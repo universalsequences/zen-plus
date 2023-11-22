@@ -1,36 +1,39 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
-import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
-import { PatchImpl } from '@/lib/nodes/Patch';
 
 export interface DraggingNode {
     node: ObjectNode | MessageNode;
     offset: Coordinate;
     origin: Coordinate;
 }
+
 export interface DraggingCable {
     sourceNode: ObjectNode | MessageNode;
     sourceOutlet: IOlet;
     sourceCoordinate: Coordinate;
 }
 
-interface PositionerContext {
+export interface AlignmentLine {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+}
 
+interface PositionerContext {
+    scrollRef: React.MutableRefObject<HTMLDivElement | null>;
     draggingCable: DraggingCable | null;
     setDraggingCable: (x: DraggingCable | null) => void;
     draggingNode: DraggingNode | null;
     setDraggingNode: (x: DraggingNode | null) => void;
-    selectedNodes: (ObjectNode | MessageNode) [];
-    setSelectedNodes: (x: ((ObjectNode | MessageNode)[]) ) => void;
     updatePosition: (id: string, position: Coordinate) => void;
-    updatePositions: (x: Coordinates) => void;
+    updatePositions: (x: Coordinates) => Coordinates;
     updateZIndex: (id: string, zIndex: number) => void;
     coordinates: Coordinates;
     zIndices: ZIndices;
     maxZIndex: number;
     size: Size | null;
-    selectedConnection: IOConnection | null;
-    setSelectedConnection: (x: IOConnection | null) => void;
+    alignmentLines: AlignmentLine[]
 }
 
 interface Props {
@@ -66,46 +69,87 @@ export const PositionProvider: React.FC<Props> = ({ children }) => {
     const [coordinates, setCoordinates] = useState<Coordinates>(coordinatesRef.current);
     const [zIndices, setZIndices] = useState<ZIndices>({});
     const [size, setSize] = useState<Size | null>(null);
-    const [selectedNodes, setSelectedNodes] = useState<(ObjectNode | MessageNode)[] >([]);
-    const [selectedConnection, setSelectedConnection] = useState<IOConnection | null>(null);
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]);
 
-    useEffect(() => {
-        if (selectedNodes.length > 0) {
-            setSelectedConnection(null);
+    const updatePositions = useCallback((updates: Coordinates): Coordinates => {
+        if (!scrollRef.current) {
+            return updates;
         }
-    }, [selectedNodes, setSelectedConnection]);
 
-    useEffect(() => {
-        if (selectedConnection) {
-            setSelectedNodes([]);
+        if (Object.keys(updates).length === 1) {
+            updates = calculateAlignmentLine(updates, coordinates);
+        } else {
+            setAlignmentLines([]);
         }
-    }, [selectedConnection, setSelectedNodes]);
 
-    const updatePositions = useCallback((updates: Coordinates) => {
-        console.log("updates=", updates);
         let _coordinates = coordinatesRef.current;
         let _size = size;
+        let sizeChanged = false;
         for (let id in updates) {
             let position = updates[id];
             _coordinates[id] = updates[id];
-            let height = window.innerHeight;
-            let width = window.innerWidth;
+            let height = scrollRef.current.offsetHeight;
+            let width = scrollRef.current.offsetWidth;
             if (_size) {
                 height = _size.height;
                 width = _size.width;
-        }
+            }
 
             if (position.x + 100 > width || position.y + 100 > height) {
+                sizeChanged = true;
                 _size = {
-                width: Math.max(width, position.x + 100),
-                height: Math.max(height, position.y + 100),
+                    width: Math.max(width, position.x + 100),
+                    height: Math.max(height, position.y + 100),
                 }
             }
         }
-        setSize(_size);
-        setCoordinates({ ..._coordinates });
 
-    }, [coordinates, setCoordinates, setSize, size]);
+        if (sizeChanged) {
+            setSize(_size);
+        }
+        setCoordinates({ ..._coordinates });
+        return updates;
+    }, [coordinates, setCoordinates, setSize, size, setAlignmentLines]);
+
+    const calculateAlignmentLine = useCallback((updates: Coordinates, positions: Coordinates): Coordinates => {
+        let _updates = { ...updates };
+        let xAlignmentLines: AlignmentLine[] = [];
+        let yAlignmentLines: AlignmentLine[] = [];
+        let foundX = false;
+        let foundY = false;
+        let minDistanceX = Infinity;
+        let minDistanceY = Infinity;
+        for (let id in updates) {
+            for (let _id in positions) {
+                if (id === _id) {
+                    continue;
+                }
+                let coord1 = updates[id];
+                let coord2 = positions[_id];
+                let oldCoord = positions[id];
+
+                let diffX = Math.abs(coord1.x - coord2.x);
+                let diffY = Math.abs(coord1.y - coord2.y);
+                let distance = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
+
+                if (distance < minDistanceX && diffX < 10) {
+                    // then we need vertical alignment
+                    let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord2.x, y2: oldCoord.y };
+                    minDistanceX = distance;
+                    xAlignmentLines = [alignmentLine];
+                    _updates[id].x = coord2.x;
+                } else if (distance < minDistanceY && diffY < 10) {
+                    let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: oldCoord.x, y2: coord2.y };
+                    yAlignmentLines = [alignmentLine];
+                    minDistanceY = distance;
+                    _updates[id].y = coord2.y;
+                }
+            }
+        }
+        setAlignmentLines([...xAlignmentLines, ...yAlignmentLines]);
+        return _updates;
+    }, [setAlignmentLines]);
 
     const updatePosition = useCallback((id: string, position: Coordinate) => {
         let _coordinates = coordinatesRef.current;
@@ -146,14 +190,12 @@ export const PositionProvider: React.FC<Props> = ({ children }) => {
             coordinates,
             updatePosition,
             size,
-            selectedConnection,
-            setSelectedConnection,
             draggingCable,
             setDraggingCable,
-            selectedNodes,
-            setSelectedNodes,
             draggingNode,
-            setDraggingNode
+            setDraggingNode,
+            scrollRef,
+            alignmentLines
         }}>
         {children}
     </PositionContext.Provider>;

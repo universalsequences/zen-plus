@@ -4,7 +4,7 @@ import { doc } from './doc';
 //import { HasAttributes } from './interp';
 import { BlockGen } from '@/lib/zen/data';
 import { Operator, Statement } from './zen/types';
-import { Lazy, ObjectNode } from '../types';
+import { Lazy, Message, ObjectNode } from '../types';
 import { print, s, Arg } from '@/lib/zen/index';
 import { memoZen, memo } from './memo';
 import {
@@ -258,6 +258,19 @@ export const zen_or = (object: ObjectNode, b: Lazy) => {
     return memoZen(object, "or" as Operator, b);
 };
 
+op_doc('round', 2);
+export const zen_round = (object: ObjectNode, multiple: Lazy) => {
+    return memo(object, (num: Message): Statement => {
+        let mode: RoundMode = "trunc" as RoundMode; //(object.attributes.mode || "nearest") as RoundMode;
+
+        let operator = {
+            name: "round",
+            params: mode
+        };
+        return [operator, num as Statement, (multiple() as Statement) || 0];
+    });
+};
+
 op_doc('switch', 3);
 export const zen_switch = (object: ObjectNode, b: Lazy, c: Lazy) => {
     return memoZen(object, "zswitch" as Operator, b, c);
@@ -323,7 +336,7 @@ export const math = {
     'delta': zen_delta,
     'switch': zen_switch,
     'abs': zen_abs,
-    //    'round': zen_round,
+    'round': zen_round,
     'min': zen_min,
     'max': zen_max,
     't60': zen_t60,

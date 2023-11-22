@@ -30,14 +30,19 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
     return d;
 };
 
-const generatePath = (source: Coordinate, dest: Coordinate) => {
+export const generatePath = (source: Coordinate, dest: Coordinate) => {
 
     let x1 = source.x;
     let y1 = source.y;
     let x2 = dest.x;
     let y2 = dest.y;
 
-    let points = getZObjectPath(x1 + 5, y1 + 6, x2 + 5, y2, false);
+    if (Math.abs(x1 - x2) < 2) {
+        x1 += 4;
+        x2 += 4;
+        return `M ${x1},${y1} L ${x2},${y2}`;
+    }
+    let points = getZObjectPath(x1 + 4, y1 + 3, x2 + 4, y2, false);
 
     const fl = (x: number) => Math.floor(x);
     let d = "M " + fl(points[0]) + ' ' + fl(points[1]);

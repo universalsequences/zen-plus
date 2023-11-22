@@ -1,5 +1,6 @@
 import { Patch, IOConnection, IOlet, Message, ObjectNode, MessageNode, Node, Attributes } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { uuid } from '@/lib/uuid/IDGenerator';
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode) 
@@ -9,8 +10,10 @@ export class BaseNode implements Node {
     inlets: IOlet[];
     outlets: IOlet[];
     attributes: Attributes
+    id: string;
 
     constructor(patch: Patch) {
+        this.id = uuid();
         this.patch = patch;
         this.inlets = [];
         this.outlets = [];
@@ -46,7 +49,7 @@ export class BaseNode implements Node {
         iolets.push(inlet);
     }
 
-    connect(destination: Node, inlet: IOlet, outlet: IOlet) {
+    connect(destination: Node, inlet: IOlet, outlet: IOlet, compile = true) {
         let connection: IOConnection = {
             source: this,
             destination,
@@ -57,7 +60,9 @@ export class BaseNode implements Node {
         outlet.connections.push(connection);
         inlet.connections.push(connection);
 
-        this.patch.recompileGraph();
+        if (compile) {
+            this.patch.recompileGraph();
+        }
         return connection;
     }
 

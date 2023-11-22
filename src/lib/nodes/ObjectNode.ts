@@ -3,6 +3,8 @@ import { lookupDoc } from './definitions/doc';
 import { Definition } from '../docs/docs';
 import { BaseNode } from './BaseNode';
 import { v4 as uuidv4 } from 'uuid';
+import { uuid } from '@/lib/uuid/IDGenerator';
+import { SerializedPatch } from './types';
 
 import {
     Lazy,
@@ -14,7 +16,10 @@ import {
     IOlet,
     Identifier,
     Patch,
-    ObjectNode
+    ObjectNode,
+    SubPatch,
+    SerializedObjectNode,
+    SerializedOutlet
 } from './types';
 
 interface Constants {
@@ -22,7 +27,7 @@ interface Constants {
 }
 
 const CONSTANTS: Constants = {
-    "twopi": 2*Math.PI,
+    "twopi": 2 * Math.PI,
     "pi": Math.PI
 }
 
@@ -37,34 +42,41 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     attributes: Attributes;
     text: string;
     arguments: Message[];
-    initialMessages: (Message | undefined)[];
+    subpatch?: SubPatch;
 
     constructor(patch: Patch) {
         super(patch);
         this.zIndex = 0;
-        this.id = uuidv4();
+        this.id = uuid();
         this.text = "";
         this.inlets = [];
         this.outlets = [];
         this.position = { x: 0, y: 0 };
         this.attributes = {};
         this.arguments = [];
-        this.initialMessages = [];
     }
 
     /**
      * Parses the given text and updates the instance's name property,
      * arguments and sets the correct NodeFunction
+     * called from the UI when user types into an object node box
+     *
      * @param {string} text - The text input by the user to parse
      */
-    parse(text: string, compile=true): boolean {
+    parse(text: string, compile = true): boolean {
         let tokens: string[] = text.split(" ").filter(x => x.length > 0);
         let name = tokens[0];
         let argumentTokens = tokens.slice(1);
 
+        let patchPreset: SerializedPatch | null = this.getPatchPresetIfAny(name);
+        if (patchPreset) {
+            text = text.replace(name, "zen");
+            name = "zen";
+        }
+
         let definition: Definition | null = lookupDoc(name);
 
-        this.inlets.forEach(x => x.hidden=false);
+        this.inlets.forEach(x => x.hidden = false);
         if (!definition) {
             if (name in CONSTANTS || !isNaN(parseFloat(name))) {
                 let parsed = CONSTANTS[name] || parseFloat(name);
@@ -76,14 +88,16 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return false;
         }
 
+
         if (!api[name]) {
             return false;
         }
 
         this.text = text;
 
-        let parsedArguments = this.parseArguments(argumentTokens, definition.numberOfInlets, definition.defaultValue);
-        this.initialMessages = parsedArguments;
+        let parsedArguments = this.parseArguments(
+            argumentTokens, definition.numberOfInlets, definition.defaultValue);
+
         let nodeFunction: NodeFunction = api[name];
         this.name = name;
 
@@ -91,10 +105,16 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         let instanceFunction: InstanceFunction = nodeFunction(this, ...lazyArgs);
         this.fn = instanceFunction;
 
-        if (compile) {
+
+        if (compile && this.name !== "zen") {
             this.patch.recompileGraph();
         }
-        console.log(this);
+
+        if (patchPreset && this.subpatch) {
+            console.log("patch preset to load...", patchPreset);
+            this.subpatch.objectNodes = [];
+            this.subpatch.fromJSON(patchPreset);
+        }
         return true;
     }
 
@@ -135,10 +155,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             if (i > 0) {
                 if (this.inlets[i]) {
                     if (this.inlets[i].connections.length === 0) {
-                        this.inlets[i].lastMessage = parsedArguments[i-1];
+                        this.inlets[i].lastMessage = parsedArguments[i - 1];
                     }
                 }
                 lazyArgs.push(() => this.arguments[i - 1]);
+            }
+            if (this.name === "in") {
+                this.inlets[i].hidden = true;
             }
         }
 
@@ -159,11 +182,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         // check the number of io-lets matches the spec
-        if (this.outlets.length > numberOfOutlets) {
+        if (this.name !== "zen" && this.outlets.length > numberOfOutlets) {
             this.outlets = this.outlets.slice(0, numberOfOutlets);
         }
 
-        if (this.inlets.length > numberOfInlets) {
+        if (this.name !== "zen" && this.inlets.length > numberOfInlets) {
             this.inlets = this.inlets.slice(0, numberOfInlets);
         }
 
@@ -171,15 +194,37 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     parseArguments(tokens: string[], numberOfInlets: number, defaultMessage?: number): (Message | undefined)[] {
-        let otherArguments: (Message|undefined)[]=[];
+        let otherArguments: (Message | undefined)[] = [];
         let defaultArgument = defaultMessage === undefined ? 0 : defaultMessage;
 
         for (let i = 0; i < Math.max(tokens.length, numberOfInlets); i++) {
-            let parsed = CONSTANTS[tokens[i]] || parseFloat(tokens[i]);
+            let parsed: Message = CONSTANTS[tokens[i]] || parseFloat(tokens[i]);
+            if (tokens[i] !== undefined && isNaN(parsed)) {
+                parsed = tokens[i];
+            }
             this.arguments[i] = i < tokens.length ? parsed : defaultArgument;
             otherArguments[i] = i < tokens.length ? parsed : defaultMessage;
         }
         return otherArguments;
+    }
+
+    pipeSubPatch(inlet: IOlet, message: Message) {
+        let subpatch = this.subpatch;
+        if (!subpatch) {
+            return;
+        }
+        let inputNodes = subpatch.objectNodes.filter(x => x.name === "in");
+        let inputNumber = this.inlets.indexOf(inlet) + 1;
+        if (message !== undefined) {
+            let inputNode = inputNodes.find(x => x.arguments[0] === inputNumber);
+            if (inputNode && inputNode.outlets[0]) {
+                let outlet = inputNode.outlets[0];
+                for (let connection of outlet.connections) {
+                    let { destination, destinationInlet } = connection;
+                    destination.receive(destinationInlet, message);
+                }
+            }
+        }
     }
 
     receive(inlet: IOlet, message: Message) {
@@ -188,6 +233,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         super.receive(inlet, message);
+
+        // these are subpatches
+        if (this.name === "zen") {
+            this.pipeSubPatch(inlet, message);
+            return;
+        }
 
         let indexOf = this.inlets.indexOf(inlet);
 
@@ -207,11 +258,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             let argumentNumber = indexOf - 1;
             this.arguments[argumentNumber] = message;
 
-            // if we've already received a message in left-most inlet, we
-            // run the function (assuming its a "hot inlet" for now)
             if (this.inlets.some((c, i) => c.lastMessage === undefined)) {
                 return;
             }
+
+            // if we've already received a message in left-most inlet, we
+            // run the function (assuming its a "hot inlet" for now)
 
             let lastMessage = this.inlets[0] && this.inlets[0].lastMessage;
             if (lastMessage) {
@@ -223,6 +275,65 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 }
             }
         }
+    }
+
+    getJSON(): SerializedObjectNode {
+        let json: any = {
+            id: this.id,
+            text: this.text,
+            position: this.position,
+            outlets: this.getConnectionsJSON()
+        };
+
+        if (this.subpatch) {
+            return {
+                ...json,
+                subpatch: this.subpatch.getJSON()
+            };
+        }
+
+        return json;
+    }
+
+    getConnectionsJSON(): SerializedOutlet[] {
+        let json: SerializedOutlet[] = [];
+        for (let i = 0; i < this.outlets.length; i++) {
+            let outlet = this.outlets[i];
+            let outletJson = [];
+            for (let connection of outlet.connections) {
+                let { destination, destinationInlet } = connection;
+                let inletIndex = destination.inlets.indexOf(destinationInlet);
+                outletJson.push({
+                    destinationId: destination.id,
+                    destinationInlet: inletIndex
+                });
+            }
+            json.push({
+                outletNumber: i,
+                connections: outletJson
+            });
+        }
+        return json;
+    }
+
+    fromJSON(json: SerializedObjectNode) {
+        this.position = json.position;
+        this.parse(json.text, false);
+        this.id = json.id;
+
+        if (json.subpatch && this.subpatch) {
+            this.subpatch.objectNodes = [];
+            this.subpatch.fromJSON(json.subpatch);
+        }
+    }
+
+    getPatchPresetIfAny(name: string): SerializedPatch | null {
+        let payload = window.localStorage.getItem(`subpatch.${name}`);
+
+        if (payload) {
+            return JSON.parse(payload) as SerializedPatch;
+        }
+        return null;
     }
 }
 

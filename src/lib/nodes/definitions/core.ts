@@ -6,7 +6,23 @@ import { Operator, Statement, CompoundOperator } from './zen/types';
 import { Lazy, ObjectNode, Message } from '../types';
 import { print, s, Arg } from '@/lib/zen/index';
 import { memoZen, memo } from './memo';
-import { noise, rampToTrig, sine, triangle, ParamGen, accum, phasor, param, zen, createWorklet, UGen } from '@/lib/zen/index';
+import { ParamGen, param } from '@/lib/zen/index';
+
+doc(
+    'phasor',
+    {
+        description: "phasor",
+        numberOfInlets: 2,
+        numberOfOutlets: 1,
+        defaultValue: 0
+    });
+const phasor = (_node: ObjectNode, ...args: Lazy[]) => {
+    return (message: Message) => {
+        let statement: Statement = [{ name: "phasor" } as Operator, message as Statement, args[0]() as Statement]
+        statement.node = _node;
+        return [statement];
+    };
+};
 
 doc(
     'param',
@@ -20,7 +36,7 @@ doc(
 
 export const zen_param = (object: ObjectNode) => {
     let p: ParamGen;
-    return (x: Message): Statement [] => {
+    return (x: Message): Statement[] => {
         if (p === undefined) {
             p = param(0);
         }
@@ -63,13 +79,13 @@ doc(
 
 export const zen_accum = (object: ObjectNode, reset: Lazy, min: Lazy, max: Lazy) => {
     return memo(object, (x: Message): Statement => {
-            let params = { min: min(), max: max() };
-            let operator = {
-                name: "accum",
-                params
-            };
-            return [operator as CompoundOperator, x as Statement, reset() as Statement];
-        }, reset, min, max);
+        let params = { min: min(), max: max() };
+        let operator = {
+            name: "accum",
+            params
+        };
+        return [operator as CompoundOperator, x as Statement, reset() as Statement];
+    }, reset, min, max);
 };
 
 doc(
@@ -131,5 +147,6 @@ export const core = {
     rampToTrig: zen_rampToTrig,
     sine: zen_sine,
     accum: zen_accum,
-    param: zen_param
+    param: zen_param,
+    phasor
 }

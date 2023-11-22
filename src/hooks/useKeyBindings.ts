@@ -1,9 +1,10 @@
 import React, { useEffect, useCallback } from 'react';
 import { usePosition } from '@/contexts/PositionContext';
 import { usePatch } from '@/contexts/PatchContext';
+import { useSelection } from '@/contexts/SelectionContext';
 
 export const useKeyBindings = () => {
-    let { setSelectedConnection, selectedNodes, selectedConnection } = usePosition();
+    let { setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
     let { patch, deleteConnection, deleteNodes } = usePatch();
 
     useEffect(() => {
@@ -18,12 +19,11 @@ export const useKeyBindings = () => {
         if (e.key === "Backspace") {
             if (selectedConnection) {
                 // need to delete this connection
-                console.log('delete =', selectedConnection);
                 selectedConnection.source.disconnect(selectedConnection);
                 deleteConnection((selectedConnection.source as any).id, selectedConnection);
             } else if (selectedNodes.length > 0) {
                 deleteNodes(selectedNodes);
             }
         }
-    }, [selectedConnection, selectedNodes, setSelectedConnection,deleteNodes, deleteConnection]);
+    }, [selectedConnection, selectedNodes, setSelectedConnection, deleteNodes, deleteConnection]);
 };

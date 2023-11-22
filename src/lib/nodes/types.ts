@@ -1,5 +1,5 @@
-import { SizeLimit } from 'next';
 import { BlockGen } from '../zen';
+import { Connections } from '@/contexts/PatchContext';
 import { Statement } from './definitions/zen/types';
 
 export interface Size {
@@ -59,29 +59,32 @@ export type Attributes = {
     [x: string]: string | number;
 }
 
-export interface Node {
+export type Node = Identifiable & {
     patch: Patch;
     inlets: IOlet[];
     outlets: IOlet[];
     attributes: Attributes;
 
-    connect: (destination: Node, inlet: IOlet, outlet: IOlet) => IOConnection;
+    newInlet: (name?: string) => void;
+    connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
     disconnect: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message) => void;
 }
 
-export type ObjectNode = Identifiable & Positioned & Node & {
+export type ObjectNode = Positioned & Node & {
     name?: string; // the name of the object - i.e. what it is
     text: string;
     fn?: InstanceFunction;
     parse: (x: string, compile?: boolean) => boolean;
     arguments: Message[];
-    initialMessages: (Message | undefined)[];
     block?: BlockGen;
+    subpatch?: SubPatch;
+    getJSON: () => SerializedObjectNode;
+    fromJSON: (x: SerializedObjectNode) => void;
 }
 
-export type MessageNode = Identifiable & Positioned & Node & {
+export type MessageNode = Positioned & Node & {
     message?: Message;
 }
 
@@ -94,7 +97,42 @@ export type Patch = Identifiable & {
     objectNodes: ObjectNode[];
     messageNodes: MessageNode[];
     compile: (x: Statement) => void;
-    recompileGraph: () => void;
+    recompileGraph: (force?: boolean) => void;
     type: PatchType;
     historyDependencies: Statement[];
+    getAllNodes: () => ObjectNode[];
+    newHistoryDependency: (x: Statement, o: ObjectNode) => void;
+    getJSON: () => SerializedPatch;
+    fromJSON: (x: SerializedPatch) => Connections;
+    name?: string;
 }
+
+export type SubPatch = Patch & {
+    parentNode: ObjectNode;
+    parentPatch: Patch;
+    clearState: () => void;
+}
+
+
+export interface SerializedOutlet {
+    outletNumber: number;
+    connections: SerializedConnection[]
+};
+
+export interface SerializedConnection {
+    destinationId: string;
+    destinationInlet: number;
+};
+
+export type SerializedObjectNode = Identifiable & {
+    text: string;
+    position: Coordinate;
+    outlets: SerializedOutlet[]
+    subpatch?: SerializedPatch;
+};
+
+export type SerializedPatch = Identifiable & {
+    objectNodes: SerializedObjectNode[]
+    name?: string;
+};
+

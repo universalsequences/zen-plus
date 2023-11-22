@@ -1,15 +1,19 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { usePosition, DraggingNode } from '@/contexts/PositionContext';
+import { usePatches } from '@/contexts/PatchesContext';
 import PositionedComponent from './PositionedComponent';
 import { lookupDoc } from '@/lib/nodes/definitions/doc';
 import { Definition } from '@/lib/docs/docs';
 import { ObjectNode, Patch, Coordinate, MessageNode } from '@/lib/nodes/types';
+import { useSelection } from '@/contexts/SelectionContext';
 
 import { usePatch } from '@/contexts/PatchContext';
 import { usePositionStyle } from '@/hooks/usePositionStyle';
+import { nodeServerAppPaths } from 'next/dist/build/webpack/plugins/pages-manifest-plugin';
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-    const { setDraggingNode, setSelectedNodes, selectedNodes } = usePosition();
+    const { selectedNodes, setSelectedNodes } = useSelection();
+    const { setDraggingNode } = usePosition();
     let isSelected = selectedNodes.includes(objectNode);
     let out = React.useMemo(() => {
         return <InnerObjectNodeComponent
@@ -26,7 +30,7 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
 const InnerObjectNodeComponent: React.FC<{
     isSelected: boolean,
     setDraggingNode: (x: DraggingNode | null) => void,
-    setSelectedNodes: (x: (ObjectNode | MessageNode) []) => void,
+    setSelectedNodes: (x: (ObjectNode | MessageNode)[]) => void,
     objectNode: ObjectNode
 }> =
     ({
@@ -38,9 +42,11 @@ const InnerObjectNodeComponent: React.FC<{
         const ref = useRef<HTMLDivElement | null>(null);
         const inputRef = useRef<HTMLInputElement | null>(null);
 
+        const { setPatch } = usePatch();
         const [editing, setEditing] = useState(false);
         const [error, setError] = useState<string | null>(null);
-        const [text, setText] = useState(objectNode.text);
+        const [text, setText] = useState(objectNode.subpatch ? objectNode.text.replace("zen", objectNode.subpatch.name || "zen") : objectNode.text);
+        const { patches, setPatches } = usePatches();
 
 
         const onChange = useCallback((value: string) => {
@@ -51,7 +57,7 @@ const InnerObjectNodeComponent: React.FC<{
             if (e.key === "Enter") {
                 let success = objectNode.parse(text);
                 if (success) {
-                    // we have a defintion so lets update
+                    // this object existed and successfully
                     setError(null);
                     setEditing(false);
                 } else {
@@ -62,29 +68,42 @@ const InnerObjectNodeComponent: React.FC<{
         }, [text, setText, objectNode, setError, setEditing]);
 
         useEffect(() => {
-            if (inputRef.current && editing) {
-                inputRef.current.focus();
-                inputRef.current.select();
-            }
+            // TODO: dont set timeout... this is a hack
+            setTimeout(() => {
+                if (inputRef.current && editing) {
+                    inputRef.current.focus();
+                    inputRef.current.select();
+                }
+            }, 100)
         }, [editing]);
 
         const onClick = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-            e.stopPropagation();
-            if (isSelected) {
-                if (initialPosition.current &&
+
+        }, [isSelected, objectNode, setSelectedNodes, setEditing, editing]);
+
+        const initialPosition = useRef<Coordinate | null>(null);
+
+        const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+            if (isSelected || objectNode.text === "") {
+                if (objectNode.text === "" || (initialPosition.current &&
                     initialPosition.current.x === objectNode.position.x &&
-                    initialPosition.current.y === objectNode.position.y) {
+                    initialPosition.current.y === objectNode.position.y)) {
+                    if (objectNode.text === "") {
+                        e.stopPropagation();
+                    }
+                    if (objectNode.name === "zen" && objectNode.subpatch) {
+                        if (!patches.includes(objectNode.subpatch)) {
+                            setPatches([...patches, objectNode.subpatch]);
+                        }
+                        return;
+                    }
                     setEditing(true);
                     setSelectedNodes([]);
                 }
             } else {
                 setSelectedNodes([objectNode]);
             }
-        }, [isSelected, objectNode, setSelectedNodes, setEditing, editing]);
 
-        const initialPosition = useRef<Coordinate | null>(null);
-
-        const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
             if (editing) {
                 e.stopPropagation();
             }
@@ -96,7 +115,7 @@ const InnerObjectNodeComponent: React.FC<{
                     initialPosition.current = { ...objectNode.position };
                 }
             }
-        }, [editing, setDraggingNode, objectNode]);
+        }, [editing, setDraggingNode, objectNode, isSelected, setSelectedNodes, setEditing, setPatch, setPatches, patches]);
 
         return (
             <PositionedComponent
@@ -104,7 +123,7 @@ const InnerObjectNodeComponent: React.FC<{
                 <div
                     ref={ref}
                     onMouseDown={onMouseDown}
-                    className="flex h-full w-full flex-1">
+                    className="flex h-full w-full flex-1 whitespace-nowrap">
                     {editing ?
                         <input
                             onClick={(e: any) => e.stopPropagation()}

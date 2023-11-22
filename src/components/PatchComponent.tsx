@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useSelection } from '@/contexts/SelectionContext';
+import Toolbar from './Toolbar'
 import Cables from './Cables';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import ObjectNodeComponent from './ObjectNodeComponent';
-import { ObjectNode, Patch } from '@/lib/nodes/types';
+import { ObjectNode, Patch, IOConnection } from '@/lib/nodes/types';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
-import { usePatch } from '@/contexts/PatchContext';
-import { usePosition, DraggingNode } from '@/contexts/PositionContext';
+import { Connections, usePatch } from '@/contexts/PatchContext';
+import { usePosition, DraggingNode, Coordinates } from '@/contexts/PositionContext';
 
 interface Selection {
     x1: number;
@@ -16,30 +18,32 @@ interface Selection {
     y2: number;
 }
 
-const PatchComponent = () => {
+const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     useThemeContext();
-    const { setDraggingNode, draggingNode, selectedNodes, setSelectedNodes, updatePosition, updatePositions, size, setSelectedConnection } = usePosition();
-    const { patch, objectNodes, messageNodes, newObjectNode, newMessageNode } = usePatch();
+    const { selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
+    const {
+        scrollRef,
+        setDraggingNode, draggingNode, updatePosition, updatePositions, size } = usePosition();
+    const {
+        updateConnections,
+        patch, objectNodes, messageNodes, newObjectNode, newMessageNode } = usePatch();
 
     useKeyBindings();
 
     const lastClick = useRef(0);
 
-    const scrollRef = useRef<HTMLDivElement | null>(null);
 
     const [selection, setSelection] = useState<Selection | null>(null);
 
-    const onMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    const onMouseUp = useCallback((e: MouseEvent) => {
         if (selection) {
             let filtered = objectNodes.filter(
-                node => node.position.x >= selection.x1 && node.position.x <= selection.x2 && 
-                node.position.y >= selection.y1 && node.position.y <= selection.y2);
-            console.log('filtered for selection', filtered, selection)
+                node => node.position.x >= selection.x1 && node.position.x <= selection.x2 &&
+                    node.position.y >= selection.y1 && node.position.y <= selection.y2);
             setSelectedNodes(filtered);
         }
         setDraggingNode(null);
     }, [setDraggingNode, selection, setSelection, setSelectedNodes, objectNodes]);
-    console.log(selection);
     const draggingNodeRef = useRef<DraggingNode | null>(null);
 
     useEffect(() => {
@@ -51,40 +55,55 @@ const PatchComponent = () => {
     useEffect(() => {
         selectedNodesRef.current = selectedNodes;
     }, [selectedNodes])
-    const onMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+
+    const onMouseMove = useCallback((e: MouseEvent) => {
         if (!scrollRef.current) {
             return;
         }
+
+        let rect = scrollRef.current.getBoundingClientRect();
+        let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
         if (selection) {
-            let x = scrollRef.current.scrollLeft + e.pageX 
-            let y = scrollRef.current.scrollTop + e.pageY
+            let x = scrollRef.current.scrollLeft + client.x;
+            let y = scrollRef.current.scrollTop + client.y
             setSelection({
-                ... selection,
+                ...selection,
                 x2: x,
                 y2: y
             })
         }
+
         if (draggingNodeRef.current) {
-            let { node, offset, origin } = draggingNodeRef.current;
-            let x = scrollRef.current.scrollLeft + e.pageX - offset.x;
-            let y = scrollRef.current.scrollTop + e.pageY - offset.y;
+            let { node, offset } = draggingNodeRef.current;
+            let x = scrollRef.current.scrollLeft + client.x - offset.x;
+            let y = scrollRef.current.scrollTop + client.y - offset.y;
 
             let diffX = x - node.position.x;
             let diffY = y - node.position.y;
-            node.position.x = x;
-            node.position.y = y;
+
+            node.position.x = Math.max(0, x);
+            node.position.y = Math.max(0, y);
 
             let updates: any = {};
+            let nodeMap: any = {};
             for (let _node of selectedNodesRef.current) {
                 if (node !== _node) {
-                    _node.position.x += diffX;
-                    _node.position.y += diffY;
-                    updates[_node.id] = {... _node.position};
+                    _node.position.x = Math.max(0, _node.position.x + diffX);
+                    _node.position.y = Math.max(0, _node.position.y + diffY);
+                    updates[_node.id] = { ..._node.position };
+                }
+                nodeMap[_node.id] = _node;
+            }
+            updates[node.id] = { ...node.position };
+
+            let _updates = updatePositions(updates);
+            for (let id in updates) {
+                let node = nodeMap[id];
+                if (node) {
+                    node.position = updates[id];
                 }
             }
-            updates[node.id] = {... node.position};
-            updatePositions(updates);
-            //updatePosition(node.id, { ...node.position });
         }
     }, [updatePositions, scrollRef, selection, setSelection, selectedNodes]);
 
@@ -92,33 +111,52 @@ const PatchComponent = () => {
         if (patch.objectNodes.length < 1) {
             let node = new ObjectNodeImpl(patch);
             node.parse("out 1");
-            let position = { x: window.innerWidth / 2, y: window.innerHeight - 100 };
+            let position = { x: window.innerWidth / 2, y: window.innerHeight - 300 };
             newObjectNode(node, position);
             updatePosition(node.id, position);
         }
     }, [objectNodes]);
 
+    useEffect(() => {
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+        return () => {
+            window.removeEventListener("mouseup", onMouseUp);
+            window.removeEventListener("mousemove", onMouseMove);
+        }
+    }, [updatePositions, scrollRef, selection, setSelection, selectedNodes]);
+
+
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         if (scrollRef.current) {
-            let x = scrollRef.current.scrollLeft + e.pageX 
-            let y = scrollRef.current.scrollTop + e.pageY
+
+            let rect = scrollRef.current.getBoundingClientRect();
+            let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            let x = scrollRef.current.scrollLeft + client.x
+            let y = scrollRef.current.scrollTop + client.y
             setSelection({
                 x1: x,
                 y1: y,
                 x2: x,
                 y2: y
             })
-    }
+        }
     }, [setSelection]);
 
     const onClick = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         let now = new Date().getTime();
-        if (now - lastClick.current < 350) {
+        if (now - lastClick.current < 350 && scrollRef.current) {
             // create a new object
+
+            let rect = scrollRef.current.getBoundingClientRect();
+            let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+            let x = scrollRef.current.scrollLeft + client.x;
+            let y = scrollRef.current.scrollTop + client.y
+
             let objectNode = new ObjectNodeImpl(patch);
             let position = {
-                x: e.pageX,
-                y: e.pageY,
+                x, y
             };
 
             newObjectNode(objectNode, position);
@@ -132,7 +170,22 @@ const PatchComponent = () => {
             setSelection(null);
         }
         lastClick.current = now;
-    }, [setSelectedNodes, selection, setSelectedConnection, setSelection]);
+    }, [setSelectedNodes, selection, setSelectedConnection, setSelection, patch]);
+
+    useEffect(() => {
+        let positions: Coordinates = {};
+        let connections: Connections = {};
+        for (let node of patch.objectNodes) {
+            positions[node.id] = node.position;
+            let _connections: IOConnection[] = [];
+            for (let outlet of node.outlets) {
+                _connections = [..._connections, ...outlet.connections];
+            }
+            connections[node.id] = _connections;
+        }
+        updatePositions(positions);
+        updateConnections(connections);
+    }, [patch]);
 
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
@@ -150,7 +203,7 @@ const PatchComponent = () => {
     const createObjectNode = useCallback(() => {
         let objectNode = new ObjectNodeImpl(patch);
         newObjectNode(objectNode, { ...menuPositionRef.current });
-        updatePosition(objectNode.id, {... menuPositionRef.current});
+        updatePosition(objectNode.id, { ...menuPositionRef.current });
     }, [menuPosition, objectNodes]);
 
     const createMessageNode = useCallback(() => {
@@ -158,13 +211,11 @@ const PatchComponent = () => {
         newMessageNode(messageNode, { ...menuPosition });
     }, [menuPosition]);
 
-
     let out = React.useMemo(() => {
-        console.log('rendering patch component');
         return (
             <div
                 onContextMenu={handleContextMenu}
-                className="flex-1 flex min-h-screen flex-col">
+                className={"flex flex-col border border-zinc-600 relative w-full my-5 tile "}>
                 <ContextMenu.Root>
                     <ContextMenu.Content color="indigo" className="ContextMenuContent">
                         <ContextMenu.Item
@@ -180,19 +231,19 @@ const PatchComponent = () => {
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
                         ref={scrollRef}
-                        style={size ? { minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
                         className="ContextMenuTrigger overflow-scroll relative">
                         <div
                             onMouseDown={onMouseDown}
-                            onMouseMove={onMouseMove}
-                            onMouseUp={onMouseUp}
                             onClick={onClick}
-                            className="w-full h-full flex flex-1 select-none bg-zinc-700 z-1">
+                            className=" flex flex-1 select-none bg-black-blur z-1">
                             <Cables />
-                            {selection && <div 
-                            style={{left: selection.x1 + 'px', top: selection.y1 + 'px',
-                        width: (selection.x2-selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'}}
-                            className="bg-red-500 absolute pointer-events-none"/>}
+                            {selection &&
+                                <div
+                                    style={{
+                                        left: selection.x1 + 'px', top: selection.y1 + 'px',
+                                        width: (selection.x2 - selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'
+                                    }}
+                                    className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
                             {objectNodes.map(
                                 (objectNode, index) =>
                                     objectNode.name === "outputs" ? '' : <ObjectNodeComponent
@@ -200,12 +251,12 @@ const PatchComponent = () => {
                                         objectNode={objectNode} />
                             )}
                         </div>
-
                     </ContextMenu.Trigger>
                 </ContextMenu.Root>
+                <Toolbar />
             </div>
         );
-    }, [objectNodes, messageNodes, selection]);
+    }, [objectNodes, messageNodes, selection, patch]);
     return out;
 };
 

@@ -1,18 +1,23 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { currentUUID, uuid, plusUUID, registerUUID } from '@/lib/uuid/IDGenerator';
+import { Project } from '@/contexts/StorageContext';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
-import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
+import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate, SubPatch } from '@/lib/nodes/types';
 import { PatchImpl } from '@/lib/nodes/Patch';
 
-type Connections = {
+export type Connections = {
     [x: string]: IOConnection[];
 }
 
 interface PatcherContext {
-    deleteNodes: (x: (ObjectNode | MessageNode) []) => void;
+    loadProject: (x: Project) => void;
+    updateConnections: (x: Connections) => void;
+    deleteNodes: (x: (ObjectNode | MessageNode)[]) => void;
     connections: Connections;
     registerConnection: (x: string, connection: IOConnection) => void;
     deleteConnection: (id: string, connection: IOConnection) => void;
     patch: Patch;
+    setPatch: (x: Patch) => void;
     messageNodes: MessageNode[];
     objectNodes: ObjectNode[];
     newMessageNode: (x: MessageNode, position: Coordinate) => void;
@@ -21,6 +26,7 @@ interface PatcherContext {
 
 interface Props {
     children: React.ReactNode;
+    patch: Patch;
 }
 
 const PatchContext = createContext<PatcherContext | undefined>(undefined);
@@ -44,12 +50,38 @@ type Size = {
     height: number;
 }
 
-export const PatchProvider: React.FC<Props> = ({ children }) => {
+export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const [connections, setConnections] = useState<Connections>({});
-    const [patch, setPatch] = useState<Patch>(new PatchImpl());
+    const [patch, setPatch] = useState<Patch>(props.patch);
     const [objectNodes, setObjectNodes] = useState<ObjectNode[]>([]);
     const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
 
+    const loadProject = useCallback((project: Project) => {
+        patch.name = project.name;
+        patch.objectNodes = [];
+        let connections = patch.fromJSON(project.json);
+        setConnections(connections);
+        setObjectNodes([...patch.objectNodes]);
+    }, [setObjectNodes, patch, setConnections]);
+
+    useEffect(() => {
+        setPatch(props.patch);
+    }, [props.patch]);
+
+    useEffect(() => {
+        setObjectNodes([...patch.objectNodes]);
+        setMessageNodes([...patch.messageNodes]);
+
+        let connections: Connections = {};
+        for (let node of patch.objectNodes) {
+            let _connections: IOConnection[] = [];
+            for (let outlet of node.outlets) {
+                _connections = [..._connections, ...outlet.connections];
+            }
+            connections[node.id] = _connections;
+        }
+        setConnections(connections);
+    }, [patch, setObjectNodes, setMessageNodes])
 
     const registerConnection = useCallback((id: string, connection: IOConnection) => {
         if (!(connections[id])) {
@@ -59,6 +91,13 @@ export const PatchProvider: React.FC<Props> = ({ children }) => {
         setConnections({ ...connections });
     }, [setConnections, connections]);
 
+    const updateConnections = useCallback((x: Connections) => {
+        setConnections({
+            ...connections,
+            ...x
+        });
+    }, [setConnections]);
+
     const deleteConnection = useCallback((id: string, connection: IOConnection) => {
         if ((connections[id])) {
             connections[id] = connections[id].filter(x => x !== connection);
@@ -67,11 +106,22 @@ export const PatchProvider: React.FC<Props> = ({ children }) => {
     }, [setConnections, connections]);
 
     const deleteNodes = useCallback((nodes: (ObjectNode | MessageNode)[]) => {
-        console.log('delete nodes', nodes);
         patch.objectNodes = patch.objectNodes.filter(
             x => !nodes.includes(x));
-        
+
         for (let node of nodes) {
+            if ((node as ObjectNode).name === "in") {
+                // delete inlet if neede
+                let parentNode = (node.patch as SubPatch).parentNode;
+                if (parentNode) {
+                    let args = (node as ObjectNode).arguments;
+                    if (args && args[0]) {
+                        let inletNumber: number = (args[0] as number) - 1;
+                        parentNode.inlets.splice(inletNumber, 1);
+                    }
+                }
+            }
+
             for (let outlet of node.outlets) {
                 for (let connection of outlet.connections) {
                     connection.destination.disconnect(connection);
@@ -101,8 +151,8 @@ export const PatchProvider: React.FC<Props> = ({ children }) => {
                 }
             }
         }
-        setConnections({... connections});
-        setObjectNodes([... patch.objectNodes]);
+        setConnections({ ...connections });
+        setObjectNodes([...patch.objectNodes]);
     }, [patch, setObjectNodes, connections, setConnections]);
 
 
@@ -120,6 +170,8 @@ export const PatchProvider: React.FC<Props> = ({ children }) => {
 
     return <PatchContext.Provider
         value={{
+            updateConnections,
+            setPatch,
             deleteNodes,
             patch,
             objectNodes,
@@ -128,7 +180,8 @@ export const PatchProvider: React.FC<Props> = ({ children }) => {
             newObjectNode,
             registerConnection,
             connections,
-            deleteConnection
+            deleteConnection,
+            loadProject
         }}>
         {children}
     </PatchContext.Provider>;

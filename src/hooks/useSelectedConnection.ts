@@ -1,10 +1,10 @@
 import React from 'react';
-import { usePosition } from '@/contexts/PositionContext';
+import { useSelection } from '@/contexts/SelectionContext';
 import { IOConnection } from '@/lib/nodes/types';
 
 export const useSelectedConnection = (connection: IOConnection) => {
 
-    const { setSelectedConnection, selectedConnection, setSelectedNodes } = usePosition();
+    const { setSelectedConnection, selectedConnection, setSelectedNodes } = useSelection();
 
     return {
         isSelected: selectedConnection === connection,
