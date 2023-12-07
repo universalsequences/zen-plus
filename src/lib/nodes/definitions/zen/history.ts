@@ -1,7 +1,7 @@
 import { doc } from './doc'
 import { NodeFunc } from './memo';
-import { ObjectNode, Lazy, Message } from '../types';
-import { Operator, Statement, CompoundOperator } from './zen/types';
+import { ObjectNode, Lazy, Message } from '../../types';
+import { Operator, Statement, CompoundOperator } from './types';
 import { zen, s, history, Arg, History, UGen, print } from '@/lib/zen/index';
 import ObjectNodeComponent from '@/components/ObjectNodeComponent';
 
@@ -77,8 +77,11 @@ export const zen_history = (object: ObjectNode) => {
 
                     // ensure we aren't double adding...?
                     object.patch.newHistoryDependency(newHistory, object);
+                    console.log('create new history dependency...');
                     return [];
                 } else {
+                    console.log("skipped altogether... not enough histories...");
+                    return [];
                 }
             }
         }
@@ -87,12 +90,14 @@ export const zen_history = (object: ObjectNode) => {
             // this refers to the initial pass. in this case, we just want to pass the
             // history's value through: i.e. history()
             let statement: Statement = [{ name: "history", history: h }];
+            console.log('1. sending initial history statement=', statement);
             return [statement];
         } else {
             // this refers to when this node receives a statement in the inlet-- we need
             // to place this statement in the dependency array in Patcher (as they will be placed)
             // at the start of the whole program
             let statement: Statement = [{ name: "history", history: h, historyInput: x as Statement }];
+            console.log('2. sending initial history statement=', statement);
             return [statement];
         }
     };

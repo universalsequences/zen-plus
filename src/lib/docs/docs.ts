@@ -1,14 +1,20 @@
+import { ConnectionType, Attributes, AttributeOptions } from '../nodes/types';
 
 export interface Definition {
     description: string;
-    numberOfInlets: number;
-    numberOfOutlets: number;
+    numberOfInlets: string | number | ((x: number) => number);
+    numberOfOutlets: string | number | ((x: number) => number);
     inletNames?: string[];
     outletNames?: string[];
     defaultValue?: number;
+    outletType?: ConnectionType;
+    inletType?: ConnectionType;
+    name?: string;
+    attributeOptions?: AttributeOptions;
+    attributes?: Attributes;
 }
 
-type API = {
+export type API = {
     [x: string]: Definition;
 };
 
@@ -18,14 +24,17 @@ export const documenter = () => {
         if (definition.numberOfOutlets === undefined) {
             definition.numberOfOutlets = 1;
         }
-        api[name] = definition;
+        api[name] = {
+            ...definition,
+            name
+        }
     };
 
     let lookupDoc = (name: string): Definition | null => {
         return api[name] || null;
     };
 
-    return { lookupDoc, doc };
+    return { lookupDoc, doc, api };
 };
 
 

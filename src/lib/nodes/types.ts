@@ -1,4 +1,5 @@
 import { BlockGen } from '../zen';
+import { OperatorContextType } from './context';
 import { Connections } from '@/contexts/PatchContext';
 import { Statement } from './definitions/zen/types';
 
@@ -41,6 +42,12 @@ export type NodeFunction = (node: ObjectNode, ...args: Lazy[]) => InstanceFuncti
 
 // a node has inlets and outlets
 
+export enum ConnectionType {
+    AUDIO,
+    ZEN,
+    CORE
+}
+
 export interface IOConnection {
     source: Node;
     destination: Node;
@@ -53,10 +60,19 @@ export type IOlet = Identifiable & {
     connections: IOConnection[];
     lastMessage?: Message;
     hidden?: boolean;
+    connectionType?: ConnectionType; // default = ZEN
+}
+
+export type AttributeOptions = {
+    [x: string]: string[];
 }
 
 export type Attributes = {
-    [x: string]: string | number;
+    [x: string]: string | number | boolean;
+}
+
+export type AttributeCallbacks = {
+    [x: string]: (x: string | number | boolean) => void;
 }
 
 export type Node = Identifiable & {
@@ -64,28 +80,42 @@ export type Node = Identifiable & {
     inlets: IOlet[];
     outlets: IOlet[];
     attributes: Attributes;
+    attributeCallbacks: AttributeCallbacks;
+    attributeOptions: AttributeOptions;
 
     newInlet: (name?: string) => void;
+    newOutlet: (name?: string) => void;
     connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
     disconnect: (connection: IOConnection) => void;
+    connectAudioNode: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message) => void;
+    setAttribute: (name: string, value: string | number | boolean) => void;
 }
 
 export type ObjectNode = Positioned & Node & {
     name?: string; // the name of the object - i.e. what it is
-    text: string;
-    fn?: InstanceFunction;
-    parse: (x: string, compile?: boolean) => boolean;
-    arguments: Message[];
-    block?: BlockGen;
+    text: string; // the literal text inputed in the object box (used to parse)
+    fn?: InstanceFunction; // the function associated with the object name (to be run on message receive)
+    parse: (x: string, operatorContextType?: OperatorContextType, compile?: boolean) => boolean; // function to parse text -> fn
+    arguments: Message[]; // stored messages from inlets #1,2,3,etc (to be used by fn)
+    buffer?: Float32Array; // optional buffer (used in matrix objects)
     subpatch?: SubPatch;
     getJSON: () => SerializedObjectNode;
     fromJSON: (x: SerializedObjectNode) => void;
+    size?: Size;
+    audioNode?: AudioNode;
+    useAudioNode: (x: AudioNode) => void;
+    operatorContextType: OperatorContextType;
+    needsLoad?: boolean;
 }
 
 export type MessageNode = Positioned & Node & {
+    messageType: MessageType;
     message?: Message;
+    getJSON: () => SerializedMessageNode;
+    fromJSON: (x: SerializedMessageNode) => void;
+    parse: (x: string) => void;
 }
 
 // for now, only Zen patches are allowed
@@ -96,21 +126,27 @@ export enum PatchType {
 export type Patch = Identifiable & {
     objectNodes: ObjectNode[];
     messageNodes: MessageNode[];
-    compile: (x: Statement) => void;
+    compile: (x: Statement, outputNumber: number) => void;
     recompileGraph: (force?: boolean) => void;
     type: PatchType;
+    audioContext: AudioContext;
     historyDependencies: Statement[];
     getAllNodes: () => ObjectNode[];
+    getAllMessageNodes: () => MessageNode[];
     newHistoryDependency: (x: Statement, o: ObjectNode) => void;
     getJSON: () => SerializedPatch;
     fromJSON: (x: SerializedPatch) => Connections;
     name?: string;
+
+    setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
+    onNewMessage?: (id: string, value: Message) => void;
 }
 
 export type SubPatch = Patch & {
     parentNode: ObjectNode;
     parentPatch: Patch;
     clearState: () => void;
+    processMessageForParam: (x: Message) => boolean;
 }
 
 
@@ -129,10 +165,35 @@ export type SerializedObjectNode = Identifiable & {
     position: Coordinate;
     outlets: SerializedOutlet[]
     subpatch?: SerializedPatch;
+    buffer?: number[];
+    attributes?: Attributes;
+    size?: Size;
+    operatorContextType: OperatorContextType;
+    numberOfOutlets?: number;
 };
 
 export type SerializedPatch = Identifiable & {
     objectNodes: SerializedObjectNode[]
+    messageNodes?: SerializedMessageNode[]
     name?: string;
 };
 
+export type SerializedMessageNode = Identifiable & {
+    position: Coordinate;
+    outlets: SerializedOutlet[]
+    attributes?: Attributes;
+    message: Message;
+    messageType: MessageType;
+}
+
+export enum MessageType {
+    Number,
+    Message,
+    Toggle
+}
+
+export enum Orientation {
+    X,
+    Y,
+    XY
+}

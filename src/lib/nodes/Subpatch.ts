@@ -1,7 +1,9 @@
 import { Statement } from './definitions/zen/types';
+import { OperatorContextType } from './context';
 import { PatchImpl } from './Patch';
-import { ObjectNode, Patch, SubPatch } from './types';
+import { ObjectNode, Message, Patch, SubPatch } from './types';
 import ObjectNodeImpl from './ObjectNode';
+
 
 /**
  * The way sub-patches work is there is an ObjectNode that defines a subpatch object
@@ -24,16 +26,17 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
 
     _setupInitialNodes() {
+        const ZEN = OperatorContextType.ZEN;
         let in1 = new ObjectNodeImpl(this);
-        in1.parse("in 1", false);
+        in1.parse("in 1", ZEN, false);
         let in2 = new ObjectNodeImpl(this);
-        in2.parse("in 2", false);
+        in2.parse("in 2", ZEN, false);
 
         let out1 = new ObjectNodeImpl(this);
-        out1.parse("out 1", false);
+        out1.parse("out 1", ZEN, false);
 
         let plus = new ObjectNodeImpl(this);
-        plus.parse("+", false);
+        plus.parse("+", ZEN, false);
 
         in1.connect(plus, plus.inlets[0], in1.outlets[0], false);
         in2.connect(plus, plus.inlets[1], in2.outlets[0], false);
@@ -50,16 +53,41 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     recompileGraph(force?: boolean): void {
         console.log('recompile graph called... for subpatch')
         if (force) {
+            console.log('forcing super.recompileGraph');
             super.recompileGraph()
         } else {
+            console.log('parentPatch.recompileGraph');
             this.parentPatch.recompileGraph();
         }
     }
 
-    compile(statement: Statement) {
+    compile(statement: Statement, outputNumber: number) {
         // this will get called for any outs that get called...
         // this should look at the node 
-        this.parentNode.send(this.parentNode.outlets[0], statement);
+        console.log("compiling statement for subpatch", statement, outputNumber);
+        this.parentNode.send(this.parentNode.outlets[outputNumber - 1], statement);
+    }
+
+    processMessageForParam(message: Message) {
+        if (typeof message === "string") {
+            let tokens = message.split(" ").filter(x => x.length > 0);
+            let paramName = tokens[0];
+            let paramValue: number = parseFloat(tokens[1]);
+            if (isNaN(paramValue)) {
+                return false;
+            }
+
+            // look for parameters in this patch
+            let params = this.objectNodes.filter(x => x.name === "param");
+            let param = params.find(x => x.arguments[0] === paramName);
+            if (param) {
+                param.receive(param.inlets[0], paramValue);
+                console.log("message param true......");
+                return true;
+            }
+
+        }
+        return false;
     }
 
     clearState() {
@@ -69,7 +97,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
                 n => {
                     n.lastMessage = undefined;
                 });
-            node.parse(node.text, false);
+            node.parse(node.text, OperatorContextType.ZEN, false);
         }
     }
 

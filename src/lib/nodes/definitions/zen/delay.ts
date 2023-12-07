@@ -1,8 +1,8 @@
 import { op_doc } from './math';
-import { Operator } from './zen/types';
+import { Operator } from './types';
 import { BlockGen } from '@/lib/zen/data';
 import { delay } from '@/lib/zen/delay';
-import { Lazy, ObjectNode } from '../types';
+import { Lazy, ObjectNode } from '../../types';
 import { memoZen } from './memo';
 import { memo } from './memo';
 

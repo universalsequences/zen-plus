@@ -9,6 +9,7 @@ interface Props {
     iolets: IOlet[];
     className: string;
     isOutlet: boolean;
+    text?: string;
 }
 const IOletsComponent = (props: Props) => {
     const { scrollRef, setDraggingCable, draggingCable } = usePosition();
@@ -17,7 +18,6 @@ const IOletsComponent = (props: Props) => {
     const onMouseDown = useCallback((
         e: React.MouseEvent<HTMLDivElement, MouseEvent>,
         iolet: IOlet) => {
-        console.log('on mouse down called=', iolet);
         if (!scrollRef.current) {
             return;
         }
@@ -40,18 +40,22 @@ const IOletsComponent = (props: Props) => {
     }, []);
 
     const onMouseUp = useCallback((iolet: IOlet) => {
-        console.log('on mouse up called...', draggingCable);
-        if (!props.isOutlet && draggingCable) {
-            let { sourceNode, sourceOutlet } = draggingCable;
-            let connection = sourceNode.connect(props.node, iolet, sourceOutlet, true);
-            registerConnection(sourceNode.id, connection);
+        if (draggingCable) {
+            let { sourceNode, sourceOutlet, destNode, destInlet } = draggingCable;
+            if (sourceNode && sourceOutlet && !props.isOutlet) {
+                let connection = sourceNode.connect(props.node, iolet, sourceOutlet, true);
+                registerConnection(sourceNode.id, connection);
+            } else if (destNode && destInlet && props.isOutlet) {
+                let connection = props.node.connect(destNode, destInlet, iolet, true);
+                registerConnection(props.node.id, connection);
+            }
         }
     }, [draggingCable, setDraggingCable]);
 
     let numIOlets = props.iolets.length;
     let memoed = React.useMemo(() => {
         return (
-            <div className={props.className}>
+            <div className={props.className + ' w-full justify-between iolets'}>
                 {props.iolets.map(
                     (iolet, i) =>
                         <Tooltip.Provider
@@ -65,7 +69,7 @@ const IOletsComponent = (props: Props) => {
                                         onMouseUp={() => onMouseUp(iolet)}
                                         onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => onMouseDown(
                                             e, iolet)}
-                                        className={(iolet.hidden ? "opacity-0 " : "") + (iolet.connections.length > 0 ? "  border-teal-400 bg-black hover:bg-teal-400 " : "bg-white hover:border-red-500 ") + " border-2 w-2 h-2 rounded-full  mr-2 hover:bg-red-500"}>
+                                        className={(iolet.hidden ? "opacity-0 " : "") + (iolet.connections.length > 0 ? "  border-teal-400 bg-black hover:bg-teal-400 " : "bg-white hover:border-red-500 ") + " border-2 w-2 h-2 rounded-full  hover:bg-red-500 z-30"}>
                                     </div>
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal>
@@ -80,7 +84,7 @@ const IOletsComponent = (props: Props) => {
                         </Tooltip.Provider>
                 )}
             </div>);
-    }, [props.iolets, numIOlets, draggingCable]);
+    }, [props.iolets, numIOlets, draggingCable, props.text]);
     return memoed;
 }
 

@@ -4,30 +4,46 @@ import { Coordinate, ObjectNode, IOConnection } from '@/lib/nodes/types';
 
 export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection: IOConnection) => {
 
-    const { coordinates } = usePosition();
+    const { sizeIndex, coordinates } = usePosition();
 
     let sourceCoordinate = coordinates[node.id];
     let destCoordinate = coordinates[(connection.destination as any).id];
-    const d = React.useMemo(() => {
+    let sourceSize = sizeIndex[node.id];
+    let destSize = sizeIndex[connection.destination.id];
+    return React.useMemo(() => {
         if (sourceCoordinate && destCoordinate) {
+            // we calculate the position of the inlet/outlets for this cable
+            // by taking the width of the source/dest nodes and divide by numIOlets-1
             let destInlet = connection.destinationInlet;
             let sourceCoordinate = coordinates[node.id];
+            let destCoordinate = coordinates[(connection.destination as any).id];
             let inletNumber = connection.destination.inlets.indexOf(destInlet);
-
+            let numInlets = connection.destination.inlets.length;
+            let numOutlets = node.outlets.length;
+            let sourceBetween = ((sourceSize ? sourceSize.width : 80) - 10) / Math.max(1, numOutlets - 1);
+            let destBetween = ((destSize ? destSize.width : 80) - 10) / Math.max(1, numInlets - 1)
+            let offset = inletNumber * destBetween
+            let destX = destCoordinate.x;
             destCoordinate = {
                 ...destCoordinate,
-                x: destCoordinate.x + inletNumber * 8
+                x: destX + offset
             };
+            let height = sourceSize ? sourceSize.height : 23;
             sourceCoordinate = {
-                x: sourceCoordinate.x + outletNumber * 10,
-                y: sourceCoordinate.y + 23
+                x: sourceCoordinate.x + outletNumber * sourceBetween,
+                y: sourceCoordinate.y + height - 3
             };
-            return generatePath(sourceCoordinate, destCoordinate);
-        }
-        return "";
-    }, [sourceCoordinate, destCoordinate]);
+            let d = generatePath(sourceCoordinate, destCoordinate);
 
-    return d;
+            let destinationCircle = interpolate(
+                { ...destCoordinate, x: destCoordinate.x + 5 }, sourceCoordinate, .1);
+            let sourceCircle = interpolate(
+                { ...sourceCoordinate, x: sourceCoordinate.x + 5 }, destCoordinate, .1);
+            return { d, destinationCircle, sourceCircle, destCoordinate, sourceCoordinate };
+        }
+        return { d: "" };
+    }, [sourceCoordinate, destCoordinate, sourceSize, destSize]);
+
 };
 
 export const generatePath = (source: Coordinate, dest: Coordinate) => {
@@ -88,3 +104,9 @@ export const getZObjectPath = (x1: number, y1: number, x2: number, y2: number, i
         x2, y2];
 };
 
+function interpolate(pointA: Coordinate, pointB: Coordinate, t: number): Coordinate {
+    return {
+        x: pointA.x + (pointB.x - pointA.x) * t,
+        y: pointA.y + (pointB.y - pointA.y) * t
+    };
+}

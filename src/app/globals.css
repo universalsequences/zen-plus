@@ -19,7 +19,7 @@
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
-  background-image: url(/wallpaper4.jpg);
+  background-image: url(/wallpaper-7.jpg);
   background-size: cover;
   overflow: hidden;
   /*
@@ -166,6 +166,22 @@ body, html {
   grid-row: 2 / 3;
 }
 
+.patches-5  {
+    .tile:nth-child(4) {
+        grid-column: 3 / 3;
+        grid-row: 1 / 2;
+    }
+    .tile:nth-child(5) {
+        grid-column: 3 / 3;
+        grid-row: 2 / 2;
+    }
+
+}
+.tile:nth-child(4) {
+        grid-row: 1 / 3;
+}
+
+
 div[data-radix-popper-content-wrapper] {
     pointer-events: none;
     div,span {
@@ -223,3 +239,17 @@ div[data-radix-popper-content-wrapper] {
         stroke: red;
     }
 }
+
+.object-context {
+    background-color: #ddfff742;
+    border: 1px solid #ffffff2b;
+    backdrop-filter: blur(8px);
+}
+
+textarea {
+  width: 100%;
+  resize: none;
+
+  box-sizing: border-box; /* Include padding and border in the element's total width */
+}
+

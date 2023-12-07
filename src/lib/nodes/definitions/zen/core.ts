@@ -1,24 +1,25 @@
 
 import { doc } from './doc';
-//import { HasAttributes } from './interp';
-import { BlockGen } from '@/lib/zen/data';
-import { Operator, Statement, CompoundOperator } from './zen/types';
-import { Lazy, ObjectNode, Message } from '../types';
-import { print, s, Arg } from '@/lib/zen/index';
+import { Operator, Statement, CompoundOperator } from './types';
+import { Lazy, ObjectNode, Message } from '../../types';
 import { memoZen, memo } from './memo';
 import { ParamGen, param } from '@/lib/zen/index';
 
 doc(
     'phasor',
     {
-        description: "phasor",
+        description: "generates a sawtooth signal from 0-1 at specified rate (in hz)",
         numberOfInlets: 2,
         numberOfOutlets: 1,
         defaultValue: 0
     });
 const phasor = (_node: ObjectNode, ...args: Lazy[]) => {
     return (message: Message) => {
-        let statement: Statement = [{ name: "phasor" } as Operator, message as Statement, args[0]() as Statement]
+        let statement: Statement = [
+            { name: "phasor" } as Operator,
+            message as Statement,
+            args[0]() as Statement
+        ];
         statement.node = _node;
         return [statement];
     };
@@ -28,19 +29,25 @@ doc(
     'param',
     {
         description: "sets a parameter",
-        numberOfInlets: 0,
+        numberOfInlets: 2,
         numberOfOutlets: 1,
         inletNames: ["parameter value"]
     }
 );
 
-export const zen_param = (object: ObjectNode) => {
+export const zen_param = (object: ObjectNode, name: Lazy) => {
+    object.needsLoad = true;
+
     let p: ParamGen;
+    // how do we even keep track of the last chosen parameter if this isnt a message object...
+
     return (x: Message): Statement[] => {
         if (p === undefined) {
-            p = param(0);
+            console.log('creating nu...');
+            p = param(0, name() as string);
         }
         if (typeof x === "number") {
+            console.log('setting via num', x);
             p.set!(x);
             return [];
         }

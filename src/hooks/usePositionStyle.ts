@@ -4,7 +4,6 @@ import { usePosition } from '@/contexts/PositionContext';
 
 export const usePositionStyle = (node: Identifiable & Positioned) => {
     let { coordinates } = usePosition();
-
     let nodePosition = coordinates[node.id];
 
     const positionStyle = useMemo(() => {

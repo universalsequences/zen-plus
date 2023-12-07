@@ -1,4 +1,5 @@
 "use client"
+import '@/styles/styles.scss';
 import Image from 'next/image'
 import React, { useState } from 'react';
 import PatchComponent from '@/components/PatchComponent';

@@ -1,7 +1,7 @@
-import { Lazy, ObjectNode } from '../types';
+import { Lazy, ObjectNode } from '../../types';
 import { memoZen, memo } from './memo';
 import { doc } from './doc';
-import { Operator, Statement } from './zen/types';
+import { Operator, Statement } from './types';
 
 doc(
     'biquad',

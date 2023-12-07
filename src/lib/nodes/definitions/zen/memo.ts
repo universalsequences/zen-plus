@@ -1,9 +1,9 @@
 import { Arg, UGen, ParamGen } from '@/lib/zen/index';
-import { printStatement } from './zen/AST';
-import { ObjectNode, Message } from '../types';
+import { printStatement } from './AST';
+import { ObjectNode, Message } from '../../types';
 import { BlockGen } from '@/lib/zen/data';
-import { Statement, Operator } from './zen/types';
-import {Lazy} from '../types';
+import { Statement, Operator } from './types';
+import { Lazy } from '../../types';
 
 //export type AnyGen = (Arg) | UGen | ParamGen;
 export type NodeFunc = (x: Message, ...args: boolean[]) => Statement;
@@ -35,9 +35,9 @@ export const memoZen = (
         if (typeof x === "string") {
             return [operator];
         }
-        
+
         let xyz: Statement = [operator, x as unknown as Statement, ..._args as Statement[]];
-        xyz.node  = object;
+        xyz.node = object;
         return xyz;
     }, ...args);
 };
@@ -50,7 +50,7 @@ export const memo = (object: ObjectNode, fn: NodeFunc, ...args: Lazy[]) => {
     return (msg: (Message)): (Statement[]) => {
         out = fn(msg);
         if (out && typeof out !== "number") {
-            out.node  = object; 
+            out.node = object;
         }
         return [out];
     }

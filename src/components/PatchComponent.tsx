@@ -1,15 +1,32 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import LockButton from './LockButton';
+import { useMessage } from '@/contexts/MessageContext';
+import { traverseBackwards } from '@/lib/nodes/traverse';
 import { useSelection } from '@/contexts/SelectionContext';
 import Toolbar from './Toolbar'
 import Cables from './Cables';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import ObjectNodeComponent from './ObjectNodeComponent';
-import { ObjectNode, Patch, IOConnection } from '@/lib/nodes/types';
+import { MessageType, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
+import MessageNodeComponent from './MessageNodeComponent';
 import { Connections, usePatch } from '@/contexts/PatchContext';
-import { usePosition, DraggingNode, Coordinates } from '@/contexts/PositionContext';
+import { usePatches } from '@/contexts/PatchesContext';
+import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts/PositionContext';
+
+enum PatchResizeType {
+    Left,
+    Right,
+}
+
+interface ResizingPatch {
+    gridTemplate: string;
+    resizeType: PatchResizeType
+    startPosition: Coordinate;
+}
+
 
 interface Selection {
     x1: number;
@@ -20,58 +37,147 @@ interface Selection {
 
 const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     useThemeContext();
-    const { selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
+    const { setGridTemplate, gridTemplate } = usePatches();
+    const [resizingPatch, setResizingPatch] = useState<ResizingPatch | null>(null);
     const {
+        lastResizingTime,
+        setSelection,
+        selection,
+        lockedMode,
+        selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
+    const { onNewMessage } = useMessage();
+
+    useEffect(() => {
+    }, []);
+
+    const {
+        updateSize,
         scrollRef,
-        setDraggingNode, draggingNode, updatePosition, updatePositions, size } = usePosition();
+        setResizingNode,
+        resizingNode,
+        setDraggingNode,
+        draggingNode,
+        sizeIndexRef,
+        updatePosition,
+        updatePositions,
+    } = usePosition();
+
     const {
         updateConnections,
         patch, objectNodes, messageNodes, newObjectNode, newMessageNode } = usePatch();
+
+    useEffect(() => {
+        patch.onNewMessage = onNewMessage;
+    }, [patch, onNewMessage]);
 
     useKeyBindings();
 
     const lastClick = useRef(0);
 
-
-    const [selection, setSelection] = useState<Selection | null>(null);
-
     const onMouseUp = useCallback((e: MouseEvent) => {
-        if (selection) {
-            let filtered = objectNodes.filter(
-                node => node.position.x >= selection.x1 && node.position.x <= selection.x2 &&
-                    node.position.y >= selection.y1 && node.position.y <= selection.y2);
+        if (lockedMode) {
+            return;
+        }
+        if (resizingPatch) {
+            setResizingPatch(null);
+        }
+        if (selection && selection.patch === patch) {
+            let filtered = [...objectNodes, ...messageNodes].filter(
+                node => {
+                    let size = sizeIndexRef.current[node.id];
+                    if (size) {
+                        let w = size.width || 100;
+                        let h = size.height || 7;
+                        return node.position.x + w >= selection.x1 && node.position.x <= selection.x2 &&
+                            node.position.y + h >= selection.y1 && node.position.y <= selection.y2;
+                    } else {
+                        return;
+                    }
+                });
+            console.log("on mouse up selection =", filtered, selection);
             setSelectedNodes(filtered);
         }
         setDraggingNode(null);
-    }, [setDraggingNode, selection, setSelection, setSelectedNodes, objectNodes]);
+        setResizingNode(null);
+    }, [resizingPatch, setResizingPatch, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
+
     const draggingNodeRef = useRef<DraggingNode | null>(null);
+    const resizingNodeRef = useRef<ResizingNode | null>(null);
 
     useEffect(() => {
         draggingNodeRef.current = draggingNode;
-    }, [draggingNode]);
+        resizingNodeRef.current = resizingNode;
+    }, [resizingNode, draggingNode]);
 
     const selectedNodesRef = useRef(selectedNodes);
 
     useEffect(() => {
         selectedNodesRef.current = selectedNodes;
+        let node = selectedNodes[0];
+        //if (node) {
+        //    let backwards = traverseBackwards(node);
+        //}
     }, [selectedNodes])
 
     const onMouseMove = useCallback((e: MouseEvent) => {
         if (!scrollRef.current) {
             return;
         }
+        if (resizingPatch) {
+            let diffX = e.pageX - resizingPatch.startPosition.x;
+            let tokens = resizingPatch.gridTemplate.split(" ");
+            let token = tokens[index].replace("fr", "");
+            let tokenNum = parseFloat(token);
+            let pageWidth = window.innerWidth;
+            let ratio = diffX / pageWidth;
+            let newToken = tokenNum - ratio * 3;
+            setGridTemplate("1fr " + newToken + "fr");
+        }
+        if (lockedMode) {
+            return;
+        }
 
         let rect = scrollRef.current.getBoundingClientRect();
         let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
-        if (selection) {
-            let x = scrollRef.current.scrollLeft + client.x;
-            let y = scrollRef.current.scrollTop + client.y
-            setSelection({
-                ...selection,
-                x2: x,
-                y2: y
-            })
+        if (resizingNodeRef.current) {
+            lastResizingTime.current = new Date().getTime();
+            if (resizingNodeRef.current.orientation === Orientation.X) {
+                let { node, offset } = resizingNodeRef.current;
+                let x = scrollRef.current.scrollLeft + client.x;// - offset.x;
+                let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+                if (!node.size) {
+                    node.size = sizeIndexRef.current[node.id];
+                    // position`
+                }
+                let width = x - node.position.x;
+                node.size.width = width;
+                updateSize(node.id, { ...node.size });
+            } else if (resizingNodeRef.current.orientation === Orientation.Y) {
+                let { node, offset } = resizingNodeRef.current;
+                let x = scrollRef.current.scrollLeft + client.x;// - offset.x;
+                let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+                if (!node.size) {
+                    node.size = sizeIndexRef.current[node.id];
+                    // position`
+                }
+                let height = y - node.position.y;
+                node.size.height = height;
+                updateSize(node.id, { ...node.size });
+            } else {
+                let { node, offset } = resizingNodeRef.current;
+                let x = scrollRef.current.scrollLeft + client.x;// - offset.x;
+                let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+                if (!node.size) {
+                    node.size = sizeIndexRef.current[node.id];
+                    // position`
+                }
+                let height = y - node.position.y;
+                let width = x - node.position.x;
+                node.size.height = height;
+                node.size.width = width;
+                updateSize(node.id, { ...node.size });
+            }
         }
 
         if (draggingNodeRef.current) {
@@ -105,7 +211,10 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                 }
             }
         }
-    }, [updatePositions, scrollRef, selection, setSelection, selectedNodes]);
+    }, [
+        resizingPatch,
+        setGridTemplate,
+        updatePositions, scrollRef, selection, setSelection, selectedNodes, updateSize, lockedMode]);
 
     useEffect(() => {
         if (patch.objectNodes.length < 1) {
@@ -118,16 +227,52 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     }, [objectNodes]);
 
     useEffect(() => {
+        if (lockedMode) {
+            setDraggingNode(null);
+            setSelectedNodes([]);
+        }
+    }, [lockedMode, setSelectedNodes, setDraggingNode]);
+
+    useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
         return () => {
-            window.removeEventListener("mouseup", onMouseUp);
             window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
         }
-    }, [updatePositions, scrollRef, selection, setSelection, selectedNodes]);
+    }, [
+        resizingPatch,
+        setResizingPatch,
+        setGridTemplate,
+        lockedMode,
+        objectNodes,
+        messageNodes,
+        updatePositions, scrollRef, selection, setSelection, updateSize, selectedNodes, resizingNode, setResizingNode]);
 
+
+    const onSelectionMove = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (!scrollRef.current) {
+            return;
+        }
+        let rect = scrollRef.current.getBoundingClientRect();
+        let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+        if (selection) {
+            let x = scrollRef.current.scrollLeft + client.x;
+            let y = scrollRef.current.scrollTop + client.y
+            setSelection({
+                ...selection,
+                patch: patch,
+                x2: x,
+                y2: y
+            })
+        }
+    }, [setSelection, selection]);
 
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (e.button === 2) {
+            return;
+        }
         if (scrollRef.current) {
 
             let rect = scrollRef.current.getBoundingClientRect();
@@ -135,6 +280,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             let x = scrollRef.current.scrollLeft + client.x
             let y = scrollRef.current.scrollTop + client.y
             setSelection({
+                patch: patch,
                 x1: x,
                 y1: y,
                 x2: x,
@@ -144,7 +290,13 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     }, [setSelection]);
 
     const onClick = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (e.button == 2) {
+            return;
+        }
         let now = new Date().getTime();
+        if (now - lastResizingTime.current < 200) {
+            return;
+        }
         if (now - lastClick.current < 350 && scrollRef.current) {
             // create a new object
 
@@ -163,11 +315,6 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             updatePosition(objectNode.id, position);
             setSelection(null);
         } else {
-            if (selection == null || selection.x1 === selection.x2) {
-                setSelectedNodes([]);
-                setSelectedConnection(null);
-            }
-            setSelection(null);
         }
         lastClick.current = now;
     }, [setSelectedNodes, selection, setSelectedConnection, setSelection, patch]);
@@ -206,38 +353,74 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         updatePosition(objectNode.id, { ...menuPositionRef.current });
     }, [menuPosition, objectNodes]);
 
+    const createNumberBox = useCallback(() => {
+        let messageNode = new MessageNodeImpl(patch, MessageType.Number);
+        newMessageNode(messageNode, { ...menuPositionRef.current });
+        updatePosition(messageNode.id, { ...menuPositionRef.current });
+    }, [menuPosition, messageNodes]);
+
     const createMessageNode = useCallback(() => {
-        let messageNode = new MessageNodeImpl(patch);
-        newMessageNode(messageNode, { ...menuPosition });
-    }, [menuPosition]);
+        let messageNode = new MessageNodeImpl(patch, MessageType.Message);
+        newMessageNode(messageNode, { ...menuPositionRef.current });
+        updatePosition(messageNode.id, { ...menuPositionRef.current });
+    }, [menuPosition, messageNodes]);
+
 
     let out = React.useMemo(() => {
         return (
             <div
                 onContextMenu={handleContextMenu}
-                className={"flex flex-col border border-zinc-600 relative w-full my-5 tile "}>
+                className={("flex flex-col border border-zinc-600 relative w-full tile ") + (lockedMode ? "locked" : "")}>
+                <div
+                    onMouseDown={(e: any) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setResizingPatch({
+                            startPosition: { x: e.pageX, y: e.pageY },
+                            gridTemplate, resizeType: PatchResizeType.Right
+                        });
+                    }}
+                    className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
+                <div
+                    onMouseDown={(e: any) => {
+
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setResizingPatch({
+                            startPosition: { x: e.pageX, y: e.pageY },
+                            gridTemplate, resizeType: PatchResizeType.Left
+                        })
+                    }}
+                    className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />
+
                 <ContextMenu.Root>
-                    <ContextMenu.Content color="indigo" className="ContextMenuContent">
+                    <ContextMenu.Content color="indigo" className="object-context p-2 rounded-md text-white text-xs">
                         <ContextMenu.Item
                             onClick={createObjectNode}
-                            className="ContextMenuItem">
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             New Object Node
                         </ContextMenu.Item>
                         <ContextMenu.Item
                             onClick={createMessageNode}
-                            className="ContextMenuItem">
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             New Message Node
+                        </ContextMenu.Item>
+                        <ContextMenu.Item
+                            onClick={createNumberBox}
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                            New Number Box
                         </ContextMenu.Item>
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
                         ref={scrollRef}
                         className="ContextMenuTrigger overflow-scroll relative">
                         <div
+                            onMouseMove={onSelectionMove}
                             onMouseDown={onMouseDown}
                             onClick={onClick}
                             className=" flex flex-1 select-none bg-black-blur z-1">
                             <Cables />
-                            {selection &&
+                            {selection && selection.patch === patch &&
                                 <div
                                     style={{
                                         left: selection.x1 + 'px', top: selection.y1 + 'px',
@@ -247,16 +430,23 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                             {objectNodes.map(
                                 (objectNode, index) =>
                                     objectNode.name === "outputs" ? '' : <ObjectNodeComponent
-                                        key={objectNode.id}
+                                        key={objectNode.id + '_' + index}
                                         objectNode={objectNode} />
+                            )}
+                            {messageNodes.map(
+                                (messageNode, index) =>
+                                    <MessageNodeComponent
+                                        key={messageNode.id + '_' + index}
+                                        messageNode={messageNode} />
                             )}
                         </div>
                     </ContextMenu.Trigger>
                 </ContextMenu.Root>
                 <Toolbar />
+                <LockButton />
             </div>
         );
-    }, [objectNodes, messageNodes, selection, patch]);
+    }, [objectNodes, messageNodes, selection, patch, lockedMode]);
     return out;
 };
 

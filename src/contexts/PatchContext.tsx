@@ -56,16 +56,21 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const [objectNodes, setObjectNodes] = useState<ObjectNode[]>([]);
     const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
 
+
     const loadProject = useCallback((project: Project) => {
         patch.name = project.name;
         patch.objectNodes = [];
         let connections = patch.fromJSON(project.json);
         setConnections(connections);
         setObjectNodes([...patch.objectNodes]);
-    }, [setObjectNodes, patch, setConnections]);
+        setMessageNodes([...patch.messageNodes]);
+    }, [setMessageNodes, setObjectNodes, patch, setConnections]);
 
     useEffect(() => {
         setPatch(props.patch);
+    }, [props.patch]);
+
+    useEffect(() => {
     }, [props.patch]);
 
     useEffect(() => {
@@ -98,28 +103,41 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         });
     }, [setConnections]);
 
+    let connectionsRef = useRef<Connections>(connections);
+    useEffect(() => {
+        connectionsRef.current = connections;
+    }, [connections]);
+
     const deleteConnection = useCallback((id: string, connection: IOConnection) => {
-        if ((connections[id])) {
-            connections[id] = connections[id].filter(x => x !== connection);
+        if ((connectionsRef.current[id])) {
+            connectionsRef.current[id] = connections[id].filter(x => x !== connection);
         }
-        setConnections({ ...connections });
+        setConnections({ ...connectionsRef.current });
     }, [setConnections, connections]);
 
     const deleteNodes = useCallback((nodes: (ObjectNode | MessageNode)[]) => {
         patch.objectNodes = patch.objectNodes.filter(
             x => !nodes.includes(x));
+        patch.messageNodes = patch.messageNodes.filter(
+            x => !nodes.includes(x));
 
         for (let node of nodes) {
-            if ((node as ObjectNode).name === "in") {
+            let name = (node as ObjectNode).name;
+            if (name == "in" || name === "out") {
                 // delete inlet if neede
                 let parentNode = (node.patch as SubPatch).parentNode;
                 if (parentNode) {
                     let args = (node as ObjectNode).arguments;
                     if (args && args[0]) {
-                        let inletNumber: number = (args[0] as number) - 1;
-                        parentNode.inlets.splice(inletNumber, 1);
+                        let ioletNumber: number = (args[0] as number) - 1;
+                        if (name === "in") {
+                            parentNode.inlets.splice(ioletNumber, 1);
+                        } else {
+                            parentNode.outlets.splice(ioletNumber, 1);
+                        }
                     }
                 }
+
             }
 
             for (let outlet of node.outlets) {
@@ -153,6 +171,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         }
         setConnections({ ...connections });
         setObjectNodes([...patch.objectNodes]);
+        setMessageNodes([...patch.messageNodes]);
     }, [patch, setObjectNodes, connections, setConnections]);
 
 
@@ -165,7 +184,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const newMessageNode = useCallback((messageNode: MessageNode, position: Coordinate) => {
         messageNode.position = position;
         patch.messageNodes = [...patch.messageNodes, messageNode];
-        setObjectNodes(patch.objectNodes);
+        setMessageNodes(patch.messageNodes);
     }, [setObjectNodes, patch]);
 
     return <PatchContext.Provider
@@ -181,7 +200,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             registerConnection,
             connections,
             deleteConnection,
-            loadProject
+            loadProject,
         }}>
         {children}
     </PatchContext.Provider>;

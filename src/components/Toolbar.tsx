@@ -78,16 +78,16 @@ const Toolbar = () => {
     }, [patches, setPatches, patch]);
 
     if (breadcrumbs.length === 1) {
-        return <div className="absolute -top-6 left-0">
+        return <div className="absolute top-2 left-2">
             <PatchDropdown patch={patch}>
-                <GlobeIcon className="w-5 h-5 invert" />
+                <GlobeIcon className="w-5 h-5" />
             </PatchDropdown>
         </div>;
     }
 
     return <div
-        style={{ zIndex: 100000000000 }}
-        className="flex absolute -top-8 left-0  full bg-black-blur px-1  pr-8">
+        style={{ zIndex: 1 }}
+        className="flex absolute top-0 left-0  full bg-black-blur px-1  pr-8">
         <PatchDropdown patch={patch}>
             <GlobeIcon className="w-5 h-5 mt-1 mr-3" />
         </PatchDropdown>

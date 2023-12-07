@@ -3,8 +3,8 @@
 import { doc } from './doc';
 //import { HasAttributes } from './interp';
 import { BlockGen } from '@/lib/zen/data';
-import { Operator, Statement } from './zen/types';
-import { Lazy, Message, ObjectNode } from '../types';
+import { Operator, Statement } from './types';
+import { Lazy, Message, ObjectNode } from '../../types';
 import { print, s, Arg } from '@/lib/zen/index';
 import { memoZen, memo } from './memo';
 import {
@@ -35,10 +35,10 @@ import {
     wrap,
 } from '@/lib/zen/index';
 
-export const op_doc = (name: string, num: number = 2) => doc(
+export const op_doc = (name: string, num: number = 2, description?: string) => doc(
     name,
     {
-        description: "yo",
+        description: description || `takes ${name} of ${num} zen expressions`,
         numberOfInlets: num,
         numberOfOutlets: 1
     });
@@ -46,7 +46,7 @@ export const op_doc = (name: string, num: number = 2) => doc(
 doc(
     '+',
     {
-        description: "adds",
+        description: "adds two zen expressions together",
         numberOfInlets: 2,
         numberOfOutlets: 1
     });
@@ -55,13 +55,13 @@ export const zen_add = (object: ObjectNode, ...args: Lazy[]) => {
 };
 
 
-op_doc('*');
+op_doc('*', 2, "multiples two zen expressions together");
 export const zen_mult = (object: ObjectNode, b: Lazy) => {
     return memoZen(object, "mult" as Operator, b);
 
 };
 
-op_doc('nth');
+op_doc('nth', 2, "takes nth element of zen typed array");
 export const zen_nth = (object: ObjectNode, b: Lazy) => {
     return memoZen(object, "nth" as Operator, b);
 
@@ -69,29 +69,29 @@ export const zen_nth = (object: ObjectNode, b: Lazy) => {
 };
 
 
-op_doc('xor');
+op_doc('xor', 2, "takes xor of two zen expressions");
 export const zen_xor = (object: ObjectNode, b: Lazy) => {
     return memoZen(object, "xor" as Operator, b);
 
 
 };
 
-op_doc('sign', 1);
+op_doc('sign', 1, "extracts the sign (+1 or -1) of a zen expression");
 export const zen_sign = (object: ObjectNode) => {
     return memoZen(object, "sign" as Operator);
 };
 
-op_doc('!/', 1);
+op_doc('!/', 1, "takes the recipricol of a zen expression");
 export const zen_reciprical = (object: ObjectNode) => {
     return memoZen(object, "reciprical" as Operator);
 };
 
-op_doc('exp2', 1);
+op_doc('exp2', 1, "power of 2 of zen expression");
 export const zen_exp2 = (object: ObjectNode) => {
     return memoZen(object, "exp2" as Operator);
 };
 
-op_doc('log2', 1);
+op_doc('log2', 1, "log 2 of a zen expression");
 export const zen_log2 = (object: ObjectNode) => {
     return memoZen(object, "log2" as Operator);
 };

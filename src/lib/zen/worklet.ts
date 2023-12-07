@@ -26,6 +26,7 @@ export const createWorklet = (
         const workletBase64 = btoa(workletCode);
         const url = `data:application/javascript;base64,${workletBase64}`;
 
+        console.log(code);
         const onCompilation = (): AudioWorkletNode => {
             const workletNode = new AudioWorkletNode(
                 ctxt,
@@ -69,6 +70,7 @@ export const createWorklet = (
                     });
 
             } else {
+                console.log('init memory called...');
                 initMemory(graph.context, workletNode);
                 workletNode.port.postMessage({ type: "ready" });
             }
@@ -208,9 +210,10 @@ this.port.postMessage({type: "ack",body: "yo"});
              }
            }
          } else {
-           for (let i=0; i < data.length; i++) {
+//           for (let i=0; i < data.length; i++) {
+console.log("received on message memory set=", data, idx);
             this.memory.set(data, idx)
-         }
+//         }
 }
        } else if (e.data.type === "memory-get") {
            if (this.wasmModule) {
@@ -322,7 +325,6 @@ keys.push(type);
 
   checkMessages() {
     // Iterate over the message queue and send messages if the rate limit has elapsed
-console.log("checking...");
     for (const [type, subTypeMap] of this.messageQueue.entries()) {
       for (const [subType, message] of subTypeMap.entries()) {
           this.port.postMessage({type, subType, body: message});
@@ -523,6 +525,7 @@ export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
     for (let block of context.memory.blocksInUse) {
         if (block.initData !== undefined) {
             let idx = block._idx === undefined ? block.idx : block._idx;
+            console.log("sending data", idx, block.initData);
             workletNode.port.postMessage({
                 type: "init-memory",
                 body: {

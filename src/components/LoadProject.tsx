@@ -16,16 +16,21 @@ const LoadProject = (props: Props) => {
     const { getPatches } = useStorage();
     const { patch } = props;
     const [patches, setPatches] = useState<Project[]>([]);
-    const { updatePositions } = usePosition();
+    const { updatePositions, sizeIndexRef, setSizeIndex } = usePosition();
     const { loadProject } = usePatch();
 
     const _loadPatch = useCallback((x: Project) => {
         patch.name = x.name;
         loadProject(x);
         let updates: Coordinates = {};
-        for (let node of patch.objectNodes) {
+        let sizes = { ...sizeIndexRef.current }
+        for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
             updates[node.id] = node.position;
+            if (node.size) {
+                sizes[node.id] = node.size;
+            }
         }
+        setSizeIndex(sizes);
         updatePositions(updates);
     }, [patch]);
 
