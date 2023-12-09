@@ -19,7 +19,8 @@
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
-  background-image: url(/wallpaper-7.jpg);
+  //background-image: url(/wallpaper-7.jpg);
+  background-color: #111010 !important;
   background-size: cover;
   overflow: hidden;
   /*
@@ -122,7 +123,7 @@ body, html {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #2ad4bf7f; /* handle color */
+    background: #bbbbbb; /* handle color */
     border-radius: 8px;
     height: 8px;
 }
@@ -138,7 +139,7 @@ body, html {
 
 .patches {
   row-gap: 10px;
-  column-gap: 10px;
+  column-gap: 50px;
   //grid-template-columns: 1fr 1fr; /* Start with 2 columns */
   grid-template-rows: auto;
 }
@@ -253,3 +254,10 @@ textarea {
   box-sizing: border-box; /* Include padding and border in the element's total width */
 }
 
+
+.patcher-background {
+    background-color: #3b3b3b4a;
+    //border: 1px solid #909090;
+    background-image: radial-gradient(circle at center center, rgb(65 65 65) 0%, rgb(25 23 23) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, hsl(235.2deg 7.8% 11.05%),hsl(228deg 9.09% 10.78%));
+    background-size: 14px 14px;
+}

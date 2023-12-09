@@ -104,7 +104,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
      * @param {string} text - The text input by the user to parse
      */
     parse(text: string, contextType: OperatorContextType = this.operatorContextType, compile = true): boolean {
-        // console.log('parsing node=%s compile=%s', text, compile);
         let context: OperatorContext = getOperatorContext(contextType);
         this.operatorContextType = contextType;
         let originalText = text;
@@ -166,7 +165,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
 
         if (compile && this.name !== "zen") {
-            console.log('compile and name not zen');
             this.patch.recompileGraph();
         }
 
@@ -339,7 +337,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 // if this is a subpatch thats receiving messages...
                 // we need to pass it off to subpatch
                 let subpatchProcess = this.subpatch.processMessageForParam(message);
-                console.log('subpatch process =', this.name, message, subpatchProcess);
                 if (subpatchProcess) {
                     return true;
                 }

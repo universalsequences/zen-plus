@@ -17,7 +17,8 @@ interface Props {
     children: React.ReactNode;
 }
 
-const PatchDropdown = (props: Props) => {
+const PatchDropdown = React.memo((props: Props) => {
+    const [open, setOpen] = useState<boolean | undefined>();
     const [option, setOption] = useState<Option | null>(null);
     const { patch, children } = props;
     let [name, setName] = useState(patch.name);
@@ -33,23 +34,46 @@ const PatchDropdown = (props: Props) => {
         let json = patch.getJSON();
         if (isSubPatch) {
             // we are saving a sub patch
-            saveSubPatch(name, json);
+            saveSubPatch(name as string, json);
         } else {
-            savePatch(name, json);
+            savePatch(name as string, json);
         }
-    }, [patch, name]);
+        setOption(null);
+    }, [patch, name, setOption]);
+
+    useEffect(() => {
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [setOption, setOpen, option, name, patch]);
+
+    const onKeyDown = useCallback((e: any) => {
+        if (e.key === "o" && e.metaKey) {
+            e.preventDefault();
+            setOption(Option.Load);
+        } else if (e.key === "s" && e.metaKey) {
+            e.preventDefault();
+            setOption(Option.Save);
+        } else if (e.key === "Enter" && option === Option.Save) {
+            save();
+        }
+    }, [setOption, setOpen, option, name, patch]);
 
     return (
         <div>
-            <Dialog.Root>
-                <DropdownMenu.Root>
+            <Dialog.Root
+                open={option !== null}
+            >
+                <DropdownMenu.Root
+                    open={open}
+                >
                     <DropdownMenu.Trigger>
                         <button className="IconButton" aria-label="Customise options">
                             {children}
                         </button>
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Content color="indigo" className="bg-white text-zinc-800 p-3 DropdownMenuContent text-xs" sideOffset={5}>
-                        <Dialog.Trigger>
+                        <Dialog.Trigger
+                        >
                             <DropdownMenu.Item
                                 onClick={() => setOption(Option.Save)}
                                 className="DropdownMenuItem flex cursor-pointer">
@@ -58,16 +82,19 @@ const PatchDropdown = (props: Props) => {
                             <DropdownMenu.Item
                                 onClick={() => setOption(Option.Load)}
                                 className="DropdownMenuItem flex cursor-pointer">
-                                Load <div className="RightSlot">⌘+S</div>
+                                Load <div className="RightSlot">⌘+O</div>
                             </DropdownMenu.Item>
                         </Dialog.Trigger>
                     </DropdownMenu.Content>
                 </DropdownMenu.Root>
                 <Dialog.Portal>
-                    <Dialog.Overlay className="center-fixed" />
+                    <Dialog.Overlay
+
+                        className="center-fixed" />
                     <Dialog.Content
+                        onInteractOutside={() => setOption(null)}
                         style={{ zIndex: 100000000000 }}
-                        className="center-fixed bg-black-blur-light p-5 text-white rounded-lg outline-none">
+                        className="center-fixed dark-modal  p-5 text-white rounded-lg outline-none">
                         {option === Option.Save ? <>
                             <fieldset className="Fieldset">
                                 <label className="Label mr-4" htmlFor="name">
@@ -90,13 +117,13 @@ const PatchDropdown = (props: Props) => {
                             </div>
                         </> :
                             <>
-                                <LoadProject isSubPatch={isSubPatch} patch={patch} />
+                                <LoadProject hide={() => setOption(null)} isSubPatch={isSubPatch} patch={patch} />
                             </>}
                     </Dialog.Content>
                 </Dialog.Portal>
             </Dialog.Root>
         </div>
     );
-}
+});
 
 export default PatchDropdown;

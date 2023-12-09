@@ -53,6 +53,7 @@ export interface IOConnection {
     destination: Node;
     sourceOutlet: IOlet; // which outlet of the source this comes from
     destinationInlet: IOlet; // which inlet of the destination this goes to
+    segmentation?: number;  // y position of segmentation
 }
 
 export type IOlet = Identifiable & {
@@ -137,6 +138,7 @@ export type Patch = Identifiable & {
     getJSON: () => SerializedPatch;
     fromJSON: (x: SerializedPatch) => Connections;
     name?: string;
+    skipRecompile: boolean;
 
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
     onNewMessage?: (id: string, value: Message) => void;
@@ -158,6 +160,7 @@ export interface SerializedOutlet {
 export interface SerializedConnection {
     destinationId: string;
     destinationInlet: number;
+    segmentation?: number;
 };
 
 export type SerializedObjectNode = Identifiable & {

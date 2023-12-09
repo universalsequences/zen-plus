@@ -25,7 +25,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
             "max": 1000,
             "round": false,
             "number box": true,
-            "is parameter": messageType === MessageType.Number,
+            "is parameter": false,
             "scripting name": "",
         };
 

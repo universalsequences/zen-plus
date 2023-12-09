@@ -4,7 +4,7 @@ import { IOConnection } from '@/lib/nodes/types';
 
 export const useSelectedConnection = (connection: IOConnection) => {
 
-    const { setSelectedConnection, selectedConnection, setSelectedNodes } = useSelection();
+    const { setSelectedConnection, selectedConnection } = useSelection();
 
     return {
         isSelected: selectedConnection === connection,

@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useCallback, useState } from 'react';;
+import { useSelection } from '@/contexts/SelectionContext';
 import AlignmentHelper from './AlignmentHelper';
 import { useConnections } from '@/hooks/useConnections';
 import { useEdgePatch, generatePath } from '@/hooks/useEdgePath';
@@ -10,20 +11,37 @@ import { DraggingCable, usePosition } from '@/contexts/PositionContext';
 const strokeColor = "#2ad4bf";
 const Cables = () => {
     let { objectNodes, messageNodes, deleteConnection } = usePatch();
+    let { selectedNodes } = useSelection();
     let { size } = usePosition();
-    let { scrollRef, setDraggingCable, draggingCable } = usePosition();
+    let { draggingNode, scrollRef, setDraggingCable, draggingCable, setDraggingSegmentation } = usePosition();
 
     let memoed = React.useMemo(() => {
-        return (<svg
-            style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
-            className="absolute z-0 w-full h-full z-1">
-            {[...objectNodes, ...messageNodes].map((node, i) =>
-                <ObjectCables
-                    deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
-            <AlignmentHelper />
-            <Dragging />
-        </svg>)
-    }, [size, objectNodes, messageNodes, setDraggingCable, deleteConnection]);
+        let _selectedNodes = [...selectedNodes];
+        if (draggingNode) {
+            _selectedNodes.push(draggingNode.node);
+        }
+        return (<>
+            <svg
+                style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
+                className="absolute z-0 w-full h-full z-1 pointer-events-none">
+                {_selectedNodes.map((node, i) =>
+                    <ObjectCables
+                        setDraggingSegmentation={setDraggingSegmentation}
+                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
+                <AlignmentHelper />
+                <Dragging />
+            </svg>
+            <svg
+                style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
+                className="absolute z-0 w-full h-full z-1 pointer-events-none">
+                {[...objectNodes.filter(x => !_selectedNodes.includes(x)), ...messageNodes.filter(x => !_selectedNodes.includes(x))].map((node, i) =>
+                    <ObjectCables
+                        setDraggingSegmentation={setDraggingSegmentation}
+                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
+            </svg>
+        </>
+        )
+    }, [size, objectNodes, draggingNode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
     return memoed;
 };
 
@@ -74,9 +92,12 @@ const Dragging = () => {
 };
 
 const ObjectCables: React.FC<{
+    setDraggingSegmentation: (x: IOConnection | null) => void,
     deleteConnection: (x: string, y: IOConnection) => void,
     setDraggingCable: (x: DraggingCable | null) => void, node: ObjectNode | MessageNode
-}> = memo(({ deleteConnection, node, setDraggingCable }) => {
+}> = memo(({
+    setDraggingSegmentation,
+    deleteConnection, node, setDraggingCable }) => {
     let connections = useConnections(node.id);
     let list = React.useMemo(() => {
         let list = [];
@@ -86,6 +107,7 @@ const ObjectCables: React.FC<{
             for (let connection of outlet.connections) {
                 let dest = connection.destination;
                 list.push(<Edge
+                    setDraggingSegmentation={setDraggingSegmentation}
                     deleteConnection={deleteConnection}
                     setDraggingCable={setDraggingCable}
                     key={i++} outletNumber={outletNumber} node={node} connection={connection} />);
@@ -93,19 +115,21 @@ const ObjectCables: React.FC<{
             outletNumber++;
         }
         return list;
-    }, [deleteConnection, setDraggingCable, connections]);
+    }, [deleteConnection, setDraggingCable, connections, setDraggingSegmentation]);
     return <>{list}</>
 });
 
 const Edge: React.FC<{
     deleteConnection: (x: string, y: IOConnection) => void,
     setDraggingCable: (x: DraggingCable | null) => void,
+    setDraggingSegmentation: (x: IOConnection | null) => void,
     node: ObjectNode | MessageNode,
     connection: IOConnection,
     outletNumber: number
 }> = ({
     deleteConnection,
     setDraggingCable,
+    setDraggingSegmentation,
     connection,
     node,
     outletNumber
@@ -116,7 +140,6 @@ const Edge: React.FC<{
             d, destinationCircle, sourceCircle } = useEdgePatch(node as ObjectNode, outletNumber, connection);
 
         let { isSelected, select } = useSelectedConnection(connection);
-        //let [hover, setHover] = useState(false);
 
         const moveSourceEdge = useCallback((e: any) => {
             e.stopPropagation();
@@ -145,36 +168,48 @@ const Edge: React.FC<{
             // mouse events
             let isAudio = connection.sourceOutlet.connectionType === ConnectionType.AUDIO;
             let isCore = connection.sourceOutlet.connectionType === ConnectionType.CORE;
+            let sourceCoord = (connection.source as ObjectNode).position;
+            let destCoord = (connection.destination as ObjectNode).position;
             return <>
-                <g className="edge-group">
-                    {(isCore || isAudio) && <path
-                        className="visible-edge"
-                        fill="transparent"
-                        d={d} stroke={isSelected ? "red" : "black"} strokeWidth={2} />}
-                    <path
-                        className="visible-edge"
-                        fill="transparent"
-                        strokeDasharray={isAudio ?
-                            "4 4" : undefined}
-                        d={d} stroke={isSelected ? "red" : (isCore ? "#979797" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
-                    <path
-                        fill="transparent"
-                        onMouseDown={(e: any) => e.stopPropagation()}
-                        onClick={(e: any) => {
-                            e.stopPropagation();
-                            select();
-                        }}
-                        d={d} stroke="transparent" strokeWidth={4} />
-
+                <g style={isSelected ? { zIndex: 10000000 } : { zIndex: 0 }} className="edge-group">
+                    {d.map((_d, i) => <g key={i}>
+                        {(isCore || isAudio) && <path
+                            className="visible-edge pointer-events-auto"
+                            fill="transparent"
+                            d={_d} stroke={isSelected ? "red" : "black"} strokeWidth={2} />}
+                        <path
+                            className="visible-edge pointer-events-auto "
+                            fill="transparent"
+                            strokeDasharray={isAudio ?
+                                "4 4" : undefined}
+                            d={_d} stroke={isSelected ? "red" : (isCore ? "#979797" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
+                        <path
+                            fill="transparent"
+                            className={(((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? "cursor-ns-resize" : "") + " pointer-events-auto "}
+                            onMouseDown={(e: any) => {
+                                e.stopPropagation();
+                                if (((d.length === 5 && i === 1) || (d.length === 3 && i === 1))) {
+                                    setDraggingSegmentation(connection)
+                                }
+                            }}
+                            onClick={(e: any) => {
+                                e.stopPropagation();
+                                select();
+                            }}
+                            d={_d} stroke="transparent" strokeWidth={
+                                ((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? 8 :
+                                    4} />
+                    </g>
+                    )}
                 </g>
                 {isSelected && sourceCircle && <circle
                     style={{ zIndex: 10000000 }}
                     onMouseDown={moveSourceEdge}
-                    cx={sourceCircle.x} cy={sourceCircle.y} r={4} fill="white" className="edge-mover" />}
+                    cx={sourceCircle.x} cy={sourceCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
                 {isSelected && destinationCircle && <circle
                     style={{ zIndex: 10000000 }}
                     onMouseDown={moveDestEdge}
-                    cx={destinationCircle.x} cy={destinationCircle.y} r={4} fill="white" className="edge-mover" />}
+                    cx={destinationCircle.x} cy={destinationCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
             </>
         }, [d, destinationCircle, sourceCircle, sourceCoordinate, destCoordinate, isSelected, setDraggingCable, deleteConnection]);
         return p;

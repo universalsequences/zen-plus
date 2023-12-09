@@ -46,7 +46,6 @@ export const data = (
     let lastData: Float32Array;
     let initted = false;
     let resp: BlockGen = (context: Context): MemoryBlock => {
-        console.log('data called with size=%s channels=%s', size, channels);
         initted = true;
         if (lastData) {
             initData = lastData;
@@ -79,10 +78,8 @@ export const data = (
                     !((_context as LoopContext).context === context))
             ) {
                 if (context === _context) {
-                    console.log('reusing block', block.idx);
                 } else {
                     block = context.alloc(size * channels);
-                    console.log("ALLOCATING BLOCK", block.idx, size * channels);
                 }
             } else {
             }

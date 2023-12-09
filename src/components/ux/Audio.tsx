@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useSelection } from '@/contexts/SelectionContext';
 import { ObjectNode } from '@/lib/nodes/types';
+import { arrayBufferToArray } from '@/lib/audio/arrayBufferToArray';
 
 const bufferToArrayBuffer = require('buffer-to-arraybuffer');
 
@@ -7,13 +9,14 @@ export type ByteTypeNames = {
     [x: string]: Int8ArrayConstructor | Int32ArrayConstructor
 }
 
-const BYTE_TYPE_NAMES: ByteTypeNames = {
+export const BYTE_TYPE_NAMES: ByteTypeNames = {
     "byte": Int8Array,
     "int32": Int32Array
 };
 
 const Audio: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let [buffer, setBuffer] = useState<Float32Array | null>(null);
+    let { updateAttributes, attributesIndex } = useSelection();
 
     const onDrop = useCallback(async (ev: React.DragEvent<HTMLDivElement>) => {
         ev.stopPropagation();
@@ -32,15 +35,16 @@ const Audio: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         }
     }, [setBuffer]);
 
+    let hasName = objectNode.attributes["external URL"] !== "";
     return <div
         onDragOver={(e: any) => e.preventDefault()}
         onDrop={onDrop}
-        className="w-44 bg-zinc-700 text-white p-2 rounded-lg">
-        {buffer ? <div className="bg-zinc-900 p-2">
-            {buffer.length / 44100} seconds
+        className={(!hasName ? "w-44" : "") + " bg-zinc-700 text-white p-2 rounded-lg"}>
+        {objectNode.attributes["external URL"] !== "" ? <div className="overflow-hidden bg-zinc-900 p-2">{objectNode.attributes["external URL"]}</div> : (buffer ? <div className="bg-zinc-900 p-2 overflow-hidden">
+            {(buffer.length / 44100) + ' seconds'}
         </div> : <div className="bg-zinc-900 p-2">
             Drop Audio Here
-        </div>}
+        </div>)}
     </div>;
 };
 
@@ -52,19 +56,9 @@ export const getBlob = (file: File, audioContext: AudioContext, dataFormat?: str
         reader.readAsArrayBuffer(file)
         reader.onloadend = async () => {
             let raw: ArrayBuffer = reader.result as ArrayBuffer;
-            let ArrayType = dataFormat ? (BYTE_TYPE_NAMES[dataFormat] || Int8Array) : Int8Array;
-            console.log("data format=", dataFormat, ArrayType);
-            let blob = new ArrayType(raw)
-            console.log(blob);
-            let type = new TextDecoder().decode(blob.slice(0, 4));
-            if (type === "RIFF") {
-                let audioBuffer = await audioContext.decodeAudioData(bufferToArrayBuffer(blob));
-                resolve(audioBuffer.getChannelData(0));
-            } else {
-                resolve(new Float32Array(blob));
-            }
+            resolve(arrayBufferToArray(raw, audioContext, dataFormat));
         }
     });
-
 };
+
 

@@ -7,7 +7,6 @@ export const op = (operator: string, name: string, evaluator?: (x: number, y: nu
     return (...ins: Arg[]): UGen => {
         return memo((context: Context): Generated => {
             let _ins = ins.map(f => context.gen(f));
-            console.log('adding called =', _ins);
             let [opVar] = context.useVariables(name + "Val");
             let code = `${context.varKeyword} ${opVar} = ${_ins.map(x => x.variable).join(" " + operator + " ")};`
             if (operator === '%') {

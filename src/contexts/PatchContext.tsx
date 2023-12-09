@@ -1,8 +1,14 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { getSegmentation } from '@/lib/cables/getSegmentation';
+import { usePosition } from '@/contexts/PositionContext';
+import { SizeIndex } from './PositionContext';
 import { currentUUID, uuid, plusUUID, registerUUID } from '@/lib/uuid/IDGenerator';
 import { Project } from '@/contexts/StorageContext';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
-import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate, SubPatch } from '@/lib/nodes/types';
+import {
+    Positioned,
+    Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate, SubPatch
+} from '@/lib/nodes/types';
 import { PatchImpl } from '@/lib/nodes/Patch';
 
 export type Connections = {
@@ -10,6 +16,8 @@ export type Connections = {
 }
 
 interface PatcherContext {
+    segmentCable: (x: IOConnection, segment: number) => void;
+    segmentCables: (sizeIndex: SizeIndex) => void;
     loadProject: (x: Project) => void;
     updateConnections: (x: Connections) => void;
     deleteNodes: (x: (ObjectNode | MessageNode)[]) => void;
@@ -87,6 +95,23 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         }
         setConnections(connections);
     }, [patch, setObjectNodes, setMessageNodes])
+
+    const segmentCable = useCallback((connection: IOConnection, segment: number) => {
+        connection.segmentation = segment;
+        setConnections({ ...connections });
+    }, [setConnections, connections]);
+
+    const segmentCables = useCallback((sizeIndex: SizeIndex) => {
+        for (let id in connections) {
+            for (let connection of connections[id]) {
+                if (connection.segmentation === undefined) {
+                    connection.segmentation = getSegmentation(connection, sizeIndex);
+                }
+            }
+        }
+        setConnections({ ...connections });
+    }, [setConnections, connections]);
+
 
     const registerConnection = useCallback((id: string, connection: IOConnection) => {
         if (!(connections[id])) {
@@ -201,6 +226,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             connections,
             deleteConnection,
             loadProject,
+            segmentCable,
+            segmentCables
         }}>
         {children}
     </PatchContext.Provider>;

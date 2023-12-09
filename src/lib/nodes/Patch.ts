@@ -68,9 +68,7 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph(recompileGraph?: boolean) {
-        console.log("recompileGraph called", this);
         this.disconnectGraph();
-        console.log('disconnected');
         this.outputStatements = [];
         this.storedStatement = undefined;
         this.historyDependencies = [];
@@ -78,7 +76,6 @@ export class PatchImpl implements Patch {
 
         // re-parse every node so that we "start from scratch"
         let objectNodes = this.getAllNodes();
-        console.log('re-parsing nodes');
         for (let node of objectNodes) {
             if (node.name === "zen") {
                 continue;
@@ -90,10 +87,8 @@ export class PatchImpl implements Patch {
             node.parse(node.text, node.operatorContextType, false);
         }
 
-        console.log('goin thru subpatches');
         for (let node of objectNodes) {
             if (node.subpatch) {
-                console.log("node.subpatch means recompile...");
                 node.subpatch.recompileGraph(true);
             }
         }
@@ -108,7 +103,6 @@ export class PatchImpl implements Patch {
 
         this.waiting = false;
         sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "history") || node.name === "argument" || node.needsLoad);
-        console.log("source nodes=", sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -148,7 +142,6 @@ export class PatchImpl implements Patch {
         let messageNodes = this.getAllMessageNodes();
         for (let messageNode of messageNodes) {
             if (messageNode.messageType === MessageType.Number) {
-                console.log('sending COMPILE-time input message to ', messageNode);
                 messageNode.receive(messageNode.inlets[0], "bang");
                 if (messageNode.message) {
                     messageNode.receive(messageNode.inlets[1], messageNode.message);
@@ -158,71 +151,78 @@ export class PatchImpl implements Patch {
     }
 
     compile(statement: Statement, outputNumber?: number) {
-        if (outputNumber !== undefined) {
-            this.outputStatements[outputNumber - 1] = statement;
-            let numOutputs = this.objectNodes.filter(x => x.name === "out").length;
-            let numFound = this.outputStatements.filter(x => x !== undefined).length;
-            if (numFound === numOutputs) {
-                statement = ["s" as Operator, ... this.outputStatements];
+        return new Promise(resolve => {
+            if (outputNumber !== undefined) {
+                this.outputStatements[outputNumber - 1] = statement;
+                let numOutputs = this.objectNodes.filter(x => x.name === "out").length;
+                let numFound = this.outputStatements.filter(x => x !== undefined).length;
+                if (numFound === numOutputs) {
+                    statement = ["s" as Operator, ... this.outputStatements];
+                }
             }
-        }
 
-        if (this.waiting) {
-            this.storedStatement = statement;
-            return;
-        }
-
-        this.storedStatement = undefined;
-        this.counter++;
-        let id = this.counter;
-
-        setTimeout(() => {
-            if (id !== this.counter) {
-                return
+            if (this.waiting) {
+                this.storedStatement = statement;
+                return;
             }
-            if (this.historyDependencies.length > 0) {
-                let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
-                statement = ["s" as Operator, ...historyDependencies, statement]
+            if (this.skipRecompile) {
+                this.storedStatement = statement;
+                return;
             }
-            console.log("statement to compile=", statement);
-            let ast = compileStatement(statement);
-            let printed = printStatement(statement);
 
-            this.disconnectGraph();
+            this.storedStatement = undefined;
+            this.counter++;
+            let id = this.counter;
 
-            let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
-            console.log("ast=", zenGraph);
-            console.log("creating worklet...");
+            setTimeout(() => {
+                if (id !== this.counter) {
+                    return
+                }
+                if (this.historyDependencies.length > 0) {
+                    let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
+                    statement = ["s" as Operator, ...historyDependencies, statement]
+                }
+                console.log("statement to compile=", statement);
+                let ast = compileStatement(statement);
+                let printed = printStatement(statement);
 
-            createWorklet(
-                this.audioContext,
-                zenGraph,
-                'zen' + id)
-                .then(
-                    (ret) => {
-                        console.log("CREATED WORKLET!");
-                        ret = ret as ZenWorklet;
-                        this.audioNode = ret.workletNode;
-                        this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
+                this.disconnectGraph();
 
-                        ret.workletNode.port.onmessage = (e) => {
-                            publish(e.data.type, [e.data.subType, e.data.body]);
-                        };
-                        ret.workletNode.connect(this.audioContext.destination);
-                        this.setupAudioNode(this.audioNode);
-                        if (this.setAudioWorklet) {
-                            this.setAudioWorklet(ret.workletNode);
-                        }
-                        for (let messageNode of this.messageNodes) {
-                            if (messageNode.message) {
-                                messageNode.receive(messageNode.inlets[1], messageNode.message);
+                let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
+                console.log("ast=", zenGraph);
+                console.log("creating worklet...");
+
+                createWorklet(
+                    this.audioContext,
+                    zenGraph,
+                    'zen' + id)
+                    .then(
+                        (ret) => {
+                            console.log("CREATED WORKLET!");
+                            ret = ret as ZenWorklet;
+                            this.audioNode = ret.workletNode;
+                            this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
+
+                            ret.workletNode.port.onmessage = (e) => {
+                                publish(e.data.type, [e.data.subType, e.data.body]);
+                            };
+                            ret.workletNode.connect(this.audioContext.destination);
+                            this.setupAudioNode(this.audioNode);
+                            if (this.setAudioWorklet) {
+                                this.setAudioWorklet(ret.workletNode);
                             }
-                        }
-                        this.sendNumberMessages();
-                    })
-                .catch(e => {
-                });
-        }, 250);
+                            for (let messageNode of this.messageNodes) {
+                                if (messageNode.message) {
+                                    messageNode.receive(messageNode.inlets[1], messageNode.message);
+                                }
+                            }
+                            this.sendNumberMessages();
+                            resolve(true);
+                        })
+                    .catch(e => {
+                    });
+            }, 250);
+        });
     }
 
     setupAudioNode(audioNode: AudioNode) {
@@ -259,6 +259,9 @@ export class PatchImpl implements Patch {
     fromJSON(x: SerializedPatch): Connections {
 
         this.name = x.name;
+
+        this.objectNodes = [];
+        this.messageNodes = [];
 
         let currentId = currentUUID();
         this.id = x.id;
@@ -319,13 +322,15 @@ export class PatchImpl implements Patch {
                 for (let outlet of serializedNode.outlets) {
                     let { outletNumber, connections } = outlet;
                     for (let connection of connections) {
-                        let { destinationId, destinationInlet } = connection;
+                        let { destinationId, destinationInlet, segmentation } = connection;
                         let destination: ObjectNode = ids[destinationId];
                         if (destination) {
                             let inlet = destination.inlets[destinationInlet];
                             let outlet = node.outlets[outletNumber];
                             if (inlet && outlet) {
-                                nodeConnections.push(node.connect(destination, inlet, outlet, false));
+                                let _connection = node.connect(destination, inlet, outlet, false);
+                                _connection.segmentation = segmentation;
+                                nodeConnections.push(_connection);
                             } else {
                                 missedConnections.push([connection, node, destination, outletNumber]);
                             }
@@ -337,7 +342,12 @@ export class PatchImpl implements Patch {
             i++;
         }
 
+        this.skipRecompile = true;
         this.recompileGraph();
+        this.skipRecompile = false;
+        if (this.storedStatement) {
+            this.compile(this.storedStatement);
+        }
 
         this.missedConnections = missedConnections;
         let _connections: Connections = {};

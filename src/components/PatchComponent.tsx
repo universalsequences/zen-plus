@@ -60,9 +60,13 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         sizeIndexRef,
         updatePosition,
         updatePositions,
+        setDraggingSegmentation,
+        draggingSegmentation,
     } = usePosition();
 
     const {
+        segmentCable,
+        segmentCables,
         updateConnections,
         patch, objectNodes, messageNodes, newObjectNode, newMessageNode } = usePatch();
 
@@ -78,6 +82,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         if (lockedMode) {
             return;
         }
+        setDraggingSegmentation(null);
         if (resizingPatch) {
             setResizingPatch(null);
         }
@@ -99,7 +104,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         }
         setDraggingNode(null);
         setResizingNode(null);
-    }, [resizingPatch, setResizingPatch, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
+    }, [resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
 
     const draggingNodeRef = useRef<DraggingNode | null>(null);
     const resizingNodeRef = useRef<ResizingNode | null>(null);
@@ -140,6 +145,11 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         let rect = scrollRef.current.getBoundingClientRect();
         let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
+        if (draggingSegmentation) {
+            let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+            let id = draggingSegmentation.source.id;
+            segmentCable(draggingSegmentation, y - sizeIndexRef.current[id].height);
+        }
         if (resizingNodeRef.current) {
             lastResizingTime.current = new Date().getTime();
             if (resizingNodeRef.current.orientation === Orientation.X) {
@@ -212,6 +222,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             }
         }
     }, [
+        draggingSegmentation,
         resizingPatch,
         setGridTemplate,
         updatePositions, scrollRef, selection, setSelection, selectedNodes, updateSize, lockedMode]);
@@ -241,6 +252,8 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             window.removeEventListener("mouseup", onMouseUp);
         }
     }, [
+        draggingSegmentation,
+        setDraggingSegmentation,
         resizingPatch,
         setResizingPatch,
         setGridTemplate,
@@ -410,6 +423,12 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             New Number Box
                         </ContextMenu.Item>
+                        <ContextMenu.Item
+                            onClick={() => segmentCables(sizeIndexRef.current)}
+
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                            Segment All Cables
+                        </ContextMenu.Item>
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
                         ref={scrollRef}
@@ -418,7 +437,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                             onMouseMove={onSelectionMove}
                             onMouseDown={onMouseDown}
                             onClick={onClick}
-                            className=" flex flex-1 select-none bg-black-blur z-1">
+                            className=" flex flex-1 select-none patcher-background z-1">
                             <Cables />
                             {selection && selection.patch === patch &&
                                 <div

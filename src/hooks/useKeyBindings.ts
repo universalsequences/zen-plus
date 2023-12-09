@@ -1,13 +1,18 @@
 import React, { useEffect, useCallback } from 'react';
-import { ObjectNode } from '@/lib/nodes/types';
+import { getSegmentation } from "@/lib/cables/getSegmentation";
+import { IOConnection, ObjectNode } from '@/lib/nodes/types';
 import { usePosition } from '@/contexts/PositionContext';
 import { usePatch } from '@/contexts/PatchContext';
 import { useSelection } from '@/contexts/SelectionContext';
 
 export const useKeyBindings = () => {
     let { setLockedMode, lockedMode, setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
-    let { deletePositions } = usePosition();
-    let { patch, deleteConnection, deleteNodes } = usePatch();
+    let { deletePositions, sizeIndexRef } = usePosition();
+    let { segmentCable, patch, deleteConnection, deleteNodes } = usePatch();
+
+    const segmentSelectedCable = useCallback((cable: IOConnection) => {
+        segmentCable(cable, getSegmentation(cable, sizeIndexRef.current));
+    }, []);
 
     useEffect(() => {
         window.addEventListener("keydown", onKeyDown);
@@ -22,6 +27,10 @@ export const useKeyBindings = () => {
         }
         if (e.key === "e" && e.metaKey) {
             setLockedMode(!lockedMode);
+        }
+        if (e.key === "y" && e.metaKey && selectedConnection) {
+            e.preventDefault();
+            segmentSelectedCable(selectedConnection);
         }
         if (e.key === "Backspace") {
             if (selectedConnection) {

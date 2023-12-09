@@ -36,7 +36,7 @@ const PositionedComponent: React.FC<{
                 height: ref.current.offsetHeight
             });
         }
-    }, [maxZIndex, node.attributes]);
+    }, [node.attributes, text]);
 
     const startResizing = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>, orientation: Orientation) => {
         e.stopPropagation();
@@ -160,19 +160,19 @@ const PositionedComponent: React.FC<{
                                 (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => startResizing(e, Orientation.XY)}
 
                             style={{ maxWidth: 25, maxHeight: 25 }}
-                            className="absolute bottom-0 right-0 w-1/6 h-1/6 bg-zinc-300 cursor-se-resize z-30" />
+                            className="absolute bottom-0 right-0 w-1 h-1 bg-zinc-300 cursor-se-resize z-30" />
                         <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 " />
                         <div className="absolute bottom-0 left-0 w-1 h-1 bg-zinc-300 " />
                         {isCustom && <div
                             onClick={(e: any) => e.stopPropagation()}
                             onMouseDown={
                                 (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => startResizing(e, Orientation.Y)}
-                            className={"absolute bottom-0 bg-red-500 left-0 h-0.5 w-full cursor-ns-resize z-10 " + (isCustom ? "bg-zinc-400" : "")} />}
+                            className={"absolute bottom-0 left-0 h-0.5 w-full cursor-ns-resize z-10 " + (isCustom ? "" : "")} />}
                         {<div
                             onClick={(e: any) => e.stopPropagation()}
                             onMouseDown={
                                 (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => startResizing(e, Orientation.X)}
-                            className={"absolute top-0 right-0 w-0.5 h-full  cursor-ew-resize z-10 " + (isCustom ? "bg-zinc-400" : "")} />}
+                            className={"absolute top-0 right-0 w-0.5 h-full  cursor-ew-resize z-10 " + (isCustom ? "" : "")} />}
                     </>}
                 <IOletsComponent
                     text={text}

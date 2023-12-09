@@ -18,8 +18,6 @@ export const accum = (incr: Arg, reset: Arg = 0, params: AccumParams) => {
         let _reset = genArg(reset, context);
         let [varName] = context.useVariables("accum");
 
-        console.log('accum called with  = ', _incr, _reset);
-
         if (params.init !== undefined) {
             block.initData = new Float32Array([params.init]);
         }

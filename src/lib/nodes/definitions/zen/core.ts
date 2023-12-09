@@ -43,11 +43,9 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
 
     return (x: Message): Statement[] => {
         if (p === undefined) {
-            console.log('creating nu...');
             p = param(0, name() as string);
         }
         if (typeof x === "number") {
-            console.log('setting via num', x);
             p.set!(x);
             return [];
         }

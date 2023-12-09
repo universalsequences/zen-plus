@@ -134,6 +134,7 @@ export class BaseNode implements Node {
                 let { destination, destinationInlet } = connection;
                 let inletIndex = destination.inlets.indexOf(destinationInlet);
                 outletJson.push({
+                    segmentation: connection.segmentation,
                     destinationId: destination.id,
                     destinationInlet: inletIndex
                 });

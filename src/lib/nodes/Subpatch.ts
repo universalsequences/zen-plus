@@ -51,12 +51,9 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
 
     recompileGraph(force?: boolean): void {
-        console.log('recompile graph called... for subpatch')
         if (force) {
-            console.log('forcing super.recompileGraph');
             super.recompileGraph()
         } else {
-            console.log('parentPatch.recompileGraph');
             this.parentPatch.recompileGraph();
         }
     }
@@ -64,7 +61,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     compile(statement: Statement, outputNumber: number) {
         // this will get called for any outs that get called...
         // this should look at the node 
-        console.log("compiling statement for subpatch", statement, outputNumber);
         this.parentNode.send(this.parentNode.outlets[outputNumber - 1], statement);
     }
 
@@ -82,7 +78,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
             let param = params.find(x => x.arguments[0] === paramName);
             if (param) {
                 param.receive(param.inlets[0], paramValue);
-                console.log("message param true......");
                 return true;
             }
 

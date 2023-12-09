@@ -28,7 +28,7 @@ export const zen_data = (
         if (!block) {
             let initBuffer: Float32Array | undefined = Array.isArray(inputData) ? new Float32Array(inputData as number[]) :
                 ArrayBuffer.isView(inputData) ? inputData : undefined;
-            console.log("creating new block!");
+            console.log("creating new block!", size(), channels());
             block = data(
                 size() as number,
                 channels() as number,
@@ -76,7 +76,6 @@ export const zen_peek = (
         node.inlets[3].lastMessage = 1000000;
     }
     return (x: Message): Statement[] => {
-        console.log("Peek called...");
         let outputs: Statement[] = [];
         if (node.attributes["channels"] === 1) {
             let operator = {
@@ -85,12 +84,10 @@ export const zen_peek = (
             };
             if (maxLength()) {
                 let ret = [operator, index() as Statement, channel() as Statement, maxLength() as Statement] as Statement;
-                console.log("returning channel=1 peek=", ret);
                 (ret as Statement).node = node;
                 return [ret];
             } else {
                 let ret = [operator, index() as Statement, channel() as Statement] as Statement;
-                console.log("returning channel=1 peek=", ret);
                 (ret as Statement).node = node;
                 return [ret];
             }

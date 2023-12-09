@@ -97,12 +97,21 @@ const InnerObjectNodeComponent: React.FC<{
                 console.log("enter");
                 if (autoCompletes[selected]) {
                     console.log('auto completes...');
+                    console.log("BOOO");
                     let name = autoCompletes[selected].definition.name as string;
                     if (text.split(" ")[0] === name) {
                         name = text;
                     }
                     setText(name);
                     setAutoCompletes([]);
+                    if (objectNode.text.split(" ")[0] === name) {
+                        name = objectNode.text;
+                    }
+
+                    console.log("YOOO");
+                    if (objectNode.text.split(" ")[0] === name) {
+                        name = objectNode.text;
+                    }
                     enterText(name, autoCompletes[selected].context);
                 } else {
                     console.log("else enter text=", text);
@@ -113,7 +122,12 @@ const InnerObjectNodeComponent: React.FC<{
             if (e.key === "Tab") {
                 if (autoCompletes[0]) {
                     e.preventDefault();
-                    setText(autoCompletes[0].definition.name as string);
+
+                    let name = autoCompletes[0].definition.name as string;
+                    if (objectNode.text.split(" ")[0] === name) {
+                        name = objectNode.text;
+                    }
+                    setText(name);
                     setAutoCompletes([]);
                 }
             }
@@ -222,8 +236,13 @@ const InnerObjectNodeComponent: React.FC<{
                                     selected={selected}
                                     autoCompletes={autoCompletes}
                                     selectOption={(x: ContextDefinition) => {
-                                        setText(x.definition.name as string);
-                                        enterText(x.definition.name as string, x.context);
+
+                                        let name = x.definition.name as string;
+                                        if (text.split(" ")[0] === name) {
+                                            name = text;
+                                        }
+                                        setText(name);
+                                        enterText(name, x.context);
                                         setAutoCompletes([]);
                                     }} />}
                                 {editing && error &&

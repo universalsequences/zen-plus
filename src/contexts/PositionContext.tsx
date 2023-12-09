@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
-import { Patch, IOlet, Attributes, MessageNode, Orientation, ObjectNode, Coordinate } from '@/lib/nodes/types';
+import { Patch, IOlet, Attributes, IOConnection, MessageNode, Orientation, ObjectNode, Coordinate } from '@/lib/nodes/types';
 
+const ALIGNMENT_GRID = 6;
 export interface ResizingNode {
     node: ObjectNode | MessageNode;
     offset: Coordinate;
@@ -37,6 +38,8 @@ interface PositionerContext {
     sizeIndex: SizeIndex;
     setSizeIndex: (x: SizeIndex) => void;
     scrollRef: React.MutableRefObject<HTMLDivElement | null>;
+    setDraggingSegmentation: (x: IOConnection | null) => void;
+    draggingSegmentation: IOConnection | null;
     draggingCable: DraggingCable | null;
     setDraggingCable: (x: DraggingCable | null) => void;
     draggingNode: DraggingNode | null;
@@ -113,6 +116,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     const [draggingCable, setDraggingCable] = useState<DraggingCable | null>(null);
     const [draggingNode, setDraggingNode] = useState<DraggingNode | null>(null);
     const [resizingNode, setResizingNode] = useState<ResizingNode | null>(null);
+    const [draggingSegmentation, setDraggingSegmentation] = useState<IOConnection | null>(null);
     const coordinatesRef = useRef<Coordinates>({});
     const [coordinates, setCoordinates] = useState<Coordinates>(coordinatesRef.current);
     const [zIndices, setZIndices] = useState<ZIndices>({});
@@ -188,18 +192,18 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                 let diffX2 = Math.abs(coord1.x + width1 - coord2.x);
                 let diffY2 = Math.abs(coord1.y + height1 - coord2.y);
 
-                if (distance < minDistanceX && diffX < 10) {
+                if (distance < minDistanceX && diffX < ALIGNMENT_GRID) {
                     // then we need vertical alignment
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord2.x, y2: oldCoord.y };
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
                     _updates[id].x = coord2.x;
-                } else if (distance < minDistanceY && diffY < 10) {
+                } else if (distance < minDistanceY && diffY < ALIGNMENT_GRID) {
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: oldCoord.x, y2: coord2.y };
                     yAlignmentLines = [alignmentLine];
                     minDistanceY = distance;
                     _updates[id].y = coord2.y;
-                } else if (distance < minDistanceX && diffX2 < 10) {
+                } else if (distance < minDistanceX && diffX2 < ALIGNMENT_GRID) {
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord2.x, y2: oldCoord.y };
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
@@ -274,7 +278,9 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setSizeIndex,
             resizingNode,
             setResizingNode,
-            deletePositions
+            deletePositions,
+            draggingSegmentation,
+            setDraggingSegmentation
         }}>
         {children}
     </PositionContext.Provider>;

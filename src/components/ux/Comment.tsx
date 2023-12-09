@@ -36,6 +36,7 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let size = sizeIndex[objectNode.id];
 
     useEffect(() => {
+        console.log('size changed...');
         adjustHeight();
     }, [text, size]);
 

@@ -6,7 +6,7 @@ import { Patch } from '@/lib/nodes/types';
 
 interface Props {
     isSubPatch: boolean;
-
+    hide: () => void;
     // actually no point in having this patch, cuz every patch is in their own
     // PatchContext
 
@@ -32,18 +32,21 @@ const LoadProject = (props: Props) => {
         }
         setSizeIndex(sizes);
         updatePositions(updates);
+        props.hide();
     }, [patch]);
 
     useEffect(() => {
         setPatches([...getPatches(props.isSubPatch ? "subpatch" : "patch")].reverse());
     }, []);
 
+    console.log("load project");
+
     return (
         <div className="text-xs flex flex-col h-64 w-96 select-none">
             <div className="text-base">Patches...</div>
             <div
                 style={{ backgroundColor: "#0000003f" }}
-                className="flex-1 mt-4 overflow-y-scroll p-3 border border-zinc-500">
+                className="flex-1 mt-4 overflow-y-scroll p-3 border border-zinc-900">
                 {patches.map(
                     (project, index) =>
                         <div
