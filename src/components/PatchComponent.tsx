@@ -8,7 +8,7 @@ import Cables from './Cables';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import ObjectNodeComponent from './ObjectNodeComponent';
-import { MessageType, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
+import { MessageNode, ObjectNode, Node, MessageType, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
 import MessageNodeComponent from './MessageNodeComponent';
@@ -65,9 +65,11 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     } = usePosition();
 
     const {
+        deleteNodes,
         segmentCable,
         segmentCables,
         updateConnections,
+        registerConnection,
         patch, objectNodes, messageNodes, newObjectNode, newMessageNode } = usePatch();
 
     useEffect(() => {
@@ -129,14 +131,14 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             return;
         }
         if (resizingPatch) {
-            let diffX = e.pageX - resizingPatch.startPosition.x;
-            let tokens = resizingPatch.gridTemplate.split(" ");
-            let token = tokens[index].replace("fr", "");
-            let tokenNum = parseFloat(token);
             let pageWidth = window.innerWidth;
-            let ratio = diffX / pageWidth;
-            let newToken = tokenNum - ratio * 3;
-            setGridTemplate("1fr " + newToken + "fr");
+            let leftWidthPercent = (e.pageX / pageWidth) * 100;
+            let rightWidthPercent = 100 - leftWidthPercent;
+
+            // Create the grid template string
+            let newGridTemplate = `${leftWidthPercent}% ${rightWidthPercent}%`;
+
+            setGridTemplate(newGridTemplate);
         }
         if (lockedMode) {
             return;
@@ -364,6 +366,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         let objectNode = new ObjectNodeImpl(patch);
         newObjectNode(objectNode, { ...menuPositionRef.current });
         updatePosition(objectNode.id, { ...menuPositionRef.current });
+        return objectNode;
     }, [menuPosition, objectNodes]);
 
     const createNumberBox = useCallback(() => {
@@ -377,6 +380,127 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         newMessageNode(messageNode, { ...menuPositionRef.current });
         updatePosition(messageNode.id, { ...menuPositionRef.current });
     }, [menuPosition, messageNodes]);
+
+    const encapsulate = useCallback((nodes: Node[]) => {
+        let inboundConnections = nodes.flatMap(
+            node => node.inlets.flatMap(
+                inlet => inlet.connections.filter(
+                    connection => !nodes.includes(connection.source))));
+
+        console.log("inbound connections=", inboundConnections);
+
+        let outboundConnections = nodes.flatMap(
+            node => node.outlets.flatMap(
+                outlet => outlet.connections.filter(
+                    connection => !nodes.includes(connection.destination))));
+
+        let objectNode = createObjectNode();
+        objectNode.parse("zen");
+        patch.objectNodes = patch.objectNodes.filter(
+            x => !nodes.includes(x));
+        patch.messageNodes = patch.messageNodes.filter(
+            x => !nodes.includes(x));
+
+        let subpatch = objectNode.subpatch;
+        if (!subpatch) {
+            return;
+        }
+
+        subpatch.objectNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
+        subpatch.objectNodes = subpatch.objectNodes.filter(x => x.name !== "+");
+
+        let inboundNodes = Array.from(new Set(inboundConnections.map(x => x.destination)));
+        let outboundNodes = Array.from(new Set(outboundConnections.map(x => x.source)));
+
+        console.log("in bound nodes=", inboundNodes);
+        for (let i = 0; i < inboundConnections.length; i++) {
+            let node = inboundConnections[i].destination;
+            let connection = inboundConnections[i];
+            let inputNode: ObjectNode = new ObjectNodeImpl(subpatch);
+            if (i >= 2) {
+                let position = (node as ObjectNode).position;
+                //newObjectNode(inputNode, { x: position.x, y: Math.max(0, position.y - 10) });
+                subpatch.objectNodes.push(inputNode);
+                inputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
+                inputNode.parse('in ' + (i + 1));
+            } else {
+                let n = subpatch.objectNodes.find(x => x.text === ("in " + (i + 1)));
+                if (!n) {
+                    continue;
+                }
+                inputNode = n as ObjectNode;
+            }
+            for (let inlet of node.inlets) {
+                inlet.connections.splice(inlet.connections.indexOf(connection), 1);
+            }
+            //for (let connection of inboundConnections) {
+            //   if (connection.destination === node) {
+            for (let _outlet of connection.source.outlets) {
+                _outlet.connections = _outlet.connections.filter(
+                    c => c !== connection);
+            }
+            console.log("connection.source.connect", connection.source, objectNode, objectNode.inlets[i], connection.sourceOutlet);
+            let _connection = connection.source.connect(
+                objectNode,
+                objectNode.inlets[i], connection.sourceOutlet, false);
+            registerConnection(connection.source.id, _connection);
+
+            inputNode.connect(
+                connection.destination,
+                connection.destinationInlet,
+                inputNode.outlets[0],
+                false);
+        }
+
+        for (let i = 0; i < outboundConnections.length; i++) {
+            let node = outboundConnections[i].source;
+            let connection = outboundConnections[i];
+            let outputNode: ObjectNode = new ObjectNodeImpl(subpatch);
+            if (i >= 1) {
+                let position = (node as ObjectNode).position;
+                //newObjectNode(inputNode, { x: position.x, y: Math.max(0, position.y - 10) });
+                subpatch.objectNodes.push(outputNode);
+                outputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
+                outputNode.parse('out ' + (i + 1));
+            } else {
+                let n = subpatch.objectNodes.find(x => x.text === ("out " + (i + 1)));
+                if (!n) {
+                    continue;
+                }
+                outputNode = n as ObjectNode;
+            }
+            for (let outlet of node.outlets) {
+                outlet.connections.splice(outlet.connections.indexOf(connection), 1);
+            }
+            let _connection = objectNode.connect(
+                connection.destination,
+                connection.destinationInlet,
+                objectNode.outlets[i], false);
+            registerConnection(connection.source.id, _connection);
+
+            connection.source.connect(
+                outputNode,
+                outputNode.inlets[0],
+                connection.sourceOutlet,
+                false);
+        }
+
+
+
+        for (let node of nodes) {
+            // its a object
+            node.patch = subpatch;
+            if ((node as ObjectNode).operatorContextType !== undefined) {
+                subpatch.objectNodes.push(node as ObjectNode);
+            } else {
+                subpatch.messageNodes.push(node as MessageNode);
+                // its a message
+            }
+        }
+
+        deleteNodes(nodes as (ObjectNode | MessageNode)[], true);
+    }, [patch]);
+
 
 
     let out = React.useMemo(() => {
@@ -429,6 +553,12 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             Segment All Cables
                         </ContextMenu.Item>
+                        {selectedNodes.length > 1 &&
+                            <ContextMenu.Item
+                                onClick={() => encapsulate(selectedNodes)}
+                                className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                Encapsulate ${selectedNodes.length} nodes
+                            </ContextMenu.Item>}
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
                         ref={scrollRef}

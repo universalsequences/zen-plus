@@ -209,7 +209,9 @@ this.port.postMessage({type: "ack",body: "yo"});
            }
          } else {
 //           for (let i=0; i < data.length; i++) {
+if (this.memory) {
             this.memory.set(data, idx)
+}
 //         }
 }
        } else if (e.data.type === "memory-get") {

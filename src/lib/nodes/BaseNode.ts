@@ -87,7 +87,8 @@ export class BaseNode implements Node {
         if (inlet.connectionType === ConnectionType.AUDIO &&
             outlet.connectionType === ConnectionType.AUDIO) {
             this.connectAudioNode(connection);
-        } else if (compile) {
+        } else if (compile && inlet.connectionType === ConnectionType.ZEN) {
+            console.log("connecting so recompiling");
             this.patch.recompileGraph();
         }
         return connection;
@@ -116,7 +117,12 @@ export class BaseNode implements Node {
                 x => x !== connection);
         }
 
-        this.patch.recompileGraph();
+        console.log("disconnecting so recompile");
+
+        if (connection.destinationInlet.connectionType === ConnectionType.ZEN) {
+            console.log("connecting so recompiling");
+            this.patch.recompileGraph();
+        }
     }
 
     receive(inlet: IOlet, msg: Message) {

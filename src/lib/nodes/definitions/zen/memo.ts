@@ -49,7 +49,7 @@ export const memo = (object: ObjectNode, fn: NodeFunc, ...args: Lazy[]) => {
     let id = 0;
     return (msg: (Message)): (Statement[]) => {
         out = fn(msg);
-        if (out && typeof out !== "number") {
+        if (out) {
             out.node = object;
         }
         return [out];

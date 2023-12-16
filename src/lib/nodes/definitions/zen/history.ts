@@ -1,4 +1,5 @@
 import { doc } from './doc'
+import { isForwardCycle } from '@/lib/nodes/traverse';
 import { NodeFunc } from './memo';
 import { ObjectNode, Lazy, Message } from '../../types';
 import { Operator, Statement, CompoundOperator } from './types';
@@ -45,8 +46,12 @@ doc(
     {
         numberOfInlets: 1,
         numberOfOutlets: 1,
-        description: "history"
+        attributes: {
+            "initial": 0
+        },
+        description: "history",
     });
+
 
 export const zen_history = (object: ObjectNode) => {
     let h: History;
@@ -56,32 +61,50 @@ export const zen_history = (object: ObjectNode) => {
     // 2. we want to retrieve data out of the history to use
     return (x: Message): Statement[] => {
         if (h == undefined) {
-            h = history();
+            h = history(object.attributes["initial"] as number);
         }
 
         let inputStatement: Statement = x as Statement;
 
         // we need to determine if the statement we are receiving contains
         // THIS history
-        let loopedHistory = containsSameHistory(h, inputStatement, true);
-        if (loopedHistory && Array.isArray(loopedHistory)) {
-            let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator
-            let historyInput = compoundOperator.historyInput;
-            // we need to determine if it has the history input set correctly
-            if (historyInput) {
-                // finally check one more layer down..
-                let contains = containsSameHistory(h, historyInput, false);
-                if (contains) {
-                    let newHistory: Statement = [compoundOperator, historyInput] as Statement;
-                    newHistory.node = object;
+        let a = new Date().getTime();
+        let isCycle = object.isCycle !== undefined ? object.isCycle : isForwardCycle(object);
+        object.isCycle = isCycle;
+        if (!isCycle) {
+            if (x !== "bang") {
+                let statement: Statement = [{ name: "history", history: h, historyInput: x as Statement }];
+                statement.node = object;
+                let _statement = [statement[0], x as Statement] as Statement; // as Statement];
+                _statement.node = object;
+                return [(_statement as Statement)]; //as Statement[];
+            } else {
+                return [];
 
-                    // ensure we aren't double adding...?
-                    object.patch.newHistoryDependency(newHistory, object);
-                    console.log('create new history dependency...');
-                    return [];
-                } else {
-                    console.log("skipped altogether... not enough histories...");
-                    return [];
+            }
+        }
+        if (isCycle) {
+
+            let b = new Date().getTime();
+
+            let loopedHistory = containsSameHistory(h, inputStatement, true);
+            let c = new Date().getTime();
+            if (loopedHistory && Array.isArray(loopedHistory)) {
+                let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator
+                let historyInput = compoundOperator.historyInput;
+                // we need to determine if it has the history input set correctly
+                if (historyInput) {
+                    // finally check one more layer down..
+                    let contains = containsSameHistory(h, historyInput, false);
+                    if (contains) {
+                        let newHistory: Statement = [compoundOperator, inputStatement] as Statement;
+                        newHistory.node = object;
+                        // ensure we aren't double adding...?
+                        object.patch.newHistoryDependency(newHistory, object);
+                        return [];
+                    } else {
+                        return [];
+                    }
                 }
             }
         }
@@ -90,20 +113,22 @@ export const zen_history = (object: ObjectNode) => {
             // this refers to the initial pass. in this case, we just want to pass the
             // history's value through: i.e. history()
             let statement: Statement = [{ name: "history", history: h }];
-            console.log('1. sending initial history statement=', statement);
             return [statement];
         } else {
             // this refers to when this node receives a statement in the inlet-- we need
             // to place this statement in the dependency array in Patcher (as they will be placed)
             // at the start of the whole program
             let statement: Statement = [{ name: "history", history: h, historyInput: x as Statement }];
-            console.log('2. sending initial history statement=', statement);
             return [statement];
         }
     };
 };
 
-const containsSameHistory = (history: History, statement: Statement, needsInput: boolean): Statement | null => {
+const containsSameHistory = (history: History, statement: Statement, needsInput: boolean, depth: number = 0): Statement | null => {
+    if (depth > 50) {
+        // max depth...
+        return null;
+    }
     if (Array.isArray(statement)) {
         let [operator, ...statements] = statement;
         if ((operator as CompoundOperator).history === history) {
@@ -115,13 +140,12 @@ const containsSameHistory = (history: History, statement: Statement, needsInput:
             }
         }
         for (let statement of statements) {
-            let s = containsSameHistory(history, statement as Statement, needsInput);
+            let s = containsSameHistory(history, statement as Statement, needsInput, depth + 1);
             if (s) {
                 return s;
             }
         }
         return null;
-
     }
     if ((statement as CompoundOperator).history === history) {
         return statement;

@@ -75,6 +75,9 @@ const MessageBox: React.FC<{
         <div
             ref={fullDiv}
             onMouseDown={(e: any) => {
+                if (lockedModeRef.current) {
+                    e.stopPropagation();
+                }
                 startPosition.current = { ...messageNode.position };
             }}
             onClick={(e: any) => {

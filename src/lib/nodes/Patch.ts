@@ -1,7 +1,8 @@
 import { Patch, SubPatch, PatchType, SerializedPatch, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
-import { ZenWorklet } from '@/lib/zen/worklet';
+import { initMemory, ZenWorklet } from '@/lib/zen/worklet';
 import { traverseForwards } from './traverse';
 import { ZenGraph } from '@/lib/zen/zen'
+import { OperatorContextType } from './context';
 import ObjectNodeImpl from './ObjectNode';
 import MessageNodeImpl from './MessageNode';
 import { Connections } from '@/contexts/PatchContext';
@@ -12,6 +13,8 @@ import { compileStatement, printStatement } from './definitions/zen/AST';
 import { publish } from '@/lib/messaging/queue';
 
 interface GraphContext {
+    splitter?: ChannelSplitterNode;
+    merger?: ChannelMergerNode;
     graph: ZenGraph;
     workletNode: AudioWorkletNode;
 }
@@ -34,10 +37,12 @@ export class PatchImpl implements Patch {
     setAudioWorklet?: (x: AudioWorkletNode | null) => void;
     outputStatements: Statement[];
     skipRecompile: boolean;
+    skipRecompile2: boolean;
 
     constructor() {
         this.id = uuid();
         this.skipRecompile = false;
+        this.skipRecompile2 = false;
         this.historyDependencies = [];
         this.counter = 0;
         this.type = PatchType.Zen;
@@ -68,6 +73,14 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph(recompileGraph?: boolean) {
+        if (this.name === undefined) {
+            console.log("recompile started =", this.name || this.id, new Date().getTime());
+        }
+        let startTime = new Date().getTime();
+        if (this.skipRecompile || this.skipRecompile2) {
+            return;
+        }
+        this.skipRecompile2 = true;
         this.disconnectGraph();
         this.outputStatements = [];
         this.storedStatement = undefined;
@@ -75,8 +88,11 @@ export class PatchImpl implements Patch {
         this.waiting = true;
 
         // re-parse every node so that we "start from scratch"
-        let objectNodes = this.getAllNodes();
+        let objectNodes = this.objectNodes; //getAllNodes();
         for (let node of objectNodes) {
+            if (node.operatorContextType !== OperatorContextType.ZEN) {
+                continue;
+            }
             if (node.name === "zen") {
                 continue;
             }
@@ -92,7 +108,8 @@ export class PatchImpl implements Patch {
                 node.subpatch.recompileGraph(true);
             }
         }
-        let sourceNodes = objectNodes.filter(node => node.name === "history");
+
+        let sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param");
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -102,7 +119,7 @@ export class PatchImpl implements Patch {
 
 
         this.waiting = false;
-        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "history") || node.name === "argument" || node.needsLoad);
+        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "param" && node.name !== "history") || node.name === "argument" || node.needsLoad);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -115,7 +132,8 @@ export class PatchImpl implements Patch {
                 }
             });
 
-        this.sendNumberMessages()
+        // this.sendNumberMessages()
+
         if (this.storedStatement) {
             this.compile(this.storedStatement);
         }
@@ -124,16 +142,23 @@ export class PatchImpl implements Patch {
         matricesAndBuffers.forEach(
             matrix => matrix.receive(matrix.inlets[0], "bang"));
 
-
+        this.skipRecompile2 = false;
     }
 
     disconnectGraph() {
-        this.worklets.forEach(({ workletNode, graph }) => {
+        this.worklets.forEach(({ workletNode, splitter, graph, merger }) => {
             workletNode.port.postMessage({
                 type: "dispose"
             });
             workletNode.disconnect();
             graph.context.disposed = true;
+            workletNode.port.onmessage = null;
+            if (splitter) {
+                splitter.disconnect();
+            }
+            if (merger) {
+                merger.disconnect();
+            }
         });
         this.worklets.length = 0;
     }
@@ -148,81 +173,127 @@ export class PatchImpl implements Patch {
                 }
             }
         }
+        let nodes = this.getAllNodes();
+        let attruis = nodes.filter(x => x.name === "attrui");
+        for (let attrui of attruis) {
+            attrui.receive(attrui.inlets[0], "bang");
+        }
     }
 
     compile(statement: Statement, outputNumber?: number) {
-        return new Promise(resolve => {
-            if (outputNumber !== undefined) {
-                this.outputStatements[outputNumber - 1] = statement;
-                let numOutputs = this.objectNodes.filter(x => x.name === "out").length;
-                let numFound = this.outputStatements.filter(x => x !== undefined).length;
-                if (numFound === numOutputs) {
-                    statement = ["s" as Operator, ... this.outputStatements];
-                }
+        if (outputNumber !== undefined) {
+            this.outputStatements[outputNumber - 1] = statement;
+            let numOutputs = this.objectNodes.filter(x => x.name === "out").length;
+            let numFound = this.outputStatements.filter(x => x !== undefined).length;
+            if (numFound === numOutputs) {
+                statement = ["s" as Operator, ... this.outputStatements];
             }
+        }
 
-            if (this.waiting) {
-                this.storedStatement = statement;
-                return;
+        if (this.waiting) {
+            this.storedStatement = statement;
+            return;
+        }
+        if (this.skipRecompile) {
+            this.storedStatement = statement;
+            return;
+        }
+
+        this.storedStatement = undefined;
+        this.counter++;
+        let id = this.counter;
+
+        setTimeout(() => {
+            if (id !== this.counter) {
+                return
             }
-            if (this.skipRecompile) {
-                this.storedStatement = statement;
-                return;
+            if (this.historyDependencies.length > 0) {
+                let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
+                let _statement = ["s" as Operator];
+                for (let dependency of historyDependencies) {
+                    _statement.push(dependency as any);
+                }
+                _statement.push(statement as any);
+                statement = _statement as Statement;
+                //statement = ["s" as Operator, ...historyDependencies, statement]
             }
+            console.log("statement to compile=", statement);
+            let ast = compileStatement(statement);
+            let printed = printStatement(statement);
 
-            this.storedStatement = undefined;
-            this.counter++;
-            let id = this.counter;
+            this.disconnectGraph();
 
-            setTimeout(() => {
-                if (id !== this.counter) {
-                    return
-                }
-                if (this.historyDependencies.length > 0) {
-                    let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
-                    statement = ["s" as Operator, ...historyDependencies, statement]
-                }
-                console.log("statement to compile=", statement);
-                let ast = compileStatement(statement);
-                let printed = printStatement(statement);
+            let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
+            createWorklet(
+                this.audioContext,
+                zenGraph,
+                'zen' + id)
+                .then(
+                    (ret) => {
 
-                this.disconnectGraph();
+                        console.log("worklet", new Date().getTime());
+                        ret = ret as ZenWorklet;
+                        this.audioNode = ret.workletNode;
+                        let worklet = ret.workletNode;
 
-                let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
-                console.log("ast=", zenGraph);
-                console.log("creating worklet...");
+                        ret.workletNode.port.onmessage = (e) => {
+                            if (e.data.type === "wasm-ready") {
+                                initMemory(zenGraph.context, worklet)
+                                worklet.port.postMessage({ type: "ready" });
+                                console.log('wasm ready');
+                                this.skipRecompile = true;
+                                this.sendNumberMessages();
+                                let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
+                                matricesAndBuffers.forEach(
+                                    matrix => matrix.receive(matrix.inlets[0], "bang"));
 
-                createWorklet(
-                    this.audioContext,
-                    zenGraph,
-                    'zen' + id)
-                    .then(
-                        (ret) => {
-                            console.log("CREATED WORKLET!");
-                            ret = ret as ZenWorklet;
-                            this.audioNode = ret.workletNode;
-                            this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
+                                this.skipRecompile = false;
 
-                            ret.workletNode.port.onmessage = (e) => {
-                                publish(e.data.type, [e.data.subType, e.data.body]);
-                            };
+
+                            }
+                            publish(e.data.type, [e.data.subType, e.data.body]);
+                        };
+
+                        console.log(ret.workletNode);
+                        if (ret.workletNode.channelCount <= 1) {
                             ret.workletNode.connect(this.audioContext.destination);
-                            this.setupAudioNode(this.audioNode);
-                            if (this.setAudioWorklet) {
-                                this.setAudioWorklet(ret.workletNode);
+                            this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
+                        } else {
+                            let splitter = this.audioContext.createChannelSplitter(ret.workletNode.channelCount);
+                            try {
+                                ret.workletNode.connect(splitter);
+                                let merger = this.audioContext.createChannelMerger(this.audioContext.destination.maxChannelCount);
+                                splitter.connect(merger, 0, 0);
+                                splitter.connect(merger, 1, 1);
+                                merger.connect(this.audioContext.destination);
+                                this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph, splitter, merger });
+                            } catch (E) {
+                                console.log('error connecting', E);
                             }
-                            for (let messageNode of this.messageNodes) {
-                                if (messageNode.message) {
-                                    messageNode.receive(messageNode.inlets[1], messageNode.message);
-                                }
+                        }
+
+                        this.setupAudioNode(this.audioNode);
+                        if (this.setAudioWorklet) {
+                            this.setAudioWorklet(ret.workletNode);
+                        }
+
+                        for (let messageNode of this.messageNodes) {
+                            if (messageNode.message) {
+                                messageNode.receive(messageNode.inlets[1], messageNode.message);
                             }
-                            this.sendNumberMessages();
-                            resolve(true);
-                        })
-                    .catch(e => {
-                    });
-            }, 250);
-        });
+                        }
+                        this.sendNumberMessages();
+                        this.skipRecompile = true;
+                        let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
+                        matricesAndBuffers.forEach(
+                            matrix => matrix.receive(matrix.inlets[0], "bang"));
+
+                        this.skipRecompile = false;
+
+                    })
+                .catch(e => {
+                });
+        }, 20);
     }
 
     setupAudioNode(audioNode: AudioNode) {
@@ -256,8 +327,8 @@ export class PatchImpl implements Patch {
         };
     }
 
-    fromJSON(x: SerializedPatch): Connections {
-
+    fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
+        this.skipRecompile = true;
         this.name = x.name;
 
         this.objectNodes = [];
@@ -303,7 +374,7 @@ export class PatchImpl implements Patch {
             }
 
             if (!found) {
-                objectNode.fromJSON(serializedNode);
+                objectNode.fromJSON(serializedNode, isPreset);
             }
 
             this.objectNodes.push(objectNode);
@@ -342,27 +413,29 @@ export class PatchImpl implements Patch {
             i++;
         }
 
-        this.skipRecompile = true;
-        this.recompileGraph();
-        this.skipRecompile = false;
-        if (this.storedStatement) {
-            this.compile(this.storedStatement);
-        }
 
         this.missedConnections = missedConnections;
         let _connections: Connections = {};
-        for (let node of [... this.objectNodes, ... this.messageNodes]) {
-            let oldId = node.id;
-            let newId = plusUUID(oldId, currentId);
-            registerUUID(newId);
-            _connections[newId] = connections[oldId];
-            node.id = newId;
+        if (isPreset) {
+            for (let node of [... this.objectNodes, ... this.messageNodes]) {
+                let oldId = node.id;
+                let newId = plusUUID(oldId, currentId);
+                registerUUID(newId);
+                _connections[newId] = connections[oldId];
+                node.id = newId;
+            }
         }
 
         for (let messageNode of this.messageNodes) {
             if (messageNode.message) {
                 messageNode.receive(messageNode.inlets[1], messageNode.message);
             }
+        }
+        this.skipRecompile = false;
+
+
+        if (!(this as Patch as SubPatch).parentNode) {
+            this.recompileGraph();
         }
         return _connections;
     }

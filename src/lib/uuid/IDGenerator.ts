@@ -17,7 +17,6 @@ class IdGenerator {
     register(id: string) {
         let num = parseInt(id, 36);
         if (num > this.currentId) {
-            console.log('registering currentId=%s', num + 1, this.currentId);
             this.currentId = num + 1;
         }
     }

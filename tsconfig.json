@@ -1,3 +1,4 @@
+
 {
   "compilerOptions": {
     "target": "es5",
@@ -13,6 +14,7 @@
     "moduleResolution":"node",
     "isolatedModules": true,
     "jsx": "preserve",
+      "types": ["@webgpu/types"],
     "incremental": true,
     "plugins": [
       {

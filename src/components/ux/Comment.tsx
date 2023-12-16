@@ -28,7 +28,6 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             // Use setTimeout to allow the browser to render the height reset
             //setTimeout(() => {
             textarea.style.height = `${textarea.scrollHeight - totalVerticalPaddingAndBorder}px`;
-            console.log('adjusting height=', textarea.style.height);
             //}, 0);
         }
     };
@@ -36,7 +35,6 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let size = sizeIndex[objectNode.id];
 
     useEffect(() => {
-        console.log('size changed...');
         adjustHeight();
     }, [text, size]);
 

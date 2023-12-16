@@ -1,8 +1,9 @@
 import { OperatorContextType, OperatorContext, getOperatorContext } from './context';
+import { Statement, Operator } from './definitions/zen/types';
 import { Definition } from '../docs/docs';
 import { BaseNode } from './BaseNode';
 import { v4 as uuidv4 } from 'uuid';
-import { uuid } from '@/lib/uuid/IDGenerator';
+import { uuid, registerUUID } from '@/lib/uuid/IDGenerator';
 import { SerializedPatch, Size } from './types';
 
 import {
@@ -35,6 +36,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     id: Identifier;
     inlets: IOlet[];
     outlets: IOlet[];
+    isCycle?: boolean;
     position: Coordinate;
     zIndex: number;
     name?: string;
@@ -118,6 +120,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             name = "zen";
         }
 
+        this.isCycle = undefined;
+
         let definition: Definition | null = context.lookupDoc(name);
 
         this.inlets.forEach(x => x.hidden = false);
@@ -164,13 +168,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         this.fn = instanceFunction;
 
 
-        if (compile && this.name !== "zen") {
-            this.patch.recompileGraph();
+        if (compile && this.name !== "zen" && this.operatorContextType === OperatorContextType.ZEN) {
+            if (!this.patch.skipRecompile) {
+                this.patch.recompileGraph();
+            }
         }
 
         if (patchPreset && this.subpatch) {
             this.subpatch.objectNodes = [];
-            this.subpatch.fromJSON(patchPreset);
+            this.subpatch.fromJSON(patchPreset, true);
         }
         return true;
     }
@@ -338,8 +344,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 // we need to pass it off to subpatch
                 let subpatchProcess = this.subpatch.processMessageForParam(message);
                 if (subpatchProcess) {
-                    return true;
                 }
+                return true;
             }
             if (this.attributes[attributeName] === undefined) {
                 return;
@@ -350,6 +356,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             } else {
                 this.setAttribute(attributeName, attributesValue);
             }
+            return true;
         }
 
         return false;
@@ -364,6 +371,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
+        if (this.name !== "fluid" && this.name !== "data") {
+            //console.log(this.name, "receive", this.inlets.indexOf(inlet), message);
+        }
+
         super.receive(inlet, message);
 
         // these are subpatches
@@ -376,10 +387,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         if (indexOf == 0) {
             // we are sending through the main inlet, i.e. run the function
-            if (this.inlets.some((x, i) => x.lastMessage === undefined)) {
+            if (this.inlets.some((x, i) => x.lastMessage === undefined) && this.name !== "out") {
                 return;
             }
+            let a = new Date().getTime();
             let ret: Message[] = this.fn(message);
+            let b = new Date().getTime();
+            if (b - a > 5) {
+                //console.log("fn=%s patch=%s took %s ms", this.text, this.patch.name || this.patch.id, b - a, ret);
+            }
             for (let i = 0; i < ret.length; i++) {
                 if (this.outlets[i]) {
                     this.send(this.outlets[i], ret[i]);
@@ -390,16 +406,20 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             let argumentNumber = indexOf - 1;
             this.arguments[argumentNumber] = message;
 
-            if (this.inlets.some((c, i) => c.lastMessage === undefined)) {
+            if (this.inlets.some((c, i) => c.lastMessage === undefined) && this.name !== "out") {
                 return;
             }
 
             // if we've already received a message in left-most inlet, we
             // run the function (assuming its a "hot inlet" for now)
-
             let lastMessage = this.inlets[0] && this.inlets[0].lastMessage;
-            if (lastMessage) {
+            if (lastMessage !== undefined) {
+                let a = new Date().getTime();
                 let ret: Message[] = this.fn(lastMessage);
+                let b = new Date().getTime();
+                if (b - a > 5) {
+                    //console.log("fn=%s patch=%s took %s ms", this.text, this.patch.name || this.patch.id, b - a, ret);
+                }
                 for (let i = 0; i < ret.length; i++) {
                     if (this.outlets[i]) {
                         this.send(this.outlets[i], ret[i]);
@@ -435,7 +455,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         return json;
     }
 
-    fromJSON(json: SerializedObjectNode) {
+    fromJSON(json: SerializedObjectNode, isPreset?: boolean) {
         if (json.buffer) {
             this.buffer = new Float32Array(json.buffer);
         }
@@ -455,10 +475,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             }
         }
         this.id = json.id;
+        registerUUID(this.id);
 
         if (json.subpatch && this.subpatch) {
             this.subpatch.objectNodes = [];
-            this.subpatch.fromJSON(json.subpatch);
+            this.subpatch.fromJSON(json.subpatch, isPreset);
         }
     }
 

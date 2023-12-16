@@ -1,8 +1,10 @@
 import { API } from '@/lib/nodes/context';
+import { interval } from './metro';
 import { order } from './order';
 import { math } from './math';
 import { lists } from './list';
 import { matrix } from './matrix';
+import { attrui } from './attrui';
 import { buffer } from './buffer';
 import { comment } from './comment';
 import { subscribe } from './messages';
@@ -14,5 +16,7 @@ export const api: API = {
     comment,
     ...lists,
     ...math,
-    ...order
+    ...order,
+    interval,
+    attrui
 };

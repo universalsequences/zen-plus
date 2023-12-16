@@ -5,6 +5,9 @@ import * as audio_docs from '@/lib/nodes/definitions/audio/doc';
 import * as audio_api from '@/lib/nodes/definitions/audio/index';
 import * as core_docs from '@/lib/nodes/definitions/core/doc';
 import * as core_api from '@/lib/nodes/definitions/core/index';
+import * as gpu_docs from '@/lib/nodes/definitions/webgpu/doc';
+import * as gpu_api from '@/lib/nodes/definitions/webgpu/index';
+
 import * as docs from '@/lib/docs/docs';
 
 export type API = {
@@ -14,28 +17,32 @@ export type API = {
 export enum OperatorContextType {
     ZEN,
     AUDIO,
-    CORE
+    CORE,
+    WEBGPU
 }
 
 export const getAllAPIs = (): API[] => {
     let zen = getOperatorContext(OperatorContextType.ZEN);
     let audio = getOperatorContext(OperatorContextType.AUDIO);
     let core = getOperatorContext(OperatorContextType.CORE);
-    return [zen.api, audio.api, core.api];
+    let gpu = getOperatorContext(OperatorContextType.WEBGPU);
+    return [zen.api, audio.api, core.api, gpu.api];
 };
 
 export const getAllDefinitions = (): docs.API[] => {
     let zen = getOperatorContext(OperatorContextType.ZEN);
     let audio = getOperatorContext(OperatorContextType.AUDIO);
     let core = getOperatorContext(OperatorContextType.CORE);
-    return [zen.definitions, audio.definitions, core.definitions];
+    let gpu = getOperatorContext(OperatorContextType.WEBGPU);
+    return [zen.definitions, audio.definitions, core.definitions, gpu.definitions];
 };
 
 export const getAllContexts = (): OperatorContext[] => {
     let zen = getOperatorContext(OperatorContextType.ZEN);
     let audio = getOperatorContext(OperatorContextType.AUDIO);
     let core = getOperatorContext(OperatorContextType.CORE);
-    let contexts = [zen, audio, core];
+    let gpu = getOperatorContext(OperatorContextType.WEBGPU);
+    let contexts = [zen, audio, core, gpu];
     return contexts;
 };
 
@@ -53,6 +60,8 @@ export const getContextName = (type?: OperatorContextType): string | null => {
         return "audio";
     } else if (type === OperatorContextType.CORE) {
         return "core";
+    } else if (type === OperatorContextType.WEBGPU) {
+        return "webgpu";
     } else {
         return null;
     }
@@ -72,6 +81,13 @@ export const getOperatorContext = (type: OperatorContextType): OperatorContext =
             definitions: audio_docs.api,
             lookupDoc: audio_docs.lookupDoc,
             api: audio_api.api
+        };
+    } else if (type === OperatorContextType.WEBGPU) {
+        return {
+            type,
+            definitions: gpu_docs.api,
+            lookupDoc: gpu_docs.lookupDoc,
+            api: gpu_api.api
         };
     } else {
         return {

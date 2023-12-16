@@ -78,15 +78,8 @@ export const history = (val?: number, params?: HistoryParams, debugName?: string
             let code = '';
             let _variable: string = historyVar;
             if (_input) {
-
-                /*
-                if (${_reset.variable} > 0) {
-                  memory[${IDX}] = 0;
-                }
-                */
                 let [newVariable] = context.useVariables("histVal");
                 code = `
-// history insert
 memory[${IDX}] = ${_input.variable};
 `;
                 if (!params || !params.inline) {
@@ -99,7 +92,6 @@ memory[${IDX}] = ${_input.variable};
                     code = '';
                 }
                 _variable = newVariable;
-                code = "/* begin history emit */ " + code + " /* end history emit */";
                 let newCode = emitCode(context, code, _variable, _input, _reset);
                 code = newCode;
             }
@@ -120,16 +112,9 @@ memory[${IDX}] = ${_input.variable};
                 _params = [_history, ..._params];
             }
 
-
             if (!historyDef.includes("*")) {
                 outerHistories = [historyDef, ...outerHistories];
             }
-            /*
-            console.log("INPUT of history!=", _input);
-            if (_input && (context as LoopContext).context) {
-                code = _input.code + code;
-            }
-            */
             let out: Generated = {
                 code,
                 variable: _variable,
@@ -171,7 +156,6 @@ memory[${IDX}] = ${_input.variable};
                 value: val,
                 time
             }
-
             context.postMessage({
                 type: messageType,
                 body

@@ -1,4 +1,5 @@
 import { BlockGen } from '../zen';
+import { ParamGen, param } from '@/lib/zen/index';
 import { OperatorContextType } from './context';
 import { Connections } from '@/contexts/PatchContext';
 import { Statement } from './definitions/zen/types';
@@ -109,6 +110,9 @@ export type ObjectNode = Positioned & Node & {
     useAudioNode: (x: AudioNode) => void;
     operatorContextType: OperatorContextType;
     needsLoad?: boolean;
+    storedMessage?: Message;
+    param?: ParamGen;
+    isCycle?: boolean;
 }
 
 export type MessageNode = Positioned & Node & {
@@ -136,10 +140,10 @@ export type Patch = Identifiable & {
     getAllMessageNodes: () => MessageNode[];
     newHistoryDependency: (x: Statement, o: ObjectNode) => void;
     getJSON: () => SerializedPatch;
-    fromJSON: (x: SerializedPatch) => Connections;
+    fromJSON: (x: SerializedPatch, isPreset?: boolean) => Connections;
     name?: string;
     skipRecompile: boolean;
-
+    skipRecompile2: boolean;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
     onNewMessage?: (id: string, value: Message) => void;
 }

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import { OperatorContext, OperatorContextType, getAllContexts, getOperatorContext } from '@/lib/nodes/context';
 import { ContextDefinition } from '@/hooks/useAutoComplete';
 import AutoCompletes from './AutoCompletes';
@@ -15,7 +16,7 @@ import { usePatch } from '@/contexts/PatchContext';
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const { lockedMode, selectedNodes, setSelectedNodes } = useSelection();
-    const { sizeIndexRef } = usePosition();
+    const { updatePosition, sizeIndexRef } = usePosition();
 
     let lockedModeRef = useRef(lockedMode);
     useEffect(() => {
@@ -29,6 +30,7 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
             sizeIndexRef={sizeIndexRef}
             objectNode={objectNode}
             setSelectedNodes={setSelectedNodes}
+            updatePosition={updatePosition}
             isSelected={isSelected}
         />
     }, [objectNode, setSelectedNodes, isSelected]);
@@ -40,10 +42,12 @@ const InnerObjectNodeComponent: React.FC<{
     isSelected: boolean,
     lockedModeRef: React.MutableRefObject<boolean>,
     sizeIndexRef: React.MutableRefObject<SizeIndex>,
+    updatePosition: (id: string, position: Coordinate) => void;
     setSelectedNodes: (x: (ObjectNode | MessageNode)[]) => void,
     objectNode: ObjectNode
 }> =
     ({
+        updatePosition,
         lockedModeRef,
         sizeIndexRef,
         isSelected,
@@ -54,7 +58,7 @@ const InnerObjectNodeComponent: React.FC<{
         const inputRef = useRef<HTMLInputElement | null>(null);
         const [selected, setSelected] = useState(0);
 
-        const { setPatch } = usePatch();
+        const { newObjectNode, setPatch } = usePatch();
         const [editing, setEditing] = useState(objectNode.text === "");
         const [error, setError] = useState<string | null>(null);
         const [text, setText] = useState(objectNode.subpatch ? objectNode.text.replace("zen", objectNode.subpatch.name || "zen") : objectNode.text);
@@ -133,6 +137,27 @@ const InnerObjectNodeComponent: React.FC<{
             }
         }, [text, selected, setAutoCompletes, autoCompletes, setText, objectNode, setError, setEditing, setParsedText]);
 
+        const duplicate = useCallback(() => {
+            let copied = new ObjectNodeImpl(objectNode.patch);
+            copied.position.x = objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
+            copied.position.y = objectNode.position.y;
+            if (objectNode.name === "zen") {
+                copied.parse("zen");
+                let json = objectNode.getJSON();
+                if (copied.subpatch && json.subpatch) {
+                    copied.subpatch.fromJSON(
+                        json.subpatch,
+                        true);
+                }
+            } else {
+                copied.parse(objectNode.text);
+            }
+            console.log("copied position=", copied.position);
+            newObjectNode(copied, copied.position);
+            updatePosition(copied.id, copied.position);
+
+        }, [objectNode, newObjectNode]);
+
         useEffect(() => {
             // TODO: dont set timeout... this is a hack
             setTimeout(() => {
@@ -201,8 +226,13 @@ const InnerObjectNodeComponent: React.FC<{
                 <ContextMenu.Root>
                     <ContextMenu.Content
                         style={{ zIndex: 10000000000000 }}
-                        color="indigo" className="object-context rounded-lg">
-                        <Attributes node={objectNode} />
+                        color="indigo" className="object-context rounded-lg p-2 text-xs">
+                        <ContextMenu.Item
+                            onClick={duplicate}
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                            Duplicate
+                        </ContextMenu.Item>
+
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
                         className="ContextMenuTrigger relative">

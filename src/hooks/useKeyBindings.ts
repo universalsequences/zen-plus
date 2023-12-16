@@ -28,6 +28,9 @@ export const useKeyBindings = () => {
         if (e.key === "e" && e.metaKey) {
             setLockedMode(!lockedMode);
         }
+        if (e.key === "r" && e.metaKey && selectedConnection) {
+            e.preventDefault();
+        }
         if (e.key === "y" && e.metaKey && selectedConnection) {
             e.preventDefault();
             segmentSelectedCable(selectedConnection);

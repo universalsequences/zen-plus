@@ -184,9 +184,7 @@ body, html {
 
 
 div[data-radix-popper-content-wrapper] {
-    pointer-events: none;
     div,span {
-        pointer-events: none;
     }
 }
 
@@ -245,6 +243,7 @@ div[data-radix-popper-content-wrapper] {
     background-color: #ddfff742;
     border: 1px solid #ffffff2b;
     backdrop-filter: blur(8px);
+    z-index: 1000000000000000;
 }
 
 textarea {

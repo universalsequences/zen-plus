@@ -20,7 +20,7 @@ interface PatcherContext {
     segmentCables: (sizeIndex: SizeIndex) => void;
     loadProject: (x: Project) => void;
     updateConnections: (x: Connections) => void;
-    deleteNodes: (x: (ObjectNode | MessageNode)[]) => void;
+    deleteNodes: (x: (ObjectNode | MessageNode)[], shallow?: boolean) => void;
     connections: Connections;
     registerConnection: (x: string, connection: IOConnection) => void;
     deleteConnection: (id: string, connection: IOConnection) => void;
@@ -97,7 +97,9 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     }, [patch, setObjectNodes, setMessageNodes])
 
     const segmentCable = useCallback((connection: IOConnection, segment: number) => {
-        connection.segmentation = segment;
+        if (segment !== undefined && !isNaN(segment)) {
+            connection.segmentation = segment;
+        }
         setConnections({ ...connections });
     }, [setConnections, connections]);
 
@@ -105,7 +107,10 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         for (let id in connections) {
             for (let connection of connections[id]) {
                 if (connection.segmentation === undefined) {
-                    connection.segmentation = getSegmentation(connection, sizeIndex);
+                    let segment = getSegmentation(connection, sizeIndex);
+                    if (segment !== undefined && !isNaN(segment)) {
+                        connection.segmentation = segment;
+                    }
                 }
             }
         }
@@ -140,7 +145,17 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         setConnections({ ...connectionsRef.current });
     }, [setConnections, connections]);
 
-    const deleteNodes = useCallback((nodes: (ObjectNode | MessageNode)[]) => {
+    const deleteNodes = useCallback((nodes: (ObjectNode | MessageNode)[], shallow?: boolean) => {
+        if (shallow) {
+            patch.objectNodes = patch.objectNodes.filter(
+                x => !nodes.includes(x));
+            patch.messageNodes = patch.messageNodes.filter(
+                x => !nodes.includes(x));
+
+            setObjectNodes([...patch.objectNodes]);
+            setMessageNodes([...patch.messageNodes]);
+            return;
+        }
         patch.objectNodes = patch.objectNodes.filter(
             x => !nodes.includes(x));
         patch.messageNodes = patch.messageNodes.filter(

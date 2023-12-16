@@ -1,4 +1,5 @@
 import Matrix from './Matrix';
+import AttrUI from './AttrUI';
 import React from 'react';
 import NumberTilde from './NumberTilde';
 import ScopeTilde from './ScopeTilde';
@@ -20,5 +21,6 @@ export const index: ComponentIndex = {
     comment: Comment,
     "number~": NumberTilde,
     "scope~": ScopeTilde,
-    "buffer": Audio
+    "buffer": Audio,
+    "attrui": AttrUI
 };

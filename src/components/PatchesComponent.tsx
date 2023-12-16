@@ -15,6 +15,11 @@ export default function PatchesComponent() {
     let { patches, gridTemplate } = usePatches();
     let { lastResizingTime, setSelection, setSelectedNodes, setSelectedConnection, selection } = useSelection();
 
+    if (patches[0]) {
+        let ids = patches[0].getAllNodes().map(x => x.id);
+        console.log("all ids=", ids.length, new Set(ids).size);
+    }
+
     const onClick = useCallback((e: any) => {
         if (e.button == 2) {
             return;

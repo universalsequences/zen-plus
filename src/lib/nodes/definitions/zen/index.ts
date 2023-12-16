@@ -22,7 +22,7 @@ doc(
     'out',
     {
         description: "output of patch",
-        numberOfInlets: 2,
+        numberOfInlets: 3,
         numberOfOutlets: 0,
     });
 

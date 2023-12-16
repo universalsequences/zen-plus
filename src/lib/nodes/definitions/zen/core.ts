@@ -36,25 +36,33 @@ doc(
 );
 
 export const zen_param = (object: ObjectNode, name: Lazy) => {
-    object.needsLoad = true;
+    // object.needsLoad = true;
+    if (object.attributes["default"] === undefined) {
+        object.attributes["default"] = 0;
+    }
 
-    let p: ParamGen;
-    // how do we even keep track of the last chosen parameter if this isnt a message object...
-
+    let _param: ParamGen;
     return (x: Message): Statement[] => {
-        if (p === undefined) {
-            p = param(0, name() as string);
+        if (_param === undefined) {
+            let defaultValue = object.attributes["default"] as number;
+            if (object.storedMessage !== undefined) {
+                _param = param(object.storedMessage as number, name() as string);
+            } else {
+                _param = param(defaultValue, name() as string);
+            }
         }
         if (typeof x === "number") {
-            p.set!(x);
+            object.storedMessage = x;
+            _param.set!(x);
             return [];
         }
         let out: Statement = [{
             name: "param",
-            param: p,
+            param: _param,
             value: 0
         }];
         out.node = object;
+        object.patch.newHistoryDependency(out, object);
         return [out];
     };
 };

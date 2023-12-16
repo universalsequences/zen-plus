@@ -75,13 +75,19 @@ const PatchDropdown = React.memo((props: Props) => {
                         <Dialog.Trigger
                         >
                             <DropdownMenu.Item
-                                onClick={() => setOption(Option.Save)}
-                                className="DropdownMenuItem flex cursor-pointer">
+                                onClick={() => {
+                                    console.log("onc lick called for save");
+                                    setOption(Option.Save);
+                                }}
+                                className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
                                 Save <div className="RightSlot">⌘+S</div>
                             </DropdownMenu.Item>
                             <DropdownMenu.Item
-                                onClick={() => setOption(Option.Load)}
-                                className="DropdownMenuItem flex cursor-pointer">
+                                onClick={() => {
+                                    console.log("onc lick called for load");
+                                    setOption(Option.Load);
+                                }}
+                                className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
                                 Load <div className="RightSlot">⌘+O</div>
                             </DropdownMenu.Item>
                         </Dialog.Trigger>

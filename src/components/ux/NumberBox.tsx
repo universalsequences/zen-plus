@@ -4,9 +4,11 @@ import { TriangleRightIcon } from '@radix-ui/react-icons'
 
 const NumberBox: React.FC<{
     lockedModeRef: React.MutableRefObject<boolean>,
+    className?: string,
     isSelected: boolean,
     min: number, max: number, value: number, setValue: (x: number) => void, round: boolean
 }> = ({
+    className,
     lockedModeRef,
     value,
     setValue,
@@ -77,7 +79,7 @@ const NumberBox: React.FC<{
         return (
             <div ref={ref}>
                 <div
-                    className="m-1 bg-black flex flex-1">
+                    className={(className ? className : "m-1") + " bg-black flex flex-1"}>
                     <TriangleRightIcon
                         onMouseDown={(e: any) => {
                             if (!lockedModeRef.current) {

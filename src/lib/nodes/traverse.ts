@@ -1,5 +1,26 @@
 import { Node, ObjectNode, Patch, SubPatch } from './types';
 
+export const isForwardCycle = (node: Node, originalNode: Node = node, visited: Set<Node> = new Set<Node>()): boolean => {
+    let ins: Node[] = [node];
+    visited.add(node);
+    for (let outlet of node.outlets) {
+        for (let connection of outlet.connections) {
+            let { destination } = connection;
+
+            if (destination === originalNode) {
+                return true;
+            }
+            if (visited.has(destination)) {
+                continue;
+            }
+            if (isForwardCycle(destination, originalNode, visited)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 export const traverseBackwards = (node: Node, visited: Set<Node> = new Set<Node>()): Node[] => {
     if (visited.has(node)) {
         return [];

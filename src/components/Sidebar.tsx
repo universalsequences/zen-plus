@@ -46,6 +46,8 @@ const Sidebar = () => {
 
     return <div
         style={{ zIndex: 100000000000000000 }}
+        onMouseDown={(e: any) => e.stopPropagation()}
+        onClick={(e: any) => e.stopPropagation()}
         className={
             "bg-black fixed top-10 right-0 flex sidebar " + (opened ? "opened-sidebar" : "")}
     >

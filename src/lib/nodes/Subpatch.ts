@@ -74,13 +74,9 @@ export default class Subpatch extends PatchImpl implements SubPatch {
             }
 
             // look for parameters in this patch
-            let params = this.objectNodes.filter(x => x.name === "param");
-            let param = params.find(x => x.arguments[0] === paramName);
-            if (param) {
-                param.receive(param.inlets[0], paramValue);
-                return true;
-            }
-
+            let nodes = this.getAllNodes().filter(x => x.name === "param");
+            let params = nodes.filter(x => x.arguments[0] === paramName);
+            params.forEach(x => x.receive(x.inlets[0], paramValue));
         }
         return false;
     }

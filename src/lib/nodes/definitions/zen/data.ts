@@ -24,11 +24,17 @@ export const zen_data = (
     channels: Lazy
 ) => {
     let block: BlockGen | null = null;
+    let lastChannels: number = 0;
+    let lastSize: number = 0;
     return (inputData: Message): Statement[] => {
+        if (lastSize !== size() || lastChannels !== channels()) {
+            block = null;
+            lastChannels = channels() as number;
+            lastSize = size() as number;
+        }
         if (!block) {
             let initBuffer: Float32Array | undefined = Array.isArray(inputData) ? new Float32Array(inputData as number[]) :
                 ArrayBuffer.isView(inputData) ? inputData : undefined;
-            console.log("creating new block!", size(), channels());
             block = data(
                 size() as number,
                 channels() as number,

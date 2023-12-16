@@ -24,13 +24,14 @@ const Cables = () => {
             <svg
                 style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
                 className="absolute z-0 w-full h-full z-1 pointer-events-none">
-                {_selectedNodes.map((node, i) =>
+                {[...objectNodes, ...messageNodes].map((node, i) =>
                     <ObjectCables
                         setDraggingSegmentation={setDraggingSegmentation}
                         deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
                 <AlignmentHelper />
                 <Dragging />
             </svg>
+            {/*
             <svg
                 style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
                 className="absolute z-0 w-full h-full z-1 pointer-events-none">
@@ -39,6 +40,7 @@ const Cables = () => {
                         setDraggingSegmentation={setDraggingSegmentation}
                         deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
             </svg>
+             */}
         </>
         )
     }, [size, objectNodes, draggingNode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
