@@ -153,7 +153,53 @@ export const zen_noise = (object: ObjectNode) => {
     return memoZen(object, "noise" as Operator);
 };
 
+doc(
+    'selector',
+    {
+        inletNames: ["select", "arg"],
+        numberOfInlets: (x: number) => x,
+        numberOfOutlets: 1,
+        description: "selector",
+    });
+export const selector = (object: ObjectNode, ...args: Lazy[]) => {
+    return memoZen(object, "selector" as Operator, ...args);
+};
+
+doc(
+    'compressor',
+    {
+        inletNames: [
+            'input',
+            'ratio',
+            'threshold',
+            'knee',
+            'attack',
+            'release'
+        ],
+        numberOfInlets: 6,
+        numberOfOutlets: 1,
+        description: "basic compressor"
+        //saturation: '',
+        //makeup_gain: '',
+        //attack_mode: '',
+    }
+);
+
+export const compressor = (
+    object: ObjectNode,
+    ratio: Lazy,
+    threshold: Lazy,
+    knee: Lazy,
+    attack: Lazy,
+    release: Lazy,
+) => {
+    return memoZen(object, "compressor" as Operator, ratio, threshold, knee, attack, release);
+
+};
+
 export const core = {
+    compressor,
+    selector,
     cycle: zen_cycle,
     triangle: zen_triangle,
     noise: zen_noise,

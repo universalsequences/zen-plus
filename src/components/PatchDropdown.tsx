@@ -10,6 +10,7 @@ import {
 enum Option {
     Save,
     Load,
+    CustomPresentation
 }
 
 interface Props {
@@ -58,6 +59,17 @@ const PatchDropdown = React.memo((props: Props) => {
         }
     }, [setOption, setOpen, option, name, patch]);
 
+    const customPresentation = useCallback(() => {
+        let parentNode = (patch as SubPatch).parentNode;
+        if (parentNode) {
+            parentNode.setAttribute("Custom Presentation", !parentNode.attributes["Custom Presentation"]);
+            parentNode.size = {
+                width: 300,
+                height: 300,
+            };
+        }
+    }, [patch]);
+
     return (
         <div>
             <Dialog.Root
@@ -90,6 +102,16 @@ const PatchDropdown = React.memo((props: Props) => {
                                 className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
                                 Load <div className="RightSlot">⌘+O</div>
                             </DropdownMenu.Item>
+                            {isSubPatch && <DropdownMenu.Item
+                                onClick={() => {
+                                    console.log("onc lick called for load");
+                                    customPresentation();
+                                    setOption(null); //Option.CustomPresentation);
+                                }}
+                                className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
+                                {(patch as SubPatch).parentNode.attributes["Custom Presentation"] ?
+                                    "Disable Custom Presentation" : "Enable Custom Presentation"}
+                            </DropdownMenu.Item>}
                         </Dialog.Trigger>
                     </DropdownMenu.Content>
                 </DropdownMenu.Root>
@@ -101,30 +123,39 @@ const PatchDropdown = React.memo((props: Props) => {
                         onInteractOutside={() => setOption(null)}
                         style={{ zIndex: 100000000000 }}
                         className="center-fixed dark-modal  p-5 text-white rounded-lg outline-none">
-                        {option === Option.Save ? <>
-                            <fieldset className="Fieldset">
-                                <label className="Label mr-4" htmlFor="name">
-                                    Name
-                                </label>
-                                <input
-                                    style={{ borderBottom: "1px solid #4f4f4f" }}
-                                    className="Input px-2 bg-black-clear text-white outline-none"
-                                    placeholder="Enter name to save"
-                                    value={name}
-                                    onChange={
-                                        (e: any) => setName(e.target.value)} defaultValue="" />
-                            </fieldset>
+                        {option === Option.CustomPresentation ? <>
                             <div style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
                                 <Dialog.Close asChild>
                                     <button
-                                        onClick={save}
-                                        className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
+                                        onClick={customPresentation}
+                                        className="bg-black px-2 py-1 text-white rounded-full">Custom</button>
                                 </Dialog.Close>
                             </div>
                         </> :
-                            <>
-                                <LoadProject hide={() => setOption(null)} isSubPatch={isSubPatch} patch={patch} />
-                            </>}
+                            option === Option.Save ? <>
+                                <fieldset className="Fieldset">
+                                    <label className="Label mr-4" htmlFor="name">
+                                        Name
+                                    </label>
+                                    <input
+                                        style={{ borderBottom: "1px solid #4f4f4f" }}
+                                        className="Input px-2 bg-black-clear text-white outline-none"
+                                        placeholder="Enter name to save"
+                                        value={name}
+                                        onChange={
+                                            (e: any) => setName(e.target.value)} defaultValue="" />
+                                </fieldset>
+                                <div style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
+                                    <Dialog.Close asChild>
+                                        <button
+                                            onClick={save}
+                                            className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
+                                    </Dialog.Close>
+                                </div>
+                            </> :
+                                <>
+                                    <LoadProject hide={() => setOption(null)} isSubPatch={isSubPatch} patch={patch} />
+                                </>}
                     </Dialog.Content>
                 </Dialog.Portal>
             </Dialog.Root>

@@ -1,4 +1,5 @@
 import { BlockGen } from '../zen';
+import { SVGObject } from './definitions/svg/index';
 import { ParamGen, param } from '@/lib/zen/index';
 import { OperatorContextType } from './context';
 import { Connections } from '@/contexts/PatchContext';
@@ -11,6 +12,7 @@ export interface Size {
 
 export interface Positioned {
     position: Coordinate;
+    presentationPosition?: Coordinate;
     zIndex: number;
     size?: Size;
 }
@@ -28,7 +30,7 @@ export interface Coordinate {
 
 // for the most part, nodes will deal with statements
 
-export type Message = string | number | string[] | number[] | Statement | Float32Array;
+export type Message = string | number | string[] | number[] | Statement | Float32Array | SVGObject;
 export type Lazy = () => Message;
 
 /**
@@ -77,14 +79,19 @@ export type AttributeCallbacks = {
     [x: string]: (x: string | number | boolean) => void;
 }
 
-export type Node = Identifiable & {
-    patch: Patch;
-    inlets: IOlet[];
-    outlets: IOlet[];
+export type Attributed = {
     attributes: Attributes;
     attributeCallbacks: AttributeCallbacks;
     attributeOptions: AttributeOptions;
+    attributeDefaults: Attributes;
+    setAttribute: (name: string, value: string | number | boolean) => void;
+    newAttribute: (name: string, defaultValue: string | number | boolean, callback?: (x: string | number | boolean) => void) => void;
+}
 
+export type Node = Identifiable & Attributed & {
+    patch: Patch;
+    inlets: IOlet[];
+    outlets: IOlet[];
     newInlet: (name?: string) => void;
     newOutlet: (name?: string) => void;
     connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
@@ -92,7 +99,6 @@ export type Node = Identifiable & {
     connectAudioNode: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message) => void;
-    setAttribute: (name: string, value: string | number | boolean) => void;
 }
 
 export type ObjectNode = Positioned & Node & {
@@ -131,11 +137,13 @@ export enum PatchType {
 export type Patch = Identifiable & {
     objectNodes: ObjectNode[];
     messageNodes: MessageNode[];
+    presentationMode: boolean;
     compile: (x: Statement, outputNumber: number) => void;
     recompileGraph: (force?: boolean) => void;
     type: PatchType;
     audioContext: AudioContext;
     historyDependencies: Statement[];
+    historyNodes: Set<ObjectNode>;
     getAllNodes: () => ObjectNode[];
     getAllMessageNodes: () => MessageNode[];
     newHistoryDependency: (x: Statement, o: ObjectNode) => void;
@@ -145,6 +153,7 @@ export type Patch = Identifiable & {
     skipRecompile: boolean;
     skipRecompile2: boolean;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
+    setObjectNodes?: (x: ObjectNode[]) => void; // tells the front-end a new audioworklet has been compiled
     onNewMessage?: (id: string, value: Message) => void;
 }
 
@@ -170,6 +179,7 @@ export interface SerializedConnection {
 export type SerializedObjectNode = Identifiable & {
     text: string;
     position: Coordinate;
+    presentationPosition: Coordinate;
     outlets: SerializedOutlet[]
     subpatch?: SerializedPatch;
     buffer?: number[];
@@ -180,9 +190,12 @@ export type SerializedObjectNode = Identifiable & {
 };
 
 export type SerializedPatch = Identifiable & {
+    presentationMode: boolean;
     objectNodes: SerializedObjectNode[]
     messageNodes?: SerializedMessageNode[]
     name?: string;
+    size?: Size;
+    isCustomView?: boolean;
 };
 
 export type SerializedMessageNode = Identifiable & {

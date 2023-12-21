@@ -13,6 +13,7 @@ import { ObjectNode, Patch, Coordinate, Size, MessageNode } from '@/lib/nodes/ty
 import { useSelection } from '@/contexts/SelectionContext';
 import { useAutoComplete } from '@/hooks/useAutoComplete';
 import { usePatch } from '@/contexts/PatchContext';
+import CustomSubPatchView from './CustomSubPatchView';
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const { lockedMode, selectedNodes, setSelectedNodes } = useSelection();
@@ -55,17 +56,22 @@ const InnerObjectNodeComponent: React.FC<{
         setSelectedNodes,
     }) => {
         const ref = useRef<HTMLDivElement | null>(null);
+        const lastSubPatchClick = useRef(0);
         const inputRef = useRef<HTMLInputElement | null>(null);
         const [selected, setSelected] = useState(0);
 
-        const { newObjectNode, setPatch } = usePatch();
+        const { isCustomView, newObjectNode, setPatch } = usePatch();
         const [editing, setEditing] = useState(objectNode.text === "");
         const [error, setError] = useState<string | null>(null);
         const [text, setText] = useState(objectNode.subpatch ? objectNode.text.replace("zen", objectNode.subpatch.name || "zen") : objectNode.text);
         const [parsedText, setParsedText] = useState("");
         const { patches, setPatches } = usePatches();
+        const [includeInPresentation, setIncludeInPresentation] = useState(objectNode.attributes["Include in Presentation"]);
 
         const { setAutoCompletes, autoCompletes } = useAutoComplete(text);
+
+        let objectNodes = objectNode.subpatch ? objectNode.subpatch.objectNodes : undefined;
+        let messageNodes = objectNode.subpatch ? objectNode.subpatch.messageNodes : undefined;
 
         const onChange = useCallback((value: string) => {
             setText(value);
@@ -98,10 +104,7 @@ const InnerObjectNodeComponent: React.FC<{
             }
             if (e.key === "Enter") {
                 e.preventDefault();
-                console.log("enter");
                 if (autoCompletes[selected]) {
-                    console.log('auto completes...');
-                    console.log("BOOO");
                     let name = autoCompletes[selected].definition.name as string;
                     if (text.split(" ")[0] === name) {
                         name = text;
@@ -112,13 +115,11 @@ const InnerObjectNodeComponent: React.FC<{
                         name = objectNode.text;
                     }
 
-                    console.log("YOOO");
                     if (objectNode.text.split(" ")[0] === name) {
                         name = objectNode.text;
                     }
                     enterText(name, autoCompletes[selected].context);
                 } else {
-                    console.log("else enter text=", text);
                     enterText(text);
                 }
                 return;
@@ -137,6 +138,12 @@ const InnerObjectNodeComponent: React.FC<{
             }
         }, [text, selected, setAutoCompletes, autoCompletes, setText, objectNode, setError, setEditing, setParsedText]);
 
+        const togglePresentation = useCallback(() => {
+            objectNode.setAttribute("Include in Presentation", !objectNode.attributes["Include in Presentation"]);
+            setIncludeInPresentation(!includeInPresentation);
+            objectNode.presentationPosition = { ...objectNode.position };
+        }, [setIncludeInPresentation, includeInPresentation]);
+
         const duplicate = useCallback(() => {
             let copied = new ObjectNodeImpl(objectNode.patch);
             copied.position.x = objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
@@ -149,10 +156,14 @@ const InnerObjectNodeComponent: React.FC<{
                         json.subpatch,
                         true);
                 }
+                copied.attributes = {
+                    ...copied.attributes,
+                    ...json.attributes
+                };
+                copied.size = json.size;
             } else {
                 copied.parse(objectNode.text);
             }
-            console.log("copied position=", copied.position);
             newObjectNode(copied, copied.position);
             updatePosition(copied.id, copied.position);
 
@@ -171,6 +182,10 @@ const InnerObjectNodeComponent: React.FC<{
         const initialPosition = useRef<Coordinate | null>(null);
 
         const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+            if (isCustomView) {
+                // e.stopPropagation();
+                return;
+            }
             if (lockedModeRef.current) {
                 return;
             }
@@ -188,8 +203,13 @@ const InnerObjectNodeComponent: React.FC<{
                         e.stopPropagation();
                     }
                     if (objectNode.name === "zen" && objectNode.subpatch) {
-                        if (!patches.includes(objectNode.subpatch)) {
-                            setPatches([...patches, objectNode.subpatch]);
+                        let diff = new Date().getTime() - lastSubPatchClick.current;
+                        lastSubPatchClick.current = new Date().getTime();
+                        console.log("diff = ", diff);
+                        expandPatch();
+                        if (diff > 250) {
+                            console.log("return...");
+                            return;
                         }
                         return;
                     }
@@ -216,17 +236,41 @@ const InnerObjectNodeComponent: React.FC<{
         }, [editing, objectNode, isSelected, setSelectedNodes, setEditing, setPatch, setPatches, patches]);
 
         let CustomComponent = objectNode.name ? index[objectNode.name] : undefined;
+        let isCustomSubPatchView = objectNode.attributes["Custom Presentation"];
+
+        const expandPatch = useCallback(() => {
+            if (objectNode.subpatch && !patches.includes(objectNode.subpatch)) {
+                if (patches.length === 2) {
+
+                    setPatches([patches[0], objectNode.subpatch]);
+                } else {
+                    setPatches([...patches, objectNode.subpatch]);
+                }
+            }
+        }, [setPatches, patches, objectNode]);
 
         return (
             <PositionedComponent
+                isCustomView={isCustomView}
                 text={parsedText}
                 lockedModeRef={lockedModeRef}
                 skipOverflow={error !== null || (editing && autoCompletes.length > 0)}
                 node={objectNode}>
                 <ContextMenu.Root>
                     <ContextMenu.Content
+                        onMouseDown={(e: any) => e.stopPropagation()}
                         style={{ zIndex: 10000000000000 }}
                         color="indigo" className="object-context rounded-lg p-2 text-xs">
+                        {objectNode.name === "zen" && <ContextMenu.Item
+                            onClick={expandPatch}
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                            Expand Patch
+                        </ContextMenu.Item>}
+                        <ContextMenu.Item
+                            onClick={togglePresentation}
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                            {!objectNode.attributes["Include in Presentation"] ? "Include in Presentation" : "Remove from Presentation"}
+                        </ContextMenu.Item>
                         <ContextMenu.Item
                             onClick={duplicate}
                             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
@@ -235,6 +279,7 @@ const InnerObjectNodeComponent: React.FC<{
 
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
+                        disabled={isCustomView}
                         className="ContextMenuTrigger relative">
                         <div
                             ref={ref}
@@ -242,7 +287,8 @@ const InnerObjectNodeComponent: React.FC<{
                             className="flex h-full w-full flex-1 whitespace-nowrap">
                             <>
 
-                                {CustomComponent ? <CustomComponent objectNode={objectNode} />
+                                {isCustomSubPatchView ? <CustomSubPatchView
+                                    objectNode={objectNode} /> : CustomComponent ? <CustomComponent objectNode={objectNode} />
                                     : editing ?
                                         <input
                                             onClick={(e: any) => e.stopPropagation()}

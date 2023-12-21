@@ -11,6 +11,9 @@ doc(
     });
 
 export const comment = (_node: ObjectNode) => {
+    if (_node && _node.size) {
+        _node.size.width = 120;
+    }
     return (x: Message) => [];
 }
 

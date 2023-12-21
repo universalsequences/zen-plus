@@ -54,6 +54,7 @@ export const s = (...inputs: Arg[]): UGen => {
             if (_out.outputs! > outputs) {
                 outputs = _out.outputs!;
             }
+            //console.log(`seq took ${b - a}ms`, input);
         }
 
         return {

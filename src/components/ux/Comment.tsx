@@ -42,6 +42,7 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     return (
         <div className="w-full h-full">
             <textarea
+                style={size ? { width: size.width } : {}}
                 ref={textareaRef}
                 className="outline-none bg-transparent text-white p-2 border-box overflow-hidden"
                 value={text}

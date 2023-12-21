@@ -140,7 +140,7 @@ export class Context {
             histories,
             outerHistories,
             params,
-            variables: _variables,
+            variables: Array.from(new Set(_variables)),
             context: this,
             functions,
             functionArguments,

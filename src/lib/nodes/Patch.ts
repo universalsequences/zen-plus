@@ -1,4 +1,5 @@
 import { Patch, SubPatch, PatchType, SerializedPatch, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
+import { containsSameHistory } from './definitions/zen/history';
 import { initMemory, ZenWorklet } from '@/lib/zen/worklet';
 import { traverseForwards } from './traverse';
 import { ZenGraph } from '@/lib/zen/zen'
@@ -34,13 +35,17 @@ export class PatchImpl implements Patch {
     storedStatement?: Statement;
     name?: string;
     missedConnections: [SerializedConnection, ObjectNode, ObjectNode, number][];
+    historyNodes: Set<ObjectNode>;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void;
     outputStatements: Statement[];
+    presentationMode: boolean;
     skipRecompile: boolean;
     skipRecompile2: boolean;
 
     constructor() {
         this.id = uuid();
+        this.presentationMode = false;
+        this.historyNodes = new Set<ObjectNode>();
         this.skipRecompile = false;
         this.skipRecompile2 = false;
         this.historyDependencies = [];
@@ -85,6 +90,7 @@ export class PatchImpl implements Patch {
         this.outputStatements = [];
         this.storedStatement = undefined;
         this.historyDependencies = [];
+        this.historyNodes = new Set<ObjectNode>();
         this.waiting = true;
 
         // re-parse every node so that we "start from scratch"
@@ -109,7 +115,7 @@ export class PatchImpl implements Patch {
             }
         }
 
-        let sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param");
+        let sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument");
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -119,7 +125,7 @@ export class PatchImpl implements Patch {
 
 
         this.waiting = false;
-        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "param" && node.name !== "history") || node.name === "argument" || node.needsLoad);
+        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "param" && node.name !== "history") || node.needsLoad);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -132,7 +138,8 @@ export class PatchImpl implements Patch {
                 }
             });
 
-        // this.sendNumberMessages()
+        this.sendNumberMessages()
+        this.sendAttributeMessages()
 
         if (this.storedStatement) {
             this.compile(this.storedStatement);
@@ -173,6 +180,9 @@ export class PatchImpl implements Patch {
                 }
             }
         }
+    }
+
+    sendAttributeMessages() {
         let nodes = this.getAllNodes();
         let attruis = nodes.filter(x => x.name === "attrui");
         for (let attrui of attruis) {
@@ -209,21 +219,48 @@ export class PatchImpl implements Patch {
             }
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
+                console.log('history deps=', historyDependencies);
                 let _statement = ["s" as Operator];
                 for (let dependency of historyDependencies) {
-                    _statement.push(dependency as any);
+                    // make sure that statement contains the history
+                    let hist = ((dependency as Statement[])[0] as any).history;
+                    // make sure the hist is somewhere in the statement
+                    if (hist) {
+                        if (containsSameHistory(hist, statement, false)) {
+                            _statement.push(dependency as any);
+                        } else {
+                        }
+                    } else {
+                        let param = ((dependency as Statement[])[0] as any).param;
+                        _statement.push(dependency as any);
+                        /*
+                        // make sure the hist is somewhere in the statement
+                        if (param) {
+                            if (containsSameHistory(hist, statement, false)) {
+                                console.log("hist contained in statement", dependency);
+                                _statement.push(dependency as any);
+                            } else {
+                                console.log("hist not contained in statement", dependency);
+                            }
+                        }
+                        */
+                    }
                 }
+                console.log("resolved histories=", _statement);
                 _statement.push(statement as any);
-                statement = _statement as Statement;
-                //statement = ["s" as Operator, ...historyDependencies, statement]
+                //statement = _statement as Statement;
+                statement = ["s" as Operator, _statement as Statement];
             }
             console.log("statement to compile=", statement);
             let ast = compileStatement(statement);
-            let printed = printStatement(statement);
+            console.log('compiled became=', ast, new Date().getTime());
+            //let printed = printStatement(statement);
+            //console.log(printed);
 
             this.disconnectGraph();
 
             let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
+            console.log("zen graph=", zenGraph, new Date().getTime());
             createWorklet(
                 this.audioContext,
                 zenGraph,
@@ -242,7 +279,7 @@ export class PatchImpl implements Patch {
                                 worklet.port.postMessage({ type: "ready" });
                                 console.log('wasm ready');
                                 this.skipRecompile = true;
-                                this.sendNumberMessages();
+                                this.sendAttributeMessages();
                                 let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
                                 matricesAndBuffers.forEach(
                                     matrix => matrix.receive(matrix.inlets[0], "bang"));
@@ -283,6 +320,7 @@ export class PatchImpl implements Patch {
                             }
                         }
                         this.sendNumberMessages();
+                        this.sendAttributeMessages();
                         this.skipRecompile = true;
                         let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
                         matricesAndBuffers.forEach(
@@ -293,7 +331,7 @@ export class PatchImpl implements Patch {
                     })
                 .catch(e => {
                 });
-        }, 20);
+        }, 50);
     }
 
     setupAudioNode(audioNode: AudioNode) {
@@ -315,17 +353,28 @@ export class PatchImpl implements Patch {
     newHistoryDependency(newHistory: Statement, object: ObjectNode) {
         if (!this.historyDependencies.some(x => x.node === object)) {
             this.historyDependencies = [newHistory, ... this.historyDependencies];
+            this.historyNodes.add(object);
         }
     }
 
     getJSON(): SerializedPatch {
-        return {
+        let json: SerializedPatch = {
             id: this.id,
             name: this.name,
             objectNodes: this.objectNodes.map(x => x.getJSON()),
             messageNodes: this.messageNodes.map(x => x.getJSON()),
+            presentationMode: this.presentationMode
         };
+        let parentNode = (this as any as SubPatch).parentNode;
+        if (parentNode) {
+            if (parentNode.attributes["Custom Presentation"]) {
+                json.isCustomView = parentNode.attributes["Custom Presentation"] ? true : false;
+                json.size = parentNode.size;
+            }
+        }
+        return json;
     }
+
 
     fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
         this.skipRecompile = true;
@@ -333,6 +382,15 @@ export class PatchImpl implements Patch {
 
         this.objectNodes = [];
         this.messageNodes = [];
+        this.presentationMode = x.presentationMode === undefined ? false : x.presentationMode;
+
+        let parentNode = (this as any as SubPatch).parentNode;
+        if (parentNode) {
+            if (x.isCustomView) {
+                parentNode.attributes["Custom Presentation"] = x.isCustomView;
+                parentNode.size = x.size;
+            }
+        }
 
         let currentId = currentUUID();
         this.id = x.id;
@@ -415,13 +473,14 @@ export class PatchImpl implements Patch {
 
 
         this.missedConnections = missedConnections;
-        let _connections: Connections = {};
+        let _connections: Connections = { ...connections };
         if (isPreset) {
             for (let node of [... this.objectNodes, ... this.messageNodes]) {
                 let oldId = node.id;
                 let newId = plusUUID(oldId, currentId);
                 registerUUID(newId);
                 _connections[newId] = connections[oldId];
+                delete _connections[oldId];
                 node.id = newId;
             }
         }
@@ -456,6 +515,9 @@ export class PatchImpl implements Patch {
 
 const notInFunction = (x: Statement) => {
     if (x.node) {
+
+        let debug = false;
+        let _name = (x.node.patch as any).name;
         let forward = traverseForwards(x.node);
         if (forward && forward.some(x => (x as ObjectNode).name === "defun")) {
             return false;

@@ -23,6 +23,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         this.parentPatch = parentPatch;
         this.parentNode = parentNode;
         this._setupInitialNodes();
+        this.parentNode.newAttribute("Custom Presentation", false);
     }
 
     _setupInitialNodes() {

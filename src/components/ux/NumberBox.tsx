@@ -79,7 +79,7 @@ const NumberBox: React.FC<{
         return (
             <div ref={ref}>
                 <div
-                    className={(className ? className : "m-1") + " bg-black flex flex-1"}>
+                    className={(className ? className : "m-y") + " bg-zinc-900 flex flex-1"}>
                     <TriangleRightIcon
                         onMouseDown={(e: any) => {
                             if (!lockedModeRef.current) {

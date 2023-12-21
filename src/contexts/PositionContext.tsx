@@ -37,6 +37,8 @@ interface PositionerContext {
     deletePositions: (x: ObjectNode[]) => void;
     sizeIndex: SizeIndex;
     setSizeIndex: (x: SizeIndex) => void;
+    preparePresentationMode: boolean;
+    setPreparePresentationMode: (x: boolean) => void;
     scrollRef: React.MutableRefObject<HTMLDivElement | null>;
     setDraggingSegmentation: (x: IOConnection | null) => void;
     draggingSegmentation: IOConnection | null;
@@ -54,6 +56,8 @@ interface PositionerContext {
     maxZIndex: number;
     size: Size | null;
     alignmentLines: AlignmentLine[]
+    presentationMode: boolean;
+    setPresentationMode: (x: boolean) => void;
 }
 
 interface Props {
@@ -88,6 +92,7 @@ export type SizeIndex = {
 
 export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
 
+    const [preparePresentationMode, setPreparePresentationMode] = useState(false);
     const [sizeIndex, setSizeIndex] = useState<SizeIndex>({});
 
     useEffect(() => {
@@ -99,7 +104,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         }
         setSizeIndex(_size);
         sizeIndexRef.current = _size;
-    }, []);
+    }, [patch.objectNodes, setSizeIndex]);
 
     const sizeIndexRef = useRef<SizeIndex>(sizeIndex);
     useEffect(() => {
@@ -123,6 +128,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     const [size, setSize] = useState<Size | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]);
+    let [presentationMode, setPresentationMode] = useState(patch.presentationMode);
 
     const updatePositions = useCallback((updates: Coordinates): Coordinates => {
         if (!scrollRef.current) {
@@ -148,11 +154,14 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                 width = _size.width;
             }
 
-            if (position.x + 100 > width || position.y + 100 > height) {
+            let node_size = sizeIndexRef.current[id];
+            let w = node_size ? node_size.width + 50 : 100;
+            let h = node_size ? node_size.height + 50 : 100;
+            if (position.x + w > width || position.y + h > height) {
                 sizeChanged = true;
                 _size = {
-                    width: Math.max(width, position.x + 100),
-                    height: Math.max(height, position.y + 100),
+                    width: Math.max(width, position.x + w),
+                    height: Math.max(height, position.y + h),
                 }
             }
         }
@@ -280,7 +289,11 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setResizingNode,
             deletePositions,
             draggingSegmentation,
-            setDraggingSegmentation
+            setDraggingSegmentation,
+            presentationMode,
+            setPresentationMode,
+            preparePresentationMode,
+            setPreparePresentationMode
         }}>
         {children}
     </PositionContext.Provider>;

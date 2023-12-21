@@ -8,7 +8,7 @@ import { Target } from './targets';
 
 export const t60 = (input: Arg): UGen => {
     return memo((context: Context): Generated => {
-        let [variable] = context.useVariables("t60");
+        let [variable] = context.useVariables("t60Val");
         let _input = context.gen(input);
         let exp = context.target === Target.C ? cKeywords["Math.exp"] : "Math.exp";
         let code = `

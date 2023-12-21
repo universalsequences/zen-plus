@@ -10,6 +10,8 @@ export type Connections = {
 interface IPatchesContext {
     audioWorklet: AudioWorkletNode | null;
     setAudioWorklet: (x: AudioWorkletNode | null) => void;
+    selectedPatch: Patch | null;
+    setSelectedPatch: (x: Patch | null) => void;
     basePatch: Patch;
     patches: Patch[];
     setPatches: (x: Patch[]) => void;
@@ -35,11 +37,14 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     const [patches, setPatches] = useState<Patch[]>([basePatch]);
     const [audioWorklet, setAudioWorklet] = useState<AudioWorkletNode | null>(null);
     const [gridTemplate, setGridTemplate] = useState("1fr 1fr");
+    const [selectedPatch, setSelectedPatch] = useState<Patch | null>(null);
 
     basePatch.setAudioWorklet = setAudioWorklet;
 
     return <PatchesContext.Provider
         value={{
+            selectedPatch,
+            setSelectedPatch,
             gridTemplate,
             setGridTemplate,
             audioWorklet,

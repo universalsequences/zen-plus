@@ -11,7 +11,6 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     message?: Message;
     position: Coordinate;
     zIndex: number;
-    attributes: Attributes;
     paramNode: ObjectNode;
     messageType: MessageType;
 
@@ -20,14 +19,18 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
         this.id = uuid();
         this.position = { x: 0, y: 0 };
         this.zIndex = 0;
-        this.attributes = {
-            "min": 0,
-            "max": 1000,
-            "round": false,
-            "number box": true,
-            "is parameter": false,
-            "scripting name": "",
-        };
+        this.newAttribute("min", 0);
+        this.newAttribute("max", 1);
+        this.newAttribute("number box", messageType === MessageType.Number);
+        this.newAttribute("is parameter", false);
+        this.newAttribute("scripting name", "");
+        this.newAttribute("Include in Presentation", false, () => {
+            this.patch.objectNodes = [... this.patch.objectNodes];
+            if (this.patch.setObjectNodes) {
+                this.patch.setObjectNodes(this.patch.objectNodes);
+            }
+        });
+
 
         this.message = 0;
         this.newInlet(TRIGGER, ConnectionType.CORE);
@@ -47,7 +50,11 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     receive(inlet: IOlet, message: Message) {
         switch (inlet.name) {
             case TRIGGER:
-                if (this.attributes["is parameter"] && this.paramNode.fn) {
+                if (this.attributes["number box"] && message !== "bang") {
+                    console.log("mesasge = ", message);
+                    this.message = message;
+                    this.send(this.outlets[0], message);
+                } else if (this.attributes["is parameter"] && this.paramNode.fn) {
                     let result = this.paramNode.fn("bang");
                     this.send(this.outlets[0], result[0]);
                     if (this.message !== undefined) {
@@ -101,20 +108,30 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     }
 
     getJSON(): SerializedMessageNode {
-        return {
+        let json: any = {
             id: this.id,
             message: this.message as Message,
             position: this.position,
             outlets: this.getConnectionsJSON(),
-            messageType: this.messageType,
-            attributes: this.attributes
+            messageType: this.messageType
         };
+
+        json.attributes = {};
+        for (let name in this.attributes) {
+            if (this.attributes[name] !== this.attributeDefaults[name]) {
+                json.attributes[name] = this.attributes[name];
+            }
+        }
+        return json;
 
     }
 
     fromJSON(json: SerializedMessageNode) {
         if (json.attributes) {
-            this.attributes = json.attributes;
+            this.attributes = {
+                ... this.attributes,
+                ...json.attributes
+            }
         }
         if (json.messageType) {
             this.messageType = json.messageType;

@@ -25,7 +25,7 @@ const AutoCompletes: React.FC<{
             style={{
                 backdropFilter: "blur(8px)"
             }}
-            className="-bottom-32  absolute h-32 left-0 w-96 overflow-x-hidden overflow-y-scroll bg-black-clear-light text-white border-zinc-400">
+            className="-bottom-32  absolute h-32 left-0 w-96 overflow-x-hidden overflow-y-scroll bg-zinc-500 text-white border-zinc-400">
             {autoCompletes.map(
                 (option, index) =>
                     <div

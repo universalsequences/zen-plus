@@ -1,5 +1,7 @@
 import { API } from '@/lib/nodes/context';
 import { interval } from './metro';
+import { strings } from './strings';
+import { umenu } from './umenu';
 import { order } from './order';
 import { math } from './math';
 import { lists } from './list';
@@ -18,5 +20,7 @@ export const api: API = {
     ...math,
     ...order,
     interval,
-    attrui
+    attrui,
+    umenu,
+    ...strings
 };

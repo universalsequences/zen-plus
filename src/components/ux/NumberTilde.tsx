@@ -24,7 +24,7 @@ const NumberTilde: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }, [setValue]);
 
     return (
-        <div className="w-full h-full px-2 py-1 bg-black-blur text-white">
+        <div className="text-base w-full h-full px-2 py-1 text-white px-2 py-1 bg-zinc-700">
             {value}
         </div>
     );

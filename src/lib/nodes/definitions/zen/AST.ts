@@ -344,6 +344,9 @@ export const getZObjects = (statement: Statement,): ObjectNode[] => {
 };
 
 export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = []): UGen => {
+    if (!statement.node) {
+        //console.log("no node for statement", statement);
+    }
     if (typeof statement === "number") {
         return float(statement as number);
     }
@@ -379,6 +382,7 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     if (zobject && compiled[zobject.id]) {
         //let _depth = calculateDepth(statement);
         //if (!_depth.some(x => x[0] && x[0].name === "history")) {
+        //console.log('cached compiled already=', zobject.id, statement);
         return compiled[zobject.id];
         //}
     }

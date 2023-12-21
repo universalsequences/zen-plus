@@ -17,6 +17,7 @@ export class BaseNode implements Node {
     attributes: Attributes;
     attributeCallbacks: AttributeCallbacks;
     attributeOptions: AttributeOptions;
+    attributeDefaults: Attributes;;
     id: string;
 
     constructor(patch: Patch) {
@@ -27,10 +28,15 @@ export class BaseNode implements Node {
         this.attributes = {};
         this.attributeCallbacks = {};
         this.attributeOptions = {};
+        this.attributeDefaults = {};
     }
 
     newAttribute(name: string, defaultValue: string | number | boolean, callback?: (x: string | number | boolean) => void) {
         this.attributes[name] = defaultValue;
+        if (defaultValue !== undefined) {
+            this.attributeDefaults[name] = defaultValue;
+        }
+
         if (callback) {
             this.attributeCallbacks[name] = callback;
         }

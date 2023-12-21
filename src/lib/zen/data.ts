@@ -163,7 +163,7 @@ export const peek = (
         let _index = variableContext.gen(index);
         let _channel = variableContext.gen(channel);
         let [preIdx, peekIdx, peekVal, channelIdx, frac, nextIdx, peekIdx2, peekIdx3] = variableContext.useVariables(
-            "preIdx", "peekIdx", "peekVal", "channelIdx", "frac", "nextIdx", "peekIdx2", "peekIdx3");
+            "preIdx", "peekIdx", "peekVal", "channelIdx", "frac", "nextIdx", "peekIdx_2", "peekIdx_3");
         let perChannel: any = multichannelBlock.length;
 
         let __length = undefined;
@@ -229,7 +229,7 @@ export const poke = (
     return memo((context: Context): Generated => {
         let multichannelBlock = data(context);
         let _index: Generated = context.gen(index);
-        let [_idx2]: string[] = context.useVariables('pokeIdx2');
+        let [_idx2]: string[] = context.useVariables('pokeIdx_2_');
         let _channel: Generated = context.gen(channel);
         let _value: Generated = context.gen(value);
         let perChannel: number = multichannelBlock.length!;
@@ -254,7 +254,7 @@ export const clearData = (
 ): UGen => {
     return memo((context: Context): Generated => {
         let multichannelBlock = data(context);
-        let [_idx2]: string[] = context.useVariables('pokeIdx2');
+        let [_idx2]: string[] = context.useVariables('pokeIdx_2_');
         let _value: Generated = context.gen(value);
         let perChannel: number = multichannelBlock.length!;
         let intKeyword = context.intKeyword;

@@ -15,7 +15,25 @@ export const messagemessage = (node: ObjectNode) => {
     };
 }
 
+doc(
+    'loadBang',
+    {
+        numberOfOutlets: 1,
+        numberOfInlets: 0,
+        description: "sends bang on load",
+    });
+
+export const loadBang = (node: ObjectNode) => {
+    node.needsLoad = true;
+    return (message: Message): Message[] => {
+
+        return ["bang"];
+    };
+}
+
+
 
 export const order: API = {
-    messagemessage
+    messagemessage,
+    loadBang
 };

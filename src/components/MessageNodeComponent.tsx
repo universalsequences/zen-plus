@@ -23,6 +23,14 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageN
         message = Array.from(message);
     }
 
+    let valueRef = useRef<number>();
+    useEffect(() => {
+        if (valueRef.current !== message) {
+            setValue(message as number);
+        }
+        valueRef.current = message as number;
+    }, [message, setValue]);
+
     const onValueChange = useCallback((value: number) => {
         // we need to send this over to messageNode
         messageNode.receive(messageNode.inlets[1], value);

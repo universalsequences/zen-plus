@@ -30,16 +30,19 @@ export const memoZen = (
     operator: Operator,
     ...args: Lazy[]
 ) => {
-    return memo(object, (x: Message): Statement => {
+    return (x: Message): Statement[] => {
         let _args: Message[] = args.map(x => x());
         if (typeof x === "string") {
-            return [operator];
+            return [[operator]];
         }
 
         let xyz: Statement = [operator, x as unknown as Statement, ..._args as Statement[]];
         xyz.node = object;
-        return xyz;
-    }, ...args);
+        if (operator as string === "zswitch") {
+            // console.log(xyz);
+        }
+        return [xyz];
+    };
 };
 
 export const memo = (object: ObjectNode, fn: NodeFunc, ...args: Lazy[]) => {

@@ -21,6 +21,9 @@ body, html {
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
   //background-image: url(/wallpaper-7.jpg);
   background-color: #111010 !important;
+  background-color: #575757 !important;
+  background-color: #323030 !important;
+  background-color: #1b1d1f !important;
   background-size: cover;
   overflow: hidden;
   /*
@@ -198,9 +201,14 @@ div[data-radix-popper-content-wrapper] {
     //backdrop-filter: blur(2px);
 }
 
+.bg-black-clear2 {
+    background-color: #59595930;
+    //backdrop-filter: blur(2px);
+}
+
 .bg-black-clear {
-    background-color: #0000000f;
-    backdrop-filter: blur(2px);
+    background-color: #bab3b3b0;
+    //backdrop-filter: blur(2px);
 }
 
 .bg-black-clear-light {
@@ -243,7 +251,7 @@ div[data-radix-popper-content-wrapper] {
 }
 
 .object-context {
-    background-color: #ddfff742;
+    background-color: #00000094;
     border: 1px solid #ffffff2b;
     backdrop-filter: blur(8px);
     z-index: 1000000000000000;
@@ -260,6 +268,10 @@ textarea {
 .patcher-background {
     background-color: #3b3b3b4a;
     //border: 1px solid #909090;
-    background-image: radial-gradient(circle at center center, rgb(65 65 65) 0%, rgb(25 23 23) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, hsl(235.2deg 7.8% 11.05%),hsl(228deg 9.09% 10.78%));
+    //background-image: radial-gradient(circle at center center, rgb(65 65 65) 0%, rgb(25 23 23) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, hsl(235.2deg 7.8% 11.05%),hsl(228deg 9.09% 10.78%));
+    background-image: radial-gradient(circle at center center, rgb(65 65 65) 0%, rgb(193 190 190) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #acada7,#adaeab);
+    background-image: radial-gradient(circle at center center, rgb(207 200 200) 0%, rgb(45 43 43) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #5b5c55,#595a59);
+    background-image: radial-gradient(circle at center center, rgb(207 200 200) 0%, rgb(130 123 123) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #8c8787,#8d8989);
+        background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0b,#0b0b0b);
     background-size: 14px 14px;
 }

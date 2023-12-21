@@ -11,8 +11,6 @@ export const getSegmentation = (cable: IOConnection, sizeIndex: SizeIndex) => {
     let yDiff = destCoord.y - (sourceY - 20);
     let y = yDiff < 120 ? (0.5 * (sourceY) + 0.5 * destCoord.y) - 25 :
         sourceY + 45;
-    console.log("y = %s yDiff=%s", y, yDiff, sourceY, destCoord.y);
-
     return y;
 }
 

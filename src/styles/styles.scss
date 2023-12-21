@@ -1,5 +1,9 @@
 
-.locked {
+.locked, .presentation {
+    textarea {
+        pointer-events: none;
+    }
+        
     .node-component {
         overflow: hidden !important;
     }
@@ -68,11 +72,11 @@
 
 
 .node-component.context-type-1 {
-    background-color: #e9fa9985;
+    background-color: #d2ff00;
 }
 
 .node-component.context-type-2 {
-    background-color: #6d99ff38;
+    background-color: #0118ff;
 }
 
 
@@ -80,4 +84,45 @@
     background-color: #ffffff0f;
     border: 1px solid #ffffff0f;
     backdrop-filter: blur(8px);
+}
+
+.node-component {
+    .patcher-background {
+        background-image: unset;
+    }
+}
+
+
+.node-component {
+    box-shadow:2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
+  6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
+  12.5px 12.5px 10px rgba(0, 0, 0, 0.035),
+  22.3px 22.3px 17.9px rgba(0, 0, 0, 0.042),
+  41.8px 41.8px 33.4px rgba(0, 0, 0, 0.05),
+  100px 100px 80px rgba(0, 0, 0, 0.07);
+
+}
+.custom-view {
+    .patcher-background {
+        background-color: #1b1d1f;
+        border: none;
+    .node-component {
+        border: none;
+        box-shadow: unset;
+
+        .cursor-ew-resize {
+            display: none;
+        }
+
+    }
+    }
+    border: none;
+}
+
+.node-component.comment {
+    box-shadow: unset;
+}
+
+.h-6_5 {
+    height: 1.5rem;
 }

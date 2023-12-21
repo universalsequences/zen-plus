@@ -15,11 +15,6 @@ export default function PatchesComponent() {
     let { patches, gridTemplate } = usePatches();
     let { lastResizingTime, setSelection, setSelectedNodes, setSelectedConnection, selection } = useSelection();
 
-    if (patches[0]) {
-        let ids = patches[0].getAllNodes().map(x => x.id);
-        console.log("all ids=", ids.length, new Set(ids).size);
-    }
-
     const onClick = useCallback((e: any) => {
         if (e.button == 2) {
             return;
@@ -35,20 +30,22 @@ export default function PatchesComponent() {
         setSelection(null);
     }, [setSelection, selection]);
 
-    return <>
-        <div
-            onClick={onClick}
-            className="flex w-full h-full min-h-screen">
-            <div className="flex flex-col w-full">
-                <div
-                    style={patches.length === 2 ? { gridTemplateColumns: gridTemplate } : {}}
-                    className={"m-4 flex-1 grid patches h-full flex-1 " + ("patches-" + patches.length)}>
-                    {patches.map(
-                        (patch, i) => <PatchWrapper index={i} key={i} patch={patch} />)}
+    return React.useMemo(() => {
+        return <>
+            <div
+                onClick={onClick}
+                className="flex w-full h-full min-h-screen">
+                <div className="flex flex-col w-full">
+                    <div
+                        style={patches.length === 2 ? { gridTemplateColumns: gridTemplate } : {}}
+                        className={"m-4 flex-1 grid patches h-full flex-1 " + ("patches-" + patches.length)}>
+                        {patches.map(
+                            (patch, i) => <PatchWrapper index={i} key={patch.id} patch={patch} />)}
+                    </div>
                 </div>
-            </div>
-            <Sidebar />
-        </div >
-    </>
+                <Sidebar />
+            </div >
+        </>
+    }, [patches, selection, setSelection, gridTemplate]);
 
 }

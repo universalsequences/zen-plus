@@ -13,7 +13,7 @@ interface Props {
 }
 const IOletsComponent = (props: Props) => {
     const { scrollRef, setDraggingCable, draggingCable } = usePosition();
-    const { registerConnection } = usePatch();
+    const { isCustomView, patch, registerConnection } = usePatch();
 
     const onMouseDown = useCallback((
         e: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -53,6 +53,10 @@ const IOletsComponent = (props: Props) => {
     }, [draggingCable, setDraggingCable]);
 
     let numIOlets = props.iolets.length;
+
+    if (isCustomView) {
+        return <></>;
+    }
     let memoed = React.useMemo(() => {
         return (
             <div className={props.className + ' w-full justify-between iolets'}>

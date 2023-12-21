@@ -15,6 +15,10 @@ export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
     return (_message: Message) => {
         if (name() && value() !== undefined) {
             let msg = `${name()} ${value()}`;
+            node.storedMessage = value();
+            return [msg];
+        } else if (name() && node.storedMessage !== undefined) {
+            let msg = `${name()} ${node.storedMessage}`;
             return [msg];
         }
         return [];

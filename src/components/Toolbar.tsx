@@ -59,11 +59,31 @@ const Toolbar = () => {
                         patch.name = e.target.value;
                     }} className="text-white bg-black-clear outline-none px-1" /> : patch.name || "current patch"}
     </div >);
+
+    const selectPatch = useCallback((_patch: Patch) => {
+        if (!(_patch as SubPatch).parentPatch) {
+            // base patch chosen-- so we close
+            closePatch();
+            if (patches.length === 1) {
+                setPatches([_patch]);
+            }
+            return;
+        }
+        console.log('select patch=', _patch);
+        let indexOf = patches.indexOf(patch);
+        let _patches = [...patches];
+        _patches[indexOf] = _patch;
+        console.log('setting patches=', _patches);
+        setPatches(_patches);
+    }, [setPatches, patches, patch]);
+
     while ((_patch as SubPatch).parentPatch) {
         key++;
         _patch = (_patch as SubPatch).parentPatch;
+        let p = _patch;
         let __patch = _patch;
         breadcrumbs.push(<div
+            onClick={() => selectPatch(p)}
             key={key}
             className=" my-auto text-white cursor-pointer text-xs rounded-full py-1 flex">
             {(_patch as SubPatch).parentPatch === undefined ? "base patch" : (_patch.name || "patch")}
@@ -74,7 +94,11 @@ const Toolbar = () => {
     breadcrumbs.reverse();
 
     const closePatch = useCallback(() => {
-        setPatches(patches.filter(x => x !== patch));
+        let _p = patches.filter(x => x !== patch);
+        if (_p.length === 0) {
+            _p = [(patch as SubPatch).parentPatch];
+        }
+        setPatches(_p);
     }, [patches, setPatches, patch]);
 
     if (breadcrumbs.length === 1) {
@@ -86,8 +110,8 @@ const Toolbar = () => {
     }
 
     return <div
-        style={{ zIndex: 1 }}
-        className="flex absolute top-0 left-0  full bg-black-blur px-1  pr-8">
+        style={{ zIndex: 100000000000000 }}
+        className="flex absolute -top-8 left-0  full bg-zinc-800 px-1  pr-8">
         <PatchDropdown patch={patch}>
             <GlobeIcon className="w-5 h-5 mt-1 mr-3" />
         </PatchDropdown>

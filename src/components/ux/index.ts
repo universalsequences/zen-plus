@@ -1,4 +1,6 @@
 import Matrix from './Matrix';
+import SVGCanvas from './SVGCanvas';
+import UMenu from './UMenu';
 import AttrUI from './AttrUI';
 import React from 'react';
 import NumberTilde from './NumberTilde';
@@ -22,5 +24,7 @@ export const index: ComponentIndex = {
     "number~": NumberTilde,
     "scope~": ScopeTilde,
     "buffer": Audio,
-    "attrui": AttrUI
+    "attrui": AttrUI,
+    "umenu": UMenu,
+    "canvas": SVGCanvas
 };

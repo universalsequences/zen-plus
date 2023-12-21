@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import pako from 'pako';
 import { getSegmentation } from '@/lib/cables/getSegmentation';
 import { usePosition } from '@/contexts/PositionContext';
 import { SizeIndex } from './PositionContext';
@@ -6,6 +7,7 @@ import { currentUUID, uuid, plusUUID, registerUUID } from '@/lib/uuid/IDGenerato
 import { Project } from '@/contexts/StorageContext';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import {
+    SerializedPatch,
     Positioned,
     Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate, SubPatch
 } from '@/lib/nodes/types';
@@ -30,11 +32,13 @@ interface PatcherContext {
     objectNodes: ObjectNode[];
     newMessageNode: (x: MessageNode, position: Coordinate) => void;
     newObjectNode: (x: ObjectNode, position: Coordinate) => void;
+    isCustomView: boolean;
 }
 
 interface Props {
     children: React.ReactNode;
     patch: Patch;
+    isCustomView?: boolean;
 }
 
 const PatchContext = createContext<PatcherContext | undefined>(undefined);
@@ -64,14 +68,32 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const [objectNodes, setObjectNodes] = useState<ObjectNode[]>([]);
     const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
 
+    useEffect(() => {
+        if (props.isCustomView) {
+            patch.setObjectNodes = setObjectNodes;
+        }
+    }, [setObjectNodes, patch]);
 
     const loadProject = useCallback((project: Project) => {
         patch.name = project.name;
         patch.objectNodes = [];
-        let connections = patch.fromJSON(project.json);
-        setConnections(connections);
-        setObjectNodes([...patch.objectNodes]);
-        setMessageNodes([...patch.messageNodes]);
+        console.log("load project =", project.json);
+        if ((project.json as any).compressed) {
+            const binaryBuffer = Buffer.from((project.json as any).compressed, 'base64');
+
+            // Decompress the data using Pako
+            const decompressed = pako.inflate(binaryBuffer, { to: 'string' });
+            let _json = JSON.parse(decompressed);
+            let connections = patch.fromJSON(_json);
+            setConnections(connections);
+            setObjectNodes([...patch.objectNodes]);
+            setMessageNodes([...patch.messageNodes]);
+        } else {
+            let connections = patch.fromJSON(project.json);
+            setConnections(connections);
+            setObjectNodes([...patch.objectNodes]);
+            setMessageNodes([...patch.messageNodes]);
+        }
     }, [setMessageNodes, setObjectNodes, patch, setConnections]);
 
     useEffect(() => {
@@ -104,10 +126,12 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     }, [setConnections, connections]);
 
     const segmentCables = useCallback((sizeIndex: SizeIndex) => {
+        console.log('segment cables called...', connections);
         for (let id in connections) {
             for (let connection of connections[id]) {
-                if (connection.segmentation === undefined) {
+                if (connection.segmentation === undefined && sizeIndex[id]) {
                     let segment = getSegmentation(connection, sizeIndex);
+                    console.log('segment for connection = ', segment);
                     if (segment !== undefined && !isNaN(segment)) {
                         connection.segmentation = segment;
                     }
@@ -242,7 +266,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             deleteConnection,
             loadProject,
             segmentCable,
-            segmentCables
+            segmentCables,
+            isCustomView: props.isCustomView ? true : false
         }}>
         {children}
     </PatchContext.Provider>;

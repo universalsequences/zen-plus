@@ -15,6 +15,7 @@ import MessageNodeComponent from './MessageNodeComponent';
 import { Connections, usePatch } from '@/contexts/PatchContext';
 import { usePatches } from '@/contexts/PatchesContext';
 import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts/PositionContext';
+import PresentationMode from './PresentationMode';
 
 enum PatchResizeType {
     Left,
@@ -35,9 +36,9 @@ interface Selection {
     y2: number;
 }
 
-const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
+const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView }) => {
     useThemeContext();
-    const { setGridTemplate, gridTemplate } = usePatches();
+    const { setSelectedPatch, setGridTemplate, gridTemplate } = usePatches();
     const [resizingPatch, setResizingPatch] = useState<ResizingPatch | null>(null);
     const {
         lastResizingTime,
@@ -48,9 +49,13 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     const { onNewMessage } = useMessage();
 
     useEffect(() => {
-    }, []);
+        if (!isCustomView) {
+            setSelectedPatch(patch);
+            patch.onNewMessage = onNewMessage;
+        }
+    }, [onNewMessage]);
 
-    const {
+    let {
         updateSize,
         scrollRef,
         setResizingNode,
@@ -59,10 +64,15 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         draggingNode,
         sizeIndexRef,
         updatePosition,
+        presentationMode,
         updatePositions,
         setDraggingSegmentation,
         draggingSegmentation,
     } = usePosition();
+
+    if (isCustomView) {
+        presentationMode = true;
+    }
 
     const {
         deleteNodes,
@@ -81,6 +91,9 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     const lastClick = useRef(0);
 
     const onMouseUp = useCallback((e: MouseEvent) => {
+        if (isCustomView) {
+            return;
+        }
         if (lockedMode) {
             return;
         }
@@ -89,24 +102,22 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             setResizingPatch(null);
         }
         if (selection && selection.patch === patch) {
-            let filtered = [...objectNodes, ...messageNodes].filter(
+            let all = [...patch.objectNodes, ...patch.messageNodes];
+            console.log("ALL =", all);
+            let filtered = all.filter(
                 node => {
                     let size = sizeIndexRef.current[node.id];
-                    if (size) {
-                        let w = size.width || 100;
-                        let h = size.height || 7;
-                        return node.position.x + w >= selection.x1 && node.position.x <= selection.x2 &&
-                            node.position.y + h >= selection.y1 && node.position.y <= selection.y2;
-                    } else {
-                        return;
-                    }
+                    let w = size ? size.width || 100 : 100;
+                    let h = size ? size.height || 7 : 7;
+                    let position = presentationMode ? node.presentationPosition || node.position : node.position;
+                    return position.x + w >= selection.x1 && position.x <= selection.x2 &&
+                        position.y + h >= selection.y1 && position.y <= selection.y2;
                 });
-            console.log("on mouse up selection =", filtered, selection);
             setSelectedNodes(filtered);
         }
         setDraggingNode(null);
         setResizingNode(null);
-    }, [resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
+    }, [presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
 
     const draggingNodeRef = useRef<DraggingNode | null>(null);
     const resizingNodeRef = useRef<ResizingNode | null>(null);
@@ -130,6 +141,9 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         if (!scrollRef.current) {
             return;
         }
+        if (isCustomView) {
+            return;
+        }
         if (resizingPatch) {
             let pageWidth = window.innerWidth;
             let leftWidthPercent = (e.pageX / pageWidth) * 100;
@@ -150,7 +164,11 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         if (draggingSegmentation) {
             let y = scrollRef.current.scrollTop + client.y; //- offset.y;
             let id = draggingSegmentation.source.id;
-            segmentCable(draggingSegmentation, y - sizeIndexRef.current[id].height);
+            let node = draggingSegmentation.source as ObjectNode;
+            let height = node.size ? node.size.height : sizeIndexRef.current[id].height;
+            if (height) {
+                segmentCable(draggingSegmentation, y - height);
+            }
         }
         if (resizingNodeRef.current) {
             lastResizingTime.current = new Date().getTime();
@@ -197,33 +215,50 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             let x = scrollRef.current.scrollLeft + client.x - offset.x;
             let y = scrollRef.current.scrollTop + client.y - offset.y;
 
-            let diffX = x - node.position.x;
-            let diffY = y - node.position.y;
+            let position = presentationMode ? node.presentationPosition || node.position : node.position;
+            let diffX = x - position.x;
+            let diffY = y - position.y;
 
-            node.position.x = Math.max(0, x);
-            node.position.y = Math.max(0, y);
+            position.x = Math.max(0, x);
+            position.y = Math.max(0, y);
 
             let updates: any = {};
             let nodeMap: any = {};
+
             for (let _node of selectedNodesRef.current) {
+                if (selectedNodesRef.current.length > 1) {
+                    for (let outlet of _node.outlets) {
+                        for (let connection of outlet.connections) {
+                            if (connection.segmentation) {
+                                connection.segmentation += diffY;
+                            }
+                        }
+                    }
+                }
                 if (node !== _node) {
-                    _node.position.x = Math.max(0, _node.position.x + diffX);
-                    _node.position.y = Math.max(0, _node.position.y + diffY);
-                    updates[_node.id] = { ..._node.position };
+                    let _position = presentationMode ? _node.presentationPosition || _node.position : _node.position;
+                    _position.x = Math.max(0, _position.x + diffX);
+                    _position.y = Math.max(0, _position.y + diffY);
+                    updates[_node.id] = { ..._position };
                 }
                 nodeMap[_node.id] = _node;
             }
-            updates[node.id] = { ...node.position };
+            updates[node.id] = { ...position };
 
             let _updates = updatePositions(updates);
             for (let id in updates) {
                 let node = nodeMap[id];
                 if (node) {
-                    node.position = updates[id];
+                    if (presentationMode) {
+                        node.presentationPosition = updates[id];
+                    } else {
+                        node.position = updates[id];
+                    }
                 }
             }
         }
     }, [
+        presentationMode,
         draggingSegmentation,
         resizingPatch,
         setGridTemplate,
@@ -254,6 +289,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             window.removeEventListener("mouseup", onMouseUp);
         }
     }, [
+        presentationMode,
         draggingSegmentation,
         setDraggingSegmentation,
         resizingPatch,
@@ -285,6 +321,11 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     }, [setSelection, selection]);
 
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (isCustomView) {
+            return;
+        }
+        setSelectedPatch(patch);
+        patch.onNewMessage = onNewMessage;
         if (e.button === 2) {
             return;
         }
@@ -302,9 +343,13 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                 y2: y
             })
         }
-    }, [setSelection]);
+    }, [setSelection, onNewMessage]);
 
     const onClick = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (isCustomView) {
+            return;
+        }
+        setSelectedPatch(patch);
         if (e.button == 2) {
             return;
         }
@@ -337,8 +382,11 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
     useEffect(() => {
         let positions: Coordinates = {};
         let connections: Connections = {};
-        for (let node of patch.objectNodes) {
-            positions[node.id] = node.position;
+        for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
+            if (presentationMode && !node.attributes["Include in Presentation"]) {
+                continue;
+            }
+            positions[node.id] = presentationMode ? node.presentationPosition || node.position : node.position;
             let _connections: IOConnection[] = [];
             for (let outlet of node.outlets) {
                 _connections = [..._connections, ...outlet.connections];
@@ -347,11 +395,14 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         }
         updatePositions(positions);
         updateConnections(connections);
-    }, [patch]);
+    }, [patch, presentationMode]);
 
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
     const handleContextMenu = (event: any) => {
+        if (isCustomView) {
+            return;
+        }
         event.preventDefault();
         setMenuPosition({ x: event.clientX, y: event.clientY });
     };
@@ -381,13 +432,18 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         updatePosition(messageNode.id, { ...menuPositionRef.current });
     }, [menuPosition, messageNodes]);
 
+    const presentation = useCallback((nodes: Node[]) => {
+        for (let node of nodes) {
+            (node as ObjectNode).setAttribute("Include in Presentation", true);
+            (node as ObjectNode).presentationPosition = { ... (node as ObjectNode).position };
+        }
+    }, []);
+
     const encapsulate = useCallback((nodes: Node[]) => {
         let inboundConnections = nodes.flatMap(
             node => node.inlets.flatMap(
                 inlet => inlet.connections.filter(
                     connection => !nodes.includes(connection.source))));
-
-        console.log("inbound connections=", inboundConnections);
 
         let outboundConnections = nodes.flatMap(
             node => node.outlets.flatMap(
@@ -407,12 +463,12 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
         }
 
         subpatch.objectNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
+        subpatch.messageNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
         subpatch.objectNodes = subpatch.objectNodes.filter(x => x.name !== "+");
 
         let inboundNodes = Array.from(new Set(inboundConnections.map(x => x.destination)));
         let outboundNodes = Array.from(new Set(outboundConnections.map(x => x.source)));
 
-        console.log("in bound nodes=", inboundNodes);
         for (let i = 0; i < inboundConnections.length; i++) {
             let node = inboundConnections[i].destination;
             let connection = inboundConnections[i];
@@ -439,7 +495,6 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                 _outlet.connections = _outlet.connections.filter(
                     c => c !== connection);
             }
-            console.log("connection.source.connect", connection.source, objectNode, objectNode.inlets[i], connection.sourceOutlet);
             let _connection = connection.source.connect(
                 objectNode,
                 objectNode.inlets[i], connection.sourceOutlet, false);
@@ -493,6 +548,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
             if ((node as ObjectNode).operatorContextType !== undefined) {
                 subpatch.objectNodes.push(node as ObjectNode);
             } else {
+                console.log('adding message=', node);
                 subpatch.messageNodes.push(node as MessageNode);
                 // its a message
             }
@@ -504,10 +560,37 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
 
 
     let out = React.useMemo(() => {
+        let inner = <div
+            onMouseMove={onSelectionMove}
+            onMouseDown={onMouseDown}
+            onClick={onClick}
+            className=" flex flex-1 select-none patcher-background z-1">
+            {!isCustomView && <Cables />}
+            {selection && selection.patch === patch &&
+                <div
+                    style={{
+                        left: selection.x1 + 'px', top: selection.y1 + 'px',
+                        width: (selection.x2 - selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'
+                    }}
+                    className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
+            {objectNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
+                (objectNode, index) =>
+                    objectNode.name === "outputs" ? '' : <ObjectNodeComponent
+                        key={objectNode.id}
+                        objectNode={objectNode} />
+            )}
+            {messageNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
+                (messageNode, index) =>
+                    <MessageNodeComponent
+                        key={messageNode.id}
+                        messageNode={messageNode} />
+            )}
+        </div>
+
         return (
             <div
                 onContextMenu={handleContextMenu}
-                className={("flex flex-col border border-zinc-600 relative w-full tile ") + (lockedMode ? "locked" : "")}>
+                className={(isCustomView ? "" : "border border-zinc-800 ") + ("flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")}>
                 <div
                     onMouseDown={(e: any) => {
                         e.preventDefault();
@@ -518,7 +601,7 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                         });
                     }}
                     className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
-                <div
+                {!isCustomView && <div
                     onMouseDown={(e: any) => {
 
                         e.preventDefault();
@@ -528,9 +611,10 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                             gridTemplate, resizeType: PatchResizeType.Left
                         })
                     }}
-                    className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />
+                    className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />}
 
-                <ContextMenu.Root>
+                <>{isCustomView ? inner : <ContextMenu.Root
+                >
                     <ContextMenu.Content color="indigo" className="object-context p-2 rounded-md text-white text-xs">
                         <ContextMenu.Item
                             onClick={createObjectNode}
@@ -553,49 +637,36 @@ const PatchComponent: React.FC<{ index: number }> = ({ index }) => {
                             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             Segment All Cables
                         </ContextMenu.Item>
+                        {selectedNodes.length > 0 &&
+                            <ContextMenu.Item
+                                onClick={() => presentation(selectedNodes)}
+                                className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                Include in Presentation {selectedNodes.length} nodes
+                            </ContextMenu.Item>}
                         {selectedNodes.length > 1 &&
                             <ContextMenu.Item
                                 onClick={() => encapsulate(selectedNodes)}
                                 className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                Encapsulate ${selectedNodes.length} nodes
+                                Encapsulate {selectedNodes.length} nodes
                             </ContextMenu.Item>}
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
                         ref={scrollRef}
-                        className="ContextMenuTrigger overflow-scroll relative">
-                        <div
-                            onMouseMove={onSelectionMove}
-                            onMouseDown={onMouseDown}
-                            onClick={onClick}
-                            className=" flex flex-1 select-none patcher-background z-1">
-                            <Cables />
-                            {selection && selection.patch === patch &&
-                                <div
-                                    style={{
-                                        left: selection.x1 + 'px', top: selection.y1 + 'px',
-                                        width: (selection.x2 - selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'
-                                    }}
-                                    className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
-                            {objectNodes.map(
-                                (objectNode, index) =>
-                                    objectNode.name === "outputs" ? '' : <ObjectNodeComponent
-                                        key={objectNode.id + '_' + index}
-                                        objectNode={objectNode} />
-                            )}
-                            {messageNodes.map(
-                                (messageNode, index) =>
-                                    <MessageNodeComponent
-                                        key={messageNode.id + '_' + index}
-                                        messageNode={messageNode} />
-                            )}
-                        </div>
+                        className={(isCustomView ? "" : "overflow-scroll") + " ContextMenuTrigger relative"}>
+                        {inner}
                     </ContextMenu.Trigger>
-                </ContextMenu.Root>
-                <Toolbar />
-                <LockButton />
+                </ContextMenu.Root>}
+                    {!isCustomView && <>
+                        <Toolbar />
+                        <PresentationMode />
+                        <LockButton />
+                    </>}
+                </>
             </div>
         );
-    }, [objectNodes, messageNodes, selection, patch, lockedMode]);
+    }, [
+        visibleObjectNodes,
+        objectNodes, patch.objectNodes, messageNodes, selection, patch, lockedMode, presentationMode]);
     return out;
 };
 

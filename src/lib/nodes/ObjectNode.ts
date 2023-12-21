@@ -1,5 +1,6 @@
 import { OperatorContextType, OperatorContext, getOperatorContext } from './context';
 import { Statement, Operator } from './definitions/zen/types';
+import pako from 'pako';
 import { Definition } from '../docs/docs';
 import { BaseNode } from './BaseNode';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,10 +39,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     outlets: IOlet[];
     isCycle?: boolean;
     position: Coordinate;
+    presentationPosition?: Coordinate;
     zIndex: number;
     name?: string;
     fn?: InstanceFunction;
-    attributes: Attributes;
     text: string;
     arguments: Message[];
     subpatch?: SubPatch;
@@ -58,7 +59,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         this.inlets = [];
         this.outlets = [];
         this.position = { x: 0, y: 0 };
-        this.attributes = {};
+        this.newAttribute("Include in Presentation", false, () => {
+            this.patch.objectNodes = [... this.patch.objectNodes];
+            if (this.patch.setObjectNodes) {
+                this.patch.setObjectNodes(this.patch.objectNodes);
+            }
+        });
         this.arguments = [];
         this.operatorContextType = OperatorContextType.ZEN;
     }
@@ -158,7 +164,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 definition.numberOfInlets;
 
         let parsedArguments = this.parseArguments(
-            argumentTokens, numberOfInlets, definition.defaultValue);
+            argumentTokens, numberOfInlets, definition.defaultValue as number | undefined);
 
         let nodeFunction: NodeFunction = context.api[name];
         this.name = name;
@@ -176,7 +182,18 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         if (patchPreset && this.subpatch) {
             this.subpatch.objectNodes = [];
-            this.subpatch.fromJSON(patchPreset, true);
+            if ((patchPreset as any).compressed) {
+                // Convert the Base64 string back to a binary buffer
+                const binaryBuffer = Buffer.from((patchPreset as any).compressed, 'base64');
+                // Decompress the data using Pako
+                const decompressed = pako.inflate(binaryBuffer, { to: 'string' });
+                let json = JSON.parse(decompressed);
+                this.subpatch.fromJSON(json, true);
+                console.log(json);
+            } else {
+                this.subpatch.fromJSON(patchPreset, true);
+            }
+
         }
         return true;
     }
@@ -247,7 +264,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 }
                 lazyArgs.push(() => this.arguments[i - 1]);
             }
-            if (this.name === "in" || this.name === "param") {
+            if (this.name === "in") {
                 this.inlets[i].hidden = true;
             }
         }
@@ -269,7 +286,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         // check the number of io-lets matches the spec
-        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets) {
+        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas") {
             this.outlets = this.outlets.slice(0, _numberOfOutlets);
         }
 
@@ -434,15 +451,23 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             id: this.id,
             text: this.text,
             position: this.position,
+            presentationPosition: this.presentationPosition,
             outlets: this.getConnectionsJSON(),
             size: this.size,
             operatorContextType: this.operatorContextType
         };
+
         if (this.buffer && this.name !== "buffer") {
             json.buffer = Array.from(this.buffer);
         }
 
-        json.attributes = { ... this.attributes };
+        json.attributes = {};
+        for (let name in this.attributes) {
+            if (this.attributes[name] !== this.attributeDefaults[name]) {
+                json.attributes[name] = this.attributes[name];
+            }
+        }
+        //        json.attributes = { ... this.attributes };
 
         if (this.subpatch) {
             return {
@@ -462,10 +487,17 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (json.size) {
             this.size = json.size;
         }
+
         if (json.attributes) {
-            this.attributes = json.attributes;
+            this.attributes = {
+                ... this.attributes,
+                ...json.attributes
+            }
         }
+
         this.position = json.position;
+        this.presentationPosition = json.presentationPosition;
+
         this.parse(json.text, json.operatorContextType || OperatorContextType.ZEN, false);
         if (json.numberOfOutlets) {
             for (let i = 0; i < json.numberOfOutlets; i++) {
@@ -481,7 +513,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             this.subpatch.objectNodes = [];
             this.subpatch.fromJSON(json.subpatch, isPreset);
         }
+
+        if (json.attributes) {
+            this.attributes = {
+                ... this.attributes,
+                ...json.attributes
+            }
+        }
     }
+
 
     getPatchPresetIfAny(name: string): SerializedPatch | null {
         // TODO: make this data-source modular, with multi data sources  beyond localstorage

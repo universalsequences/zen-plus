@@ -36,8 +36,24 @@ export const pak = (node: ObjectNode, ...args: Lazy[]) => {
     };
 }
 
+doc(
+    'list.length',
+    {
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        description: "returns length of list"
+    });
+
+export const list_length = (node: ObjectNode, ...args: Lazy[]) => {
+    return (message: Message): Message[] => {
+        return [(message as any[]).length] as Message[];
+    };
+}
+
+
 
 export const lists = {
+    "list.length": list_length,
     unpack,
     pak
 };

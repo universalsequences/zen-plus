@@ -18,14 +18,18 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
         if (sourceCoordinate && destCoordinate) {
             // we calculate the position of the inlet/outlets for this cable
             // by taking the width of the source/dest nodes and divide by numIOlets-1
+
+            let sub = (connection.destination as ObjectNode).subpatch;
             let destInlet = connection.destinationInlet;
             let sourceCoordinate = coordinates[node.id];
             let destCoordinate = coordinates[(connection.destination as any).id];
             let inletNumber = connection.destination.inlets.indexOf(destInlet);
             let numInlets = connection.destination.inlets.length;
             let numOutlets = node.outlets.length;
-            let sourceBetween = ((source_w) - 10) / Math.max(1, numOutlets - 1);
-            let destBetween = ((dest_w) - 10) / Math.max(1, numInlets - 1)
+            let width = (connection.source as ObjectNode).size ? (connection.source as ObjectNode).size!.width! : source_w
+            let sourceBetween = ((width) - 10) / Math.max(1, numOutlets - 1);
+            let dest_width = (connection.destination as ObjectNode).size ? (connection.destination as ObjectNode).size!.width : source_w
+            let destBetween = ((dest_width) - 10) / Math.max(1, numInlets - 1)
             let offset = inletNumber * destBetween
             let destX = destCoordinate.x;
 
@@ -33,7 +37,7 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
                 ...destCoordinate,
                 x: destX + offset
             };
-            let height = source_h
+            let height = (connection.source as ObjectNode).size ? (connection.source as ObjectNode).size!.height : source_h
             sourceCoordinate = {
                 x: sourceCoordinate.x + outletNumber * sourceBetween,
                 y: sourceCoordinate.y + height - 3
@@ -54,6 +58,7 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
                 sourceCircle.x = sourceCoordinate.x + 2;
                 destinationCircle.x = destCoordinate.x + 4;
             }
+
             return { d, destinationCircle, sourceCircle, destCoordinate, sourceCoordinate };
         }
         return { d: [] };

@@ -31,10 +31,12 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
 
     const { sizeIndex } = usePosition();
-    let { width, height } = sizeIndex[objectNode.id];
+    let { width, height } = sizeIndex[objectNode.id] || { width: 100, height: 100 };
     const [size, setSize] = useState({ width, height });
     let size_x = (width - (columns as number) * 4) / (columns as number);
     let size_y = (height - (rows as number) * 4) / (rows as number);
+
+    console.log("matrix render...");
 
     let memo = React.useMemo(() => {
         let _rows = [];
@@ -71,7 +73,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                                         height: size_y,
                                         backgroundColor: value ? "#2ad4bf" : ""
                                     }}
-                                    className={"rounded-full border bg-black border-zinc-800 cursor-pointer active:bg-zinc-800 active:border-zinc-100 "}>
+                                    className={"rounded-full border bg-black-clear2 border-zinc-800 cursor-pointer active:bg-zinc-800 active:border-zinc-100 "}>
 
                                 </div>)}
                     </div>)}

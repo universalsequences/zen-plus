@@ -6,7 +6,7 @@ export interface Definition {
     numberOfOutlets: string | number | ((x: number) => number);
     inletNames?: string[];
     outletNames?: string[];
-    defaultValue?: number;
+    defaultValue?: number | string | number[];
     outletType?: ConnectionType;
     inletType?: ConnectionType;
     name?: string;

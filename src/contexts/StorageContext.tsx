@@ -29,32 +29,50 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         let projects = JSON.parse(window.localStorage.getItem(key) || "[]")
         let _projects: Project[] = [];
         for (let name of projects) {
-            let payload = window.localStorage.getItem(`${key}.${name}`);
-            if (payload) {
-                let payloadJSON: SerializedPatch = JSON.parse(payload);
-                _projects.push({
-                    name: name,
-                    json: payloadJSON
-                });
+            let localStorageKey = `${key}.${name}`;
+            let payload = window.localStorage.getItem(localStorageKey);
+            try {
+                if (payload) {
+                    let payloadJSON: SerializedPatch = JSON.parse(payload);
+                    _projects.push({
+                        name: name,
+                        json: payloadJSON
+                    });
+                }
+            } catch (e) {
+
             }
         }
         return _projects;
     };
 
     const savePatch = useCallback((name: string, patchToSave: SerializedPatch) => {
-        let payload = JSON.stringify(patchToSave);
-        let storageName = `patch.${name}`;
-        let projects = JSON.parse(window.localStorage.getItem("patch") || "[]")
-        window.localStorage.setItem("patch", JSON.stringify([...projects, name]));
-        window.localStorage.setItem(storageName, payload);
+        fetch('/api/compress', {
+            method: "POST",
+            body: JSON.stringify(patchToSave)
+        }).then(
+            async r => {
+                let payload = await r.json();
+                let storageName = `patch.${name}`;
+                let projects = JSON.parse(window.localStorage.getItem("patch") || "[]")
+                window.localStorage.setItem("patch", JSON.stringify([...projects, name]));
+                window.localStorage.setItem(storageName, JSON.stringify(payload));
+            });
+
     }, []);
 
     const saveSubPatch = useCallback((name: string, patchToSave: SerializedPatch) => {
-        let payload = JSON.stringify(patchToSave);
-        let storageName = `subpatch.${name}`;
-        let projects = JSON.parse(window.localStorage.getItem("subpatch") || "[]")
-        window.localStorage.setItem("subpatch", JSON.stringify([...projects, name]));
-        window.localStorage.setItem(storageName, payload);
+        fetch('/api/compress', {
+            method: "POST",
+            body: JSON.stringify(patchToSave)
+        }).then(
+            async r => {
+                let payload = await r.json();
+                let storageName = `subpatch.${name}`;
+                let projects = JSON.parse(window.localStorage.getItem("subpatch") || "[]")
+                window.localStorage.setItem("subpatch", JSON.stringify([...projects, name]));
+                window.localStorage.setItem(storageName, JSON.stringify(payload));
+            });
     }, []);
 
     return <StorageContext.Provider

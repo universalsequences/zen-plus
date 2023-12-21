@@ -61,12 +61,14 @@ export const history = (val?: number, params?: HistoryParams, debugName?: string
 
             context = _context;
             if (block === undefined || contextChanged) {
+                console.log('allocating!!');
                 block = context.alloc(1);
                 historyVar = context.useVariables(debugName || "historyVal")[0];
                 contextBlocks = contextBlocks.filter(
                     x => !x.context.disposed);
                 contextBlocks.push({ context, block });
             } else {
+                console.log('jot allocating');
             }
 
             if (block._idx === 44794) {

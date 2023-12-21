@@ -45,8 +45,8 @@ const LoadProject = (props: Props) => {
         <div className="text-xs flex flex-col h-64 w-96 select-none">
             <div className="text-base">Patches...</div>
             <div
-                style={{ backgroundColor: "#0000003f" }}
-                className="flex-1 mt-4 overflow-y-scroll p-3 border border-zinc-900">
+                style={{ borderColor: "#ffffff3f", backgroundColor: "#00000012" }}
+                className="flex-1 mt-4 overflow-y-scroll p-3 border ">
                 {patches.map(
                     (project, index) =>
                         <div

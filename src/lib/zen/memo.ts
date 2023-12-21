@@ -84,7 +84,12 @@ export const memo = (fn: UGen): UGen => {
             }
         }
         _context = context;
+        let a = new Date().getTime();
         memoized = fn(context);
+        let b = new Date().getTime();
+        if (b - a > 50) {
+            console.log('memo internal fn took', b - a, memoized);
+        }
         return memoized;
     };
 };

@@ -19,6 +19,7 @@ const ScopeTilde: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const renderTargetsRef = useRef<THREE.WebGLRenderTarget[]>([]);
     const currentRenderTargetIndex = useRef(0);
     const initialized = useRef(false);
+    const renderCounter = useRef(0);
 
 
     useEffect(() => {
@@ -118,6 +119,12 @@ gl_FragColor = mix(vec4(199.0/255.0,1.0,0.1,1.0), vec4(0.0,0.0,0.0,0.0), smooths
             !cameraRef.current) {
             return;
         }
+
+        renderCounter.current++;
+        if (renderCounter.current % 2 === 0) {
+            //requestAnimationFrame(render);
+            //return;
+        }
         // Update the shader uniform with the latest maxValue
 
         const currentIndex = currentRenderTargetIndex.current;
@@ -161,7 +168,10 @@ gl_FragColor = mix(vec4(199.0/255.0,1.0,0.1,1.0), vec4(0.0,0.0,0.0,0.0), smooths
 
     return (
         <div
-            style={{ backgroundColor: "#62626259" }}
+            style={{
+                backdropFilter: "blur(8px)",
+                backgroundColor: "#62626239"
+            }}
             ref={mountRef} className="w-64 h-24 text-white">
         </div>
     );

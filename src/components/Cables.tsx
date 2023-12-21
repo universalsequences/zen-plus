@@ -13,7 +13,7 @@ const Cables = () => {
     let { objectNodes, messageNodes, deleteConnection } = usePatch();
     let { selectedNodes } = useSelection();
     let { size } = usePosition();
-    let { draggingNode, scrollRef, setDraggingCable, draggingCable, setDraggingSegmentation } = usePosition();
+    let { presentationMode, draggingNode, scrollRef, setDraggingCable, draggingCable, setDraggingSegmentation } = usePosition();
 
     let memoed = React.useMemo(() => {
         let _selectedNodes = [...selectedNodes];
@@ -24,12 +24,12 @@ const Cables = () => {
             <svg
                 style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
                 className="absolute z-0 w-full h-full z-1 pointer-events-none">
-                {[...objectNodes, ...messageNodes].map((node, i) =>
+                {!presentationMode && [...objectNodes, ...messageNodes].map((node, i) =>
                     <ObjectCables
                         setDraggingSegmentation={setDraggingSegmentation}
                         deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
                 <AlignmentHelper />
-                <Dragging />
+                {!presentationMode && <Dragging />}
             </svg>
             {/*
             <svg
@@ -43,7 +43,7 @@ const Cables = () => {
              */}
         </>
         )
-    }, [size, objectNodes, draggingNode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
+    }, [size, objectNodes, draggingNode, presentationMode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
     return memoed;
 };
 
@@ -184,7 +184,7 @@ const Edge: React.FC<{
                             fill="transparent"
                             strokeDasharray={isAudio ?
                                 "4 4" : undefined}
-                            d={_d} stroke={isSelected ? "red" : (isCore ? "#979797" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
+                            d={_d} stroke={isSelected ? "red" : (isCore ? "#ffffff" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
                         <path
                             fill="transparent"
                             className={(((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? "cursor-ns-resize" : "") + " pointer-events-auto "}
