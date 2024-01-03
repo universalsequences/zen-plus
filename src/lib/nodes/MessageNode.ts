@@ -10,6 +10,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     id: string;
     message?: Message;
     position: Coordinate;
+    presentationPosition?: Coordinate;
     zIndex: number;
     paramNode: ObjectNode;
     messageType: MessageType;
@@ -50,8 +51,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     receive(inlet: IOlet, message: Message) {
         switch (inlet.name) {
             case TRIGGER:
-                if (this.attributes["number box"] && message !== "bang") {
-                    console.log("mesasge = ", message);
+                if (this.attributes["number box"] && !this.attributes["is parameter"] && message !== "bang") {
                     this.message = message;
                     this.send(this.outlets[0], message);
                 } else if (this.attributes["is parameter"] && this.paramNode.fn) {
@@ -112,6 +112,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
             id: this.id,
             message: this.message as Message,
             position: this.position,
+            presentationPosition: this.presentationPosition,
             outlets: this.getConnectionsJSON(),
             messageType: this.messageType
         };
@@ -137,6 +138,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
             this.messageType = json.messageType;
         }
         this.position = json.position;
+        this.presentationPosition = json.presentationPosition;
         this.message = json.message;
         this.id = json.id;
     }

@@ -57,6 +57,7 @@ export interface IOConnection {
     sourceOutlet: IOlet; // which outlet of the source this comes from
     destinationInlet: IOlet; // which inlet of the destination this goes to
     segmentation?: number;  // y position of segmentation
+    created?: boolean;
 }
 
 export type IOlet = Identifiable & {
@@ -72,7 +73,7 @@ export type AttributeOptions = {
 }
 
 export type Attributes = {
-    [x: string]: string | number | boolean;
+    [x: string]: string | number | boolean | string[] | number[];
 }
 
 export type AttributeCallbacks = {
@@ -95,7 +96,7 @@ export type Node = Identifiable & Attributed & {
     newInlet: (name?: string) => void;
     newOutlet: (name?: string) => void;
     connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
-    disconnect: (connection: IOConnection) => void;
+    disconnect: (connection: IOConnection, compile: boolean) => void;
     connectAudioNode: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message) => void;
@@ -105,7 +106,7 @@ export type ObjectNode = Positioned & Node & {
     name?: string; // the name of the object - i.e. what it is
     text: string; // the literal text inputed in the object box (used to parse)
     fn?: InstanceFunction; // the function associated with the object name (to be run on message receive)
-    parse: (x: string, operatorContextType?: OperatorContextType, compile?: boolean) => boolean; // function to parse text -> fn
+    parse: (x: string, operatorContextType?: OperatorContextType, compile?: boolean, patch?: SerializedPatch) => boolean; // function to parse text -> fn
     arguments: Message[]; // stored messages from inlets #1,2,3,etc (to be used by fn)
     buffer?: Float32Array; // optional buffer (used in matrix objects)
     subpatch?: SubPatch;
@@ -116,9 +117,11 @@ export type ObjectNode = Positioned & Node & {
     useAudioNode: (x: AudioNode) => void;
     operatorContextType: OperatorContextType;
     needsLoad?: boolean;
-    storedMessage?: Message;
+    storedLazyMessage?: Lazy;
     param?: ParamGen;
     isCycle?: boolean;
+    lastSentMessage?: Message;
+    storedMessage?: Message;
 }
 
 export type MessageNode = Positioned & Node & {
@@ -152,9 +155,13 @@ export type Patch = Identifiable & {
     name?: string;
     skipRecompile: boolean;
     skipRecompile2: boolean;
+    setZenCode?: (x: string | null) => void;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
     setObjectNodes?: (x: ObjectNode[]) => void; // tells the front-end a new audioworklet has been compiled
     onNewMessage?: (id: string, value: Message) => void;
+    previousSerializedPatch?: SerializedPatch;
+    previousTokenId: number;
+    viewed?: boolean;
 }
 
 export type SubPatch = Patch & {
@@ -166,13 +173,13 @@ export type SubPatch = Patch & {
 
 
 export interface SerializedOutlet {
-    outletNumber: number;
+    outletNumber?: number;
     connections: SerializedConnection[]
 };
 
 export interface SerializedConnection {
     destinationId: string;
-    destinationInlet: number;
+    destinationInlet?: number;
     segmentation?: number;
 };
 
@@ -200,6 +207,7 @@ export type SerializedPatch = Identifiable & {
 
 export type SerializedMessageNode = Identifiable & {
     position: Coordinate;
+    presentationPosition: Coordinate;
     outlets: SerializedOutlet[]
     attributes?: Attributes;
     message: Message;

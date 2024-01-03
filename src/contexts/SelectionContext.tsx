@@ -18,6 +18,10 @@ interface ISelectionContext {
     setSelectedConnection: (x: IOConnection | null) => void;
     selection: Selection | null;
     setSelection: (x: Selection | null) => void;
+
+    zoomRef: React.MutableRefObject<number>;
+    zoom: number;
+    setZoom: (x: number) => void;
 }
 
 export interface Selection {
@@ -42,11 +46,21 @@ export const useSelection = (): ISelectionContext => {
 
 export const SelectionProvider: React.FC<Props> = ({ children }) => {
 
+    const [zoom, setZoom] = useState(1);
+    const zoomRef = useRef(1);
+
+    useEffect(() => {
+        zoomRef.current = zoom;
+    }, [zoom]);
     const lastResizingTime = useRef(0);
     const [selectedNodes, setSelectedNodes] = useState<(ObjectNode | MessageNode)[]>([]);
     const [selectedConnection, setSelectedConnection] = useState<IOConnection | null>(null);
     const [lockedMode, setLockedMode] = useState(false);
     const [selection, setSelection] = useState<Selection | null>(null)
+
+    useEffect(() => {
+        setSelection(null);
+    }, [lockedMode, setSelection]);
 
     useEffect(() => {
         if (selectedNodes.length > 0) {
@@ -83,6 +97,9 @@ export const SelectionProvider: React.FC<Props> = ({ children }) => {
             setSelectedConnection,
             selectedNodes,
             setSelectedNodes,
+            setZoom,
+            zoom,
+            zoomRef,
             lockedMode,
             setLockedMode,
             selection,

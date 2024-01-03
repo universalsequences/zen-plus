@@ -8,10 +8,10 @@ import { usePatches } from '@/contexts/PatchesContext';
 import { PatchImpl } from '@/lib/nodes/Patch';
 
 
-const PatchWrapper: React.FC<{ patch: Patch, index: number }> = ({ patch, index }) => {
+const PatchWrapper: React.FC<{ maxWidth: number, maxHeight: number, patch: Patch, index: number }> = ({ patch, index, maxWidth, maxHeight }) => {
     return <PatchProvider patch={patch}>
         <PositionProvider patch={patch}>
-            <PatchComponent index={index} />
+            <PatchComponent maxWidth={maxWidth} maxHeight={maxHeight} index={index} />
         </PositionProvider>
     </PatchProvider>;
 

@@ -143,6 +143,9 @@ export const getVariableName = (op: string, idx: number, zobject: ObjectNode): s
         let idx = zobject.id.replaceAll("-", "").slice(0, 6);
         return `${op}_${idx}_${scriptingName}`;
     }
+    if (op.includes("history")) {
+        op = op.replace("history", "hist");
+    }
     return `${op}${idx}`;
 };
 
@@ -155,6 +158,9 @@ export const _printStatement = (
 ): string => {
     if (typeof statement === "number") {
         return (statement as number).toString();
+    }
+    if (typeof statement === "string") {
+        return "\"" + (statement as string) + "\"";
     }
 
     if (!Array.isArray(statement)) {
@@ -245,6 +251,8 @@ export const _printStatement = (
         output = `${_name} (${JSON.stringify((operator as CompoundOperator).range)}, ${_body},
         "${(operator as CompoundOperator).variableName}")
         `;
+    } else if (_name === "param" && zobject.storedMessage !== undefined) {
+        output = `param(${zobject.storedMessage})`;
     } else if (_name === "message") {
         let comp = operator as CompoundOperator;
         let name = comp.params;
@@ -270,6 +278,7 @@ ${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printState
         if (!variables[zobject.id]) {
             let idx = Object.keys(variables).length;
             let name = getVariableName(op, idx, zobject); //`${op}${idx} `;
+
             variables[zobject.id] = {
                 idx,
                 name,
@@ -297,8 +306,8 @@ type CompiledStatements = {
     [id: string]: UGen;
 }
 
-export const compileStatement = (statement: Statement, compiled: CompiledStatements = {}): UGen => {
-    let _compiled = _compileStatement(statement);
+export const compileStatement = (statement: Statement, _api = api, _simpleFunctions = simpleFunctions): UGen | (() => string | number) => {
+    let _compiled = _compileStatement(statement, undefined, undefined, undefined, _api, _simpleFunctions);
     return _compiled;
 }
 
@@ -343,12 +352,19 @@ export const getZObjects = (statement: Statement,): ObjectNode[] => {
     }
 };
 
-export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = []): UGen => {
+export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = [], _api: API, _simpleFunctions: API): UGen | (() => string | number) => {
     if (!statement.node) {
         //console.log("no node for statement", statement);
     }
     if (typeof statement === "number") {
-        return float(statement as number);
+        if (_api === api) {
+            return float(statement as number);
+        } else {
+            return () => (statement as number);
+        }
+    }
+    if (typeof statement === "string") {
+        return () => (statement as string);
     }
 
     if (statement && (statement as BlockGen).getSize) {
@@ -378,7 +394,7 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     let newList = zobject ? [zobject, ...zobjects] : zobjects;
 
     // recursively compile the statements
-    let compiledArgs = statements.filter(x => x !== undefined).map(arg => _compileStatement(arg as Statement, compiled, depth + 1, newList));
+    let compiledArgs = statements.filter(x => x !== undefined).map(arg => _compileStatement(arg as Statement, compiled, depth + 1, newList, _api, _simpleFunctions));
     if (zobject && compiled[zobject.id]) {
         //let _depth = calculateDepth(statement);
         //if (!_depth.some(x => x[0] && x[0].name === "history")) {
@@ -389,46 +405,48 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
 
 
 
-    let zenOperator: ZenFunction = getZenOperator(operator);
+    let zenOperator: ZenFunction | OnchainFunction = getZenOperator(operator, _api);
     let output: UGen | undefined = undefined;
     let _name = "";
-    if (isSimpleFunction(zenOperator)) {
+    if (isSimpleFunction(zenOperator, _simpleFunctions)) {
         output = (zenOperator as SimpleFunction)(...compiledArgs);
     } else {
         // a few functions require a bespoke params field to work
         let compoundOperator = operator as CompoundOperator;
         let name = compoundOperator.name;
         if (name === "phasor") {
-            console.log('calling phasor with compiled args=', compiledArgs);
-            output = phasor(compiledArgs[0], compiledArgs[1], compoundOperator.params as AccumParams);
+            output = phasor(compiledArgs[0] as Arg, compiledArgs[1] as Arg, compoundOperator.params as AccumParams);
         } else if (name === "accum") {
-            output = accum(compiledArgs[0], compiledArgs[1], compoundOperator.params as AccumParams);
+            output = accum(compiledArgs[0] as Arg, compiledArgs[1] as Arg, compoundOperator.params as AccumParams);
         } else if (name === "round") {
-            output = round(compiledArgs[0], compiledArgs[1], compoundOperator.params as RoundMode);
+            output = round(compiledArgs[0] as Arg, compiledArgs[1] as Arg, compoundOperator.params as RoundMode);
         } else if (name === "poke") {
             // data will work as is
             let blockGen = compoundOperator.params as BlockGen;
-            output = poke(blockGen, compiledArgs[0], compiledArgs[1], compiledArgs[2]);
+            output = poke(blockGen, compiledArgs[0] as Arg, compiledArgs[1] as Arg, compiledArgs[2] as Arg);
         } else if (name === "clearData") {
             // data will work as is
             let blockGen = compoundOperator.params as BlockGen;
-            output = clearData(blockGen, compiledArgs[0]);
+            output = clearData(blockGen, compiledArgs[0] as Arg);
         } else if (name === "peek") {
             let blockGen = compoundOperator.params as BlockGen;
-            output = peek(blockGen, compiledArgs[0], compiledArgs[1], compiledArgs[2]);
+            output = peek(blockGen, compiledArgs[0] as Arg, compiledArgs[1] as Arg, compiledArgs[2] as Arg);
         } else if (name === "simdMatSum") {
             return simdMatSum(compoundOperator.block1!, compoundOperator.block2!);
         } else if (name === "history") {
             let hist: History = compoundOperator.history!;
-            output = hist(compiledArgs[0], compiledArgs[1]);
+            output = hist(compiledArgs[0] as UGen, compiledArgs[1] as UGen);
         } else if (name === "param") {
             let param: ParamGen = compoundOperator.param!;
+            if (statement.node && statement.node.text.includes("wet")) {
+                console.log('sending output of param!', param, statement);
+            }
             output = param;
         } else if (name === "click") {
             let click: Clicker = compoundOperator.param! as Clicker;
             output = click;
         } else if (name === "output") {
-            output = output_f(compiledArgs[0], compoundOperator.outputNumber!);
+            output = output_f(compiledArgs[0] as Arg, compoundOperator.outputNumber!);
         } else if (name === "variable") {
             output = variable(compoundOperator.variableName!);
         } else if (name === "argument") {
@@ -437,30 +455,30 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             output = input(compoundOperator.value!);
         } else if (name === "rawSumLoop") {
             let range: Range = compoundOperator.range!;
-            output = rawSumLoop(range, compiledArgs[0], compoundOperator.variableName!);
+            output = rawSumLoop(range, compiledArgs[0] as UGen, compoundOperator.variableName!);
         } else if (name === "defun") {
             let size: number = compoundOperator.value!;
             let name: string = compoundOperator.variableName!;
-            output = defun(name, size, ...compiledArgs);
+            output = defun(name, size, ...compiledArgs as UGen[]);
         } else if (name === "call") {
             let invocationNumber: number = compoundOperator.value!;
             let body = compiledArgs[0];
             let args = compiledArgs.slice(1);
             _name = name;
-            output = call(body as LazyFunction, invocationNumber, ...args);
+            output = call(body as LazyFunction, invocationNumber, ...args as UGen[]);
         } else if (name === "message") {
-            output = message(compoundOperator.params as string, compiledArgs[0], compiledArgs[1]);
+            output = message(compoundOperator.params as string, compiledArgs[0] as Arg, compiledArgs[1] as Arg);
         } else if (name === "modeling.play") {
             let components: Component[] = [];
             for (let component of compoundOperator.physicalModel!) {
                 let { web, material } = component;
-                let pitch = _compileStatement(material.pitch as Statement, compiled, depth + 1, newList);
-                let couplingCoefficient = _compileStatement(material.couplingCoefficient as Statement, compiled, depth + 1, newList);
-                let release = _compileStatement(material.release as Statement, compiled, depth + 1, newList);
-                let placement = _compileStatement(material.placement as Statement, compiled, depth + 1, newList);
-                let noise = _compileStatement(material.noise as Statement, compiled, depth + 1, newList);
-                let x = _compileStatement(material.x as Statement, compiled, depth + 1, newList);
-                let y = _compileStatement(material.y as Statement, compiled, depth + 1, newList);
+                let pitch = _compileStatement(material.pitch as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                let couplingCoefficient = _compileStatement(material.couplingCoefficient as Statement, compiled, depth + 1, newList, _api, _simpleFunctions)
+                let release = _compileStatement(material.release as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                let placement = _compileStatement(material.placement as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                let noise = _compileStatement(material.noise as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                let x = _compileStatement(material.x as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                let y = _compileStatement(material.y as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
                 let _material = {
                     pitch,
                     release,
@@ -470,20 +488,20 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
                     x,
                     y
                 };
-                let comp: Component = new Component(_material, web, components.length === 0);
+                let comp: Component = new Component(_material as any, web, components.length === 0);
                 components.push(comp);
             }
             if (components.length === 1) {
-                output = components[0].gen(compiledArgs[0]);
+                output = components[0].gen(compiledArgs[0] as UGen);
             } else {
                 components[0].bidirectionalConnect(components[1]);
                 output = s(
-                    compiledArgs[0],
+                    compiledArgs[0] as Arg,
                     components[0].currentChannel,
                     components[0].prevChannel,
                     components[1].currentChannel,
                     components[1].prevChannel,
-                    mix(components[0].gen(compiledArgs[0]), components[1].gen(add(0)), compiledArgs[1] || 0)
+                    mix(components[0].gen(compiledArgs[0] as UGen), components[1].gen(add(0)), (compiledArgs[1] as UGen) || 0)
                 );
             }
         }
@@ -498,25 +516,29 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     return float(0);
 };
 
-export const getZenOperator = (operator: Operator): ZenFunction => {
+export const getZenOperator = (operator: Operator, _api: API = api): ZenFunction | OnchainFunction => {
     let operatorName: string = (operator as CompoundOperator).name ||
         operator as string;
-    return api[operatorName];
+    return _api[operatorName];
 };
 
 export type SimpleFunction = (...x: Arg[]) => UGen;
 export type BinaryParamFunction = (x: Arg, y?: Arg, params?: CustomParams) => UGen;
 export type ZenFunction = SimpleFunction; // | BinaryParamFunction;
+
+export type OnchainArg = string | (() => string);
+export type OnchainFunction = (...x: OnchainArg[]) => () => string;
+
 export type API = {
-    [key: string]: ZenFunction;
+    [key: string]: ZenFunction | OnchainFunction
 };
 
 export type BinaryAPI = {
     [key: string]: BinaryParamFunction;
 };
 
-const isSimpleFunction = (func: ZenFunction): boolean => {
-    return Object.values(simpleFunctions).includes(func);
+const isSimpleFunction = (func: ZenFunction | OnchainFunction, _simpleFunctions: API): boolean => {
+    return Object.values(_simpleFunctions).includes(func);
 };
 
 const simpleFunctions: API = {

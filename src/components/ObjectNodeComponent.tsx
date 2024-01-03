@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { fetchOnchainSubPatch } from '@/lib/onchain/fetch';
+import { usePublicClient } from 'wagmi';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import { OperatorContext, OperatorContextType, getAllContexts, getOperatorContext } from '@/lib/nodes/context';
 import { ContextDefinition } from '@/hooks/useAutoComplete';
@@ -16,7 +18,7 @@ import { usePatch } from '@/contexts/PatchContext';
 import CustomSubPatchView from './CustomSubPatchView';
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-    const { lockedMode, selectedNodes, setSelectedNodes } = useSelection();
+    const { setSelection, lockedMode, selectedNodes, setSelectedNodes } = useSelection();
     const { updatePosition, sizeIndexRef } = usePosition();
 
     let lockedModeRef = useRef(lockedMode);
@@ -30,16 +32,18 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
             lockedModeRef={lockedModeRef}
             sizeIndexRef={sizeIndexRef}
             objectNode={objectNode}
+            setSelection={setSelection}
             setSelectedNodes={setSelectedNodes}
             updatePosition={updatePosition}
             isSelected={isSelected}
         />
-    }, [objectNode, setSelectedNodes, isSelected]);
+    }, [objectNode, setSelectedNodes, isSelected, setSelection]);
 
     return out;
 };
 
 const InnerObjectNodeComponent: React.FC<{
+    setSelection: any,
     isSelected: boolean,
     lockedModeRef: React.MutableRefObject<boolean>,
     sizeIndexRef: React.MutableRefObject<SizeIndex>,
@@ -49,12 +53,14 @@ const InnerObjectNodeComponent: React.FC<{
 }> =
     ({
         updatePosition,
+        setSelection,
         lockedModeRef,
         sizeIndexRef,
         isSelected,
         objectNode,
         setSelectedNodes,
     }) => {
+        const publicClient = usePublicClient();
         const ref = useRef<HTMLDivElement | null>(null);
         const lastSubPatchClick = useRef(0);
         const inputRef = useRef<HTMLInputElement | null>(null);
@@ -65,24 +71,37 @@ const InnerObjectNodeComponent: React.FC<{
         const [error, setError] = useState<string | null>(null);
         const [text, setText] = useState(objectNode.subpatch ? objectNode.text.replace("zen", objectNode.subpatch.name || "zen") : objectNode.text);
         const [parsedText, setParsedText] = useState("");
-        const { patches, setPatches } = usePatches();
+        const { expandPatch, patches, setPatches } = usePatches();
         const [includeInPresentation, setIncludeInPresentation] = useState(objectNode.attributes["Include in Presentation"]);
+
+        const _expandPatch = useCallback(() => {
+            if (objectNode.subpatch) {
+                expandPatch(objectNode);
+            }
+        }, [objectNode]);
 
         const { setAutoCompletes, autoCompletes } = useAutoComplete(text);
 
         let objectNodes = objectNode.subpatch ? objectNode.subpatch.objectNodes : undefined;
         let messageNodes = objectNode.subpatch ? objectNode.subpatch.messageNodes : undefined;
 
+
         const onChange = useCallback((value: string) => {
             setText(value);
             setSelected(0);
         }, [setText, setSelected, objectNode]);
 
-        const enterText = useCallback((text: string, context?: OperatorContext) => {
+        const enterText = useCallback(async (text: string, context?: OperatorContext, tokenId?: number) => {
             if (!context) {
                 context = getOperatorContext(OperatorContextType.ZEN);
             }
-            let success = objectNode.parse(text, context.type);
+            let success = true
+            if (tokenId) {
+                let serializedSubPatch = await fetchOnchainSubPatch(publicClient, tokenId);
+                success = objectNode.parse(text, context.type, true, serializedSubPatch);
+            } else {
+                success = objectNode.parse(text, context.type);
+            }
             if (success) {
                 // this object existed and successfully
                 setError(null);
@@ -118,7 +137,7 @@ const InnerObjectNodeComponent: React.FC<{
                     if (objectNode.text.split(" ")[0] === name) {
                         name = objectNode.text;
                     }
-                    enterText(name, autoCompletes[selected].context);
+                    enterText(name, autoCompletes[selected].context, autoCompletes[selected].definition.tokenId);
                 } else {
                     enterText(text);
                 }
@@ -182,6 +201,7 @@ const InnerObjectNodeComponent: React.FC<{
         const initialPosition = useRef<Coordinate | null>(null);
 
         const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+            setSelection(null);
             if (isCustomView) {
                 // e.stopPropagation();
                 return;
@@ -206,7 +226,7 @@ const InnerObjectNodeComponent: React.FC<{
                         let diff = new Date().getTime() - lastSubPatchClick.current;
                         lastSubPatchClick.current = new Date().getTime();
                         console.log("diff = ", diff);
-                        expandPatch();
+                        expandPatch(objectNode);
                         if (diff > 250) {
                             console.log("return...");
                             return;
@@ -238,17 +258,6 @@ const InnerObjectNodeComponent: React.FC<{
         let CustomComponent = objectNode.name ? index[objectNode.name] : undefined;
         let isCustomSubPatchView = objectNode.attributes["Custom Presentation"];
 
-        const expandPatch = useCallback(() => {
-            if (objectNode.subpatch && !patches.includes(objectNode.subpatch)) {
-                if (patches.length === 2) {
-
-                    setPatches([patches[0], objectNode.subpatch]);
-                } else {
-                    setPatches([...patches, objectNode.subpatch]);
-                }
-            }
-        }, [setPatches, patches, objectNode]);
-
         return (
             <PositionedComponent
                 isCustomView={isCustomView}
@@ -262,7 +271,7 @@ const InnerObjectNodeComponent: React.FC<{
                         style={{ zIndex: 10000000000000 }}
                         color="indigo" className="object-context rounded-lg p-2 text-xs">
                         {objectNode.name === "zen" && <ContextMenu.Item
-                            onClick={expandPatch}
+                            onClick={_expandPatch}
                             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             Expand Patch
                         </ContextMenu.Item>}
@@ -318,7 +327,7 @@ const InnerObjectNodeComponent: React.FC<{
                                             name = text;
                                         }
                                         setText(name);
-                                        enterText(name, x.context);
+                                        enterText(name, x.context, x.definition.tokenId);
                                         setAutoCompletes([]);
                                     }} />}
                                 {editing && error &&

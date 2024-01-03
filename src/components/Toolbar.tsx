@@ -1,4 +1,6 @@
 import React, { memo, useEffect, useCallback, useState } from 'react';;
+import LockButton from './LockButton';
+import PresentationMode from './PresentationMode';
 import PatchDropdown from './PatchDropdown';
 import LoadProject from './LoadProject';
 import { useStorage } from '@/contexts/StorageContext';
@@ -15,14 +17,13 @@ enum Option {
     Save,
     Load,
 }
-
-const Toolbar = () => {
+const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
     // for now this will simply tell us what nested subpatches are
     const [option, setOption] = useState<Option | null>(null);
 
-    const { patches, setPatches } = usePatches();
-    const { patch, setPatch } = usePatch();
+    const { changeTileForPatch, closePatch, patches, setPatches } = usePatches();
+    //const { patch, setPatch } = usePatch();
     let breadcrumbs: any[] = [];
     let _patch: Patch = patch;
     let [editing, setEditing] = useState(false);
@@ -48,7 +49,7 @@ const Toolbar = () => {
                 setEditing(true);
             }
         }}
-        className="text-white my-auto text-xs rounded-full py-1 cursor-pointer" >
+        className="text-white my-auto text-xs rounded-full cursor-pointer" >
         {
             editing ? <input
                 onKeyDown={(e: any) => e.key === "Enter" ? setEditing(false) : 0}
@@ -61,20 +62,25 @@ const Toolbar = () => {
     </div >);
 
     const selectPatch = useCallback((_patch: Patch) => {
+        console.log('select patch');
+
+        /*
         if (!(_patch as SubPatch).parentPatch) {
             // base patch chosen-- so we close
-            closePatch();
+            _closePatch();
             if (patches.length === 1) {
                 setPatches([_patch]);
             }
             return;
         }
-        console.log('select patch=', _patch);
+        */
+        changeTileForPatch(patch, _patch);
+        /*
         let indexOf = patches.indexOf(patch);
         let _patches = [...patches];
         _patches[indexOf] = _patch;
-        console.log('setting patches=', _patches);
         setPatches(_patches);
+        */
     }, [setPatches, patches, patch]);
 
     while ((_patch as SubPatch).parentPatch) {
@@ -85,7 +91,7 @@ const Toolbar = () => {
         breadcrumbs.push(<div
             onClick={() => selectPatch(p)}
             key={key}
-            className=" my-auto text-white cursor-pointer text-xs rounded-full py-1 flex">
+            className=" my-auto text-zinc-400 cursor-pointer text-xs rounded-full flex">
             {(_patch as SubPatch).parentPatch === undefined ? "base patch" : (_patch.name || "patch")}
             <CaretRightIcon className="w-2 mx-2" />
         </div>);
@@ -93,7 +99,7 @@ const Toolbar = () => {
 
     breadcrumbs.reverse();
 
-    const closePatch = useCallback(() => {
+    const _closePatch = useCallback(() => {
         let _p = patches.filter(x => x !== patch);
         if (_p.length === 0) {
             _p = [(patch as SubPatch).parentPatch];
@@ -102,21 +108,45 @@ const Toolbar = () => {
     }, [patches, setPatches, patch]);
 
     if (breadcrumbs.length === 1) {
-        return <div className="absolute top-2 left-2">
-            <PatchDropdown patch={patch}>
-                <GlobeIcon className="w-5 h-5" />
-            </PatchDropdown>
+        return <div
+            style={{ height: 35 }}
+            className="flex fixed top-0 left-0  full w-full">
+            <div className="flex-1 m-1 bg-toolbar relative rounded-lg flex px-2 overflow-hidden">
+                <PatchDropdown patch={patch}>
+                    <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
+                </PatchDropdown>
+                <div
+                    style={{ borderLeft: "1px solid white" }}
+                    className="absolute top-0 h-full pt-0.5 right-0 px-5 flex  pr-20">
+                    <LockButton />
+                    <PresentationMode />
+                </div>
+            </div>
         </div>;
     }
 
     return <div
-        style={{ zIndex: 100000000000000 }}
-        className="flex absolute -top-8 left-0  full bg-zinc-800 px-1  pr-8">
-        <PatchDropdown patch={patch}>
-            <GlobeIcon className="w-5 h-5 mt-1 mr-3" />
-        </PatchDropdown>
-        {breadcrumbs}
-        <Cross2Icon onClick={closePatch} className="w-3 h-3 absolute top-0 bottom-0 my-auto right-2 cursor-pointer" />
+        style={{ zIndex: 100000000000000, height: 35 }}
+        onClick={(e: any) => e.stopPropagation()}
+        onMouseDown={(e: any) => e.stopPropagation()}
+        className="flex fixed top-0 left-0  full w-full ">
+        <div className="flex-1 m-1 bg-toolbar relative flex px-2 overflow-hidden rounded-lg">
+            <PatchDropdown patch={patch}>
+                <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
+            </PatchDropdown>
+            <div className="flex relative pr-8">
+                {breadcrumbs}
+                <Cross2Icon onClick={() => {
+                    closePatch(patch);
+                }} className="w-3 h-3 absolute top-0 bottom-0 my-auto right-2 cursor-pointer" />
+            </div>
+            <div
+                style={{ borderLeft: "1px solid white" }}
+                className="absolute top-0 h-full pt-0.5 right-0 px-5 flex pr-20">
+                <LockButton />
+                <PresentationMode />
+            </div>
+        </div>
     </div>;
 };
 

@@ -11,7 +11,8 @@ import { DraggingCable, usePosition } from '@/contexts/PositionContext';
 const strokeColor = "#2ad4bf";
 const Cables = () => {
     let { objectNodes, messageNodes, deleteConnection } = usePatch();
-    let { selectedNodes } = useSelection();
+    let { lockedMode, selectedNodes } = useSelection();
+
     let { size } = usePosition();
     let { presentationMode, draggingNode, scrollRef, setDraggingCable, draggingCable, setDraggingSegmentation } = usePosition();
 
@@ -20,16 +21,18 @@ const Cables = () => {
         if (draggingNode) {
             _selectedNodes.push(draggingNode.node);
         }
+        let zIndex = lockedMode ? 0 : 1000000;
         return (<>
             <svg
-                style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
-                className="absolute z-0 w-full h-full z-1 pointer-events-none">
+                style={size ? { zIndex, width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : { zIndex }}
+                className="absolute z-0 w-full h-full pointer-events-none">
                 {!presentationMode && [...objectNodes, ...messageNodes].map((node, i) =>
                     <ObjectCables
                         setDraggingSegmentation={setDraggingSegmentation}
                         deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
                 <AlignmentHelper />
                 {!presentationMode && <Dragging />}
+
             </svg>
             {/*
             <svg
@@ -43,12 +46,13 @@ const Cables = () => {
              */}
         </>
         )
-    }, [size, objectNodes, draggingNode, presentationMode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
+    }, [size, objectNodes, lockedMode, draggingNode, presentationMode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
     return memoed;
 };
 
 const Dragging = () => {
     let { scrollRef, setDraggingCable, draggingCable } = usePosition();
+    let { zoomRef } = useSelection();
 
     let [current, setCurrent] = useState<Coordinate | null>(null);
 
@@ -72,8 +76,8 @@ const Dragging = () => {
 
         let rect = scrollRef.current.getBoundingClientRect();
         let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        let x = scrollRef.current.scrollLeft + client.x;
-        let y = scrollRef.current.scrollTop + client.y;
+        let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current
+        let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current;
 
         // let x = e.clientX;
         //let y = e.clientY;
@@ -145,7 +149,7 @@ const Edge: React.FC<{
 
         const moveSourceEdge = useCallback((e: any) => {
             e.stopPropagation();
-            connection.source.disconnect(connection);
+            connection.source.disconnect(connection, true);
             deleteConnection((connection.source as any).id, connection);
             setDraggingCable({
                 destCoordinate,
@@ -156,7 +160,7 @@ const Edge: React.FC<{
 
         const moveDestEdge = useCallback((e: any) => {
             e.stopPropagation();
-            connection.source.disconnect(connection);
+            connection.source.disconnect(connection, true);
             deleteConnection((connection.source as any).id, connection);
             setDraggingCable({
                 sourceCoordinate,
@@ -165,6 +169,41 @@ const Edge: React.FC<{
             })
         }, [sourceCoordinate, connection, deleteConnection]);
 
+        const createKeyframes = (d: string, id: string) => {
+            return `
+@keyframes jiggle-${id} {
+        0%, 100% { d: path("${d}"); }
+        20% { d: path("${modifyPath(d, 0.1)}"); }
+        40% { d: path("${modifyPath(d, 0.10)}"); }
+        60% { d: path("${modifyPath(d, 0.85)}"); }
+        80% { d: path("${modifyPath(d, 0.35)}"); }
+      }
+    `;
+        };
+
+        const modifyPath = (path: string, factor: number) => {
+            // Split the path into segments
+            if (!path) {
+                return "";
+            }
+            const segments = path.split(' ');
+
+            // Modify segments based on factor
+            // Assuming a cubic Bezier curve format like "M 373 286 C 393 326 392 430 412 470"
+            if (segments.length === 11 && segments[0] === 'M' && segments[3] === 'C') {
+                // Adjust control points for the jiggle effect
+                const controlPoint1Y = parseFloat(segments[5]);
+                const controlPoint2Y = parseFloat(segments[9]);
+
+                // Apply a simple jiggle effect by modifying the Y coordinates of the control points
+                segments[5] = (controlPoint1Y + 8 * Math.sin(factor * Math.PI * 2)).toString();
+                segments[9] = (controlPoint2Y - 8 * Math.sin(factor * Math.PI * 2)).toString();
+            }
+
+            return segments.join(' ');
+        };
+
+
         const p = React.useMemo(() => {
             // use 2 paths: one that you see, and another that is invisible but used to capture
             // mouse events
@@ -172,19 +211,26 @@ const Edge: React.FC<{
             let isCore = connection.sourceOutlet.connectionType === ConnectionType.CORE;
             let sourceCoord = (connection.source as ObjectNode).position;
             let destCoord = (connection.destination as ObjectNode).position;
+            let id = connection.source.id + connection.destination.id;
+            let keyframes = connection.created ? createKeyframes(d[0], id) : "";
+            let created = connection.created;
+            connection.created = undefined;
+
             return <>
                 <g style={isSelected ? { zIndex: 10000000 } : { zIndex: 0 }} className="edge-group">
+                    {created && <style dangerouslySetInnerHTML={{ __html: keyframes }} />}
+
                     {d.map((_d, i) => <g key={i}>
                         {(isCore || isAudio) && <path
                             className="visible-edge pointer-events-auto"
                             fill="transparent"
                             d={_d} stroke={isSelected ? "red" : "black"} strokeWidth={2} />}
                         <path
-                            className="visible-edge pointer-events-auto "
+                            style={{ animation: `jiggle-${id} .4s ease-in-out` }}
                             fill="transparent"
                             strokeDasharray={isAudio ?
                                 "4 4" : undefined}
-                            d={_d} stroke={isSelected ? "red" : (isCore ? "#ffffff" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
+                            d={_d} className={(isSelected ? " selected-edge " : "") + ("visible-edge pointer-events-auto ") + (isCore ? "core" : isAudio ? "audio" : "zen")} stroke={isSelected ? "red" : (isCore ? "#ffffff" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
                         <path
                             fill="transparent"
                             className={(((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? "cursor-ns-resize" : "") + " pointer-events-auto "}
@@ -199,8 +245,8 @@ const Edge: React.FC<{
                                 select();
                             }}
                             d={_d} stroke="transparent" strokeWidth={
-                                ((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? 8 :
-                                    4} />
+                                ((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? 4 :
+                                    2} />
                     </g>
                     )}
                 </g>

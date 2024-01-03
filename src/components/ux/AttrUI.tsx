@@ -25,20 +25,20 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         let zenObjects: ObjectNode[] = (outbound as ObjectNode[]).filter(x => x.name === "zen");
         let subpatches = zenObjects.map(x => x.subpatch).filter(x => x) as SubPatch[];
         let allNodes = subpatches.flatMap(x => x.getAllNodes());
-        let paramNodes = allNodes.filter(x => x.name === "param");
+        let paramNodes = [...outbound, ...allNodes].filter(x => (x as ObjectNode).name === "param");
         if ((objectNode.patch as SubPatch).parentNode) {
             paramNodes = [...paramNodes, ...objectNode.patch.objectNodes.filter(
                 x => x.name === "param")];
 
         }
-        let parameterOptions = paramNodes.map(x => x.arguments[0]) as string[];
+        let parameterOptions = paramNodes.map(x => (x as ObjectNode).arguments[0]) as string[];
         let options: Option[] = [];
         for (let node of paramNodes) {
-            let paramName = node.arguments[0] as string;
+            let paramName = (node as ObjectNode).arguments[0] as string;
             if (!options.some(x => x.label === paramName)) {
                 options.push({
                     label: paramName,
-                    value: node
+                    value: node as ObjectNode
                 });
             }
         }
@@ -71,7 +71,19 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let node: ObjectNode | null = found ? (found.value) : null;
     return (
         <div
-            onClick={() => loadOptions()} className={(lockedMode ? "" : " pointer-events-none ") + "flex h-8 bg-zinc-900 w-full flex-1 border-zinc-100"} >
+            onMouseDown={(e: any) => {
+                if (lockedMode) {
+                    e.stopPropagation();
+                }
+            }}
+
+            onClick={(e: any) => {
+                loadOptions();
+                if (lockedMode) {
+                    e.stopPropagation();
+                }
+
+            }} className={(lockedMode ? "" : " pointer-events-none ") + "flex h-6 bg-zinc-900 w-full flex-1 border-zinc-100"} >
             <select
                 className="w-32 text-white bg-zinc-900 outline-none pl-1 mr-1"
                 placeholder="none"
@@ -80,7 +92,7 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 {options.map(x => <option key={x.label} value={x.label}>{x.label}</option>)}
             </select>
             <div
-                style={{ borderLeft: "1px solid white" }}
+                style={{ borderLeft: "1px solid #8d8787" }}
                 className={(!selectedOption ? "pointer-events-none opacity-20" : "") + " h-full flex flex-col flex-1"}>
                 <div className="my-auto w-full">
                     <NumberBox

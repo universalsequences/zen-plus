@@ -45,11 +45,11 @@ const Sidebar = () => {
     }, [selectedNodes, setOpened, opened]);
 
     return <div
-        style={{ zIndex: 100000000000000000 }}
+        style={{ zIndex: 10000000000 }}
         onMouseDown={(e: any) => e.stopPropagation()}
         onClick={(e: any) => e.stopPropagation()}
         className={
-            "bg-black fixed top-10 right-0 flex sidebar " + (opened ? "opened-sidebar" : "")}
+            "bg-toolbar fixed top-12 right-0 flex sidebar " + (opened ? "opened-sidebar" : "")}
     >
         <div
             onClick={() => {
@@ -63,7 +63,7 @@ const Sidebar = () => {
                 borderTop: "1px solid white", borderLeft: "1px solid white", borderBottom: "1px solid white"
             }}
 
-            className="cursor-pointer absolute p-2 w-10 h-10 bg-black">
+            className="cursor-pointer absolute p-2 w-10 h-10 bg-toolbar">
             <CubeIcon
                 style={{
                     opacity: selectedNodes.length > 0 ? 1 : 0.5

@@ -40,7 +40,7 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
             let height = (connection.source as ObjectNode).size ? (connection.source as ObjectNode).size!.height : source_h
             sourceCoordinate = {
                 x: sourceCoordinate.x + outletNumber * sourceBetween,
-                y: sourceCoordinate.y + height - 3
+                y: sourceCoordinate.y + height - 2
             };
 
             let isStraight = Math.abs(sourceCoordinate.x - destCoordinate.x) < 4;
@@ -156,19 +156,25 @@ const generateSegmentedPaths = (source: Coordinate, dest: Coordinate, fromY: num
     segmentY -= diff;
     let isLoop = y2 < y1;
 
-    let offset = 10;
+    let offset = 5;
     let isSmol = false;
+    /*
     if (Math.abs(x1 - x2) < 20) {
         offset = 0;
         isSmol = true;
 
     }
+    */
+
     let cx1 = x1 + (x1 < x2 ? offset : -offset); //.9*x1 + .1*x2;
     let cx2 = x2 + (x1 > x2 ? offset : -offset); //.1*x1 + .9*x2;
 
     const width = 15;
     let _x2 = isHorizontal ? x2 - width : x2;
-    let offsetX1 = x1 < x2 ? 10 : -2;
+    let offsetX1 = x1 < x2 ? 10 : -10;
+    let x_diff = Math.abs(x1 - x2);
+    let _ratio = Math.min(1, (x_diff / 80))
+    offsetX1 *= _ratio;
     let path1 = [
         x1, y1,
         x1, segmentY,
@@ -225,15 +231,16 @@ const generateSegmentedPaths = (source: Coordinate, dest: Coordinate, fromY: num
     let offsetX = x1 < x2 ? Math.max(-2, (x1 - x2)) : Math.min(2, x1 - x2);
     offsetX *= 4.8;
     let offset_middle = x1 < x2 ? 5 : -5;
+    let _off = x1 < x2 ? offset + 5 : -(offset + 5);
     let path2 = [
-        cx1, segmentY,
-        .5 * x1 + .5 * _x2, segmentY,
-        .5 * x1 + .5 * _x2, segmentY,
-        cx2 - offset_middle, segmentY,
+        cx1 + offsetX1, segmentY,
+        cx1 + offsetX1, segmentY,
+        cx2 - offsetX1, segmentY,
+        cx2 - offsetX1, segmentY,
     ];
 
     let path3 = [
-        cx2 + offsetX, segmentY,
+        cx2 - offsetX1, segmentY,
         _x2, segmentY,
         _x2, segmentY,
         _x2, y2,

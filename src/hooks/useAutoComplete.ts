@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useStorage } from '@/contexts/StorageContext';
 import { API, Definition } from '@/lib/docs/docs';
 import { OperatorContext, getAllContexts } from '@/lib/nodes/context';
 import { NodeFunction } from '@/lib/nodes/types';
 
 export interface ContextDefinition {
-    definition: Definition;
+    definition: Definition & { tokenId?: number };
     context?: OperatorContext;
 }
 export const useAutoComplete = (text: string) => {
     let [autoCompletes, setAutoCompletes] = useState<ContextDefinition[]>([]);
+    let { onchainSubPatches } = useStorage();
 
     useEffect(() => {
         if (text === "") {
@@ -30,20 +32,23 @@ export const useAutoComplete = (text: string) => {
                 }
             }
         }
+        /*
         let payload = window.localStorage.getItem(`subpatch`);
         let list: string[] = [];
         if (payload) {
             list = Array.from(new Set(JSON.parse(payload)));
         }
-        for (let elem of list) {
-            let _name = elem.toLowerCase();
+        */
+        for (let elem of onchainSubPatches) {
+            let _name = elem.name.toLowerCase();
             if (_name.startsWith(_text)) {
                 options.push({
                     definition: {
-                        description: "user generated supatch",
-                        name: elem as string,
+                        description: "user generated supatch #" + elem.tokenId,
+                        name: elem.name as string,
                         numberOfInlets: 0,
                         numberOfOutlets: 0,
+                        tokenId: elem.tokenId
                     }
                 });
             }

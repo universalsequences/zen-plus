@@ -15,9 +15,14 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     let lastName = "";
     node.needsLoad = true;
 
+    let lastMessage: Message | null = null;
     const onMessage = (message: Message) => {
         // received the message
+        if (lastMessage === message) {
+            return;
+        }
         node.send(node.outlets[0], message);
+        lastMessage = message;
     };
 
     return (x: Message) => {

@@ -71,6 +71,10 @@
 }
 
 
+//.node-component:active {
+//    z-index:100000000000 !important;
+//}
+
 .node-component.context-type-1 {
     background-color: #d2ff00;
 }
@@ -81,7 +85,7 @@
 
 
 .dark-modal {
-    background-color: #ffffff0f;
+    background-color: #3432322b;
     border: 1px solid #ffffff0f;
     backdrop-filter: blur(8px);
 }
@@ -102,9 +106,30 @@
   100px 100px 80px rgba(0, 0, 0, 0.07);
 
 }
+
+
+.node-component.selected {
+    z-index: 100000000000 !important;
+}
+
+body {
+    --dark-patch-color: #121213;
+}
+
+.bg-toolbar {
+    background-color: #ffffff2e;
+    backdrop-filter: blur(8px);
+}
+
+body {
+.bg-zinc-900 {
+    background-color: var(--dark-patch-color);
+}
+}
+
 .custom-view {
+        background-color: var(--dark-patch-color);
     .patcher-background {
-        background-color: #1b1d1f;
         border: none;
     .node-component {
         border: none;
@@ -125,4 +150,125 @@
 
 .h-6_5 {
     height: 1.5rem;
+}
+
+.html-viewer {
+    p {
+        margin: 0px;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    font-size: 15px;
+    display: grid;
+    grid-template-columns: repeat(20, 5%);
+    grid-template-rows: repeat(20, 12px);
+    x: 0px;
+    justify-content: space-between;
+}
+
+
+.light-mode {
+    --light-patch-color: #6a6a72;
+    .locked {
+        .patcher-background {
+            background-image: radial-gradient(circle at center center, rgb(74 73 73) 0%, rgb(167 190 203) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
+        }
+    }
+    .patcher-background {
+        //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
+        background-image: radial-gradient(circle at center center, rgb(182 172 172) 0%, rgb(161 155 136) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
+    }
+
+    .node-component.border-zinc-900 {
+        border-color: #bebbbbcf;
+    }
+    .node-component {
+        .bg-zinc-800 {
+            background-color: #000000b0;
+        }
+    }
+
+    .custom-view {
+            background-color: var(--light-patch-color);
+
+    }
+
+    .bg-zinc-900 {
+            background-color: var(--light-patch-color);
+        //color: black;
+
+        .text-white {
+            //color: black;
+        }
+    }
+}
+
+.dragging-cable { 
+    svg {
+        z-index: 0 !important;
+    }
+}
+
+svg {
+    .edge-group:hover {
+        .visible-edge {
+        stroke: red !important;
+    }
+    }
+    path.selected-edge {
+        stroke: red !important;
+    }
+    path.zen {
+        stroke: #26ffe4b3;
+    }
+
+    path.core {
+        stroke: white;
+    }
+
+    path.audio {
+        stroke: yellow;
+    }
+}
+
+.selected-patch {
+     border-color:  #cbffef70 !important;
+}
+
+.tile {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    margin: 1px;
+    border-radius: 12px;
+    overflow: hidden;
+    border-width: 3px !important;
+    border-color: #0b0b0b;
+
+}
+
+.tile.horizontal-tile {
+    //animation: horizontal-slide 0.6s ease//;
+    //max-width: 100%;
+}
+
+.tile.vertical-tile {
+    //animation: vertical-slide 0.6s ease;
+    //max-height: 100%;
+}
+
+@keyframes horizontal-slide {
+    0% { max-width: 0%};
+    100% { max-width: 100% }
+}
+
+@keyframes vertical-slide {
+    0% { max-height: 0%};
+    100% { max-height: 100% }
+}
+
+.tile-container {
+    gap: 15px;
 }

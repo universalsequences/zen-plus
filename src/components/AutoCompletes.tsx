@@ -23,7 +23,8 @@ const AutoCompletes: React.FC<{
         <div
             ref={ref}
             style={{
-                backdropFilter: "blur(8px)"
+                backdropFilter: "blur(2px)",
+                backgroundColor: "#59575721"
             }}
             className="-bottom-32  absolute h-32 left-0 w-96 overflow-x-hidden overflow-y-scroll bg-zinc-500 text-white border-zinc-400">
             {autoCompletes.map(

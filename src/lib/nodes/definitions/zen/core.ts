@@ -26,6 +26,26 @@ const phasor = (_node: ObjectNode, ...args: Lazy[]) => {
 };
 
 doc(
+    'elapsed',
+    {
+        description: "returns number of samples elapsed so far",
+        numberOfInlets: 0,
+        numberOfOutlets: 1,
+        defaultValue: 0
+    });
+const elapsed = (_node: ObjectNode) => {
+    return (message: Message) => {
+        let statement: Statement = [
+            "elapsed" as Operator,
+        ];
+        statement.node = _node;
+        return [statement];
+    };
+};
+
+
+
+doc(
     'param',
     {
         description: "sets a parameter",
@@ -42,25 +62,41 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     }
 
     let _param: ParamGen;
+    console.log("parsing zen_param = ", object.text);
     return (x: Message): Statement[] => {
         if (_param === undefined) {
             let defaultValue = object.attributes["default"] as number;
             if (object.storedMessage !== undefined) {
                 _param = param(object.storedMessage as number, name() as string);
+                if (name() === "wet") {
+                    console.log('creating wet param', _param);
+                }
             } else {
                 _param = param(defaultValue, name() as string);
+                if (name() === "wet") {
+                    console.log('2. creating wet param', _param);
+                }
             }
+        }
+        if (typeof x === "string" && x !== "bang" && x.split(" ").length === 2) {
+            let split = x.split(" ");
+            x = parseFloat(split[1]);
         }
         if (typeof x === "number") {
             object.storedMessage = x;
             _param.set!(x);
             return [];
         }
+
+
         let out: Statement = [{
             name: "param",
             param: _param,
-            value: 0
+            value: Math.random()
         }];
+        if (name() === "wet") {
+            console.log("statement param wet=", out);
+        }
         out.node = object;
         object.patch.newHistoryDependency(out, object);
         return [out];
@@ -127,6 +163,8 @@ doc(
 export const zen_sine = (object: ObjectNode) => {
     return memoZen(object, "sine" as Operator);
 };
+
+
 
 doc(
     'rampToTrig',
@@ -207,5 +245,6 @@ export const core = {
     sine: zen_sine,
     accum: zen_accum,
     param: zen_param,
-    phasor
+    phasor,
+    elapsed
 }

@@ -2,7 +2,7 @@ import {
     SerializedOutlet,
     AttributeCallbacks,
     AttributeOptions,
-    Patch, IOConnection, ConnectionType, IOlet, Message, ObjectNode, MessageNode, Node, Attributes
+    Patch, IOConnection, ConnectionType, SerializedConnection, IOlet, Message, ObjectNode, MessageNode, Node, Attributes
 } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { uuid } from '@/lib/uuid/IDGenerator';
@@ -93,8 +93,7 @@ export class BaseNode implements Node {
         if (inlet.connectionType === ConnectionType.AUDIO &&
             outlet.connectionType === ConnectionType.AUDIO) {
             this.connectAudioNode(connection);
-        } else if (compile && inlet.connectionType === ConnectionType.ZEN) {
-            console.log("connecting so recompiling");
+        } else if (compile && outlet.connectionType === ConnectionType.ZEN) {
             this.patch.recompileGraph();
         }
         return connection;
@@ -111,7 +110,7 @@ export class BaseNode implements Node {
         }
     };
 
-    disconnect(connection: IOConnection) {
+    disconnect(connection: IOConnection, compile: boolean = true) {
         for (let outlet of this.outlets) {
             outlet.connections = outlet.connections.filter(
                 x => x !== connection);
@@ -125,7 +124,7 @@ export class BaseNode implements Node {
 
         console.log("disconnecting so recompile");
 
-        if (connection.destinationInlet.connectionType === ConnectionType.ZEN) {
+        if (compile && connection.destinationInlet.connectionType === ConnectionType.ZEN) {
             console.log("connecting so recompiling");
             this.patch.recompileGraph();
         }
@@ -145,16 +144,23 @@ export class BaseNode implements Node {
             for (let connection of outlet.connections) {
                 let { destination, destinationInlet } = connection;
                 let inletIndex = destination.inlets.indexOf(destinationInlet);
-                outletJson.push({
-                    segmentation: connection.segmentation,
+                let _json: SerializedConnection = {
                     destinationId: destination.id,
-                    destinationInlet: inletIndex
-                });
+                    //destinationInlet: inletIndex
+                };
+                if (inletIndex > 0) {
+                    _json.destinationInlet = inletIndex;
+                }
+                if (connection.segmentation) {
+                    _json.segmentation = connection.segmentation;
+                }
+                outletJson.push(_json);
             }
-            json.push({
-                outletNumber: i,
-                connections: outletJson
-            });
+            let x: SerializedOutlet = { connections: outletJson };
+            if (i > 0) {
+                x.outletNumber = i;
+            }
+            json.push(x);
         }
         return json;
     }

@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { usePosition } from '@/contexts/PositionContext';
 import { IOlet, ObjectNode, MessageNode } from '@/lib/nodes/types';
+import { useSelection } from '@/contexts/SelectionContext';
 import { usePatch } from '@/contexts/PatchContext';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
@@ -14,6 +15,7 @@ interface Props {
 const IOletsComponent = (props: Props) => {
     const { scrollRef, setDraggingCable, draggingCable } = usePosition();
     const { isCustomView, patch, registerConnection } = usePatch();
+    const { zoomRef } = useSelection();
 
     const onMouseDown = useCallback((
         e: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -27,8 +29,8 @@ const IOletsComponent = (props: Props) => {
 
             let rect = scrollRef.current.getBoundingClientRect();
             let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            let x = scrollRef.current.scrollLeft + client.x;
-            let y = scrollRef.current.scrollTop + client.y;
+            let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
+            let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current;
 
             let sourceCoordinate = { x, y };
             setDraggingCable({
@@ -44,9 +46,11 @@ const IOletsComponent = (props: Props) => {
             let { sourceNode, sourceOutlet, destNode, destInlet } = draggingCable;
             if (sourceNode && sourceOutlet && !props.isOutlet) {
                 let connection = sourceNode.connect(props.node, iolet, sourceOutlet, true);
+                connection.created = true;
                 registerConnection(sourceNode.id, connection);
             } else if (destNode && destInlet && props.isOutlet) {
                 let connection = props.node.connect(destNode, destInlet, iolet, true);
+                connection.created = true;
                 registerConnection(props.node.id, connection);
             }
         }

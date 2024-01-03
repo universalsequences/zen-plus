@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useNodeOperations } from '@/hooks/useEncapsulation';
+import { useZoom } from '@/hooks/useZoom';
 import LockButton from './LockButton';
 import { useMessage } from '@/contexts/MessageContext';
 import { traverseBackwards } from '@/lib/nodes/traverse';
@@ -6,9 +8,10 @@ import { useSelection } from '@/contexts/SelectionContext';
 import Toolbar from './Toolbar'
 import Cables from './Cables';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
+import { ResizingPatch, PatchResizeType, useTiles } from '@/hooks/useTiles';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import ObjectNodeComponent from './ObjectNodeComponent';
-import { MessageNode, ObjectNode, Node, MessageType, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
+import { MessageNode, ObjectNode, Node, MessageType, SubPatch, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
 import MessageNodeComponent from './MessageNodeComponent';
@@ -16,17 +19,6 @@ import { Connections, usePatch } from '@/contexts/PatchContext';
 import { usePatches } from '@/contexts/PatchesContext';
 import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts/PositionContext';
 import PresentationMode from './PresentationMode';
-
-enum PatchResizeType {
-    Left,
-    Right,
-}
-
-interface ResizingPatch {
-    gridTemplate: string;
-    resizeType: PatchResizeType
-    startPosition: Coordinate;
-}
 
 
 interface Selection {
@@ -36,10 +28,9 @@ interface Selection {
     y2: number;
 }
 
-const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView }) => {
+const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView, maxWidth, maxHeight }) => {
     useThemeContext();
-    const { setSelectedPatch, setGridTemplate, gridTemplate } = usePatches();
-    const [resizingPatch, setResizingPatch] = useState<ResizingPatch | null>(null);
+    const { rootTile, gridLayout, selectedPatch, setSelectedPatch, setGridTemplate, gridTemplate } = usePatches();
     const {
         lastResizingTime,
         setSelection,
@@ -67,8 +58,11 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
         presentationMode,
         updatePositions,
         setDraggingSegmentation,
+        draggingCable,
         draggingSegmentation,
     } = usePosition();
+
+    let { zoom, zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
 
     if (isCustomView) {
         presentationMode = true;
@@ -86,11 +80,16 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
         patch.onNewMessage = onNewMessage;
     }, [patch, onNewMessage]);
 
-    useKeyBindings();
+    useKeyBindings(scrollRef);
+
+    const { onResizePatch, resizingPatch, setResizingPatch } = useTiles(patch);
 
     const lastClick = useRef(0);
 
     const onMouseUp = useCallback((e: MouseEvent) => {
+        if (resizingPatch) {
+            setResizingPatch(null);
+        }
         if (isCustomView) {
             return;
         }
@@ -98,12 +97,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
             return;
         }
         setDraggingSegmentation(null);
-        if (resizingPatch) {
-            setResizingPatch(null);
-        }
         if (selection && selection.patch === patch) {
             let all = [...patch.objectNodes, ...patch.messageNodes];
-            console.log("ALL =", all);
             let filtered = all.filter(
                 node => {
                     let size = sizeIndexRef.current[node.id];
@@ -145,14 +140,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
             return;
         }
         if (resizingPatch) {
-            let pageWidth = window.innerWidth;
-            let leftWidthPercent = (e.pageX / pageWidth) * 100;
-            let rightWidthPercent = 100 - leftWidthPercent;
-
-            // Create the grid template string
-            let newGridTemplate = `${leftWidthPercent}% ${rightWidthPercent}%`;
-
-            setGridTemplate(newGridTemplate);
+            onResizePatch(e);
+            return;
         }
         if (lockedMode) {
             return;
@@ -162,7 +151,7 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
         let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
         if (draggingSegmentation) {
-            let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+            let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
             let id = draggingSegmentation.source.id;
             let node = draggingSegmentation.source as ObjectNode;
             let height = node.size ? node.size.height : sizeIndexRef.current[id].height;
@@ -174,8 +163,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
             lastResizingTime.current = new Date().getTime();
             if (resizingNodeRef.current.orientation === Orientation.X) {
                 let { node, offset } = resizingNodeRef.current;
-                let x = scrollRef.current.scrollLeft + client.x;// - offset.x;
-                let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+                let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;// - offset.x;
+                let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
                 if (!node.size) {
                     node.size = sizeIndexRef.current[node.id];
                     // position`
@@ -196,8 +185,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
                 updateSize(node.id, { ...node.size });
             } else {
                 let { node, offset } = resizingNodeRef.current;
-                let x = scrollRef.current.scrollLeft + client.x;// - offset.x;
-                let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+                let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;// - offset.x;
+                let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
                 if (!node.size) {
                     node.size = sizeIndexRef.current[node.id];
                     // position`
@@ -214,6 +203,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
             let { node, offset } = draggingNodeRef.current;
             let x = scrollRef.current.scrollLeft + client.x - offset.x;
             let y = scrollRef.current.scrollTop + client.y - offset.y;
+            x /= zoomRef.current;
+            y /= zoomRef.current;
 
             let position = presentationMode ? node.presentationPosition || node.position : node.position;
             let diffX = x - position.x;
@@ -309,8 +300,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
         let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
         if (selection) {
-            let x = scrollRef.current.scrollLeft + client.x;
-            let y = scrollRef.current.scrollTop + client.y
+            let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
+            let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current
             setSelection({
                 ...selection,
                 patch: patch,
@@ -318,7 +309,7 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
                 y2: y
             })
         }
-    }, [setSelection, selection]);
+    }, [setSelection, selection, patch]);
 
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         if (isCustomView) {
@@ -329,12 +320,12 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
         if (e.button === 2) {
             return;
         }
-        if (scrollRef.current) {
+        if (scrollRef.current && !lockedMode) {
 
             let rect = scrollRef.current.getBoundingClientRect();
             let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            let x = scrollRef.current.scrollLeft + client.x
-            let y = scrollRef.current.scrollTop + client.y
+            let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
+            let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current;
             setSelection({
                 patch: patch,
                 x1: x,
@@ -343,7 +334,7 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
                 y2: y
             })
         }
-    }, [setSelection, onNewMessage]);
+    }, [setSelection, onNewMessage, lockedMode, patch]);
 
     const onClick = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
         if (isCustomView) {
@@ -363,8 +354,8 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
             let rect = scrollRef.current.getBoundingClientRect();
             let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
-            let x = scrollRef.current.scrollLeft + client.x;
-            let y = scrollRef.current.scrollTop + client.y
+            let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
+            let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current;
 
             let objectNode = new ObjectNodeImpl(patch);
             let position = {
@@ -397,276 +388,259 @@ const PatchComponent: React.FC<{ visibleObjectNodes?: ObjectNode[], messageNodes
         updateConnections(connections);
     }, [patch, presentationMode]);
 
-    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
-    const handleContextMenu = (event: any) => {
-        if (isCustomView) {
-            return;
-        }
-        event.preventDefault();
-        setMenuPosition({ x: event.clientX, y: event.clientY });
-    };
-
-    const menuPositionRef = useRef(menuPosition);
-
-    useEffect(() => {
-        menuPositionRef.current = menuPosition;
-    }, [menuPosition]);
-
-    const createObjectNode = useCallback(() => {
-        let objectNode = new ObjectNodeImpl(patch);
-        newObjectNode(objectNode, { ...menuPositionRef.current });
-        updatePosition(objectNode.id, { ...menuPositionRef.current });
-        return objectNode;
-    }, [menuPosition, objectNodes]);
-
-    const createNumberBox = useCallback(() => {
-        let messageNode = new MessageNodeImpl(patch, MessageType.Number);
-        newMessageNode(messageNode, { ...menuPositionRef.current });
-        updatePosition(messageNode.id, { ...menuPositionRef.current });
-    }, [menuPosition, messageNodes]);
-
-    const createMessageNode = useCallback(() => {
-        let messageNode = new MessageNodeImpl(patch, MessageType.Message);
-        newMessageNode(messageNode, { ...menuPositionRef.current });
-        updatePosition(messageNode.id, { ...menuPositionRef.current });
-    }, [menuPosition, messageNodes]);
-
-    const presentation = useCallback((nodes: Node[]) => {
-        for (let node of nodes) {
-            (node as ObjectNode).setAttribute("Include in Presentation", true);
-            (node as ObjectNode).presentationPosition = { ... (node as ObjectNode).position };
-        }
-    }, []);
-
-    const encapsulate = useCallback((nodes: Node[]) => {
-        let inboundConnections = nodes.flatMap(
-            node => node.inlets.flatMap(
-                inlet => inlet.connections.filter(
-                    connection => !nodes.includes(connection.source))));
-
-        let outboundConnections = nodes.flatMap(
-            node => node.outlets.flatMap(
-                outlet => outlet.connections.filter(
-                    connection => !nodes.includes(connection.destination))));
-
-        let objectNode = createObjectNode();
-        objectNode.parse("zen");
-        patch.objectNodes = patch.objectNodes.filter(
-            x => !nodes.includes(x));
-        patch.messageNodes = patch.messageNodes.filter(
-            x => !nodes.includes(x));
-
-        let subpatch = objectNode.subpatch;
-        if (!subpatch) {
-            return;
-        }
-
-        subpatch.objectNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
-        subpatch.messageNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
-        subpatch.objectNodes = subpatch.objectNodes.filter(x => x.name !== "+");
-
-        let inboundNodes = Array.from(new Set(inboundConnections.map(x => x.destination)));
-        let outboundNodes = Array.from(new Set(outboundConnections.map(x => x.source)));
-
-        for (let i = 0; i < inboundConnections.length; i++) {
-            let node = inboundConnections[i].destination;
-            let connection = inboundConnections[i];
-            let inputNode: ObjectNode = new ObjectNodeImpl(subpatch);
-            if (i >= 2) {
-                let position = (node as ObjectNode).position;
-                //newObjectNode(inputNode, { x: position.x, y: Math.max(0, position.y - 10) });
-                subpatch.objectNodes.push(inputNode);
-                inputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
-                inputNode.parse('in ' + (i + 1));
-            } else {
-                let n = subpatch.objectNodes.find(x => x.text === ("in " + (i + 1)));
-                if (!n) {
-                    continue;
-                }
-                inputNode = n as ObjectNode;
-            }
-            for (let inlet of node.inlets) {
-                inlet.connections.splice(inlet.connections.indexOf(connection), 1);
-            }
-            //for (let connection of inboundConnections) {
-            //   if (connection.destination === node) {
-            for (let _outlet of connection.source.outlets) {
-                _outlet.connections = _outlet.connections.filter(
-                    c => c !== connection);
-            }
-            let _connection = connection.source.connect(
-                objectNode,
-                objectNode.inlets[i], connection.sourceOutlet, false);
-            registerConnection(connection.source.id, _connection);
-
-            inputNode.connect(
-                connection.destination,
-                connection.destinationInlet,
-                inputNode.outlets[0],
-                false);
-        }
-
-        for (let i = 0; i < outboundConnections.length; i++) {
-            let node = outboundConnections[i].source;
-            let connection = outboundConnections[i];
-            let outputNode: ObjectNode = new ObjectNodeImpl(subpatch);
-            if (i >= 1) {
-                let position = (node as ObjectNode).position;
-                //newObjectNode(inputNode, { x: position.x, y: Math.max(0, position.y - 10) });
-                subpatch.objectNodes.push(outputNode);
-                outputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
-                outputNode.parse('out ' + (i + 1));
-            } else {
-                let n = subpatch.objectNodes.find(x => x.text === ("out " + (i + 1)));
-                if (!n) {
-                    continue;
-                }
-                outputNode = n as ObjectNode;
-            }
-            for (let outlet of node.outlets) {
-                outlet.connections.splice(outlet.connections.indexOf(connection), 1);
-            }
-            let _connection = objectNode.connect(
-                connection.destination,
-                connection.destinationInlet,
-                objectNode.outlets[i], false);
-            registerConnection(connection.source.id, _connection);
-
-            connection.source.connect(
-                outputNode,
-                outputNode.inlets[0],
-                connection.sourceOutlet,
-                false);
-        }
-
-
-
-        for (let node of nodes) {
-            // its a object
-            node.patch = subpatch;
-            if ((node as ObjectNode).operatorContextType !== undefined) {
-                subpatch.objectNodes.push(node as ObjectNode);
-            } else {
-                console.log('adding message=', node);
-                subpatch.messageNodes.push(node as MessageNode);
-                // its a message
-            }
-        }
-
-        deleteNodes(nodes as (ObjectNode | MessageNode)[], true);
-    }, [patch]);
-
-
+    let { encapsulate, handleContextMenu, createMessageNode, createObjectNode, createNumberBox, presentation } = useNodeOperations({
+        isCustomView,
+        zoomRef
+    });
 
     let out = React.useMemo(() => {
         let inner = <div
-            onMouseMove={onSelectionMove}
-            onMouseDown={onMouseDown}
-            onClick={onClick}
-            className=" flex flex-1 select-none patcher-background z-1">
-            {!isCustomView && <Cables />}
-            {selection && selection.patch === patch &&
-                <div
-                    style={{
-                        left: selection.x1 + 'px', top: selection.y1 + 'px',
-                        width: (selection.x2 - selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'
-                    }}
-                    className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
-            {objectNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
-                (objectNode, index) =>
-                    objectNode.name === "outputs" ? '' : <ObjectNodeComponent
-                        key={objectNode.id}
-                        objectNode={objectNode} />
-            )}
-            {messageNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
-                (messageNode, index) =>
-                    <MessageNodeComponent
-                        key={messageNode.id}
-                        messageNode={messageNode} />
-            )}
-        </div>
-
-        return (
-            <div
-                onContextMenu={handleContextMenu}
-                className={(isCustomView ? "" : "border border-zinc-800 ") + ("flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")}>
-                <div
-                    onMouseDown={(e: any) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setResizingPatch({
-                            startPosition: { x: e.pageX, y: e.pageY },
-                            gridTemplate, resizeType: PatchResizeType.Right
-                        });
-                    }}
-                    className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
-                {!isCustomView && <div
-                    onMouseDown={(e: any) => {
-
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setResizingPatch({
-                            startPosition: { x: e.pageX, y: e.pageY },
-                            gridTemplate, resizeType: PatchResizeType.Left
-                        })
-                    }}
-                    className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />}
-
-                <>{isCustomView ? inner : <ContextMenu.Root
-                >
-                    <ContextMenu.Content color="indigo" className="object-context p-2 rounded-md text-white text-xs">
-                        <ContextMenu.Item
-                            onClick={createObjectNode}
-                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                            New Object Node
-                        </ContextMenu.Item>
-                        <ContextMenu.Item
-                            onClick={createMessageNode}
-                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                            New Message Node
-                        </ContextMenu.Item>
-                        <ContextMenu.Item
-                            onClick={createNumberBox}
-                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                            New Number Box
-                        </ContextMenu.Item>
-                        <ContextMenu.Item
-                            onClick={() => segmentCables(sizeIndexRef.current)}
-
-                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                            Segment All Cables
-                        </ContextMenu.Item>
-                        {selectedNodes.length > 0 &&
-                            <ContextMenu.Item
-                                onClick={() => presentation(selectedNodes)}
-                                className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                Include in Presentation {selectedNodes.length} nodes
-                            </ContextMenu.Item>}
-                        {selectedNodes.length > 1 &&
-                            <ContextMenu.Item
-                                onClick={() => encapsulate(selectedNodes)}
-                                className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                Encapsulate {selectedNodes.length} nodes
-                            </ContextMenu.Item>}
-                    </ContextMenu.Content>
-                    <ContextMenu.Trigger
-                        ref={scrollRef}
-                        className={(isCustomView ? "" : "overflow-scroll") + " ContextMenuTrigger relative"}>
-                        {inner}
-                    </ContextMenu.Trigger>
-                </ContextMenu.Root>}
-                    {!isCustomView && <>
-                        <Toolbar />
-                        <PresentationMode />
-                        <LockButton />
-                    </>}
-                </>
+            className={(draggingCable ? " dragging-cable " : "") + "patcher-background"}
+        ><div
+            ref={zoomableRef}
+            className=" flex flex-1 select-none z-1 ">
+                {!isCustomView && <Cables />}
+                {selection && selection.patch === patch &&
+                    <div
+                        style={{
+                            left: selection.x1 + 'px', top: selection.y1 + 'px',
+                            width: (selection.x2 - selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'
+                        }}
+                        className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
+                {objectNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
+                    (objectNode, index) =>
+                        objectNode.name === "outputs" ? '' : <ObjectNodeComponent
+                            key={objectNode.id}
+                            objectNode={objectNode} />
+                )}
+                {messageNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
+                    (messageNode, index) =>
+                        <MessageNodeComponent
+                            key={messageNode.id}
+                            messageNode={messageNode} />
+                )}
             </div>
+        </div>
+            ;
+
+        let tile = rootTile ? rootTile.findPatch(patch) : null;
+        let direction = tile && tile.parent ? (tile.parent.splitDirection === "vertical" ? "vertical" : "horizontal") : "";
+        let _direction = direction;
+        if (patch.viewed) {
+            direction = "";
+        } else {
+        }
+        let cl = "w-full h-full " + direction;
+
+        let _maxWidth = null;
+        let _maxHeight = null;
+        if (tile && !isCustomView) {
+            let vparent: any = tile.parent;
+            let vprev = tile;
+            while (vparent && vparent.splitDirection !== "vertical") {
+                vprev = vparent;
+                vparent = vparent.parent;
+            }
+
+            let hparent: any = tile.parent;
+            let hprev = tile;
+            while (hparent && hparent.splitDirection !== "horizontal") {
+                hprev = hparent;
+                hparent = hparent.parent;
+            }
+
+            if (hparent) {
+                _maxWidth = hparent && hparent.children[0] === hprev ?
+                    hparent.size : 100 - hparent.size;
+            }
+
+            if (vparent) {
+                _maxHeight = vparent && vparent.children[0] === vprev ?
+                    vparent.size : 100 - vparent.size;
+            }
+
+            if (tile.parent && tile.parent.splitDirection === "vertical") {
+                _maxWidth = null;
+            }
+            if (tile.parent && tile.parent.splitDirection === "horizontal") {
+                _maxHeight = null;
+            }
+            console.log('rendering=%s max height=%s maxWidth=%s', patch.id, _maxHeight, _maxWidth, patch, tile, tile.parent);
+        } else {
+            console.log("no tile", patch);
+        }
+
+
+        let keyframe = ``;
+        if (_maxWidth) {
+            keyframe = `@keyframes horizontal-slide-${patch.id} {
+0% { max-width: ${patch.viewed ? 100 : 0}%};
+    100% { max-width: ${_maxWidth}% }
+}
+`;
+        } else {
+            _maxWidth = 100
+        }
+        if (_maxHeight) {
+            keyframe = `@keyframes vertical-slide-${patch.id} {
+0% { max-height: ${patch.viewed ? 100 : 0}%};
+        100% { max-height: ${_maxHeight}% }
+}
+`;
+        } else {
+            _maxHeight = 100;
+        }
+
+        let animation = `${_direction}-slide-${patch.id} 0.5s ease`;
+
+        let style: any = isCustomView ? {} : { animation, maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%' };
+        let isFloatingCustom = false;
+        if (!isCustomView && (patch as SubPatch).parentNode) {
+            let node = (patch as SubPatch).parentNode;
+            if (node.attributes["Custom Presentation"] && node.size && presentationMode) {
+                isFloatingCustom = lockedMode;
+                style = {
+                    width: node.size.width + 'px',
+                    height: node.size.height + 'px',
+                    maxWidth: node.size.width + 'px',
+                    maxHeight: node.size.height + 'px',
+                    margin: "auto",
+
+                };
+            }
+        }
+        return (
+            <>
+                <style dangerouslySetInnerHTML={{ __html: keyframe }} />
+                <div
+                    style={style}
+                    onClick={onClick}
+                    onMouseMove={onSelectionMove}
+                    onMouseDown={onMouseDown}
+                    onContextMenu={handleContextMenu}
+                    className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : "border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
+                    }>
+                    <div className="w-full h-full flex overflow-hidden">
+                        {/*<div style={{ zIndex: 100000000000000 }} className='absolute top-5 right-5'>
+                        <div>
+                            w={_maxWidth}
+                        </div>
+                        <div>
+                            h={_maxHeight}
+                        </div>
+                        </div>*/}
+                        {!isCustomView && <>
+                            <div
+                                onMouseDown={(e: any) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setResizingPatch({
+                                        startPosition: { x: e.pageX, y: e.pageY },
+                                        gridTemplate, resizeType: PatchResizeType.South
+                                    });
+                                }}
+                                className="w-full h-1 absolute bottom-0 cursor-ns-resize z-30" />
+                            <div
+                                onMouseDown={(e: any) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setResizingPatch({
+                                        startPosition: { x: e.pageX, y: e.pageY },
+                                        gridTemplate, resizeType: PatchResizeType.North
+                                    });
+                                }}
+                                className="w-full h-1 absolute top-0 cursor-ns-resize z-30" />
+                            <div
+                                onMouseDown={(e: any) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setResizingPatch({
+                                        startPosition: { x: e.pageX, y: e.pageY },
+                                        gridTemplate, resizeType: PatchResizeType.East
+                                    });
+                                }}
+                                className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
+                            {!isCustomView && <div
+                                onMouseDown={(e: any) => {
+
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setResizingPatch({
+                                        startPosition: { x: e.pageX, y: e.pageY },
+                                        gridTemplate, resizeType: PatchResizeType.West
+                                    })
+                                }}
+                                className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />}
+                        </>}
+
+                        <>{isCustomView ? inner : <ContextMenu.Root
+                        >
+                            <ContextMenu.Content color="indigo" className="object-context p-2 rounded-md text-white text-xs">
+                                <ContextMenu.Item
+                                    onClick={createObjectNode}
+                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                    New Object Node
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    onClick={createMessageNode}
+                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                    New Message Node
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    onClick={createNumberBox}
+                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                    New Number Box
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    onClick={() => segmentCables(sizeIndexRef.current)}
+
+                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                    Segment All Cables
+                                </ContextMenu.Item>
+                                {selectedNodes.length > 0 &&
+                                    <ContextMenu.Item
+                                        onClick={() => presentation(selectedNodes)}
+                                        className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                        Include in Presentation {selectedNodes.length} nodes
+                                    </ContextMenu.Item>}
+                                {selectedNodes.length > 1 &&
+                                    <ContextMenu.Item
+                                        onClick={() => encapsulate(selectedNodes)}
+                                        className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                                        Encapsulate {selectedNodes.length} nodes
+                                    </ContextMenu.Item>}
+                            </ContextMenu.Content>
+                            <ContextMenu.Trigger
+                                className={(isFloatingCustom ? "" : "overflow-scroll") + (isCustomView ? "" : "") + " ContextMenuTrigger relative w-full h-full flex" + " w-full h-full flex flex-col "}
+                                ref={scrollRef}>
+                                {inner}
+                            </ContextMenu.Trigger>
+                        </ContextMenu.Root>
+                        }
+                        </>
+                    </div>
+                    {
+                        !isCustomView && <>
+                            {selectedPatch === patch ? <Toolbar patch={patch} /> : ''}
+                        </>
+                    }
+                </div >
+            </>
         );
     }, [
+        maxWidth,
+        maxHeight,
+        draggingCable,
         visibleObjectNodes,
-        objectNodes, patch.objectNodes, messageNodes, selection, patch, lockedMode, presentationMode]);
+        selectedPatch,
+        objectNodes,
+        patch.objectNodes,
+        messageNodes,
+        selection,
+        patch,
+        lockedMode,
+        presentationMode]);
     return out;
 };
 

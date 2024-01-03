@@ -77,7 +77,6 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const loadProject = useCallback((project: Project) => {
         patch.name = project.name;
         patch.objectNodes = [];
-        console.log("load project =", project.json);
         if ((project.json as any).compressed) {
             const binaryBuffer = Buffer.from((project.json as any).compressed, 'base64');
 
@@ -85,11 +84,13 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             const decompressed = pako.inflate(binaryBuffer, { to: 'string' });
             let _json = JSON.parse(decompressed);
             let connections = patch.fromJSON(_json);
+            patch.previousSerializedPatch = _json;
             setConnections(connections);
             setObjectNodes([...patch.objectNodes]);
             setMessageNodes([...patch.messageNodes]);
         } else {
             let connections = patch.fromJSON(project.json);
+            patch.previousSerializedPatch = project.json;
             setConnections(connections);
             setObjectNodes([...patch.objectNodes]);
             setMessageNodes([...patch.messageNodes]);
@@ -129,7 +130,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         console.log('segment cables called...', connections);
         for (let id in connections) {
             for (let connection of connections[id]) {
-                if (connection.segmentation === undefined && sizeIndex[id]) {
+                console.log('connection segmentation=', connection.segmentation);
+                if ((!(connection.segmentation) || connection.segmentation < 0) && sizeIndex[id]) {
                     let segment = getSegmentation(connection, sizeIndex);
                     console.log('segment for connection = ', segment);
                     if (segment !== undefined && !isNaN(segment)) {
@@ -206,8 +208,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
 
             for (let outlet of node.outlets) {
                 for (let connection of outlet.connections) {
-                    connection.destination.disconnect(connection);
-                    node.disconnect(connection);
+                    connection.destination.disconnect(connection, false);
+                    node.disconnect(connection, false);
                     let id = node.id;
                     if ((connections[id])) {
                         connections[id] = connections[id].filter(x => x !== connection);
@@ -220,8 +222,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             }
             for (let inlet of node.inlets) {
                 for (let connection of inlet.connections) {
-                    connection.source.disconnect(connection);
-                    node.disconnect(connection);
+                    connection.source.disconnect(connection, false);
+                    node.disconnect(connection, false);
                     let id = (connection.source as any).id;
                     if ((connections[id])) {
                         connections[id] = connections[id].filter(x => x !== connection);
@@ -236,6 +238,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         setConnections({ ...connections });
         setObjectNodes([...patch.objectNodes]);
         setMessageNodes([...patch.messageNodes]);
+        patch.recompileGraph();
     }, [patch, setObjectNodes, connections, setConnections]);
 
 

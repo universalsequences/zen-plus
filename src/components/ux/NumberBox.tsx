@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { TriangleRightIcon } from '@radix-ui/react-icons'
+import { TargetIcon, TriangleRightIcon } from '@radix-ui/react-icons'
 
 
 const NumberBox: React.FC<{
     lockedModeRef: React.MutableRefObject<boolean>,
+    isParameter?: boolean,
     className?: string,
     isSelected: boolean,
     min: number, max: number, value: number, setValue: (x: number) => void, round: boolean
 }> = ({
+    isParameter,
     className,
     lockedModeRef,
     value,
@@ -123,6 +125,7 @@ const NumberBox: React.FC<{
                             className="flex-1">
                             {float !== undefined ? float.toString().slice(2) : ""}
                         </div>
+                        {isParameter && <TargetIcon className="mr-1 w-2 h-2 my-auto" />}
                     </div>
                 </div>
             </div>

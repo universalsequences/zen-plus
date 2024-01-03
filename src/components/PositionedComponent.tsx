@@ -133,6 +133,10 @@ const PositionedComponent: React.FC<{
             className += " border-zinc-100";
         }
 
+        if (isSelected) {
+            className += " selected";
+        }
+
         if ((node as ObjectNode).operatorContextType && !isCustom) {
             className += " context-type-" + (node as ObjectNode).operatorContextType;
         }

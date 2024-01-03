@@ -41,6 +41,9 @@ export class PatchImpl implements Patch {
     presentationMode: boolean;
     skipRecompile: boolean;
     skipRecompile2: boolean;
+    setZenCode?: (x: string | null) => void;
+    previousSerializedPatch?: SerializedPatch;
+    previousTokenId: number;
 
     constructor() {
         this.id = uuid();
@@ -59,6 +62,7 @@ export class PatchImpl implements Patch {
         this.storedStatement = undefined;
         this.missedConnections = [];
         this.outputStatements = [];
+        this.previousTokenId = 0;
     }
 
     getAllNodes(): ObjectNode[] {
@@ -78,8 +82,7 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph(recompileGraph?: boolean) {
-        if (this.name === undefined) {
-            console.log("recompile started =", this.name || this.id, new Date().getTime());
+        if (true) {
         }
         let startTime = new Date().getTime();
         if (this.skipRecompile || this.skipRecompile2) {
@@ -95,24 +98,54 @@ export class PatchImpl implements Patch {
 
         // re-parse every node so that we "start from scratch"
         let objectNodes = this.objectNodes; //getAllNodes();
-        for (let node of objectNodes) {
-            if (node.operatorContextType !== OperatorContextType.ZEN) {
-                continue;
+        let _objectNodes = objectNodes;
+        if (true) { //this.name === undefined) {
+            for (let node of _objectNodes) {
+                if (node.operatorContextType !== OperatorContextType.ZEN) {
+                    continue;
+                }
+                if (node.subpatch) {
+                    continue;
+                }
+                node.inlets.forEach(
+                    n => {
+                        n.lastMessage = undefined;
+                    });
+                node.lastSentMessage = undefined;
+                if ((node as ObjectNode).name !== "param") {
+                    node.storedMessage = undefined;
+                }
             }
-            if (node.name === "zen") {
-                continue;
+
+            for (let node of _objectNodes) {
+                if (node.operatorContextType !== OperatorContextType.ZEN) {
+                    continue;
+                }
+                if (node.subpatch) {
+                    continue;
+                }
+                node.inlets.forEach(
+                    n => {
+                        n.lastMessage = undefined;
+                    });
+                node.parse(node.text, node.operatorContextType, false);
             }
-            node.inlets.forEach(
-                n => {
-                    n.lastMessage = undefined;
-                });
-            node.parse(node.text, node.operatorContextType, false);
         }
 
         for (let node of objectNodes) {
             if (node.subpatch) {
                 node.subpatch.recompileGraph(true);
             }
+        }
+
+
+
+        let a = new Date().getTime();
+        let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
+        matricesAndBuffers.forEach(
+            matrix => matrix.receive(matrix.inlets[0], "bang"));
+        let b = new Date().getTime();
+        if (b - a > 10) {
         }
 
         let sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument");
@@ -123,33 +156,84 @@ export class PatchImpl implements Patch {
                 }
             });
 
+        let c = new Date().getTime();
+        if (c - b > 10) {
+        }
+
+        //this.sendNumberMessages()
 
         this.waiting = false;
         sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "param" && node.name !== "history") || node.needsLoad);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
+                    let prevTime = new Date().getTime();
                     let ret: Message[] = sourceNode.fn("bang");
                     for (let i = 0; i < ret.length; i++) {
                         if (sourceNode.outlets[i]) {
                             sourceNode.send(sourceNode.outlets[i], ret[i]);
                         }
                     }
+                    let endTime = new Date().getTime();
+                    if (endTime - startTime > 5) {
+                    }
                 }
             });
 
-        this.sendNumberMessages()
-        this.sendAttributeMessages()
+
+        if (this.name === undefined) {
+            let calls = _objectNodes.filter(node => node.name === "call");
+            calls.forEach(
+                call => {
+                    console.log("call we got=", call);
+                    if (call.fn && call.inlets[0] && call.inlets[0].lastMessage) {
+                        console.log("sending call inlets!", call.inlets[0].lastMessage);
+                        call.receive(call.inlets[0], call.inlets[0].lastMessage);
+                    }
+                    return;
+                    /*
+                    if (call.fn && call.inlets[0]) {
+                        console.log('call inlets=', call.inlets, call);
+                        let msg = call.inlets[0].lastMessage;
+                        if (msg) {
+                            let ret: Message[] = call.fn(msg);
+                            for (let i = 0; i < ret.length; i++) {
+                                if (call.outlets[i]) {
+                                    call.send(call.outlets[i], ret[i]);
+                                }
+                            }
+                            let endTime = new Date().getTime();
+                            if (endTime - startTime > 5) {
+                            }
+                        }
+                    }
+                    */
+                });
+        }
+
+
+        let d = new Date().getTime();
+        if (d - c > 10) {
+        }
+
+        //this.startParameterNumberMessages()
+        //this.sendAttributeMessages()
 
         if (this.storedStatement) {
             this.compile(this.storedStatement);
         }
 
+        /*
         let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
         matricesAndBuffers.forEach(
             matrix => matrix.receive(matrix.inlets[0], "bang"));
+            */
 
         this.skipRecompile2 = false;
+
+        if (true) {
+            //console.log("recompile ended =", this.name || this.id, new Date().getTime());
+        }
     }
 
     disconnectGraph() {
@@ -170,12 +254,28 @@ export class PatchImpl implements Patch {
         this.worklets.length = 0;
     }
 
-    sendNumberMessages() {
+    startParameterNumberMessages() {
         let messageNodes = this.getAllMessageNodes();
         for (let messageNode of messageNodes) {
             if (messageNode.messageType === MessageType.Number) {
-                messageNode.receive(messageNode.inlets[0], "bang");
-                if (messageNode.message) {
+                if (messageNode.attributes["is parameter"]) {
+                    messageNode.receive(messageNode.inlets[0], "bang");
+                }
+            }
+        }
+    }
+
+    sendNumberMessages(filterParameters = false) {
+        let messageNodes = this.getAllMessageNodes();
+        for (let messageNode of messageNodes) {
+            if (messageNode.messageType === MessageType.Number) {
+                if (filterParameters && !messageNode.attributes["is parameter"]) {
+                    continue;
+                }
+                if (!messageNode.attributes["is parameter"]) {
+                    messageNode.receive(messageNode.inlets[0], "bang");
+                }
+                if (messageNode.message !== undefined) {
                     messageNode.receive(messageNode.inlets[1], messageNode.message);
                 }
             }
@@ -213,13 +313,14 @@ export class PatchImpl implements Patch {
         this.counter++;
         let id = this.counter;
 
+        if (this.name === undefined) {
+        }
         setTimeout(() => {
             if (id !== this.counter) {
                 return
             }
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
-                console.log('history deps=', historyDependencies);
                 let _statement = ["s" as Operator];
                 for (let dependency of historyDependencies) {
                     // make sure that statement contains the history
@@ -232,6 +333,7 @@ export class PatchImpl implements Patch {
                         }
                     } else {
                         let param = ((dependency as Statement[])[0] as any).param;
+                        console.log('dependency encountered w param=', dependency);
                         _statement.push(dependency as any);
                         /*
                         // make sure the hist is somewhere in the statement
@@ -246,21 +348,59 @@ export class PatchImpl implements Patch {
                         */
                     }
                 }
-                console.log("resolved histories=", _statement);
                 _statement.push(statement as any);
                 //statement = _statement as Statement;
                 statement = ["s" as Operator, _statement as Statement];
             }
-            console.log("statement to compile=", statement);
             let ast = compileStatement(statement);
-            console.log('compiled became=', ast, new Date().getTime());
-            //let printed = printStatement(statement);
-            //console.log(printed);
+            let inputFile = printStatement(statement);
+            inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
+            inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
+            inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
+            inputFile = inputFile.replace(/mult(\d+)/g, (_, number) => `m${number}`);
+            inputFile = inputFile.replace(/div(\d+)/g, (_, number) => `d${number}`);
+            //inputFile = inputFile.replace(/history(\d+)/g, (_, number) => `h${number}`);
+            inputFile = inputFile.replace(/rampToTrig(\d+)/g, (_, number) => `r${number}`);
+            inputFile = inputFile.replace(/phasor(\d+)/g, (_, number) => `p${number}`);
+            inputFile = inputFile.replace(/cycle(\d+)/g, (_, number) => `c${number}`);
+            inputFile = inputFile.replace(/floor(\d+)/g, (_, number) => `f${number}`);
+            inputFile = inputFile.replace(/and(\d+)/g, (_, number) => `an${number}`);
+            inputFile = inputFile.replace(/accum(\d+)/g, (_, number) => `ac${number}`);
+            inputFile = inputFile.replace(/mod(\d+)/g, (_, number) => `mo${number}`);
+            inputFile = inputFile.replace(/clamp(\d+)/g, (_, number) => `cl${number}`);
+            inputFile = inputFile.replace(/eq(\d+)/g, (_, number) => `E${number}`);
+            inputFile = inputFile.replace(/selector(\d+)/g, (_, number) => `S${number}`);
+            inputFile = inputFile.replace(/triangle(\d+)/g, (_, number) => `T${number}`);
+            inputFile = inputFile.replace(/mstosamps(\d+)/g, (_, number) => `ms${number}`);
+            inputFile = inputFile.replace(/round(\d+)/g, (_, number) => `ro${number}`);
+            inputFile = inputFile.replace(/compressor(\d+)/g, (_, number) => `co${number}`);
+            inputFile = inputFile.replace(/wrap(\d+)/g, (_, number) => `w${number}`);
+            inputFile = inputFile.replace(/argument(\d+)/g, (_, number) => `A${number}`);
+            inputFile = inputFile.replace(/onepole(\d+)/g, (_, number) => `o${number}`);
+            inputFile = inputFile.replace(/scale(\d+)/g, (_, number) => `sc${number}`);
+            inputFile = inputFile.replace(/vactrol(\d+)/g, (_, number) => `V${number}`);
+            inputFile = inputFile.replace(/param(\d+)/g, 'p$1');
+            inputFile = inputFile.replace(/latch(\d+)/g, 'L$1');
+            inputFile = inputFile.replace(/mix(\d+)/g, 'M$1');
+            inputFile = inputFile.replace(/delay(\d+)/g, 'D$1');
+            inputFile = inputFile.replace(/biquad(\d+)/g, 'B$1');
+            inputFile = replaceAll(inputFile, "  ", "");
+            inputFile = replaceAll(inputFile, "(\n", "(");
+            inputFile = replaceAll(inputFile, "( ", "(");
+            inputFile = replaceAll(inputFile, ",\n", ",");
+            inputFile = replaceAll(inputFile, " (", "(");
+            inputFile = replaceAll(inputFile, " )", ")");
+            inputFile = replaceAll(inputFile, ") ", ")");
+            inputFile = replaceAll(inputFile, " = ", "=");
+            inputFile = getFunctionNames(inputFile);
+
+            if (this.setZenCode) {
+                this.setZenCode(inputFile);
+            }
 
             this.disconnectGraph();
 
             let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
-            console.log("zen graph=", zenGraph, new Date().getTime());
             createWorklet(
                 this.audioContext,
                 zenGraph,
@@ -268,7 +408,6 @@ export class PatchImpl implements Patch {
                 .then(
                     (ret) => {
 
-                        console.log("worklet", new Date().getTime());
                         ret = ret as ZenWorklet;
                         this.audioNode = ret.workletNode;
                         let worklet = ret.workletNode;
@@ -277,9 +416,9 @@ export class PatchImpl implements Patch {
                             if (e.data.type === "wasm-ready") {
                                 initMemory(zenGraph.context, worklet)
                                 worklet.port.postMessage({ type: "ready" });
-                                console.log('wasm ready');
                                 this.skipRecompile = true;
                                 this.sendAttributeMessages();
+                                this.sendNumberMessages(true);
                                 let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
                                 matricesAndBuffers.forEach(
                                     matrix => matrix.receive(matrix.inlets[0], "bang"));
@@ -291,7 +430,6 @@ export class PatchImpl implements Patch {
                             publish(e.data.type, [e.data.subType, e.data.body]);
                         };
 
-                        console.log(ret.workletNode);
                         if (ret.workletNode.channelCount <= 1) {
                             ret.workletNode.connect(this.audioContext.destination);
                             this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
@@ -305,7 +443,6 @@ export class PatchImpl implements Patch {
                                 merger.connect(this.audioContext.destination);
                                 this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph, splitter, merger });
                             } catch (E) {
-                                console.log('error connecting', E);
                             }
                         }
 
@@ -319,9 +456,9 @@ export class PatchImpl implements Patch {
                                 messageNode.receive(messageNode.inlets[1], messageNode.message);
                             }
                         }
+                        this.skipRecompile = true;
                         this.sendNumberMessages();
                         this.sendAttributeMessages();
-                        this.skipRecompile = true;
                         let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
                         matricesAndBuffers.forEach(
                             matrix => matrix.receive(matrix.inlets[0], "bang"));
@@ -392,7 +529,6 @@ export class PatchImpl implements Patch {
             }
         }
 
-        let currentId = currentUUID();
         this.id = x.id;
         if ((this as Patch as SubPatch).parentNode) {
             let node = (this as Patch as SubPatch).parentNode;
@@ -443,6 +579,7 @@ export class PatchImpl implements Patch {
         let i = 0;
         let connections: Connections = {};
 
+        let currentId = currentUUID();
         let missedConnections: [SerializedConnection, ObjectNode, ObjectNode, number][] = [];
         for (let serializedNode of [...x.objectNodes, ... (x.messageNodes || [])]) {
             let node = ids[serializedNode.id];
@@ -450,8 +587,14 @@ export class PatchImpl implements Patch {
                 let nodeConnections = [];
                 for (let outlet of serializedNode.outlets) {
                     let { outletNumber, connections } = outlet;
+                    if (!outletNumber) {
+                        outletNumber = 0;
+                    }
                     for (let connection of connections) {
                         let { destinationId, destinationInlet, segmentation } = connection;
+                        if (!destinationInlet) {
+                            destinationInlet = 0;
+                        }
                         let destination: ObjectNode = ids[destinationId];
                         if (destination) {
                             let inlet = destination.inlets[destinationInlet];
@@ -474,17 +617,18 @@ export class PatchImpl implements Patch {
 
         this.missedConnections = missedConnections;
         let _connections: Connections = { ...connections };
+        let num: number = 1;
         if (isPreset) {
             for (let node of [... this.objectNodes, ... this.messageNodes]) {
                 let oldId = node.id;
-                let newId = plusUUID(oldId, currentId);
+                let newId = plusUUID(num.toString(36), currentId);
                 registerUUID(newId);
                 _connections[newId] = connections[oldId];
                 delete _connections[oldId];
                 node.id = newId;
+                num++;
             }
         }
-
         for (let messageNode of this.messageNodes) {
             if (messageNode.message) {
                 messageNode.receive(messageNode.inlets[1], messageNode.message);
@@ -502,6 +646,9 @@ export class PatchImpl implements Patch {
     resolveMissedConnections() {
         for (let [connection, source, dest, outletNumber] of this.missedConnections) {
             let { destinationId, destinationInlet } = connection;
+            if (!destinationInlet) {
+                destinationInlet = 0;
+            }
             let inlet = dest.inlets[destinationInlet];
             let outlet = source.outlets[outletNumber]
             if (inlet && outlet) {
@@ -525,3 +672,83 @@ const notInFunction = (x: Statement) => {
     }
     return true;
 };
+
+const replaceAll = (target: string, search: string, repl: string) => {
+    return target.split(search).join(repl);
+};
+
+const getFunctionNames = (dslCode: string) => {
+    const funcRegex = /\b(\w+)\(/g;
+
+    // Object to store unique function names
+    const functions: any = {};
+
+    // Find all matches
+    let match;
+    while ((match = funcRegex.exec(dslCode)) !== null) {
+        functions[match[1]] = true; // Store the function name
+    }
+
+    const shorthands: any = {};
+    // Generate shorthands
+    /*
+    let shorthandIndex = 0;
+
+    let currentCharCode = 97; // ASCII code for 'a'
+    let extraChar = -1;
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    let currentCharIndex = 0;
+    let prefixIndex = -1;
+    */
+
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    let prefixIndex = 0;
+    let suffixIndex = 0;
+
+
+
+    Object.keys(functions).forEach(func => {
+
+        // Generate a shorthand name, e.g., f1, f2, ...
+        /*
+        shorthands[func] = 'F' + shorthandIndex++;
+        */
+        let shorthand = alphabet[prefixIndex] + (suffixIndex > 0 ? alphabet[suffixIndex - 1] : '');
+
+        if (shorthand === "do") {
+            shorthand = "d000";
+        }
+
+        shorthands[func] = shorthand;
+
+        if (suffixIndex === alphabet.length) {
+            suffixIndex = 0;
+            prefixIndex++;
+        } else {
+            suffixIndex++;
+        }
+
+    });
+
+    // Generate the shorthand definitions
+    let shorthandDefinitions = 'let ';
+    let outDSL = dslCode;
+    Object.entries(shorthands).forEach(([original, shorthand], i) => {
+        if (!original.includes("hist")) {
+            shorthandDefinitions += `${shorthand}=${original}`;
+            if (i < Object.values(shorthands).length - 1) {
+                shorthandDefinitions += ',';
+            }
+            outDSL = outDSL.replaceAll('=' + original + '(', '=' + shorthand + '(');
+        }
+    });
+    shorthandDefinitions = replaceAll(shorthandDefinitions, "\n", "");
+
+    outDSL = shorthandDefinitions + ';\n' + "let " + outDSL.replaceAll("let ", ",").replaceAll(";", "").replaceAll("\n", "").slice(1);
+    let retIndex = outDSL.indexOf("return");
+    outDSL = outDSL.slice(0, retIndex) + ';\n' + outDSL.slice(retIndex);
+
+    return outDSL;
+
+};
+

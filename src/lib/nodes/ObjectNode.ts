@@ -37,6 +37,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     id: Identifier;
     inlets: IOlet[];
     outlets: IOlet[];
+    lastSentMessage?: Message;
     isCycle?: boolean;
     position: Coordinate;
     presentationPosition?: Coordinate;
@@ -91,7 +92,14 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             if (token[0] === '@') {
                 let attributeName = token.slice(1);
                 let attributeValue = tokens[i + 1];
-                if (isNaN(parseFloat(attributeValue))) {
+                if (attributeValue.includes(",")) {
+                    let splits = attributeValue.split(",");
+                    let vals: (number[]) = [];
+                    for (let sp of splits) {
+                        vals.push(parseFloat(sp));
+                    }
+                    this.attributes[attributeName] = vals;
+                } else if (isNaN(parseFloat(attributeValue))) {
                     this.attributes[attributeName] = attributeValue;
                 } else {
                     this.attributes[attributeName] = parseFloat(attributeValue);
@@ -111,8 +119,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
      *
      * @param {string} text - The text input by the user to parse
      */
-    parse(text: string, contextType: OperatorContextType = this.operatorContextType, compile = true): boolean {
+    parse(text: string, contextType: OperatorContextType = this.operatorContextType, compile = true, patchPreset?: SerializedPatch): boolean {
         let context: OperatorContext = getOperatorContext(contextType);
+        this.lastSentMessage = undefined;
         this.operatorContextType = contextType;
         let originalText = text;
         text = this.parseAttributes(text, context);
@@ -120,7 +129,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         let name = tokens[0];
         let argumentTokens = tokens.slice(1);
 
-        let patchPreset: SerializedPatch | null = this.getPatchPresetIfAny(name);
+        // let patchPreset: SerializedPatch | null = this.getPatchPresetIfAny(name);
         if (patchPreset) {
             text = text.replace(name, "zen");
             name = "zen";
@@ -176,6 +185,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         if (compile && this.name !== "zen" && this.operatorContextType === OperatorContextType.ZEN) {
             if (!this.patch.skipRecompile) {
+                console.log('recompile graph objnode!', 2);
                 this.patch.recompileGraph();
             }
         }
@@ -189,9 +199,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 const decompressed = pako.inflate(binaryBuffer, { to: 'string' });
                 let json = JSON.parse(decompressed);
                 this.subpatch.fromJSON(json, true);
-                console.log(json);
+                console.log(json, this);
             } else {
                 this.subpatch.fromJSON(patchPreset, true);
+                console.log(patchPreset, this, this);
             }
 
         }
@@ -205,6 +216,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             this.newOutlet();
         }
         if (compile) {
+            console.log('recompile graph objectNode!');
             this.patch.recompileGraph();
         }
     }
@@ -286,7 +298,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         // check the number of io-lets matches the spec
-        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas") {
+        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "param") {
             this.outlets = this.outlets.slice(0, _numberOfOutlets);
         }
 
@@ -388,9 +400,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if (this.name !== "fluid" && this.name !== "data") {
-            //console.log(this.name, "receive", this.inlets.indexOf(inlet), message);
-        }
+        //        console.log(this.name, "receive", this.inlets.indexOf(inlet), message);
 
         super.receive(inlet, message);
 
@@ -400,12 +410,19 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
+        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall") {
+            return;
+        }
+
         let indexOf = this.inlets.indexOf(inlet);
 
         if (indexOf == 0) {
             // we are sending through the main inlet, i.e. run the function
             if (this.inlets.some((x, i) => x.lastMessage === undefined) && this.name !== "out") {
                 return;
+            }
+            if (this.name === "call") {
+                //                console.log('call = ', this.inlets.map(x => x.lastMessage));
             }
             let a = new Date().getTime();
             let ret: Message[] = this.fn(message);
@@ -418,6 +435,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                     this.send(this.outlets[i], ret[i]);
                 }
             }
+            this.lastSentMessage = ret[0];
         } else if (indexOf > 0) {
             // store the message in arguments
             let argumentNumber = indexOf - 1;
@@ -425,6 +443,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
             if (this.inlets.some((c, i) => c.lastMessage === undefined) && this.name !== "out") {
                 return;
+            }
+            if (this.name === "call") {
+                //                console.log('call = ', this.inlets.map(x => x.lastMessage));
             }
 
             // if we've already received a message in left-most inlet, we
@@ -442,6 +463,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                         this.send(this.outlets[i], ret[i]);
                     }
                 }
+                this.lastSentMessage = ret[0];
             }
         }
     }
@@ -461,11 +483,21 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             json.buffer = Array.from(this.buffer);
         }
 
+        if (!json.presentationPosition) {
+            delete json.presentationPosition;
+        }
+
         json.attributes = {};
         for (let name in this.attributes) {
             if (this.attributes[name] !== this.attributeDefaults[name]) {
                 json.attributes[name] = this.attributes[name];
             }
+        }
+        if (Object.keys(json.attributes).length === 0) {
+            delete json.attributes;
+        }
+        if (this.operatorContextType === 0) {
+            delete json.operatorContextType;
         }
         //        json.attributes = { ... this.attributes };
 
@@ -476,7 +508,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             };
         }
 
-        json.numberOfOutlets = this.outlets.length;
+        if (this.outlets.length > 1) {
+            json.numberOfOutlets = this.outlets.length;
+        }
         return json;
     }
 
@@ -496,9 +530,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         this.position = json.position;
-        this.presentationPosition = json.presentationPosition;
+        if (json.presentationPosition) {
+            this.presentationPosition = json.presentationPosition;
+        }
 
-        this.parse(json.text, json.operatorContextType || OperatorContextType.ZEN, false);
+        if (json.subpatch) {
+            this.parse("zen", json.operatorContextType || OperatorContextType.ZEN, false);
+        } else {
+            this.parse(json.text, json.operatorContextType || OperatorContextType.ZEN, false);
+        }
         if (json.numberOfOutlets) {
             for (let i = 0; i < json.numberOfOutlets; i++) {
                 if (!this.outlets[i]) {
@@ -506,12 +546,20 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 }
             }
         }
+
         this.id = json.id;
-        registerUUID(this.id);
+
+        if (!isPreset) {
+            registerUUID(this.id);
+        }
 
         if (json.subpatch && this.subpatch) {
             this.subpatch.objectNodes = [];
             this.subpatch.fromJSON(json.subpatch, isPreset);
+            if (this.size && json.size) {
+                this.size.width = json.size.width;
+                this.size.height = json.size.height;
+            }
         }
 
         if (json.attributes) {

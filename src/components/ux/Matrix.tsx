@@ -36,8 +36,6 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let size_x = (width - (columns as number) * 4) / (columns as number);
     let size_y = (height - (rows as number) * 4) / (rows as number);
 
-    console.log("matrix render...");
-
     let memo = React.useMemo(() => {
         let _rows = [];
         for (let i = 0; i < (rows as number); i++) {

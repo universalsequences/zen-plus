@@ -61,18 +61,15 @@ export const history = (val?: number, params?: HistoryParams, debugName?: string
 
             context = _context;
             if (block === undefined || contextChanged) {
-                console.log('allocating!!');
                 block = context.alloc(1);
                 historyVar = context.useVariables(debugName || "historyVal")[0];
                 contextBlocks = contextBlocks.filter(
                     x => !x.context.disposed);
                 contextBlocks.push({ context, block });
             } else {
-                console.log('jot allocating');
             }
 
             if (block._idx === 44794) {
-                console.log("BLOCK IDX context=", context, block);
             }
             let IDX = block.idx;
             let historyDef = `${context.varKeyword} ${historyVar} = memory[${IDX}]` + '\n';
@@ -146,10 +143,13 @@ memory[${IDX}] = ${_input.variable};
      */
 
     _history.value = (val: number, time?: Samples) => {
+        console.log('setting history value?', val, contextBlocks);
         if (context === undefined) {
+            console.log('no context...');
             return;
         }
 
+        console.log('setting history value?', val, contextBlocks);
         for (let { context, block } of contextBlocks) {
             let messageType: ContextMessageType = time !== undefined ?
                 "schedule-set" : "memory-set";
@@ -158,6 +158,7 @@ memory[${IDX}] = ${_input.variable};
                 value: val,
                 time
             }
+            console.log('actually sending...');
             context.postMessage({
                 type: messageType,
                 body

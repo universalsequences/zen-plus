@@ -1,5 +1,6 @@
 import { doc } from './doc';
 import { API } from '@/lib/nodes/context';
+import { polycall } from './poly';
 import { SubPatch, Message, Lazy, ObjectNode, Patch } from '../../types';
 import { Operator, Statement, CompoundOperator } from './types';
 import { traverseBackwards } from '@/lib/nodes/traverse';
@@ -15,11 +16,8 @@ doc(
 const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
     return (_message: Message): Statement[] => {
         let backwards = traverseBackwards(node).filter(x => x !== node);
-        let numOutbound = node.outlets.flatMap(x => x.connections).length;
+        //let numOutbound = node.outlets.flatMap(x => x.connections).length;
         let _bodies = bodies.map(x => x()).filter(x => x);
-        if (_bodies.length === 0) {
-            return [];
-        }
 
         // history dependencies...
         let deps = [];
@@ -32,9 +30,10 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
                 deps.push(dep);
             }
         }
-        console.log("DEFUN DEPS = ", deps);
-
         _bodies = [_message, ..._bodies];
+        if (_bodies.length === 0) {
+            return [];
+        }
         let __bodies = [];
         for (let x of _bodies) {
             if (deps.length > 0) {
@@ -52,13 +51,17 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
                 n.attributes["name"] === name) {
                 totalInvocations++;
             }
+            if ((n as ObjectNode).name === "polycall" &&
+                n.attributes["name"] === name) {
+                totalInvocations += (n as ObjectNode).attributes.voices as number;
+            }
         }
         let ret = [
             { name: "defun", value: totalInvocations, variableName: name },
             ...__bodies,
         ];
         (ret as Statement).node = node;
-        console.log('defun initialized', ret);
+        console.log("defun called...");
         node.storedMessage = ret as Statement;
         return [ret as Statement];
     };
@@ -74,7 +77,6 @@ doc(
     });
 const call = (node: ObjectNode, ...args: Lazy[]) => {
     return (message: Message) => {
-        console.log('call executed=', message);
         let name = node.attributes["name"] || "test";
 
         let upstream = getUpstreamNodes(node.patch);
@@ -82,28 +84,18 @@ const call = (node: ObjectNode, ...args: Lazy[]) => {
         let defuns = backwards.filter(x => x.name === "defun" &&
             x.attributes["name"] === name);
         let _node = defuns[0];
-        console.log("defuns =", defuns);
         if (!_node) {
             return [];
         }
-        /*
-        let outbound = _node.outlets.flatMap(x => x.connections.map(x => x.destination));
-        if (outbound.length === 0) {
-            return [];
-        }
-        */
-
         let callers = upstream.filter(x => x.name === "call" &&
             x.attributes["name"] == name);
 
 
         let invocationNumber = callers.indexOf(node);
-        console.log("invocation number=", invocationNumber);
         let _args = args.map(x => x()).filter(x => x !== undefined);
+        console.log("call node/storedMessage", _node, _node.storedMessage);
         let body = _node.storedMessage;
-        console.log("body", body);
         if (!body) {
-            console.log("no message body");
             return [];
         }
         let ret = [
@@ -136,8 +128,9 @@ doc(
     });
 const argument = (node: ObjectNode, num: Lazy, name: Lazy) => {
     return (message: Message) => {
-        if (name()) {
-            let ret: Statement = [{ name: "argument", value: num() as number, variableName: name() as string }]
+        let _name = name() || ('arg_' + num());
+        if (_name) {
+            let ret: Statement = [{ name: "argument", value: num() as number, variableName: _name as string }]
             ret.node = node;
 
             return [ret] as Statement[];
@@ -149,10 +142,11 @@ const argument = (node: ObjectNode, num: Lazy, name: Lazy) => {
 export const functions: API = {
     defun,
     call,
-    argument
+    argument,
+    polycall
 }
 
-const getUpstreamNodes = (patch: Patch): ObjectNode[] => {
+export const getUpstreamNodes = (patch: Patch): ObjectNode[] => {
     let nodes = [...patch.objectNodes];
     if ((patch as SubPatch).parentPatch) {
         return [...getUpstreamNodes((patch as SubPatch).parentPatch), ...nodes];

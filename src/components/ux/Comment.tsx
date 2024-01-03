@@ -27,7 +27,7 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
             // Use setTimeout to allow the browser to render the height reset
             //setTimeout(() => {
-            textarea.style.height = `${textarea.scrollHeight - totalVerticalPaddingAndBorder}px`;
+            textarea.style.height = `${textarea.scrollHeight + 0 * totalVerticalPaddingAndBorder}px`;
             //}, 0);
         }
     };
@@ -39,10 +39,11 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }, [text, size]);
 
 
+    let fontSize = objectNode.attributes.fontSize as number;
     return (
         <div className="w-full h-full">
             <textarea
-                style={size ? { width: size.width } : {}}
+                style={size ? { fontSize: fontSize, lineHeight: fontSize + 'px', width: size.width } : { fontSize: fontSize, lineHeight: fontSize + 'px' }}
                 ref={textareaRef}
                 className="outline-none bg-transparent text-white p-2 border-box overflow-hidden"
                 value={text}

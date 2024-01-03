@@ -150,6 +150,7 @@ export const zen_pow = (object: ObjectNode, b: Lazy) => {
 
 op_doc('exp', 1);
 export const zen_exp = (object: ObjectNode) => {
+
     return memoZen(object, "exp" as Operator);
 };
 

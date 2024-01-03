@@ -139,7 +139,7 @@ body, html {
 
 .patches {
   row-gap: 20px;
-  column-gap: 50px;
+  column-gap: 7px;
   //grid-template-columns: 1fr 1fr; /* Start with 2 columns */
   grid-template-rows: auto;
 }
@@ -199,8 +199,7 @@ div[data-radix-popper-content-wrapper] {
 }
 
 .bg-black-clear {
-    background-color: #0000000f;
-    backdrop-filter: blur(2px);
+    background-color: #bbb1b140;
 }
 
 .bg-black-clear-light {
@@ -236,11 +235,9 @@ div[data-radix-popper-content-wrapper] {
     margin-bottom: auto;
 }
 
-.edge-group:hover {
-    .visible-edge {
+    .visible-edge:hover {
         stroke: red;
     }
-}
 
 .object-context {
     background-color: #ddfff742;
@@ -263,3 +260,4 @@ textarea {
     background-image: radial-gradient(circle at center center, rgb(65 65 65) 0%, rgb(25 23 23) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, hsl(235.2deg 7.8% 11.05%),hsl(228deg 9.09% 10.78%));
     background-size: 14px 14px;
 }
+

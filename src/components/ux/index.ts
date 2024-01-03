@@ -8,7 +8,7 @@ import ScopeTilde from './ScopeTilde';
 import { ObjectNode } from '@/lib/nodes/types';
 import Audio from './Audio';
 import Comment from './Comment';
-
+import HTMLViewer from './HTMLViewer';
 
 interface NodeProps {
     objectNode: ObjectNode;
@@ -21,6 +21,7 @@ type ComponentIndex = {
 export const index: ComponentIndex = {
     matrix: Matrix,
     comment: Comment,
+    "html": HTMLViewer,
     "number~": NumberTilde,
     "scope~": ScopeTilde,
     "buffer": Audio,
