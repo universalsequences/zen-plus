@@ -30,6 +30,7 @@ interface Constants {
 
 const CONSTANTS: Constants = {
     "twopi": 2 * Math.PI,
+    "halfpi": 0.5 * Math.PI,
     "pi": Math.PI
 }
 
@@ -298,7 +299,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         // check the number of io-lets matches the spec
-        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "param") {
+        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "param" && this.name !== "modeling.synth" && this.name !== "modeling.component") {
             this.outlets = this.outlets.slice(0, _numberOfOutlets);
         }
 
@@ -410,7 +411,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall") {
+        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth") {
+            console.log("skipping ", this);
             return;
         }
 

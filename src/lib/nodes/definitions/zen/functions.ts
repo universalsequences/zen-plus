@@ -61,7 +61,6 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
             ...__bodies,
         ];
         (ret as Statement).node = node;
-        console.log("defun called...");
         node.storedMessage = ret as Statement;
         return [ret as Statement];
     };
@@ -93,7 +92,6 @@ const call = (node: ObjectNode, ...args: Lazy[]) => {
 
         let invocationNumber = callers.indexOf(node);
         let _args = args.map(x => x()).filter(x => x !== undefined);
-        console.log("call node/storedMessage", _node, _node.storedMessage);
         let body = _node.storedMessage;
         if (!body) {
             return [];

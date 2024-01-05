@@ -20,7 +20,6 @@ export interface Membrane {
 export interface Material {
     pitch: Arg;
     release: Arg;
-    //placement: Arg;
     x: Arg;
     y: Arg;
     noise: Arg;
@@ -29,9 +28,7 @@ export interface Material {
 
 interface Connection {
     component: Component;
-    //structure: Structure;
     neighbors: BlockGen;
-    //coeffs: BlockGen;
 }
 
 export class Component {
@@ -57,12 +54,11 @@ export class Component {
         this.isEntryPoint = isEntryPoint;
 
         this.material = material;
+        console.log('component initialized with material = ', this.material);
 
         this.web = web;
-        console.log("COMPONENT ", isEntryPoint ? "A" : "B", this);
-        console.log("WEB.size = %s maxNeights=%s", web.size, web.maxNeighbors);
         this.neighbors = data(web.size * web.maxNeighbors, 1, web.neighbors, true, "none");
-        this.coeffs = web.data; //data(web.size, web.size, web.coeffs, true, "none");
+        this.coeffs = web.data;
         this.dampening = web.dampeningData;
 
         // the dampening- i.e. "the release"
@@ -165,6 +161,8 @@ export class Component {
         return s(
             //poke(this.u, idx, this.currentChannel, tanh(current)), //min(1, max(-1, current))),
             //poke(this.u, idx, this.currentChannel, min(1, max(-1, current))),
+            // TODO: allow defining your own functions here for how to handle overflow (right now we do a simple
+            // atan sigmoid, but should honestly do something more clever
             poke(this.u, idx, this.currentChannel, div(atan(mult(0.6366197723675814, current)), 0.6366197723675814)),
             current);
     }
@@ -216,7 +214,7 @@ export class Component {
             // multiply it by "coupling coeff" and add it to this neighborsEnergy
             // so first how do we know 
             let { component, neighbors } = connection;
-            let connectedIdx = peek(neighbors, idx, 0);
+            let connectedIdx = peek(neighbors, idx, 0); // neighbors defines 
             let isConnected = neq(connectedIdx, -1); // -1 means its not connected
             let connectedValue = peek(component.u, connectedIdx, component.prevChannel);
             let displacementDiff = sub(connectedValue, val);
@@ -246,7 +244,6 @@ export class Component {
         neighbors: BlockGen = this.neighbors,
         coeffs: BlockGen = this.coeffs,
     ) {
-
         return sumLoop({
             min: 0,
             max: maxNeighbors + 1
@@ -254,6 +251,7 @@ export class Component {
 
             // whats the "index" of the i'th neighbor, according to
             // the "neighbors" matrix
+
             let neighbor = peek(
                 neighbors,
                 add(mult(maxNeighbors, idx), i), 0);
@@ -278,21 +276,6 @@ export class Component {
         });
     }
 
-    /**
-     * Used to connect two different components. the connection parameter
-     * describes how the two components are connected and with what coeffs
-     * 
-     * This connection is always 1 way. So the one being connected to, where the
-     * energy goes should call this connect method
-     *
-*/
-    connect(component: Component, structure: Structure): Component {
-        let neighbors = data(component.size * structure.maxNeighbors, 1, structure.neighbors);
-        let coeffs = data(component.size, component.size, structure.coeffs);
-        this.connections.push({ component, neighbors });
-        return this;
-    }
-
     bidirectionalConnect(component: Component) {
         // what we need to do is this...
         // generate 2 way directions
@@ -314,7 +297,6 @@ export class Component {
 
         this.connections.push({ component, neighbors: B });
         component.connections.push({ component: this, neighbors: A });
-        // now all we need is to just create connection objects for these
     }
 
     /**

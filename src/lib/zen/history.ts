@@ -143,13 +143,10 @@ memory[${IDX}] = ${_input.variable};
      */
 
     _history.value = (val: number, time?: Samples) => {
-        console.log('setting history value?', val, contextBlocks);
         if (context === undefined) {
-            console.log('no context...');
             return;
         }
 
-        console.log('setting history value?', val, contextBlocks);
         for (let { context, block } of contextBlocks) {
             let messageType: ContextMessageType = time !== undefined ?
                 "schedule-set" : "memory-set";
@@ -158,7 +155,6 @@ memory[${IDX}] = ${_input.variable};
                 value: val,
                 time
             }
-            console.log('actually sending...');
             context.postMessage({
                 type: messageType,
                 body

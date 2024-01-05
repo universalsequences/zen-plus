@@ -1,4 +1,5 @@
 import { Lazy, Message, ObjectNode, NodeFunction } from '../../types';
+import { membraneAPI } from './physical-modeling/membrane';
 import { gate } from './gate';
 import { message } from './message';
 import { API } from '@/lib/nodes/context';
@@ -124,4 +125,5 @@ export const api: API = {
     //"scope~": scope_tilde,
     'history': zen_history,
     message,
+    ...membraneAPI
 };

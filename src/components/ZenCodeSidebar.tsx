@@ -2,22 +2,61 @@ import React, { useEffect, useCallback, useState } from 'react';
 import MintSound from './MintSound';
 import { usePatches } from '@/contexts/PatchesContext';
 import Attributes from './Attributes';
-import { ObjectNode } from '@/lib/nodes/types';
+import { SubPatch, Patch, ObjectNode } from '@/lib/nodes/types';
 import { Share1Icon } from '@radix-ui/react-icons'
 import { useSelection } from '@/contexts/SelectionContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 
+interface Parameters {
+    parameterNames: string[];
+    maxValues: number[];
+    minValues: number[];
+}
+
 const Sidebar = () => {
-    const { zenCode } = usePatches();
+    const { patches, zenCode } = usePatches();
     const account = useAccount();
     const [minting, setMinting] = useState(false);
     const [dropAddress, setDropAddress] = useState<string | null>(null);
 
+    const [parameters, setParameters] = useState<Parameters | null>(null);
+
+    useEffect(() => {
+        console.log('patches changed...');
+        let patch = patches[0];
+        if (patch) {
+            while ((patch as SubPatch).parentPatch) {
+                patch = (patch as SubPatch).parentPatch;
+            }
+        }
+        console.log('patch = ', patch);
+        let params = patch.getAllNodes().filter(x => (x as ObjectNode).name === "param");
+        console.log('params = ', params);
+        let names = [];
+        let minValues = [];
+        let maxValues = [];
+        for (let param of params) {
+            console.log('checking param attributes', param.attributes);
+            if (param.attributes["onchain"] && param.attributes["max"] !== undefined && param.attributes["min"] !== undefined) {
+                names.push(param.arguments[0] as string);
+                maxValues.push(param.attributes["max"] as number);
+                minValues.push(param.attributes["min"] as number);
+            }
+        }
+        setParameters({
+            parameterNames: names,
+            maxValues,
+            minValues
+        });
+
+    }, [patches, setParameters, minting]);
+
+
     const inner = React.useMemo(() => {
         return (
             <div>
-                {minting && zenCode ? <MintSound setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
+                {minting && parameters && zenCode ? <MintSound parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
                 {!account ? <div
                     className="absolute top-2 right-2 px-2 py-1  cursor-pointer z-30 ">
                     <ConnectButton />
@@ -42,7 +81,7 @@ const Sidebar = () => {
                 </div>
             </div>
         );
-    }, [zenCode, minting]);
+    }, [zenCode, minting, parameters]);
 
     let [opened, setOpened] = useState(false);
 
@@ -51,7 +90,7 @@ const Sidebar = () => {
         onMouseDown={(e: any) => e.stopPropagation()}
         onClick={(e: any) => e.stopPropagation()}
         className={
-            "bg-toolbar fixed top-40 right-0 flex sidebar " + (opened ? "opened-sidebar" : "")}
+            "bg-toolbar fixed top-40 right-0 flex sidebar " + (opened ? "opened-sidebar2 " : "")}
     >
         <div
             onClick={() => {

@@ -251,8 +251,12 @@ export const _printStatement = (
         output = `${_name} (${JSON.stringify((operator as CompoundOperator).range)}, ${_body},
         "${(operator as CompoundOperator).variableName}")
         `;
-    } else if (_name === "param" && zobject.storedMessage !== undefined) {
-        output = `param(${zobject.storedMessage})`;
+    } else if (_name === "param" && (zobject.attributes["onchain"] || zobject.storedParameterValue !== undefined)) {
+        if (zobject.attributes["onchain"]) {
+            output = `param(${zobject.arguments[0]})`;
+        } else {
+            output = `param(${zobject.storedParameterValue})`;
+        }
     } else if (_name === "message") {
         let comp = operator as CompoundOperator;
         let name = comp.params;
@@ -454,8 +458,8 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
         } else if (name === "input") {
             output = input(compoundOperator.value!);
         } else if (name === "rawSumLoop") {
-            let range: Range = compoundOperator.range!;
-            output = rawSumLoop(range, compiledArgs[0] as UGen, compoundOperator.variableName!);
+            //let range: Range = compoundOperator.range!;
+            //output = rawSumLoop(range, compiledArgs[0] as UGen, compoundOperator.variableName!);
         } else if (name === "defun") {
             let size: number = compoundOperator.value!;
             let name: string = compoundOperator.variableName!;
@@ -468,6 +472,56 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             output = call(body as LazyFunction, invocationNumber, ...args as UGen[]);
         } else if (name === "message") {
             output = message(compoundOperator.params as string, compiledArgs[0] as Arg, compiledArgs[1] as Arg);
+        } else if (name === "modeling.synth") {
+            let { modelComponent, modelComponents } = compoundOperator;
+            if (modelComponent && modelComponents) {
+                let trig = compiledArgs[0];
+                for (let lazyComponent of modelComponents) {
+                    let { component } = lazyComponent;
+                    if (component === undefined) {
+                        let { web, material } = lazyComponent;
+                        let pitch = _compileStatement(material.pitch as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                        let couplingCoefficient = _compileStatement(material.couplingCoefficient as Statement, compiled, depth + 1, newList, _api, _simpleFunctions)
+                        let release = _compileStatement(material.release as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                        let noise = _compileStatement(material.noise as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                        let x = _compileStatement(material.x as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                        let y = _compileStatement(material.y as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                        let _material = {
+                            pitch,
+                            release,
+                            noise,
+                            couplingCoefficient,
+                            x,
+                            y
+                        };
+                        lazyComponent.component = new Component(_material as any, web, lazyComponent === modelComponents[0]);
+                    }
+                }
+                let i = 0;
+                console.log('model components=', modelComponents);
+                for (let lazyComponent of modelComponents) {
+                    let { component } = lazyComponent;
+                    console.log('going thru lazyComponent = ', component, lazyComponent.connection);
+                    if (component && lazyComponent.connection && !component.connections.some(x => lazyComponent.connection && x.component === lazyComponent.connection.component)) {
+                        let componentToConnect = lazyComponent.connection.component;
+                        console.log("connecting bidrectionally", component, componentToConnect);
+                        if (componentToConnect) {
+                            component?.bidirectionalConnect(componentToConnect);
+                        }
+                    }
+                    i++;
+                }
+
+                if (modelComponent && modelComponent.component) {
+                    output = s(
+                        compiledArgs[0] as Arg,
+                        ...modelComponents.flatMap(
+                            c => c.component ? [c.component.currentChannel, c.component.prevChannel] : []),
+                        modelComponent.component.gen(compiledArgs[0] as UGen)
+                    );
+                    console.log('actuall sending it...', modelComponent);
+                }
+            }
         } else if (name === "modeling.play") {
             let components: Component[] = [];
             for (let component of compoundOperator.physicalModel!) {
@@ -475,14 +529,14 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
                 let pitch = _compileStatement(material.pitch as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
                 let couplingCoefficient = _compileStatement(material.couplingCoefficient as Statement, compiled, depth + 1, newList, _api, _simpleFunctions)
                 let release = _compileStatement(material.release as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
-                let placement = _compileStatement(material.placement as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
+                //let placement = _compileStatement(material.placement as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
                 let noise = _compileStatement(material.noise as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
                 let x = _compileStatement(material.x as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
                 let y = _compileStatement(material.y as Statement, compiled, depth + 1, newList, _api, _simpleFunctions);
                 let _material = {
                     pitch,
                     release,
-                    placement,
+                    //placement,
                     noise,
                     couplingCoefficient,
                     x,

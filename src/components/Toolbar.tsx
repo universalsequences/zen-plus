@@ -111,7 +111,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         return <div
             style={{ height: 35 }}
             className="flex fixed top-0 left-0  full w-full">
-            <div className="flex-1 m-1 bg-toolbar relative rounded-lg flex px-2 overflow-hidden">
+            <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-2 overflow-hidden top-toolbar ">
                 <PatchDropdown patch={patch}>
                     <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
                 </PatchDropdown>
@@ -120,6 +120,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
                     className="absolute top-0 h-full pt-0.5 right-0 px-5 flex  pr-20">
                     <LockButton />
                     <PresentationMode />
+                    <div className="absolute right-5 top-1 text-xs">zen+</div>
                 </div>
             </div>
         </div>;
@@ -130,11 +131,11 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         onClick={(e: any) => e.stopPropagation()}
         onMouseDown={(e: any) => e.stopPropagation()}
         className="flex fixed top-0 left-0  full w-full ">
-        <div className="flex-1 m-1 bg-toolbar relative flex px-2 overflow-hidden rounded-lg">
+        <div className="flex-1 m-1 bg-toolbar relative flex px-2 overflow-hidden rounded-full top-toolbar">
             <PatchDropdown patch={patch}>
                 <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
             </PatchDropdown>
-            <div className="flex relative pr-8">
+            <div className="flex relative pr-8 mx-auto">
                 {breadcrumbs}
                 <Cross2Icon onClick={() => {
                     closePatch(patch);
@@ -145,6 +146,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
                 className="absolute top-0 h-full pt-0.5 right-0 px-5 flex pr-20">
                 <LockButton />
                 <PresentationMode />
+                <div className="absolute right-5 top-1 text-xs">zen+</div>
             </div>
         </div>
     </div>;

@@ -11,6 +11,7 @@ import { Material } from '../../../zen/physical-modeling/spider-web';
 import { Component } from '../../../zen/physical-modeling/Component';
 import { SpiderWeb } from '../../../zen/physical-modeling/web-maker';
 import { PhysicalModel } from './physical-modeling/types';
+import { LazyComponent } from './physical-modeling/membrane';
 
 export interface DataParams {
     size: number,
@@ -35,6 +36,8 @@ export interface CompoundOperator {
     block1?: BlockGen;
     block2?: BlockGen;
     historyInput?: Statement;
+    modelComponent?: LazyComponent;
+    modelComponents?: LazyComponent[];
 }
 
 export type Operator = "string" | CompoundOperator;

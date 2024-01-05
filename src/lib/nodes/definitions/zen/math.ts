@@ -262,7 +262,7 @@ export const zen_or = (object: ObjectNode, b: Lazy) => {
 op_doc('round', 2);
 export const zen_round = (object: ObjectNode, multiple: Lazy) => {
     return memo(object, (num: Message): Statement => {
-        let mode: RoundMode = "trunc" as RoundMode; //(object.attributes.mode || "nearest") as RoundMode;
+        let mode: RoundMode = (object.attributes.mode || "nearest") as RoundMode;
 
         let operator = {
             name: "round",

@@ -62,20 +62,19 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     }
 
     let _param: ParamGen;
-    console.log("parsing zen_param = ", object.text);
     return (x: Message): Statement[] => {
         if (_param === undefined) {
             let defaultValue = object.attributes["default"] as number;
             if (object.storedMessage !== undefined) {
                 _param = param(object.storedMessage as number, name() as string);
                 if (name() === "wet") {
-                    console.log('creating wet param', _param);
                 }
+                object.storedParameterValue = object.storedMessage as number;
             } else {
                 _param = param(defaultValue, name() as string);
                 if (name() === "wet") {
-                    console.log('2. creating wet param', _param);
                 }
+                object.storedParameterValue = defaultValue;
             }
         }
         if (typeof x === "string" && x !== "bang" && x.split(" ").length === 2) {
@@ -85,6 +84,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         if (typeof x === "number") {
             object.storedMessage = x;
             _param.set!(x);
+            object.storedParameterValue = x;
             return [];
         }
 
@@ -95,7 +95,6 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
             value: Math.random()
         }];
         if (name() === "wet") {
-            console.log("statement param wet=", out);
         }
         out.node = object;
         object.patch.newHistoryDependency(out, object);

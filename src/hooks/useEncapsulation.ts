@@ -3,7 +3,7 @@ import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts
 import { usePatch } from '@/contexts/PatchContext';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
-import { MessageType, MessageNode, Node, ObjectNode } from '@/lib/nodes/types';
+import { MessageType, MessageNode, Node, IOlet, ObjectNode } from '@/lib/nodes/types';
 
 interface Props {
     isCustomView?: boolean, zoomRef: React.MutableRefObject<number>
@@ -87,6 +87,7 @@ export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
 
 
     const encapsulate = useCallback((nodes: Node[]) => {
+        nodes = nodes.filter(x => (x as ObjectNode).name !== "in" && (x as ObjectNode).name !== "out");
         let inboundConnections = nodes.flatMap(
             node => node.inlets.flatMap(
                 inlet => inlet.connections.filter(
@@ -113,25 +114,39 @@ export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
         subpatch.messageNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
         subpatch.objectNodes = subpatch.objectNodes.filter(x => x.name !== "+");
 
-        let inboundNodes = Array.from(new Set(inboundConnections.map(x => x.destination)));
-        let outboundNodes = Array.from(new Set(outboundConnections.map(x => x.source)));
+        let inputNodes: ObjectNode[] = [];
+        let incomingNodes: IOlet[] = [];
+        let inletCounter = 0;
 
         for (let i = 0; i < inboundConnections.length; i++) {
             let node = inboundConnections[i].destination;
             let connection = inboundConnections[i];
-            let inputNode: ObjectNode = new ObjectNodeImpl(subpatch);
+            let existingIndex = incomingNodes.indexOf(connection.sourceOutlet);
+            console.log('existing index = ', existingIndex, connection.source, connection.sourceOutlet);
+            let inputNode: ObjectNode = existingIndex >= 0 ? inputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
             if (i >= 2) {
                 let position = (node as ObjectNode).position;
                 //newObjectNode(inputNode, { x: position.x, y: Math.max(0, position.y - 10) });
-                subpatch.objectNodes.push(inputNode);
-                inputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
-                inputNode.parse('in ' + (i + 1));
+                if (existingIndex === -1) {
+                    subpatch.objectNodes.push(inputNode);
+                    inputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
+                    let name = connection.sourceOutlet.name || "";
+                    inputNode.parse('in ' + (inletCounter + 1) + " " + name);
+                    inputNodes.push(inputNode);
+                    incomingNodes.push(connection.sourceOutlet);
+                    inletCounter++;
+                }
             } else {
-                let n = subpatch.objectNodes.find(x => x.text === ("in " + (i + 1)));
+                let n = subpatch.objectNodes.find(x => x.text.includes("in " + (i + 1)));
                 if (!n) {
                     continue;
                 }
                 inputNode = n as ObjectNode;
+                if (existingIndex === -1) {
+                    inputNodes.push(inputNode);
+                    incomingNodes.push(connection.sourceOutlet);
+                    inletCounter++;
+                }
             }
             for (let inlet of node.inlets) {
                 inlet.connections.splice(inlet.connections.indexOf(connection), 1);
@@ -142,10 +157,14 @@ export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
                 _outlet.connections = _outlet.connections.filter(
                     c => c !== connection);
             }
-            let _connection = connection.source.connect(
-                objectNode,
-                objectNode.inlets[i], connection.sourceOutlet, false);
-            registerConnection(connection.source.id, _connection);
+            let _index = existingIndex >= 0 ? existingIndex : inletCounter - 1;
+
+            if (existingIndex === -1) {
+                let _connection = connection.source.connect(
+                    objectNode,
+                    objectNode.inlets[_index], connection.sourceOutlet, false);
+                registerConnection(connection.source.id, _connection);
+            }
 
             inputNode.connect(
                 connection.destination,
@@ -154,30 +173,45 @@ export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
                 false);
         }
 
+        let outputNodes: ObjectNode[] = [];
+        let outerNodes: IOlet[] = [];
+        let outletCounter = 1;
         for (let i = 0; i < outboundConnections.length; i++) {
             let node = outboundConnections[i].source;
             let connection = outboundConnections[i];
-            let outputNode: ObjectNode = new ObjectNodeImpl(subpatch);
+            let existingIndex = outerNodes.indexOf(connection.sourceOutlet);
+            let outputNode: ObjectNode = existingIndex >= 0 ? outputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
             if (i >= 1) {
                 let position = (node as ObjectNode).position;
                 //newObjectNode(inputNode, { x: position.x, y: Math.max(0, position.y - 10) });
-                subpatch.objectNodes.push(outputNode);
-                outputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
-                outputNode.parse('out ' + (i + 1));
+                if (existingIndex === -1) {
+                    subpatch.objectNodes.push(outputNode);
+                    outputNode.position = { x: position.x, y: Math.max(0, position.y - 30) };
+                    outputNode.parse('out ' + (outletCounter + 1));
+                    outputNodes.push(outputNode);
+                    outerNodes.push(connection.sourceOutlet);
+                    outletCounter++;
+                } else {
+                }
             } else {
                 let n = subpatch.objectNodes.find(x => x.text === ("out " + (i + 1)));
                 if (!n) {
                     continue;
                 }
                 outputNode = n as ObjectNode;
+                if (existingIndex === -1) {
+                    outputNodes.push(outputNode);
+                    outerNodes.push(connection.sourceOutlet);
+                }
             }
             for (let outlet of node.outlets) {
                 outlet.connections.splice(outlet.connections.indexOf(connection), 1);
             }
+            let _index = existingIndex >= 0 ? existingIndex : outletCounter - 1;
             let _connection = objectNode.connect(
                 connection.destination,
                 connection.destinationInlet,
-                objectNode.outlets[i], false);
+                objectNode.outlets[_index], false);
             registerConnection(connection.source.id, _connection);
 
             connection.source.connect(

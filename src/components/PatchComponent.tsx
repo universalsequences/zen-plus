@@ -499,15 +499,19 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         if (!isCustomView && (patch as SubPatch).parentNode) {
             let node = (patch as SubPatch).parentNode;
             if (node.attributes["Custom Presentation"] && node.size && presentationMode) {
-                isFloatingCustom = lockedMode;
-                style = {
-                    width: node.size.width + 'px',
-                    height: node.size.height + 'px',
-                    maxWidth: node.size.width + 'px',
-                    maxHeight: node.size.height + 'px',
-                    margin: "auto",
-
-                };
+                let parent = (patch as SubPatch).parentPatch;
+                let parentNode = (parent as SubPatch).parentNode;
+                console.log('parent = ', parent, parentNode);
+                if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
+                    isFloatingCustom = lockedMode;
+                    style = {
+                        width: node.size.width + 'px',
+                        height: node.size.height + 'px',
+                        maxWidth: node.size.width + 'px',
+                        maxHeight: node.size.height + 'px',
+                        margin: "auto",
+                    };
+                }
             }
         }
         return (
@@ -519,7 +523,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                     onMouseMove={onSelectionMove}
                     onMouseDown={onMouseDown}
                     onContextMenu={handleContextMenu}
-                    className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : "border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
+                    className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
                     }>
                     <div className="w-full h-full flex overflow-hidden">
                         {/*<div style={{ zIndex: 100000000000000 }} className='absolute top-5 right-5'>

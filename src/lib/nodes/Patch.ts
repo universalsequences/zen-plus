@@ -163,19 +163,45 @@ export class PatchImpl implements Patch {
         //this.sendNumberMessages()
 
         this.waiting = false;
-        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && node.name !== "param" && node.name !== "history") || node.needsLoad);
+
+        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && !node.needsLoad));
+        console.log('1. source nodes to bang=', sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
-                    let prevTime = new Date().getTime();
                     let ret: Message[] = sourceNode.fn("bang");
                     for (let i = 0; i < ret.length; i++) {
                         if (sourceNode.outlets[i]) {
                             sourceNode.send(sourceNode.outlets[i], ret[i]);
                         }
                     }
-                    let endTime = new Date().getTime();
-                    if (endTime - startTime > 5) {
+                }
+            });
+
+        sourceNodes = objectNodes.filter(node => node.needsLoad && node.inlets[0] && node.inlets[0].connections.length === 0);
+        console.log('2. source nodes to bang=', sourceNodes);
+        sourceNodes.forEach(
+            sourceNode => {
+                if (sourceNode.fn) {
+                    let ret: Message[] = sourceNode.fn("bang");
+                    for (let i = 0; i < ret.length; i++) {
+                        if (sourceNode.outlets[i]) {
+                            sourceNode.send(sourceNode.outlets[i], ret[i]);
+                        }
+                    }
+                }
+            });
+
+        sourceNodes = objectNodes.filter(node => node.needsLoad && !(node.inlets[0] && node.inlets[0].connections.length === 0));
+        console.log('3. source nodes to bang=', sourceNodes);
+        sourceNodes.forEach(
+            sourceNode => {
+                if (sourceNode.fn) {
+                    let ret: Message[] = sourceNode.fn("bang");
+                    for (let i = 0; i < ret.length; i++) {
+                        if (sourceNode.outlets[i]) {
+                            sourceNode.send(sourceNode.outlets[i], ret[i]);
+                        }
                     }
                 }
             });
@@ -185,9 +211,7 @@ export class PatchImpl implements Patch {
             let calls = _objectNodes.filter(node => node.name === "call");
             calls.forEach(
                 call => {
-                    console.log("call we got=", call);
                     if (call.fn && call.inlets[0] && call.inlets[0].lastMessage) {
-                        console.log("sending call inlets!", call.inlets[0].lastMessage);
                         call.receive(call.inlets[0], call.inlets[0].lastMessage);
                     }
                     return;

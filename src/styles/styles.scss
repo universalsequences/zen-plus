@@ -50,6 +50,15 @@
     animation-duration: 0.2s;
 }
 
+.sidebar.opened-sidebar2 {
+    animation-timing-function: ease-in-out;
+    width: 320px;
+    animation-name: opensidebar2;
+    animation-duration: 0.2s;
+}
+
+
+
 @keyframes opensidebar {
     0% {
         width: 0px;
@@ -59,6 +68,18 @@
         width: 240px;
     }
 }
+
+@keyframes opensidebar2 {
+    0% {
+        width: 0px;
+    }
+
+    100% {
+        width: 320px;
+    }
+}
+
+
 
 @keyframes closesidebar {
     0% {
@@ -116,9 +137,23 @@ body {
     --dark-patch-color: #121213;
 }
 
+.opened-sidebar, .opened-sidebar2 {
+    backdrop-filter: blur(8px);
+}
+.sidebar {
+    .bg-toolbar {
+        background-color: #ffffff2e;
+        backdrop-filter:blur(8px);
+    }
+}
+
+.bg-toolbar.top-toolbar {
+    background-color: #17171769;
+        backdrop-filter:blur(8px);
+}
+
 .bg-toolbar {
     background-color: #ffffff2e;
-    backdrop-filter: blur(8px);
 }
 
 body {
@@ -173,12 +208,12 @@ body {
     --light-patch-color: #6a6a72;
     .locked {
         .patcher-background {
-            background-image: radial-gradient(circle at center center, rgb(74 73 73) 0%, rgb(167 190 203) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
+            background-image: radial-gradient(circle at center center, rgb(74 73 73) 0%, rgb(167 190 203) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092de, #8d8f96e0);
         }
     }
     .patcher-background {
         //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
-        background-image: radial-gradient(circle at center center, rgb(182 172 172) 0%, rgb(161 155 136) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
+        background-image: radial-gradient(circle at center center, rgb(182 172 172) 0%, rgb(161 155 136) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092de, #8d8f96e0);
     }
 
     .node-component.border-zinc-900 {

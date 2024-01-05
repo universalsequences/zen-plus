@@ -122,6 +122,7 @@ export type ObjectNode = Positioned & Node & {
     isCycle?: boolean;
     lastSentMessage?: Message;
     storedMessage?: Message;
+    storedParameterValue?: number;
 }
 
 export type MessageNode = Positioned & Node & {

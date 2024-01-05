@@ -1,5 +1,5 @@
 import { createSpiderWeb, SpiderWeb } from '../../../../zen/physical-modeling/web-maker';
-import { Statement } from '../AST';
+import { Statement } from '../types';
 
 export interface LazyComponent {
     web: SpiderWeb;
@@ -12,7 +12,6 @@ export interface LazyMaterial {
     pitch: Statement;
     release: Statement;
     noise: Statement;
-    placement: Statement; // where hit goes
     couplingCoefficient: Statement;
 }
 
