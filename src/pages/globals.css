@@ -19,7 +19,8 @@
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
-  background-image: url(/wallpaper4.jpg);
+  background-image: url(/pawel2.jpg);
+  
   background-color: #111010 !important;
   background-color: #575757 !important;
   background-color: #323030 !important;
@@ -269,6 +270,8 @@ textarea {
     background-image: radial-gradient(circle at center center, rgb(207 200 200) 0%, rgb(45 43 43) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #5b5c55,#595a59);
     background-image: radial-gradient(circle at center center, rgb(207 200 200) 0%, rgb(130 123 123) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #8c8787,#8d8989);
         background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0b,#0b0b0b);
-        background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bcf,#0b0b0bcf);
+        //background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bcf,#0b0b0bcf);
+        //background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0ba3,#0b0b0ba3);
+            background-image: radial-gradient(circle at center center, rgb(59 69 63) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0ba3,#0b0b0ba3);
     background-size: 14px 14px;
 }

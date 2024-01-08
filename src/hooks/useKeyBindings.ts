@@ -63,12 +63,10 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         if (e.target && ((e.target as HTMLElement).tagName.toLowerCase() === "input" ||
             (e.target as HTMLElement).tagName.toLowerCase() === "textarea")
         ) {
-            console.log('skipped...');
             return;
         }
 
-        if (selectedPatch !== patch && (e.key !== "e" && e.metaKey)) {
-            console.log('skipped...');
+        if (selectedPatch !== patch && (e.key !== "e")) {
             return;
         }
 

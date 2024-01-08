@@ -4,10 +4,11 @@ import { parseEther } from 'viem'
 import { abi } from '@/lib/abi/minter-abi';
 import { useContractWrite, usePrepareContractWrite, useAccount } from 'wagmi';
 
-//export const DROP_CONTRACT = "0x337e28b529802a466790c71277edf22a1e994c9e";
-//export const MINTER_CONTRACT = "0xf71f6ab1965f0d23dceced10fe92fd354210ec29";
-export const DROP_CONTRACT = "0x70a2d63e3ce575a8420617d8c0d80de81f2841ca";
-export const MINTER_CONTRACT = "0x2d756f6b69aa9f07e55627c053af1f79eec24172";
+//export const DROP_CONTRACT = "0x70a2d63e3ce575a8420617d8c0d80de81f2841ca";
+//export const MINTER_CONTRACT = "0x2d756f6b69aa9f07e55627c053af1f79eec24172";
+
+export const DROP_CONTRACT = "0xC7dD4a140F87F34c52e853152577c15bf6737467";
+export const MINTER_CONTRACT = "0x0afe39611872dbAE7Ceac0f2a693F09962a49a76";
 
 const WriteOnchain: React.FC<{ setTokenId: (x: number | null) => void, previousTokenId: number, isSubPatch?: boolean, name: string, compressed: string }> = ({ compressed, name, isSubPatch, previousTokenId, setTokenId }) => {
     let account = useAccount();

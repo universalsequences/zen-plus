@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useCallback, useEffect } fr
 import { abi } from '@/lib/abi/minter-abi';
 import { MINTER_CONTRACT, DROP_CONTRACT } from '@/components/WriteOnChain';
 import { usePublicClient, useContractRead } from 'wagmi'
-import { OnchainSubPatch, fetchOnchainSubPatches } from '@/lib/onchain/fetch';
+import { OnchainSubPatch, fetchOnchainSubPatch } from '@/lib/onchain/fetch';
 import { SerializedPatch } from '@/lib/nodes/types';
 
 export interface Project {
@@ -39,6 +39,28 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         functionName: 'getPatchHeads',
         args: [true]
     })
+
+    useEffect(() => {
+        if (subpatches) {
+            // fetchAll(subpatches);
+        }
+    }, [subpatches]);
+
+    const fetchAll = async (list: any) => {
+        let fetched: any[] = [];
+        for (let elem of list) {
+            let tokenId = elem.tokenId;
+            let patch = await fetchOnchainSubPatch(publicClient, tokenId);
+            fetched.push({
+                tokenId: tokenId.toString(),
+                name: elem.name,
+                patch
+            });
+
+            console.log('patch=', patch);
+        }
+        console.log('fetch all=', fetched);
+    };
 
     console.log('subpatches= ', subpatches);
 
@@ -103,7 +125,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             saveSubPatch,
             getPatches,
             savePatch,
-            onchainSubPatches: subpatches as OnchainSubPatch[]
+            onchainSubPatches: (subpatches || []) as OnchainSubPatch[]
         }}>
         {children}
     </StorageContext.Provider>;

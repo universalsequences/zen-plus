@@ -41,6 +41,13 @@ const PositionedComponent: React.FC<{
                 width: ref.current.offsetWidth,
                 height: ref.current.offsetHeight
             });
+        } else if (node.size) {
+            /*
+            updateSize(node.id, {
+                width: node.size.width,
+                height: node.size.height
+            });
+            */
         }
     }, [node.attributes, text]);
 
@@ -120,10 +127,13 @@ const PositionedComponent: React.FC<{
             className += " bg-zinc-600";
             className = className.replace("bg-black-clear", "");
             className += " pushable";
+            className += " message-node";
         }
         let isSelected = selectedNodes.includes(node);
         if (!isSelected) {
-            if ((node as ObjectNode).name === "comment") {
+            let _n = (node as ObjectNode);
+            let name = _n.name;
+            if (name === "comment" || name === "slider" || name === "knob") {
                 className += " comment ";
                 className = className.replace("border", "");
             } else {
@@ -132,6 +142,7 @@ const PositionedComponent: React.FC<{
         } else {
             className += " border-zinc-100";
         }
+
 
         if (isSelected) {
             className += " selected";
@@ -146,6 +157,9 @@ const PositionedComponent: React.FC<{
             minWidth: `${minWidth}px`,
         };
         let _size = (node as ObjectNode).size;
+        if ((node as ObjectNode).name === "slider" || ((node as ObjectNode).name === "knob")) {
+            _style.minWidth = "unset";
+        }
         let allowSize = false;
         if ((node as ObjectNode).attributes["Custom Presentation"] && _size) {
             _style.width = _size.width;

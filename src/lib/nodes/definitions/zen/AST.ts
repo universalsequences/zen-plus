@@ -210,13 +210,16 @@ export const _printStatement = (
     if (_name === "output") {
         finalArgs = `,${(operator as CompoundOperator).outputNumber}`;
     }
-    if (_name === "modeling.play") {
-        let [a, b] = (operator as CompoundOperator).physicalModel!;
+    if (_name === "modeling.synth") {
+        let component = (operator as CompoundOperator).modelComponent!;
+        let components = (operator as CompoundOperator).modelComponents!;
+
         let trig = _printStatement((statement as Statement[])[1], variables, deep + 1, histories, blocks);
-        let mix = _printStatement((statement as Statement[])[2], variables, deep + 1, histories, blocks);
-        let A = printPhysicalModel(a, variables, deep, histories, blocks);
-        let B = printPhysicalModel(b, variables, deep, histories, blocks, false);
-        return printModelConnect(A, B, variables, trig, mix, statement.node!);
+        //let mix = _printStatement((statement as Statement[])[2], variables, deep + 1, histories, blocks);
+
+        let printedModels = components.map(x => printPhysicalModel(x, variables, deep, histories, blocks));
+        let modelIndex = components.indexOf(component);
+        return printModelConnect(printedModels, variables, trig, component, statement.node!, modelIndex);
     }
 
 
@@ -442,9 +445,6 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             output = hist(compiledArgs[0] as UGen, compiledArgs[1] as UGen);
         } else if (name === "param") {
             let param: ParamGen = compoundOperator.param!;
-            if (statement.node && statement.node.text.includes("wet")) {
-                console.log('sending output of param!', param, statement);
-            }
             output = param;
         } else if (name === "click") {
             let click: Clicker = compoundOperator.param! as Clicker;
@@ -464,6 +464,9 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             let size: number = compoundOperator.value!;
             let name: string = compoundOperator.variableName!;
             output = defun(name, size, ...compiledArgs as UGen[]);
+            if (name === "jaki_core") {
+                console.log("AST for jaki_core returned=", name, compiledArgs, size);
+            }
         } else if (name === "call") {
             let invocationNumber: number = compoundOperator.value!;
             let body = compiledArgs[0];
@@ -498,13 +501,10 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
                     }
                 }
                 let i = 0;
-                console.log('model components=', modelComponents);
                 for (let lazyComponent of modelComponents) {
                     let { component } = lazyComponent;
-                    console.log('going thru lazyComponent = ', component, lazyComponent.connection);
                     if (component && lazyComponent.connection && !component.connections.some(x => lazyComponent.connection && x.component === lazyComponent.connection.component)) {
                         let componentToConnect = lazyComponent.connection.component;
-                        console.log("connecting bidrectionally", component, componentToConnect);
                         if (componentToConnect) {
                             component?.bidirectionalConnect(componentToConnect);
                         }
@@ -519,7 +519,6 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
                             c => c.component ? [c.component.currentChannel, c.component.prevChannel] : []),
                         modelComponent.component.gen(compiledArgs[0] as UGen)
                     );
-                    console.log('actuall sending it...', modelComponent);
                 }
             }
         } else if (name === "modeling.play") {
@@ -725,39 +724,48 @@ const floatArr = (ar: Float32Array) => {
 };
 
 const printModelConnect = (
-    a: string,
-    b: string,
+    models: string[],
     variables: Variables,
     trigger: string,
-    mix: string,
-    zobject: ObjectNode) => {
+    component: LazyComponent,
+    zobject: ObjectNode,
+    modelIndex: number
+) => {
+    let id = zobject.id.slice(0, zobject.id.indexOf("_"));
     let idx = Object.keys(variables).length;
-    let nameA = `model${idx} `;
-    let nameB = `model${idx + 1} `;
-    let nameC = `model${idx + 2} `;
-    variables[idx] = {
-        idx,
-        name: nameA,
-        printed: a
-    };
-    variables[idx + 1] = {
-        idx,
-        name: nameB,
-        printed: b
-    };
-    let bid = `${nameA}.bidirectionalConnect(${nameB}); `;
-    variables[idx + 2] = {
-        idx,
-        name: nameC,
-        printed: bid
-    };
+    let i = 0;
+    let names = [];
+    for (; i < models.length; i++) {
+        let name = `model${id + i}`;
+        names.push(name);
+        if (Object.values(variables).some(x => x.name === name)) {
+            continue;
+        }
+        variables[idx + i] = {
+            idx: idx + i,
+            name: name,
+            printed: models[i]
+        };
+    }
+    for (let j = 0; j < models.length - 1; j++) {
+        let a = names[j];
+        let b = names[j + 1];
+        let bid = `!${a}.connections.some(x => x.component === ${b}) ? ${a}.bidirectionalConnect(${b}) : 0; `;
+        let name = `model${id + i + j}`;
+        if (Object.values(variables).some(x => x.name === name)) {
+            continue;
+        }
+        variables[idx + j + i] = {
+            idx: idx + j + i,
+            name,
+            printed: bid
+        };
+    }
+
     let output = `s(
             ${trigger},
-            ${nameA}.currentChannel,
-            ${nameA}.prevChannel,
-            ${nameB}.currentChannel,
-            ${nameB}.prevChannel,
-            mix(${nameA}.gen(${trigger}), ${nameB}.gen(add(0)), ${mix})
+${names.map(name => name + '.currentChannel, ' + name + '.prevChannel')},
+            ${names[modelIndex]}.gen(${trigger})
         )`;
 
     /*

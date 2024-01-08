@@ -1,12 +1,14 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
-import { Patch, IOlet, Attributes, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
+import { Patch, IOlet, Node, Attributes, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
 import { PatchImpl } from '@/lib/nodes/Patch';
 export type AttributesIndex = {
     [id: string]: Attributes;
 };
 
 interface ISelectionContext {
+    opened: Node | null;
+    setOpened: (x: Node | null) => void;
     lastResizingTime: React.MutableRefObject<number>;
     updateAttributes: (id: string, x: Attributes) => void;
     attributesIndex: AttributesIndex;
@@ -46,6 +48,7 @@ export const useSelection = (): ISelectionContext => {
 
 export const SelectionProvider: React.FC<Props> = ({ children }) => {
 
+    let [opened, setOpened] = useState<Node | null>(null);
     const [zoom, setZoom] = useState(1);
     const zoomRef = useRef(1);
 
@@ -104,7 +107,9 @@ export const SelectionProvider: React.FC<Props> = ({ children }) => {
             setLockedMode,
             selection,
             setSelection,
-            lastResizingTime
+            lastResizingTime,
+            setOpened,
+            opened
         }}>
         {children}
     </SelectionContext.Provider>;

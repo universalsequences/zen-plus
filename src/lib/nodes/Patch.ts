@@ -148,7 +148,15 @@ export class PatchImpl implements Patch {
         if (b - a > 10) {
         }
 
-        let sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument");
+        let sourceNodes = objectNodes.filter(node => node.name === "slider" || node.name === "knob");
+        sourceNodes.forEach(
+            sourceNode => {
+                if (sourceNode.fn) {
+                    sourceNode.receive(sourceNode.inlets[0], "bang");
+                }
+            });
+
+        sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument");
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -165,7 +173,6 @@ export class PatchImpl implements Patch {
         this.waiting = false;
 
         sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && !node.needsLoad));
-        console.log('1. source nodes to bang=', sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -179,21 +186,22 @@ export class PatchImpl implements Patch {
             });
 
         sourceNodes = objectNodes.filter(node => node.needsLoad && node.inlets[0] && node.inlets[0].connections.length === 0);
-        console.log('2. source nodes to bang=', sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
+                    sourceNode.receive(sourceNode.inlets[0], "bang");
+                    /*
                     let ret: Message[] = sourceNode.fn("bang");
                     for (let i = 0; i < ret.length; i++) {
                         if (sourceNode.outlets[i]) {
                             sourceNode.send(sourceNode.outlets[i], ret[i]);
                         }
                     }
+                    */
                 }
             });
 
         sourceNodes = objectNodes.filter(node => node.needsLoad && !(node.inlets[0] && node.inlets[0].connections.length === 0));
-        console.log('3. source nodes to bang=', sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -215,23 +223,25 @@ export class PatchImpl implements Patch {
                         call.receive(call.inlets[0], call.inlets[0].lastMessage);
                     }
                     return;
-                    /*
-                    if (call.fn && call.inlets[0]) {
-                        console.log('call inlets=', call.inlets, call);
-                        let msg = call.inlets[0].lastMessage;
-                        if (msg) {
-                            let ret: Message[] = call.fn(msg);
-                            for (let i = 0; i < ret.length; i++) {
-                                if (call.outlets[i]) {
-                                    call.send(call.outlets[i], ret[i]);
-                                }
-                            }
-                            let endTime = new Date().getTime();
-                            if (endTime - startTime > 5) {
+                });
+
+            let inputs = this.getAllNodes().filter(node => node.name === "in");
+            inputs.forEach(
+                input => {
+                    // get the patch
+                    let p = input.patch as SubPatch;
+                    let inletNumber = (input.arguments[0] as number) - 1;
+
+                    if (p.parentNode) {
+                        if (p.parentNode.inlets[inletNumber].connections.length === 0) {
+                            // send a 0 then
+                            for (let c of input.outlets[0].connections) {
+                                let { destinationInlet, destination } = c;
+                                let value = (input.attributes["default"] as number) || 0;
+                                destination.receive(destinationInlet, value);
                             }
                         }
                     }
-                    */
                 });
         }
 
@@ -357,7 +367,6 @@ export class PatchImpl implements Patch {
                         }
                     } else {
                         let param = ((dependency as Statement[])[0] as any).param;
-                        console.log('dependency encountered w param=', dependency);
                         _statement.push(dependency as any);
                         /*
                         // make sure the hist is somewhere in the statement

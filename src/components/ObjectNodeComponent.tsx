@@ -165,8 +165,6 @@ const InnerObjectNodeComponent: React.FC<{
 
         const duplicate = useCallback(() => {
             let copied = new ObjectNodeImpl(objectNode.patch);
-            copied.position.x = objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
-            copied.position.y = objectNode.position.y;
             if (objectNode.name === "zen") {
                 copied.parse("zen");
                 let json = objectNode.getJSON();
@@ -181,8 +179,17 @@ const InnerObjectNodeComponent: React.FC<{
                 };
                 copied.size = json.size;
             } else {
-                copied.parse(objectNode.text);
+                let id = copied.id;
+                let size = objectNode.size;
+                let json = objectNode.getJSON();
+                copied.fromJSON(json, true);
+                copied.id = id;
+                if (size) {
+                    copied.size = { ...size };
+                }
             }
+            copied.position.x = objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
+            copied.position.y = objectNode.position.y;
             newObjectNode(copied, copied.position);
             updatePosition(copied.id, copied.position);
 
@@ -311,10 +318,10 @@ const InnerObjectNodeComponent: React.FC<{
                                             value={text}
                                             onChange={(e: any) => onChange(e.target.value)}
                                             type="text"
-                                            className="text-zinc-100 w-full px-1 h-4 outline-none m-auto bg-zinc-800" />
+                                            className="text-zinc-100 w-full px-1 h-4 outline-none m-auto bg-dark-transparent" />
                                         :
                                         <div
-                                            className="m-auto px-1 h-4 w-full text-zinc-100 bg-zinc-800">{text}</div>
+                                            className="m-auto px-1 h-4 w-full text-zinc-100 bg-dark-transparent">{text}</div>
                                 }
                                 {editing && <AutoCompletes
                                     setAutoCompletes={setAutoCompletes}

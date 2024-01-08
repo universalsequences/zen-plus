@@ -5,7 +5,7 @@ import { abi } from '@/lib/abi/sound-drop-abi';
 
 import { useContractWrite, usePrepareContractWrite, useAccount } from 'wagmi';
 
-export const SOUND_CONTRACT = "0xf918Ab3443342b769D597ba3127f483294027dda";
+export const SOUND_CONTRACT = "0xBb94E2Bbc2f04FaAcd5BB432a4FcCBcaF56F3A20";
 
 const MintSound: React.FC<{ setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues }) => {
     let account = useAccount();

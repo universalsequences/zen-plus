@@ -39,7 +39,7 @@ export const useAutoComplete = (text: string) => {
             list = Array.from(new Set(JSON.parse(payload)));
         }
         */
-        for (let elem of onchainSubPatches) {
+        for (let elem of [...onchainSubPatches].reverse()) {
             let _name = elem.name.toLowerCase();
             if (_name.startsWith(_text)) {
                 options.push({

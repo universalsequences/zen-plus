@@ -90,9 +90,9 @@ const Dragging = () => {
         return <></>;
     }
     if (draggingCable.sourceCoordinate) {
-        return <path fill="transparent" d={generatePath({ x: draggingCable.sourceCoordinate.x - 4, y: draggingCable.sourceCoordinate.y - 4 }, { x: current.x - 4, y: current.y - 4 })} strokeWidth={2} stroke={strokeColor} />
+        return <path fill="transparent" d={generatePath({ x: draggingCable.sourceCoordinate.x - 4, y: draggingCable.sourceCoordinate.y - 4 }, { x: current.x - 4, y: current.y - 4 })[0]} strokeWidth={2} stroke={strokeColor} />
     } else if (draggingCable.destCoordinate) {
-        return <path fill="transparent" d={generatePath({ x: draggingCable.destCoordinate.x - 4, y: draggingCable.destCoordinate.y - 4 }, { x: current.x - 4, y: current.y - 4 })} strokeWidth={2} stroke={strokeColor} />
+        return <path fill="transparent" d={generatePath({ x: draggingCable.destCoordinate.x - 4, y: draggingCable.destCoordinate.y - 4 }, { x: current.x - 4, y: current.y - 4 })[0]} strokeWidth={2} stroke={strokeColor} />
     }
     return <></>
 };
@@ -203,6 +203,8 @@ const Edge: React.FC<{
             return segments.join(' ');
         };
 
+        let [hover, setHover] = useState(false);
+
 
         const p = React.useMemo(() => {
             // use 2 paths: one that you see, and another that is invisible but used to capture
@@ -217,7 +219,7 @@ const Edge: React.FC<{
             connection.created = undefined;
 
             return <>
-                <g style={isSelected ? { zIndex: 10000000 } : { zIndex: 0 }} className="edge-group">
+                <g style={isSelected ? { zIndex: 10000000 } : { zIndex: 0 }} className={(hover ? " hover " : "") + "edge-group"}>
                     {created && <style dangerouslySetInnerHTML={{ __html: keyframes }} />}
 
                     {d.map((_d, i) => <g key={i}>
@@ -244,6 +246,8 @@ const Edge: React.FC<{
                                 e.stopPropagation();
                                 select();
                             }}
+                            onMouseOver={() => setHover(true)}
+                            onMouseLeave={() => setHover(false)}
                             d={_d} stroke="transparent" strokeWidth={
                                 ((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? 4 :
                                     2} />
@@ -259,7 +263,7 @@ const Edge: React.FC<{
                     onMouseDown={moveDestEdge}
                     cx={destinationCircle.x} cy={destinationCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
             </>
-        }, [d, destinationCircle, sourceCircle, sourceCoordinate, destCoordinate, isSelected, setDraggingCable, deleteConnection]);
+        }, [d, destinationCircle, sourceCircle, sourceCoordinate, hover, setHover, destCoordinate, isSelected, setDraggingCable, deleteConnection]);
         return p;
     };
 

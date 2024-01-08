@@ -43,7 +43,8 @@ const Tree: React.FC<{ patch: Patch, searchTerm: string, hide: () => void }> = (
                 // setPatches([patch]);
                 hide();
             }}
-            className={(isSelected ? "bg-white text-black " : "") + " pl-1 hover:bg-white hover:text-black cursor-pointer flex py-1"}><CubeIcon className="mr-1 w-2" /> {patch.name}</div>}
+            style={isSelected ? { backgroundColor: "#cffff8" } : {}}
+            className={(isSelected ? "  text-black " : "") + " pl-3 hover:bg-white hover:text-black cursor-pointer flex py-1"}><CubeIcon className="mr-1 w-2" /> {patch.name}</div>}
         <div className="ml-3">
             {patch.objectNodes.filter(x => x.subpatch).map(
                 x => <Tree key={x.id} patch={x.subpatch!} searchTerm={searchTerm} hide={hide} />)}

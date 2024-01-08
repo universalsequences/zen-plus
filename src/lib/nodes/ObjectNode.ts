@@ -412,7 +412,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth") {
-            console.log("skipping ", this);
             return;
         }
 
@@ -422,9 +421,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             // we are sending through the main inlet, i.e. run the function
             if (this.inlets.some((x, i) => x.lastMessage === undefined) && this.name !== "out") {
                 return;
-            }
-            if (this.name === "call") {
-                //                console.log('call = ', this.inlets.map(x => x.lastMessage));
             }
             let a = new Date().getTime();
             let ret: Message[] = this.fn(message);
@@ -445,9 +441,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
             if (this.inlets.some((c, i) => c.lastMessage === undefined) && this.name !== "out") {
                 return;
-            }
-            if (this.name === "call") {
-                //                console.log('call = ', this.inlets.map(x => x.lastMessage));
             }
 
             // if we've already received a message in left-most inlet, we

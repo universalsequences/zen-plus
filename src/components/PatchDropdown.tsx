@@ -221,8 +221,8 @@ const PatchDropdown = React.memo((props: Props) => {
                                             onChange={
                                                 (e: any) => setName(e.target.value)} defaultValue="" />
                                     </fieldset>
-                                    <div style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
-                                        {account ?
+                                    <div className="save-connect" style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
+                                        {account.address ?
                                             <Dialog.Close asChild>
                                                 <button
                                                     onClick={save}

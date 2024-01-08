@@ -195,11 +195,15 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                 let distance = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
 
                 let size1 = sizeIndexRef.current[id];
-                let size2 = sizeIndexRef.current[id];
+                let size2 = sizeIndexRef.current[_id];
                 let width1 = size1 ? size1.width : 0;
-                let height1 = size1 ? size2.height : 0;
+                let height1 = size2 ? size2.height : 0;
                 let diffX2 = Math.abs(coord1.x + width1 - coord2.x);
                 let diffY2 = Math.abs(coord1.y + height1 - coord2.y);
+
+                let midPointX = size2 ? (coord2.x + size2.width / 2) : coord2.x;
+                let midPointX1 = size1 ? (coord1.x + size1.width / 2) : coord1.x;
+                let diffX3 = Math.abs(midPointX1 - midPointX);
 
                 if (distance < minDistanceX && diffX < ALIGNMENT_GRID) {
                     // then we need vertical alignment
@@ -217,6 +221,12 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
                     _updates[id].x = coord2.x - width1;
+                } else if (distance < minDistanceX && diffX3 < ALIGNMENT_GRID) {
+                    let alignmentLine = { x1: midPointX, y1: coord2.y, x2: midPointX, y2: oldCoord.y };
+                    minDistanceX = distance;
+                    xAlignmentLines = [alignmentLine];
+                    let width = size1 ? size1.width : 0;
+                    _updates[id].x = midPointX - width / 2;
                 }
             }
         }

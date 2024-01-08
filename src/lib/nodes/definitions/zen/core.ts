@@ -63,6 +63,10 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
 
     let _param: ParamGen;
     return (x: Message): Statement[] => {
+        if (typeof x === "number") {
+            object.storedMessage = x;
+        }
+
         if (_param === undefined) {
             let defaultValue = object.attributes["default"] as number;
             if (object.storedMessage !== undefined) {

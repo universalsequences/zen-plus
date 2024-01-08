@@ -39,6 +39,8 @@ const LoadProject = (props: Props) => {
         args: [false]
     })
 
+    console.log("get patch heads data=", data);
+
     const _loadPatch = useCallback((x: Project) => {
         patch.name = x.name;
         loadProject(x);

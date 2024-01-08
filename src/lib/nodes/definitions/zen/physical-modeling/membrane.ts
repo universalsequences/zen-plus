@@ -43,7 +43,6 @@ export const modeling_component = (node: ObjectNode,
     let returnedUpstream = false;
     return (msg: Message) => {
         if (msg === "bang" && returnedUpstream) {
-            console.log('returned upstream');
             return [];
         }
         // if msg === "bang" (and not the initial bang) then we are just creating this... and this is the
@@ -57,7 +56,6 @@ export const modeling_component = (node: ObjectNode,
             noise: noise() as Statement,
             couplingCoefficient: couplingCoefficient() as Statement
         };
-        console.log('material generated=', material);
 
         const web: SpiderWeb = createSpiderWeb(
             node.attributes.depth as number,
@@ -78,12 +76,10 @@ export const modeling_component = (node: ObjectNode,
             connection: undefined,
             component: undefined
         };
-        console.log('modeling.component called with msg=', msg);
         if (msg !== "bang" && Array.isArray(msg)) {
             let compoundOperator = (msg)[0] as CompoundOperator;
             if (compoundOperator.modelComponent) {
                 modelComponent.connection = compoundOperator.modelComponent
-                console.log('setting connection=', modelComponent);
                 returnedUpstream = true;
             }
         }
@@ -93,7 +89,6 @@ export const modeling_component = (node: ObjectNode,
             modelComponent
         }];
 
-        console.log('returning from membrane=', statement,);
         statement.node = node;
 
         return [statement];
@@ -111,7 +106,6 @@ doc(
 
 export const modeling_synth = (node: ObjectNode, component: Lazy) => {
     return (trigger: Message) => {
-        console.log('received memebrane model=', component());
         let c = component() as Statement;
         if (Array.isArray(c)) {
             let operator = c[0] as CompoundOperator;
@@ -131,7 +125,6 @@ export const modeling_synth = (node: ObjectNode, component: Lazy) => {
                 }
             }
 
-            console.log('model components=', modelComponents);
 
             modelComponent = operator.modelComponent;
             let ret = [];
@@ -146,6 +139,7 @@ export const modeling_synth = (node: ObjectNode, component: Lazy) => {
                     i++;
                     let isEntryPoint = modelComponent.connection === undefined;
                     let statement: Statement = [{ name: "modeling.synth", modelComponent, modelComponents }, (isEntryPoint ? trigger : 0) as Statement];
+                    statement.node = { ...node, id: node.id + '_' + i };
                     ret.push(statement);
                     if (!node.outlets[i]) {
                         node.newOutlet();
@@ -157,7 +151,6 @@ export const modeling_synth = (node: ObjectNode, component: Lazy) => {
                 node.outlets[i].name = `component ${i + 1} output`;
             }
 
-            console.log('returning ret=', ret);
             // entry point is first so we reverse...
             ret.reverse();
             return ret;

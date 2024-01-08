@@ -74,6 +74,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             _rootTile.splitDirection = rootTileRef.current.splitDirection;
             _rootTile.id = rootTileRef.current.id;
             setRootTile(_rootTile);
+            console.log('setting root tile', _rootTile);
             rootTileRef.current = _rootTile;
         }
 
@@ -103,8 +104,13 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     }, [selectedPatch, rootTile, setRootTile, setPatches, patches]);
 
     const expandPatch = useCallback((objectNode: ObjectNode, replace?: boolean) => {
+        if (!rootTileRef.current) {
+            return;
+        }
+        let includes = rootTileRef.current.findPatch(objectNode.subpatch as Patch);
         console.log('expand patch=', objectNode);
-        if (objectNode.subpatch && !patches.includes(objectNode.subpatch)) {
+        console.log('includes=', includes);
+        if (objectNode.subpatch && !includes) {
             console.log('had a subpatch...');
             //if (patches.length === 2) {
             //    setPatches([patches[0], objectNode.subpatch]);
@@ -114,6 +120,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             if (rootTile) {
                 let existingTile = rootTile.findPatch(objectNode.subpatch);
                 if (existingTile) {
+                    console.log('exisitng patch so we gonna select...');
                     setSelectedPatch(objectNode.subpatch);
                     return;
                 }
@@ -123,6 +130,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                     if (tile) {
                         tile.patch = objectNode.subpatch;
                     }
+                    console.log('replace');
                 } else {
                     let tile = rootTile.findPatch(objectNode.patch);
                     if (!tile) {
@@ -134,6 +142,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                     if (tile) {
                         let dir: "vertical" | "horizontal" = tile.parent ? (tile.parent.splitDirection === "vertical" ? "horizontal" : "vertical") : "horizontal";
                         //let dir: "vertical" | "horizontal" = !flag.current ? "vertical" : "horizontal";
+                        console.log("splitting direction=", dir);
                         tile.split(dir, objectNode.subpatch);
                     }
                 }
@@ -147,6 +156,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     }, [setPatches, patches, setGridLayout, rootTile]);
 
     const closePatch = useCallback((patch: Patch) => {
+        let rootTile = rootTileRef.current;
         if (rootTile) {
             let tile = rootTile.findPatch(patch);
             if (tile && tile.parent) {
@@ -164,7 +174,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         }
         setPatches(_p);
         resetRoot();
-    }, [setPatches, patches, setGridLayout, rootTile]);
+    }, [setPatches, patches, setGridLayout, rootTile, setRootTile]);
 
     const changeTileForPatch = useCallback((a: Patch, b: Patch) => {
         if (patches.includes(b)) {

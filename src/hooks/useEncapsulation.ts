@@ -6,12 +6,11 @@ import MessageNodeImpl from '@/lib/nodes/MessageNode';
 import { MessageType, MessageNode, Node, IOlet, ObjectNode } from '@/lib/nodes/types';
 
 interface Props {
-    isCustomView?: boolean, zoomRef: React.MutableRefObject<number>
+    isCustomView?: boolean, zoomRef: React.MutableRefObject<number>,
+    scrollRef: React.MutableRefObject<HTMLDivElement | null>
 }
-export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
-    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-
-    const handleContextMenu = (event: any) => {
+export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) => {
+    const handleContextMenu = useCallback((event: any) => {
         if (isCustomView) {
             return;
         }
@@ -25,30 +24,23 @@ export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
 
         let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
         let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current;
+        console.log('scroll ref handlecontextmenu x/y', x, y);
+        console.log('rect.left=%s rect.top=%s', rect.left, rect.top);
 
-        setMenuPosition({ x, y });
-    };
+        console.log('setting menu positionref=', x, y);
+        menuPositionRef.current = { x, y }
+    }, []);
 
-    const menuPositionRef = useRef(menuPosition);
+    const menuPositionRef = useRef({ x: 0, y: 0 });
 
+    /*
     useEffect(() => {
         menuPositionRef.current = menuPosition;
     }, [menuPosition]);
+    */
 
     let {
-        updateSize,
-        scrollRef,
-        setResizingNode,
-        resizingNode,
-        setDraggingNode,
-        draggingNode,
-        sizeIndexRef,
         updatePosition,
-        presentationMode,
-        updatePositions,
-        setDraggingSegmentation,
-        draggingCable,
-        draggingSegmentation,
     } = usePosition();
 
     const {
@@ -61,22 +53,23 @@ export const useNodeOperations = ({ isCustomView, zoomRef }: Props) => {
 
     const createObjectNode = useCallback(() => {
         let objectNode = new ObjectNodeImpl(patch);
+        console.log('create object node with =', { ...menuPositionRef.current });
         newObjectNode(objectNode, { ...menuPositionRef.current });
         updatePosition(objectNode.id, { ...menuPositionRef.current });
         return objectNode;
-    }, [menuPosition, objectNodes]);
+    }, [objectNodes]);
 
     const createNumberBox = useCallback(() => {
         let messageNode = new MessageNodeImpl(patch, MessageType.Number);
         newMessageNode(messageNode, { ...menuPositionRef.current });
         updatePosition(messageNode.id, { ...menuPositionRef.current });
-    }, [menuPosition, messageNodes]);
+    }, [messageNodes]);
 
     const createMessageNode = useCallback(() => {
         let messageNode = new MessageNodeImpl(patch, MessageType.Message);
         newMessageNode(messageNode, { ...menuPositionRef.current });
         updatePosition(messageNode.id, { ...menuPositionRef.current });
-    }, [menuPosition, messageNodes]);
+    }, [messageNodes]);
 
     const presentation = useCallback((nodes: Node[]) => {
         for (let node of nodes) {

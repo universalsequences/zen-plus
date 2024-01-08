@@ -23,21 +23,17 @@ const Sidebar = () => {
     const [parameters, setParameters] = useState<Parameters | null>(null);
 
     useEffect(() => {
-        console.log('patches changed...');
         let patch = patches[0];
         if (patch) {
             while ((patch as SubPatch).parentPatch) {
                 patch = (patch as SubPatch).parentPatch;
             }
         }
-        console.log('patch = ', patch);
         let params = patch.getAllNodes().filter(x => (x as ObjectNode).name === "param");
-        console.log('params = ', params);
         let names = [];
         let minValues = [];
         let maxValues = [];
         for (let param of params) {
-            console.log('checking param attributes', param.attributes);
             if (param.attributes["onchain"] && param.attributes["max"] !== undefined && param.attributes["min"] !== undefined) {
                 names.push(param.arguments[0] as string);
                 maxValues.push(param.attributes["max"] as number);

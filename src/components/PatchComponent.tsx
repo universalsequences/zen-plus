@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import PatchInner from './PatchInner';
 import { useNodeOperations } from '@/hooks/useEncapsulation';
 import { useZoom } from '@/hooks/useZoom';
 import LockButton from './LockButton';
@@ -196,6 +197,16 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 node.size.height = height;
                 node.size.width = width;
                 updateSize(node.id, { ...node.size });
+                for (let __node of selectedNodes) {
+                    if ((__node as ObjectNode).size) {
+                        let _node: ObjectNode = __node as ObjectNode;
+                        if (_node.size) {
+                            _node.size.height = height;
+                            _node.size.width = width;
+                            updateSize(_node.id, { ..._node.size });
+                        }
+                    }
+                }
             }
         }
 
@@ -391,39 +402,32 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
 
     let { encapsulate, handleContextMenu, createMessageNode, createObjectNode, createNumberBox, presentation } = useNodeOperations({
         isCustomView,
-        zoomRef
+        zoomRef,
+        scrollRef
     });
 
-    let out = React.useMemo(() => {
-        let inner = <div
-            className={(draggingCable ? " dragging-cable " : "") + "patcher-background"}
-        ><div
-            ref={zoomableRef}
-            className=" flex flex-1 select-none z-1 ">
-                {!isCustomView && <Cables />}
-                {selection && selection.patch === patch &&
-                    <div
-                        style={{
-                            left: selection.x1 + 'px', top: selection.y1 + 'px',
-                            width: (selection.x2 - selection.x1) + 'px', height: (selection.y2 - selection.y1) + 'px'
-                        }}
-                        className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
-                {objectNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
-                    (objectNode, index) =>
-                        objectNode.name === "outputs" ? '' : <ObjectNodeComponent
-                            key={objectNode.id}
-                            objectNode={objectNode} />
-                )}
-                {messageNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
-                    (messageNode, index) =>
-                        <MessageNodeComponent
-                            key={messageNode.id}
-                            messageNode={messageNode} />
-                )}
-            </div>
-        </div>
-            ;
+    /*
+    useEffect(() => {
+        if (patch && !patch.name) {
+            let local = localStorage.getItem("backup-patches")
+            if (local) {
+                let parsed = JSON.parse(local);
+                for (let p of parsed) {
+                    console.log('trying to parse=', p);
+                    let o = createObjectNode();
+                    o.parse("zen");
+                    if (o.subpatch) {
+                        o.subpatch.fromJSON(p.patch);
+                        o.subpatch.name = p.name;
+                    }
+                }
+            }
+        }
+    }, [patch]);
+    */
 
+
+    const mem = React.useMemo(() => {
         let tile = rootTile ? rootTile.findPatch(patch) : null;
         let direction = tile && tile.parent ? (tile.parent.splitDirection === "vertical" ? "vertical" : "horizontal") : "";
         let _direction = direction;
@@ -466,9 +470,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             if (tile.parent && tile.parent.splitDirection === "horizontal") {
                 _maxHeight = null;
             }
-            console.log('rendering=%s max height=%s maxWidth=%s', patch.id, _maxHeight, _maxWidth, patch, tile, tile.parent);
         } else {
-            console.log("no tile", patch);
         }
 
 
@@ -496,12 +498,11 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
 
         let style: any = isCustomView ? {} : { animation, maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%' };
         let isFloatingCustom = false;
-        if (!isCustomView && (patch as SubPatch).parentNode) {
+        if (!isCustomView && (patch as SubPatch).parentNode && lockedMode) {
             let node = (patch as SubPatch).parentNode;
             if (node.attributes["Custom Presentation"] && node.size && presentationMode) {
                 let parent = (patch as SubPatch).parentPatch;
                 let parentNode = (parent as SubPatch).parentNode;
-                console.log('parent = ', parent, parentNode);
                 if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
                     isFloatingCustom = lockedMode;
                     style = {
@@ -514,138 +515,72 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 }
             }
         }
-        return (
-            <>
-                <style dangerouslySetInnerHTML={{ __html: keyframe }} />
-                <div
-                    style={style}
-                    onClick={onClick}
-                    onMouseMove={onSelectionMove}
-                    onMouseDown={onMouseDown}
-                    onContextMenu={handleContextMenu}
-                    className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
-                    }>
-                    <div className="w-full h-full flex overflow-hidden">
-                        {/*<div style={{ zIndex: 100000000000000 }} className='absolute top-5 right-5'>
-                        <div>
-                            w={_maxWidth}
-                        </div>
-                        <div>
-                            h={_maxHeight}
-                        </div>
-                        </div>*/}
-                        {!isCustomView && <>
-                            <div
-                                onMouseDown={(e: any) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setResizingPatch({
-                                        startPosition: { x: e.pageX, y: e.pageY },
-                                        gridTemplate, resizeType: PatchResizeType.South
-                                    });
-                                }}
-                                className="w-full h-1 absolute bottom-0 cursor-ns-resize z-30" />
-                            <div
-                                onMouseDown={(e: any) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setResizingPatch({
-                                        startPosition: { x: e.pageX, y: e.pageY },
-                                        gridTemplate, resizeType: PatchResizeType.North
-                                    });
-                                }}
-                                className="w-full h-1 absolute top-0 cursor-ns-resize z-30" />
-                            <div
-                                onMouseDown={(e: any) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setResizingPatch({
-                                        startPosition: { x: e.pageX, y: e.pageY },
-                                        gridTemplate, resizeType: PatchResizeType.East
-                                    });
-                                }}
-                                className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
-                            {!isCustomView && <div
-                                onMouseDown={(e: any) => {
+        return (<>
+            <style dangerouslySetInnerHTML={{ __html: keyframe }} />
+            <div
+                style={style}
+                onClick={onClick}
+                onMouseMove={onSelectionMove}
+                onMouseDown={onMouseDown}
+                className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
 
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setResizingPatch({
-                                        startPosition: { x: e.pageX, y: e.pageY },
-                                        gridTemplate, resizeType: PatchResizeType.West
-                                    })
-                                }}
-                                className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />}
-                        </>}
+                }>
+                {!isCustomView && <>
+                    <div
+                        onMouseDown={(e: any) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setResizingPatch({
+                                startPosition: { x: e.pageX, y: e.pageY },
+                                gridTemplate, resizeType: PatchResizeType.South
+                            });
+                        }}
+                        className="w-full h-1 absolute bottom-0 cursor-ns-resize z-30" />
+                    <div
+                        onMouseDown={(e: any) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setResizingPatch({
+                                startPosition: { x: e.pageX, y: e.pageY },
+                                gridTemplate, resizeType: PatchResizeType.North
+                            });
+                        }}
+                        className="w-full h-1 absolute top-0 cursor-ns-resize z-30" />
+                    <div
+                        onMouseDown={(e: any) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setResizingPatch({
+                                startPosition: { x: e.pageX, y: e.pageY },
+                                gridTemplate, resizeType: PatchResizeType.East
+                            });
+                        }}
+                        className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
+                    {!isCustomView && <div
+                        onMouseDown={(e: any) => {
 
-                        <>{isCustomView ? inner : <ContextMenu.Root
-                        >
-                            <ContextMenu.Content color="indigo" className="object-context p-2 rounded-md text-white text-xs">
-                                <ContextMenu.Item
-                                    onClick={createObjectNode}
-                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                    New Object Node
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    onClick={createMessageNode}
-                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                    New Message Node
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    onClick={createNumberBox}
-                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                    New Number Box
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    onClick={() => segmentCables(sizeIndexRef.current)}
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setResizingPatch({
+                                startPosition: { x: e.pageX, y: e.pageY },
+                                gridTemplate, resizeType: PatchResizeType.West
+                            })
+                        }}
+                        className="h-full w-1 absolute left-0 cursor-ew-resize z-30" />}
+                </>}
 
-                                    className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                    Segment All Cables
-                                </ContextMenu.Item>
-                                {selectedNodes.length > 0 &&
-                                    <ContextMenu.Item
-                                        onClick={() => presentation(selectedNodes)}
-                                        className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                        Include in Presentation {selectedNodes.length} nodes
-                                    </ContextMenu.Item>}
-                                {selectedNodes.length > 1 &&
-                                    <ContextMenu.Item
-                                        onClick={() => encapsulate(selectedNodes)}
-                                        className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
-                                        Encapsulate {selectedNodes.length} nodes
-                                    </ContextMenu.Item>}
-                            </ContextMenu.Content>
-                            <ContextMenu.Trigger
-                                className={(isFloatingCustom ? "" : "overflow-scroll") + (isCustomView ? "" : "") + " ContextMenuTrigger relative w-full h-full flex" + " w-full h-full flex flex-col "}
-                                ref={scrollRef}>
-                                {inner}
-                            </ContextMenu.Trigger>
-                        </ContextMenu.Root>
-                        }
-                        </>
-                    </div>
-                    {
-                        !isCustomView && <>
-                            {selectedPatch === patch ? <Toolbar patch={patch} /> : ''}
-                        </>
-                    }
-                </div >
-            </>
-        );
-    }, [
-        maxWidth,
-        maxHeight,
-        draggingCable,
-        visibleObjectNodes,
-        selectedPatch,
-        objectNodes,
-        patch.objectNodes,
-        messageNodes,
-        selection,
-        patch,
-        lockedMode,
-        presentationMode]);
-    return out;
+
+                <PatchInner visibleObjectNodes={visibleObjectNodes} index={index} isCustomView={isCustomView} zoomRef={zoomRef} zoomableRef={zoomableRef} />
+                {
+                    !isCustomView && <>
+                        {selectedPatch === patch ? <Toolbar patch={patch} /> : ''}
+                    </>
+                }
+            </div>
+        </>);
+    }, [maxWidth, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
+
+    return mem;
 };
 
 export default PatchComponent;

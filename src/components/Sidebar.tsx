@@ -6,7 +6,7 @@ import { CubeIcon } from '@radix-ui/react-icons'
 import { useSelection } from '@/contexts/SelectionContext';
 
 const Sidebar = () => {
-    const { selectedNodes } = useSelection();
+    const { selectedNodes, setOpened, opened } = useSelection();
 
     const inner = React.useMemo(() => {
         let node = selectedNodes[0];
@@ -23,12 +23,11 @@ const Sidebar = () => {
         }
     }, [selectedNodes]);
 
-    let [opened, setOpened] = useState(false);
     let name = selectedNodes[0] ? ((selectedNodes[0] as ObjectNode).name || "number") : "";
 
     useEffect(() => {
         if (selectedNodes.length === 0) {
-            setOpened(false);
+            setOpened(null);
         }
     }, [selectedNodes, setOpened]);
 
@@ -40,7 +39,7 @@ const Sidebar = () => {
     const onKeyDown = useCallback((e: any) => {
         if (e.key === "Tab" && selectedNodes.length > 0) {
             e.preventDefault();
-            setOpened(!opened);
+            setOpened(opened ? null : selectedNodes[0]);
         }
     }, [selectedNodes, setOpened, opened]);
 
@@ -54,7 +53,7 @@ const Sidebar = () => {
         <div
             onClick={() => {
                 if (selectedNodes.length > 0) {
-                    setOpened(!opened);
+                    setOpened(opened ? null : selectedNodes[0]);
                 }
             }}
             style={{

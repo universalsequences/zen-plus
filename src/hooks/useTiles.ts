@@ -85,7 +85,7 @@ export const useTiles = (patch: Patch) => {
         let tile = getTile();
         if (boundingTile && tile && tile.parent && (resizingPatch.resizeType === PatchResizeType.South &&
             boundingTile.searchSide(tile) === 0) ||
-            (resizingPatch.resizeType === PatchResizeType.North &&
+            (boundingTile && resizingPatch.resizeType === PatchResizeType.North &&
                 boundingTile.searchSide(tile) === 1)) {
             let tmp = bottomHeightPercent;
             bottomHeightPercent = topHeightPercent;
@@ -139,7 +139,9 @@ export const useTiles = (patch: Patch) => {
                     let percentA = topHeightPercent;
 
                     let percentB = bottomHeightPercent;
-                    parent.size = percentB;
+                    if (parent) {
+                        parent.size = percentB;
+                    }
                     /*
                     if (parent.searchSide(tile) === 0) { //children[0] === tile) {
                         parent.size = percentA;

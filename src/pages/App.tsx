@@ -12,15 +12,17 @@ import PatchesComponent from '@/components/PatchesComponent';
 import { Theme } from '@radix-ui/themes';
 import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
 import { PatchImpl } from '@/lib/nodes/Patch';
-import '@rainbow-me/rainbowkit/styles.css';
 import '@/styles/radix.scss';
+import '@rainbow-me/rainbowkit/styles.css';
+
 import {
     getDefaultWallets,
     RainbowKitProvider,
+    darkTheme
 } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import {
-    zoraTestnet,
+    goerli
 } from 'wagmi/chains';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
 import { infuraProvider } from 'wagmi/providers/infura';
@@ -28,9 +30,9 @@ import { publicProvider } from 'wagmi/providers/public';
 
 
 const { chains, publicClient } = configureChains(
-    [zoraTestnet],
+    [goerli],
     [
-        infuraProvider({ apiKey: process.env.INFURA_ID as string }),
+        infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
         publicProvider()
     ]
 );
@@ -55,9 +57,19 @@ export default function App() {
     if (!basePatch) {
         return <></>;
     }
+    let apiKey = process.env.INFURA_ID as string
+    console.log("influra id=", apiKey);
+    let apiKey2 = process.env.NEXT_PUBLIC_INFURA_ID as string
+    console.log("influra id=", apiKey2);
     return (
         <WagmiConfig config={wagmiConfig}>
-            <RainbowKitProvider chains={chains}>
+            <RainbowKitProvider
+                theme={darkTheme({
+                    accentColor: 'black',
+                    accentColorForeground: 'white',
+                    borderRadius: 'small',
+                })}
+                chains={chains}>
                 <Theme appearance="dark" >
                     <SettingsProvider>
                         <MessageProvider>

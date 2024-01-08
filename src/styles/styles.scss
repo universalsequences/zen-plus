@@ -109,6 +109,7 @@
     background-color: #3432322b;
     border: 1px solid #ffffff0f;
     backdrop-filter: blur(8px);
+    z-index: 10000000000 !important;
 }
 
 .node-component {
@@ -118,6 +119,7 @@
 }
 
 
+.light-mode {
 .node-component {
     box-shadow:2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
   6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
@@ -127,6 +129,7 @@
   100px 100px 80px rgba(0, 0, 0, 0.07);
 
 }
+}
 
 
 .node-component.selected {
@@ -134,7 +137,7 @@
 }
 
 body {
-    --dark-patch-color: #121213;
+    --dark-patch-color: #222224d4;
 }
 
 .opened-sidebar, .opened-sidebar2 {
@@ -247,7 +250,7 @@ body {
 }
 
 svg {
-    .edge-group:hover {
+    .edge-group.hover {
         .visible-edge {
         stroke: red !important;
     }
@@ -306,4 +309,52 @@ svg {
 
 .tile-container {
     gap: 15px;
+}
+
+.save-connect {
+    button {
+        background-color: white;
+        border-radius: 20px;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        color: black;
+        cursor: pointer;
+    }
+}
+
+[data-rk] ._9pm4ki3 {
+    z-index: 100000000000000000;
+}
+
+
+.custom-view {
+.message-node {
+    background-color: var(--dark-patch-color) !important;
+}
+}
+
+.bg-dark-transparent {
+    background-color: #000000a3;
+}
+
+.knob-container {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.knob {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: gray; /* Customize as needed */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    /* Additional styling for the knob */
 }

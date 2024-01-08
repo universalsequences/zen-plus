@@ -179,7 +179,7 @@ export const not_sub = (input: Arg, sec?: Arg): UGen => {
         let [notSub] = context.useVariables("notSubValue");
 
         let code = `${context.varKeyword} ${notSub} = ${_sec.variable} - ${_input.variable};`
-        return context.emit(code, notSub, _input);
+        return context.emit(code, notSub, _input, _sec);
     });
 };
 

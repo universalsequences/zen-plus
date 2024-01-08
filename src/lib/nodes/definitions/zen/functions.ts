@@ -57,11 +57,14 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
             }
         }
         let ret = [
-            { name: "defun", value: totalInvocations, variableName: name },
+            { name: "defun", value: totalInvocations, variableName: name + node.id },
             ...__bodies,
         ];
         (ret as Statement).node = node;
         node.storedMessage = ret as Statement;
+        if (name === "jaki_core") {
+            console.log("jaki core function def=", ret);
+        }
         return [ret as Statement];
     };
 };

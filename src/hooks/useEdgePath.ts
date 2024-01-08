@@ -44,15 +44,20 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
             };
 
             let isStraight = Math.abs(sourceCoordinate.x - destCoordinate.x) < 4;
+            let [path, points] = generatePath(sourceCoordinate, destCoordinate);
             let d = connection.segmentation !== undefined && !isStraight ?
                 generateSegmentedPaths(sourceCoordinate, destCoordinate, (connection.source as ObjectNode).position.y, connection.segmentation) :
-                [generatePath(sourceCoordinate, destCoordinate)];
+                [path];
 
-            let destinationCircle = interpolate(
-                { ...destCoordinate, x: destCoordinate.x + 5 }, sourceCoordinate, .1);
-            destinationCircle.y = destCoordinate.y - 10;
-            let sourceCircle = interpolate(
-                { ...sourceCoordinate, x: sourceCoordinate.x + 5 }, destCoordinate, .1);
+            if (points.length === 3) {
+                points = [points[0], points[1], points[1], points[2]];
+            }
+
+            let point1 = cubicBezier(.1, points[0], points[1], points[2], points[3]);
+            let point2 = cubicBezier(.9, points[0], points[1], points[2], points[3]);
+
+            let destinationCircle = point2;
+            let sourceCircle = point1;
             sourceCircle.y = sourceCoordinate.y + 10;
             if (connection.segmentation) {
                 sourceCircle.x = sourceCoordinate.x + 2;
@@ -66,7 +71,28 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
 
 };
 
-export const generatePath = (source: Coordinate, dest: Coordinate) => {
+function cubicBezier(t: number, p0: Coordinate, p1: Coordinate, p2: Coordinate, p3: Coordinate): Coordinate {
+    const u = 1 - t;
+    const tt = t * t;
+    const uu = u * u;
+    const uuu = uu * u;
+    const ttt = tt * t;
+
+    let point: Coordinate = { x: 0, y: 0 };
+    point.x = uuu * p0.x; // first term
+    point.y = uuu * p0.y; // first term
+    point.x += 3 * uu * t * p1.x; // second term
+    point.y += 3 * uu * t * p1.y; // second term
+    point.x += 3 * u * tt * p2.x; // third term
+    point.y += 3 * u * tt * p2.y; // third term
+    point.x += ttt * p3.x; // fourth term
+    point.y += ttt * p3.y; // fourth term
+
+    return point;
+}
+
+
+export const generatePath = (source: Coordinate, dest: Coordinate): [string, Coordinate[]] => {
 
     let x1 = source.x;
     let y1 = source.y;
@@ -76,9 +102,13 @@ export const generatePath = (source: Coordinate, dest: Coordinate) => {
     if (Math.abs(x1 - x2) < 2) {
         x1 += 4;
         x2 += 4;
-        return `M ${x1},${y1} L ${x2},${y2}`;
+        return [`M ${x1},${y1} L ${x2},${y2}`, [{ x: x1, y: y1 }, { x: x1, y: y1 }, { x: x2, y: y2 }, { x: x2, y: y2 }]];
     }
     let points = getZObjectPath(x1 + 4, y1 + 3, x2 + 4, y2, false);
+    let _pts = [];
+    for (let i = 0; i < points.length - 1; i += 2) {
+        _pts.push({ x: points[i], y: points[i + 1] });
+    }
 
     const fl = (x: number) => Math.floor(x);
     let d = "M " + fl(points[0]) + ' ' + fl(points[1]);
@@ -88,9 +118,9 @@ export const generatePath = (source: Coordinate, dest: Coordinate) => {
     }
     let command = "C"; //segmentation ? "Q" : "C";
     let u = d + " " + command + " " + pts;
-    return u;
+    return [u, _pts];
 
-    return `M ${x1},${y1} L ${x2},${y2}`;
+    //return [`M ${x1},${y1} L ${x2},${y2}`, points];
 };
 
 

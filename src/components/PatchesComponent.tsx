@@ -1,6 +1,7 @@
 "use client"
 import Toolbar from './Toolbar';
 import SearchWindow from './SearchWindow';
+import { Backfill } from './Backfill';
 
 import { useSettings } from '@/contexts/SettingsContext';
 import React, { useEffect, useState, useCallback } from 'react';
@@ -89,6 +90,8 @@ export default function PatchesComponent() {
                 <ZenCodeSidebar />
                 {showSearch && <SearchWindow hide={() => setShowSearch(false)} />}
             </div >
+            {/*<Backfill />*/}
+
         </>
     }, [patches, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode]);
 

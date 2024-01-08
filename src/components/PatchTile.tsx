@@ -28,7 +28,6 @@ const PatchTile: React.FC<{ tile: Tile }> = ({ tile }) => {
             }
             let maxWidth = _direction === "horizontal" ? size : 100;
             let maxHeight = _direction === "vertical" ? size : 100;
-            console.log("mem tile maxWidth=%s maxHeight=%s size=%s direction=%s", maxWidth, maxHeight, size, _direction);
             mem = (
                 <PatchWrapper
                     key={0 + (_tile.patch ? _tile.patch.id : '')}
@@ -114,8 +113,6 @@ const PatchTile: React.FC<{ tile: Tile }> = ({ tile }) => {
             return <PatchTile tile={tile} key={i + (tile.patch ? (tile.patch as any).id : tile.getDepth() + '____')} />
         }
     })];
-    console.log('mem = ', mem);
-    console.log('tile children=', tile, children);
     /*
     let keyframe = ``;
     let depth = tile.getDepth() + '____';
