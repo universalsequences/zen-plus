@@ -1,4 +1,5 @@
 import { OperatorContextType, OperatorContext, getOperatorContext } from './context';
+import { createGLFunction } from './definitions/create';
 import { Statement, Operator } from './definitions/zen/types';
 import pako from 'pako';
 import { Definition } from '../docs/docs';
@@ -36,6 +37,7 @@ const CONSTANTS: Constants = {
 
 export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     id: Identifier;
+    needsLoad?: boolean;
     inlets: IOlet[];
     outlets: IOlet[];
     lastSentMessage?: Message;
@@ -162,7 +164,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
 
-        if (!context.api[name]) {
+        if (!context.api[name] && this.operatorContextType !== OperatorContextType.GL) {
             return false;
         }
 
@@ -176,15 +178,23 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         let parsedArguments = this.parseArguments(
             argumentTokens, numberOfInlets, definition.defaultValue as number | undefined);
 
+        let lazyArgs: Lazy[] = this.generateIO(definition, parsedArguments, argumentTokens.length);
         let nodeFunction: NodeFunction = context.api[name];
+
+        if (!nodeFunction && this.operatorContextType === OperatorContextType.GL) {
+            nodeFunction = createGLFunction(this);
+            if (definition.numberOfInlets === 0) {
+                this.needsLoad = true;
+            }
+        }
         this.name = name;
 
-        let lazyArgs: Lazy[] = this.generateIO(definition, parsedArguments, argumentTokens.length);
         let instanceFunction: InstanceFunction = nodeFunction(this, ...lazyArgs);
         this.fn = instanceFunction;
 
 
-        if (compile && this.name !== "zen" && this.operatorContextType === OperatorContextType.ZEN) {
+        if (compile && this.name !== "zen" && (this.operatorContextType === OperatorContextType.ZEN ||
+            this.operatorContextType === OperatorContextType.GL)) {
             if (!this.patch.skipRecompile) {
                 console.log('recompile graph objnode!', 2);
                 this.patch.recompileGraph();
@@ -299,7 +309,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         // check the number of io-lets matches the spec
-        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "param" && this.name !== "modeling.synth" && this.name !== "modeling.component") {
+        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "latchcall" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "param" && this.name !== "modeling.synth" && this.name !== "modeling.component") {
             this.outlets = this.outlets.slice(0, _numberOfOutlets);
         }
 
@@ -350,7 +360,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             ConnectionType.AUDIO :
             t === OperatorContextType.ZEN ?
                 ConnectionType.ZEN :
-                ConnectionType.CORE
+                t === OperatorContextType.GL ?
+                    ConnectionType.GL :
+                    ConnectionType.CORE
         super.newIOlet(this.inlets, name, c || calculated);
     }
 
@@ -360,7 +372,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             ConnectionType.AUDIO :
             t === OperatorContextType.ZEN ?
                 ConnectionType.ZEN :
-                ConnectionType.CORE
+                t === OperatorContextType.GL ?
+                    ConnectionType.GL :
+                    ConnectionType.CORE
         super.newIOlet(this.outlets, name, c || calculated);
     }
 
@@ -411,7 +425,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth") {
+        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data") {
             return;
         }
 

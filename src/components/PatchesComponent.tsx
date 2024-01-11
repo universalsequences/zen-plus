@@ -15,10 +15,12 @@ import { usePatches } from '@/contexts/PatchesContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import { PatchImpl } from '@/lib/nodes/Patch';
 import PatchTile from './PatchTile';
+import { useTilesContext } from '@/contexts/TilesContext';
 
 
 export default function PatchesComponent() {
-    let { rootTile, selectedPatch, patches, gridTemplate } = usePatches();
+    let { rootTile, selectedPatch, patches } = usePatches();
+    let { gridTemplate } = useTilesContext();
 
     let { lastResizingTime, setSelection, setSelectedNodes, setSelectedConnection, selection } = useSelection();
     let [showSearch, setShowSearch] = useState(false);
@@ -83,7 +85,7 @@ export default function PatchesComponent() {
                     <div
                         //style={patches.length > 1 ? { gridTemplateColumns: gridTemplate } : {}}
                         className={"m-1 mt-4 flex-1 patches h-full flex-1 " + ("patches-" + patches.length)}>
-                        {rootTile ? <PatchTile tile={rootTile} /> : ""}
+                        {rootTile ? <PatchTile gridTemplate={gridTemplate} tile={rootTile} /> : ""}
                     </div>
                 </div>
                 <Sidebar />

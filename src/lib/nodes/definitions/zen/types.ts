@@ -1,4 +1,5 @@
 import { AccumParams } from '../../../zen/accum';
+import { Uniform } from '@/lib/gl/uniforms';
 import { ObjectNode } from '../../types';
 import { RoundMode } from '../../../zen/math';
 import { Clicker } from '../../../zen/click';
@@ -38,6 +39,7 @@ export interface CompoundOperator {
     historyInput?: Statement;
     modelComponent?: LazyComponent;
     modelComponents?: LazyComponent[];
+    uniform?: Uniform
 }
 
 export type Operator = "string" | CompoundOperator;

@@ -16,21 +16,30 @@ const Cables = () => {
     let { size } = usePosition();
     let { presentationMode, draggingNode, scrollRef, setDraggingCable, draggingCable, setDraggingSegmentation } = usePosition();
 
+    const { selectedConnection } = useSelection();
     let memoed = React.useMemo(() => {
         let _selectedNodes = [...selectedNodes];
         if (draggingNode) {
             _selectedNodes.push(draggingNode.node);
         }
         let zIndex = lockedMode ? 0 : 1000000;
+        let full = !presentationMode ? [...objectNodes, ...messageNodes] : [];
+        let selected = full.filter(x => selectedConnection && selectedConnection.source === x);
+        let notSelected = full.filter(x => !selectedConnection || selectedConnection.source !== x);
         return (<>
             <svg
                 style={size ? { zIndex, width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : { zIndex }}
                 className="absolute z-0 w-full h-full pointer-events-none">
-                {!presentationMode && [...objectNodes, ...messageNodes].map((node, i) =>
+                {notSelected.map((node, i) =>
                     <ObjectCables
                         setDraggingSegmentation={setDraggingSegmentation}
                         deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
-                <AlignmentHelper />
+                {selected.map((node, i) =>
+                    <ObjectCables
+                        setDraggingSegmentation={setDraggingSegmentation}
+                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
+                <AlignmentHelper /
+                >
                 {!presentationMode && <Dragging />}
 
             </svg>
@@ -46,7 +55,7 @@ const Cables = () => {
              */}
         </>
         )
-    }, [size, objectNodes, lockedMode, draggingNode, presentationMode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
+    }, [size, selectedConnection, objectNodes, lockedMode, draggingNode, presentationMode, messageNodes, setDraggingSegmentation, setDraggingCable, deleteConnection]);
     return memoed;
 };
 
@@ -105,23 +114,31 @@ const ObjectCables: React.FC<{
     setDraggingSegmentation,
     deleteConnection, node, setDraggingCable }) => {
     let connections = useConnections(node.id);
+    const { selectedConnection } = useSelection();
     let list = React.useMemo(() => {
         let list = [];
         let outletNumber = 0;
         let i = 0;
+        let notSelected: any = [];
+        let selected: any = [];
         for (let outlet of node.outlets) {
             for (let connection of outlet.connections) {
                 let dest = connection.destination;
-                list.push(<Edge
+                let edge = <Edge
                     setDraggingSegmentation={setDraggingSegmentation}
                     deleteConnection={deleteConnection}
                     setDraggingCable={setDraggingCable}
-                    key={i++} outletNumber={outletNumber} node={node} connection={connection} />);
+                    key={i++} outletNumber={outletNumber} node={node} connection={connection} />;
+                if (selectedConnection === connection) {
+                    selected.push(edge);
+                } else {
+                    notSelected.push(edge);
+                }
             }
             outletNumber++;
         }
-        return list;
-    }, [deleteConnection, setDraggingCable, connections, setDraggingSegmentation]);
+        return [...notSelected, ...selected];
+    }, [selectedConnection, deleteConnection, setDraggingCable, connections, setDraggingSegmentation]);
     return <>{list}</>
 });
 
@@ -211,6 +228,7 @@ const Edge: React.FC<{
             // mouse events
             let isAudio = connection.sourceOutlet.connectionType === ConnectionType.AUDIO;
             let isCore = connection.sourceOutlet.connectionType === ConnectionType.CORE;
+            let isGL = connection.sourceOutlet.connectionType === ConnectionType.GL;
             let sourceCoord = (connection.source as ObjectNode).position;
             let destCoord = (connection.destination as ObjectNode).position;
             let id = connection.source.id + connection.destination.id;
@@ -225,16 +243,16 @@ const Edge: React.FC<{
                     {d.map((_d, i) => <g key={i}>
                         {(isCore || isAudio) && <path
                             className="visible-edge pointer-events-auto"
-                            fill="transparent"
+                            fill="none"
                             d={_d} stroke={isSelected ? "red" : "black"} strokeWidth={2} />}
                         <path
                             style={{ animation: `jiggle-${id} .4s ease-in-out` }}
-                            fill="transparent"
+                            fill="none"
                             strokeDasharray={isAudio ?
                                 "4 4" : undefined}
-                            d={_d} className={(isSelected ? " selected-edge " : "") + ("visible-edge pointer-events-auto ") + (isCore ? "core" : isAudio ? "audio" : "zen")} stroke={isSelected ? "red" : (isCore ? "#ffffff" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
+                            d={_d} className={(isSelected ? " selected-edge " : "") + ("visible-edge pointer-events-auto ") + (isGL ? "gl" : isCore ? "core" : isAudio ? "audio" : "zen")} stroke={isSelected ? "red" : (isCore ? "#ffffff" : isAudio ? "yellow" : strokeColor)} strokeWidth={2} />
                         <path
-                            fill="transparent"
+                            fill="none"
                             className={(((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? "cursor-ns-resize" : "") + " pointer-events-auto "}
                             onMouseDown={(e: any) => {
                                 e.stopPropagation();
@@ -249,19 +267,19 @@ const Edge: React.FC<{
                             onMouseOver={() => setHover(true)}
                             onMouseLeave={() => setHover(false)}
                             d={_d} stroke="transparent" strokeWidth={
-                                ((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? 4 :
-                                    2} />
+                                ((d.length === 5 && i === 1) || (d.length === 3 && i === 1)) ? 5 :
+                                    5} />
                     </g>
                     )}
+                    {isSelected && sourceCircle && <circle
+                        style={{ zIndex: 10000000 }}
+                        onMouseDown={moveSourceEdge}
+                        cx={sourceCircle.x} cy={sourceCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
+                    {isSelected && destinationCircle && <circle
+                        style={{ zIndex: 10000000 }}
+                        onMouseDown={moveDestEdge}
+                        cx={destinationCircle.x} cy={destinationCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
                 </g>
-                {isSelected && sourceCircle && <circle
-                    style={{ zIndex: 10000000 }}
-                    onMouseDown={moveSourceEdge}
-                    cx={sourceCircle.x} cy={sourceCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
-                {isSelected && destinationCircle && <circle
-                    style={{ zIndex: 10000000 }}
-                    onMouseDown={moveDestEdge}
-                    cx={destinationCircle.x} cy={destinationCircle.y} r={4} fill="white" className="edge-mover pointer-events-auto" />}
             </>
         }, [d, destinationCircle, sourceCircle, sourceCoordinate, hover, setHover, destCoordinate, isSelected, setDraggingCable, deleteConnection]);
         return p;

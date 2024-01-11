@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePatches } from '@/contexts/PatchesContext';
+import { useTilesContext } from '@/contexts/TilesContext';
 import { Coordinate, Patch } from '@/lib/nodes/types';
 
 export enum PatchResizeType {
@@ -17,7 +18,9 @@ export interface ResizingPatch {
 
 export const useTiles = (patch: Patch) => {
     const [resizingPatch, setResizingPatch] = useState<ResizingPatch | null>(null);
-    const { rootTile, gridLayout, selectedPatch, setSelectedPatch, setGridTemplate, gridTemplate } = usePatches();
+    const { rootTile, gridLayout, selectedPatch, setSelectedPatch, gridTemplate } = usePatches();
+
+    const { setGridTemplate } = useTilesContext();
 
     const getTile = useCallback(() => {
         if (!rootTile) {
@@ -101,6 +104,7 @@ export const useTiles = (patch: Patch) => {
         if (rootTile) {
             let tile = rootTile.findPatch(patch);
 
+            let newGridTemplate = `${leftWidthPercent}% ${rightWidthPercent}%`;
             if (tile && tile.parent) {
                 if (resizingPatch.resizeType === PatchResizeType.East ||
                     resizingPatch.resizeType === PatchResizeType.West) {
@@ -127,6 +131,7 @@ export const useTiles = (patch: Patch) => {
                     } else {
                         parent.size = percentB;
                     }
+                    newGridTemplate = percentA + " " + percentB;
                 } else {
                     // need to find the nearest horizontal parent
                     /*
@@ -149,16 +154,15 @@ export const useTiles = (patch: Patch) => {
                         parent.size = percentB;
                     }
                     */
+                    newGridTemplate = percentA + " " + percentB;
                 }
-
             }
+            setGridTemplate(newGridTemplate);
         }
 
         // Create the grid template string
-        let newGridTemplate = `${leftWidthPercent}% ${rightWidthPercent}%`;
 
-        setGridTemplate(newGridTemplate);
-    }, [setGridTemplate, resizingPatch]);
+    }, [setGridTemplate, resizingPatch, patch, rootTile]);
 
     return { resizingPatch, setResizingPatch, onResizePatch };
 };

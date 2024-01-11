@@ -1,4 +1,5 @@
 import Matrix from './Matrix';
+import GLCanvas from './GLCanvas';
 import SVGCanvas from './SVGCanvas';
 import Slider from './Slider';
 import Knob from './Knob';
@@ -29,7 +30,7 @@ export const index: ComponentIndex = {
     "buffer": Audio,
     "attrui": AttrUI,
     "umenu": UMenu,
-    "canvas": SVGCanvas,
+    "canvas": GLCanvas,
     "slider": Slider,
     "knob": Knob
 };

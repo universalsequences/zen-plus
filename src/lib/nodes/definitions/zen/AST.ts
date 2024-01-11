@@ -18,7 +18,7 @@ import { createSpiderWeb, SpiderWeb } from '../../../zen/physical-modeling/web-m
 import { Material } from '../../../zen/physical-modeling/spider-web';
 import { click, Clicker } from '../../../zen/click';
 import { Range, variable, rawSumLoop } from '../../../zen/loop'
-import { nth, LazyFunction, call, defun, argument } from '../../../zen/functions';
+import { nth, LazyFunction, latchcall, call, defun, argument } from '../../../zen/functions';
 import { sampstoms, mstosamps } from '../../../zen/utils';
 import { ObjectNode } from '../../types';
 import { LazyComponent } from './physical-modeling/types';
@@ -268,6 +268,10 @@ export const _printStatement = (
         let _statements = [statements[0], (operator as CompoundOperator).value, ...statements.slice(1)];
         output = `call(${firstArg ? firstArg + ", " : ""}
 ${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
+    } else if (_name === "latchcall") {
+        let _statements = [statements[0], (operator as CompoundOperator).value, ...statements.slice(1)];
+        output = `latchcall(${firstArg ? firstArg + ", " : ""}
+${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
     } else if (_name === "defun") {
         let _statements = statements;
         let custom = (operator as CompoundOperator);
@@ -473,6 +477,12 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             let args = compiledArgs.slice(1);
             _name = name;
             output = call(body as LazyFunction, invocationNumber, ...args as UGen[]);
+        } else if (name === "latchcall") {
+            let invocationNumber: number = compoundOperator.value!;
+            let body = compiledArgs[0];
+            let args = compiledArgs.slice(1);
+            _name = name;
+            output = latchcall(body as LazyFunction, invocationNumber, ...args as UGen[]);
         } else if (name === "message") {
             output = message(compoundOperator.params as string, compiledArgs[0] as Arg, compiledArgs[1] as Arg);
         } else if (name === "modeling.synth") {

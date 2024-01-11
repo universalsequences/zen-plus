@@ -93,7 +93,7 @@ export class BaseNode implements Node {
         if (inlet.connectionType === ConnectionType.AUDIO &&
             outlet.connectionType === ConnectionType.AUDIO) {
             this.connectAudioNode(connection);
-        } else if (compile && outlet.connectionType === ConnectionType.ZEN) {
+        } else if (compile && (outlet.connectionType === ConnectionType.ZEN || outlet.connectionType === ConnectionType.GL)) {
             this.patch.recompileGraph();
         }
         return connection;

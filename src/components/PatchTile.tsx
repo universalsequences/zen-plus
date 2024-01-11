@@ -3,7 +3,7 @@ import { Tile } from '@/lib/tiling/types';
 import PatchWrapper from './PatchWrapper';
 import { usePatches } from '@/contexts/PatchesContext';
 
-const PatchTile: React.FC<{ tile: Tile }> = ({ tile }) => {
+const PatchTile: React.FC<{ gridTemplate?: string, tile: Tile }> = ({ tile, gridTemplate }) => {
     let ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useTilesContext } from '@/contexts/TilesContext';
 import PatchInner from './PatchInner';
 import { useNodeOperations } from '@/hooks/useEncapsulation';
 import { useZoom } from '@/hooks/useZoom';
@@ -31,7 +32,8 @@ interface Selection {
 
 const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView, maxWidth, maxHeight }) => {
     useThemeContext();
-    const { rootTile, gridLayout, selectedPatch, setSelectedPatch, setGridTemplate, gridTemplate } = usePatches();
+    const { rootTile, selectedPatch, setSelectedPatch, setGridTemplate } = usePatches();
+    const { gridTemplate } = useTilesContext();
     const {
         lastResizingTime,
         setSelection,
@@ -39,6 +41,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         lockedMode,
         selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
     const { onNewMessage } = useMessage();
+
 
     useEffect(() => {
         if (!isCustomView) {
@@ -88,6 +91,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
     const lastClick = useRef(0);
 
     const onMouseUp = useCallback((e: MouseEvent) => {
+        console.log("on mouse up");
         if (resizingPatch) {
             setResizingPatch(null);
         }
@@ -99,6 +103,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         }
         setDraggingSegmentation(null);
         if (selection && selection.patch === patch) {
+            console.log('selected called...');
             let all = [...patch.objectNodes, ...patch.messageNodes];
             let filtered = all.filter(
                 node => {
@@ -109,11 +114,12 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                     return position.x + w >= selection.x1 && position.x <= selection.x2 &&
                         position.y + h >= selection.y1 && position.y <= selection.y2;
                 });
+            console.log('filtered = ', filtered);
             setSelectedNodes(filtered);
         }
         setDraggingNode(null);
         setResizingNode(null);
-    }, [presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
+    }, [patch, presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
 
     const draggingNodeRef = useRef<DraggingNode | null>(null);
     const resizingNodeRef = useRef<ResizingNode | null>(null);
@@ -293,6 +299,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
     }, [
         presentationMode,
         draggingSegmentation,
+        patch,
         setDraggingSegmentation,
         resizingPatch,
         setResizingPatch,
@@ -578,7 +585,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 }
             </div>
         </>);
-    }, [maxWidth, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
+    }, [maxWidth, gridTemplate, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
 
     return mem;
 };

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import React, { useState, useEffect } from 'react';
 import PatchComponent from '@/components/PatchComponent';
 import { MessageProvider } from '@/contexts/MessageContext';
+import { TilesProvider } from '@/contexts/TilesContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { StorageProvider } from '@/contexts/StorageContext';
 import { PatchesProvider } from '@/contexts/PatchesContext';
@@ -76,9 +77,11 @@ export default function App() {
                             <StorageProvider>
                                 <SelectionProvider>
                                     <PatchesProvider basePatch={basePatch}>
-                                        <main className="flex min-h-screen flex-col h-full w-full">
-                                            <PatchesComponent />
-                                        </main>
+                                        <TilesProvider>
+                                            <main className="flex min-h-screen flex-col h-full w-full">
+                                                <PatchesComponent />
+                                            </main>
+                                        </TilesProvider>
                                     </PatchesProvider>
                                 </SelectionProvider>
                             </StorageProvider>

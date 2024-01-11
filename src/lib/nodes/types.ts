@@ -1,4 +1,5 @@
 import { BlockGen } from '../zen';
+import { ZenGraph } from '@/lib/gl/zen';
 import { SVGObject } from './definitions/svg/index';
 import { ParamGen, param } from '@/lib/zen/index';
 import { OperatorContextType } from './context';
@@ -30,7 +31,7 @@ export interface Coordinate {
 
 // for the most part, nodes will deal with statements
 
-export type Message = string | number | string[] | number[] | Statement | Float32Array | SVGObject;
+export type Message = string | number | string[] | number[] | Statement | Float32Array | SVGObject | ZenGraph;
 export type Lazy = () => Message;
 
 /**
@@ -48,7 +49,8 @@ export type NodeFunction = (node: ObjectNode, ...args: Lazy[]) => InstanceFuncti
 export enum ConnectionType {
     AUDIO,
     ZEN,
-    CORE
+    CORE,
+    GL
 }
 
 export interface IOConnection {

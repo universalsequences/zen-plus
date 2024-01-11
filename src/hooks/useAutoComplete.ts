@@ -1,14 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { useStorage } from '@/contexts/StorageContext';
 import { API, Definition } from '@/lib/docs/docs';
-import { OperatorContext, getAllContexts } from '@/lib/nodes/context';
-import { NodeFunction } from '@/lib/nodes/types';
+import { OperatorContextType, OperatorContext, getAllContexts } from '@/lib/nodes/context';
+import { NodeFunction, ObjectNode } from '@/lib/nodes/types';
 
 export interface ContextDefinition {
     definition: Definition & { tokenId?: number };
     context?: OperatorContext;
 }
-export const useAutoComplete = (text: string) => {
+
+const _sortContexts = (contexts: OperatorContext[], type: OperatorContextType): OperatorContext[] => {
+    // stay within the operator context
+    let contextA = contexts.filter(x => x.type === type);
+    let contextB = contexts.filter(x => x.type !== type);
+    return [...contextA, ...contextB];
+}
+
+let dist = (a: ObjectNode, b: ObjectNode): number => {
+    return Math.sqrt(Math.pow(a.position.x - b.position.x, 2) + Math.pow(a.position.y - b.position.y, 2));
+};
+
+const sortContexts = (contexts: OperatorContext[], node: ObjectNode): OperatorContext[] => {
+    if (node.text && node.operatorContextType) {
+        return _sortContexts(contexts, node.operatorContextType);
+    }
+
+
+    let nodes = node.patch.objectNodes.filter(
+        x => x !== node).sort(
+            (a, b) => dist(a, node) - dist(b, node));
+
+    if (nodes[0]) {
+        return _sortContexts(contexts, nodes[0].operatorContextType);
+    }
+    // otherwise try to get nearest nodes within the graph 
+    return contexts;
+};
+
+export const useAutoComplete = (text: string, objectNode: ObjectNode) => {
     let [autoCompletes, setAutoCompletes] = useState<ContextDefinition[]>([]);
     let { onchainSubPatches } = useStorage();
 
@@ -19,7 +48,8 @@ export const useAutoComplete = (text: string) => {
         }
         let _text = text.split(" ")[0].toLowerCase();
         let options: ContextDefinition[] = [];
-        for (let context of getAllContexts()) {
+        let contexts = sortContexts(getAllContexts(), objectNode);
+        for (let context of contexts) {
             let { definitions } = context;
             for (let name in definitions) {
                 let _name = name.toLowerCase();

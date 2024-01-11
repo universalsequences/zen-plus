@@ -36,11 +36,16 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     useEffect(() => {
         if (editing) {
             window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
         }
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [editing]);
+
+    useEffect(() => {
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
             window.removeEventListener('mouseup', handleMouseUp);
         };
     }, [editing]);

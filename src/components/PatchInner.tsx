@@ -8,7 +8,6 @@ import { useSelection } from '@/contexts/SelectionContext';
 import Toolbar from './Toolbar'
 import Cables from './Cables';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
-import { ResizingPatch, PatchResizeType, useTiles } from '@/hooks/useTiles';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import ObjectNodeComponent from './ObjectNodeComponent';
 import { MessageNode, ObjectNode, Node, MessageType, SubPatch, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
@@ -16,7 +15,6 @@ import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
 import MessageNodeComponent from './MessageNodeComponent';
 import { Connections, usePatch } from '@/contexts/PatchContext';
-import { usePatches } from '@/contexts/PatchesContext';
 import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts/PositionContext';
 import PresentationMode from './PresentationMode';
 
@@ -37,7 +35,6 @@ const PatchInner: React.FC<{
     zoomableRef,
     visibleObjectNodes, index, isCustomView }) => {
     useThemeContext();
-    const { rootTile, gridLayout, selectedPatch, setSelectedPatch, setGridTemplate, gridTemplate } = usePatches();
     const {
         lastResizingTime,
         setSelection,
@@ -45,13 +42,6 @@ const PatchInner: React.FC<{
         lockedMode,
         selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
     const { onNewMessage } = useMessage();
-
-    useEffect(() => {
-        if (!isCustomView) {
-            setSelectedPatch(patch);
-            patch.onNewMessage = onNewMessage;
-        }
-    }, [onNewMessage]);
 
     let {
         scrollRef,
@@ -81,8 +71,6 @@ const PatchInner: React.FC<{
     }, [patch, onNewMessage]);
 
     useKeyBindings(scrollRef);
-
-    const { onResizePatch, resizingPatch, setResizingPatch } = useTiles(patch);
 
     const lastClick = useRef(0);
 
@@ -147,6 +135,7 @@ const PatchInner: React.FC<{
     });
 
     let out = React.useMemo(() => {
+        console.log("patch inner");
         let inner = <div
             className={(draggingCable ? " dragging-cable " : "") + "patcher-background"}
         ><div
@@ -241,7 +230,6 @@ const PatchInner: React.FC<{
     }, [
         draggingCable,
         visibleObjectNodes,
-        selectedPatch,
         objectNodes,
         patch.objectNodes,
         messageNodes,

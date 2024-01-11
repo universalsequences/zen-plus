@@ -8,6 +8,9 @@ import * as core_api from '@/lib/nodes/definitions/core/index';
 import * as gpu_docs from '@/lib/nodes/definitions/webgpu/doc';
 import * as gpu_api from '@/lib/nodes/definitions/webgpu/index';
 
+import * as gl_docs from '@/lib/nodes/definitions/gl/doc';
+import * as gl_api from '@/lib/nodes/definitions/gl/index';
+
 import * as onchain_docs from '@/lib/nodes/definitions/onchain/doc';
 import * as onchain_api from '@/lib/nodes/definitions/onchain/index';
 
@@ -26,7 +29,8 @@ export enum OperatorContextType {
     CORE,
     WEBGPU,
     SVG,
-    ONCHAIN
+    ONCHAIN,
+    GL
 }
 
 export const getAllAPIs = (): API[] => {
@@ -35,7 +39,8 @@ export const getAllAPIs = (): API[] => {
     let core = getOperatorContext(OperatorContextType.CORE);
     let gpu = getOperatorContext(OperatorContextType.WEBGPU);
     let svg = getOperatorContext(OperatorContextType.SVG);
-    return [zen.api, audio.api, core.api, gpu.api, svg.api];
+    let gl = getOperatorContext(OperatorContextType.GL);
+    return [zen.api, audio.api, core.api, gpu.api, svg.api, gl.api];
 };
 
 export const getAllDefinitions = (): docs.API[] => {
@@ -45,7 +50,8 @@ export const getAllDefinitions = (): docs.API[] => {
     let gpu = getOperatorContext(OperatorContextType.WEBGPU);
     let svg = getOperatorContext(OperatorContextType.SVG);
     let onchain = getOperatorContext(OperatorContextType.ONCHAIN);
-    return [zen.definitions, audio.definitions, core.definitions, gpu.definitions, svg.definitions, onchain.definitions];
+    let gl = getOperatorContext(OperatorContextType.GL);
+    return [zen.definitions, audio.definitions, core.definitions, gpu.definitions, svg.definitions, onchain.definitions, gl.definitions];
 };
 
 export const getAllContexts = (): OperatorContext[] => {
@@ -55,7 +61,8 @@ export const getAllContexts = (): OperatorContext[] => {
     let gpu = getOperatorContext(OperatorContextType.WEBGPU);
     let svg = getOperatorContext(OperatorContextType.SVG);
     let onchain = getOperatorContext(OperatorContextType.ONCHAIN);
-    let contexts = [zen, audio, core, gpu, svg, onchain];
+    let gl = getOperatorContext(OperatorContextType.GL);
+    let contexts = [zen, audio, core, gpu, svg, onchain, gl];
     return contexts;
 };
 
@@ -79,6 +86,8 @@ export const getContextName = (type?: OperatorContextType): string | null => {
         return "svg";
     } else if (type === OperatorContextType.ONCHAIN) {
         return "onchain";
+    } else if (type === OperatorContextType.GL) {
+        return "gl";
     } else {
         return null;
     }
@@ -119,6 +128,13 @@ export const getOperatorContext = (type: OperatorContextType): OperatorContext =
             definitions: svg_docs.api,
             lookupDoc: svg_docs.lookupDoc,
             api: svg_api.api
+        };
+    } else if (type === OperatorContextType.GL) {
+        return {
+            type,
+            definitions: gl_docs.api,
+            lookupDoc: gl_docs.lookupDoc,
+            api: gl_api.api
         };
     } else {
         return {

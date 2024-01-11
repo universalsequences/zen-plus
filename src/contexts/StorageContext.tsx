@@ -57,12 +57,8 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
                 patch
             });
 
-            console.log('patch=', patch);
         }
-        console.log('fetch all=', fetched);
     };
-
-    console.log('subpatches= ', subpatches);
 
     const getPatches = (key: string) => {
         let projects = JSON.parse(window.localStorage.getItem(key) || "[]")
@@ -86,7 +82,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     };
 
     const savePatch = useCallback((name: string, patchToSave: SerializedPatch): Promise<string> => {
-        console.log(patchToSave);
         return new Promise(resolve => {
             fetch('/api/compress', {
                 method: "POST",

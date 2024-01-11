@@ -19,7 +19,7 @@
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
-  background-image: url(/pawel2.jpg);
+  background-image: url(/pawel5.jpg);
   
   background-color: #111010 !important;
   background-color: #575757 !important;
@@ -210,7 +210,8 @@ div[data-radix-popper-content-wrapper] {
 }
 
 .bg-black-clear {
-    background-color: #bbb1b140;
+    //background-color: #bbb1b140;
+    background-color: #e0e0e038;
 }
 
 .bg-black-clear-light {
@@ -272,6 +273,6 @@ textarea {
         background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0b,#0b0b0b);
         //background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bcf,#0b0b0bcf);
         //background-image: radial-gradient(circle at center center, rgb(36 38 37) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0ba3,#0b0b0ba3);
-            background-image: radial-gradient(circle at center center, rgb(59 69 63) 0%, rgb(12 12 12) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0ba3,#0b0b0ba3);
+        background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf0,#0b0b0bf2);
     background-size: 14px 14px;
 }

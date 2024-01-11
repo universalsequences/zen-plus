@@ -1,4 +1,5 @@
 import { Arg, Context, UGen, Generated } from './index';
+import { MemoryBlock } from './block'
 import { cKeywords } from './math';
 import { Target } from './targets';
 import { memo } from './memo';
@@ -109,6 +110,56 @@ export const call = (lazyFunction: LazyFunction, invocation: number, ...args: UG
         return generated;
     });
 };
+
+export const latchcall = (lazyFunction: LazyFunction, invocation: number, latchCondition: UGen, ...args: UGen[]): UGen => {
+    let already = false;
+    return memo((context: Context): Generated => {
+        let _func: Function = lazyFunction(context);
+        let _args: Generated[] = args.map(arg => context.gen(arg));
+        let _latchCondition: Generated = context.gen(latchCondition);
+        let name = _func.name;
+        already = true;
+        let [variable] = context.useVariables(`${name}Value`);
+
+        let block: MemoryBlock = context.alloc(8);
+
+        // call the function w/ the invocation number
+        // how do we route the correct arguments to the right ordering
+        // we almost need to "name" 
+        let THIS = context.target === Target.Javascript ? "this." : "";
+        let keyword = context.target === Target.C ? context.varKeyword + "*" : "let";
+
+        let code = "";
+
+        for (let i = 0; i < 8; i++) {
+            code += `${context.varKeyword} ${variable}_${i} = memory[${(block.idx as number) + i}];
+`;
+        }
+
+        code += `
+if (${_latchCondition.variable} > 0) {
+    ${keyword} ${variable} = ${THIS}${name} (${invocation}, ${_args.map(x => x.variable).join(",")}); 
+`;
+        for (let i = 0; i < 8; i++) {
+            code += `    ${variable}_${i} = ${variable}[${i}];
+    memory[${(block.idx as number) + i}] = ${variable}_${i};
+`;
+        }
+
+        code += `
+}
+`;
+
+        let generated: Generated = context.emit(code, variable, _latchCondition, ..._args);
+        let _funcs = generated.functions || [];
+
+        // append function
+        generated.functions = [..._funcs, _func];
+        return generated;
+    });
+};
+
+
 
 export const nth = (array: Arg, index: Arg = 0) => {
     return memo((context: Context) => {

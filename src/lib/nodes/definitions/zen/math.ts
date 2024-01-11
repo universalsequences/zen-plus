@@ -259,7 +259,15 @@ export const zen_or = (object: ObjectNode, b: Lazy) => {
     return memoZen(object, "or" as Operator, b);
 };
 
-op_doc('round', 2);
+doc(
+    'round',
+    {
+        numberOfInlets: 2,
+        inletNames: ["multiple"],
+        numberOfOutlets: 1,
+        description: "rounds input to nearest multiple",
+        defaultValue: 1
+    });
 export const zen_round = (object: ObjectNode, multiple: Lazy) => {
     return memo(object, (num: Message): Statement => {
         let mode: RoundMode = (object.attributes.mode || "nearest") as RoundMode;
@@ -287,9 +295,16 @@ export const zen_wrap = (object: ObjectNode, b: Lazy, c: Lazy) => {
     return memoZen(object, "wrap" as Operator, b, c);
 };
 
-op_doc('scale', 5);
-export const zen_scale = (object: ObjectNode, min1: Lazy, max1: Lazy, min2: Lazy, max2: Lazy) => {
-    return memoZen(object, "scale" as Operator, min1, max1, min2, max2);
+doc(
+    "scale",
+    {
+        numberOfInlets: 6,
+        numberOfOutlets: 1,
+        description: "scales an input of known range into a new range",
+        defaultValue: 1
+    });
+export const zen_scale = (object: ObjectNode, min1: Lazy, max1: Lazy, min2: Lazy, max2: Lazy, exp: Lazy) => {
+    return memoZen(object, "scale" as Operator, min1, max1, min2, max2, exp);
 };
 
 op_doc('sampstoms', 1);

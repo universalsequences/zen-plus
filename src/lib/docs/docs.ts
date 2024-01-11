@@ -1,4 +1,5 @@
 import { ConnectionType, Attributes, AttributeOptions } from '../nodes/types';
+import { UGen, Arg } from '@/lib/gl/types';
 
 export interface Definition {
     description: string;
@@ -12,6 +13,7 @@ export interface Definition {
     name?: string;
     attributeOptions?: AttributeOptions;
     attributes?: Attributes;
+    fn?: (...args: Arg[]) => UGen
 }
 
 export type API = {

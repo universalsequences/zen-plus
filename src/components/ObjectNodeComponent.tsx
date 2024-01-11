@@ -80,7 +80,7 @@ const InnerObjectNodeComponent: React.FC<{
             }
         }, [objectNode]);
 
-        const { setAutoCompletes, autoCompletes } = useAutoComplete(text);
+        const { setAutoCompletes, autoCompletes } = useAutoComplete(text, objectNode);
 
         let objectNodes = objectNode.subpatch ? objectNode.subpatch.objectNodes : undefined;
         let messageNodes = objectNode.subpatch ? objectNode.subpatch.messageNodes : undefined;
@@ -232,10 +232,8 @@ const InnerObjectNodeComponent: React.FC<{
                     if (objectNode.name === "zen" && objectNode.subpatch) {
                         let diff = new Date().getTime() - lastSubPatchClick.current;
                         lastSubPatchClick.current = new Date().getTime();
-                        console.log("diff = ", diff);
                         expandPatch(objectNode);
                         if (diff > 250) {
-                            console.log("return...");
                             return;
                         }
                         return;

@@ -104,6 +104,10 @@
     background-color: #0118ff;
 }
 
+.node-component.context-type-6 {
+    background-color: #8f18ff;
+}
+
 
 .dark-modal {
     background-color: #3432322b;
@@ -137,7 +141,7 @@
 }
 
 body {
-    --dark-patch-color: #222224d4;
+    --dark-patch-color: #222224;
 }
 
 .opened-sidebar, .opened-sidebar2 {
@@ -259,7 +263,7 @@ svg {
         stroke: red !important;
     }
     path.zen {
-        stroke: #26ffe4b3;
+        stroke: #26ffe4;
     }
 
     path.core {
@@ -269,10 +273,14 @@ svg {
     path.audio {
         stroke: yellow;
     }
+
+    path.gl {
+        stroke: #a59df3;
+    }
 }
 
 .selected-patch {
-     border-color:  #cbffef70 !important;
+     border-color:  #cbffef !important;
 }
 
 .tile {
@@ -308,7 +316,7 @@ svg {
 }
 
 .tile-container {
-    gap: 15px;
+    gap: 45px;
 }
 
 .save-connect {

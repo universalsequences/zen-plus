@@ -47,7 +47,8 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
         let totalInvocations = 0;
         let downstream = node.patch.getAllNodes();
         for (let n of downstream) {
-            if ((n as ObjectNode).name === "call" &&
+            let objectNode = n as ObjectNode;
+            if ((objectNode.name === "call" || objectNode.name === "latchcall") &&
                 n.attributes["name"] === name) {
                 totalInvocations++;
             }
@@ -121,6 +122,59 @@ const call = (node: ObjectNode, ...args: Lazy[]) => {
 }
 
 doc(
+    'latchcall',
+    {
+        description: "defines a function ",
+        numberOfInlets: (x: number) => x + 1,
+        numberOfOutlets: 1,
+        inletNames: ["arg1", "arg2", "arg2"]
+    });
+const latchcall = (node: ObjectNode, ...args: Lazy[]) => {
+    return (message: Message) => {
+        let name = node.attributes["name"] || "test";
+
+        let upstream = getUpstreamNodes(node.patch);
+        let backwards = upstream;
+        let defuns = backwards.filter(x => x.name === "defun" &&
+            x.attributes["name"] === name);
+        let _node = defuns[0];
+        if (!_node) {
+            return [];
+        }
+        let callers = upstream.filter(x => (x.name === "call" || x.name === "latchcall") &&
+            x.attributes["name"] == name);
+
+
+        let invocationNumber = callers.indexOf(node);
+        let _args = args.map(x => x()).filter(x => x !== undefined);
+        let body = _node.storedMessage;
+        if (!body) {
+            return [];
+        }
+        let ret = [
+            { name: "latchcall", value: invocationNumber },
+            body,
+            message,
+            ..._args,
+        ];
+        (ret as Statement).node = node;
+
+        let numBodies = (body as Statement[]).length - 1;
+        let rets: Statement[] = [];
+        for (let i = 0; i < numBodies; i++) {
+            let nth: Statement = ["nth" as Operator, ret as Statement, i];
+            if (!node.outlets[i]) {
+                node.newOutlet();
+            }
+            rets.push(nth);
+        }
+        return rets;
+    }
+}
+
+
+
+doc(
     'argument',
     {
         description: "defines an argument for a function ",
@@ -144,7 +198,8 @@ export const functions: API = {
     defun,
     call,
     argument,
-    polycall
+    polycall,
+    latchcall
 }
 
 export const getUpstreamNodes = (patch: Patch): ObjectNode[] => {

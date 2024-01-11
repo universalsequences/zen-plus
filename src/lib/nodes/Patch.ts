@@ -101,7 +101,8 @@ export class PatchImpl implements Patch {
         let _objectNodes = objectNodes;
         if (true) { //this.name === undefined) {
             for (let node of _objectNodes) {
-                if (node.operatorContextType !== OperatorContextType.ZEN) {
+                if (node.operatorContextType !== OperatorContextType.ZEN &&
+                    node.operatorContextType !== OperatorContextType.GL) {
                     continue;
                 }
                 if (node.subpatch) {
@@ -118,7 +119,8 @@ export class PatchImpl implements Patch {
             }
 
             for (let node of _objectNodes) {
-                if (node.operatorContextType !== OperatorContextType.ZEN) {
+                if (node.operatorContextType !== OperatorContextType.ZEN &&
+                    node.operatorContextType !== OperatorContextType.GL) {
                     continue;
                 }
                 if (node.subpatch) {
@@ -156,7 +158,7 @@ export class PatchImpl implements Patch {
                 }
             });
 
-        sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument");
+        sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument" || node.name === "uniform");
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -216,7 +218,7 @@ export class PatchImpl implements Patch {
 
 
         if (this.name === undefined) {
-            let calls = _objectNodes.filter(node => node.name === "call");
+            let calls = _objectNodes.filter(node => node.name === "call" || node.name === "latchcall");
             calls.forEach(
                 call => {
                     if (call.fn && call.inlets[0] && call.inlets[0].lastMessage) {

@@ -82,7 +82,7 @@ const IOletsComponent = (props: Props) => {
                                         onMouseUp={() => onMouseUp(iolet)}
                                         onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => onMouseDown(
                                             e, iolet)}
-                                        className={(iolet.hidden ? "opacity-0 " : "") + (iolet.connections.length > 0 ? "  border-teal-400 bg-black hover:bg-teal-400 " : "bg-white hover:border-red-500 ") + " border-2 w-2 h-2 rounded-full  hover:bg-red-500 z-30"}>
+                                        className={(iolet.hidden ? "opacity-0 " : "") + (iolet.connections.length > 0 ? "  border-teal-400 bg-black hover:bg-teal-400 " : "bg-zinc-400 border-zinc-100 hover:border-red-500 ") + " border-2 w-2 h-2 rounded-full  hover:bg-red-500 z-30"}>
                                     </div>
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal

@@ -43,6 +43,7 @@ export const zen_data = (
         } else {
             // we've already initialized the data, so we need to simply
             // feed this data into the block
+            console.log('setting...', inputData);
             if (ArrayBuffer.isView(inputData)) {
                 block.set!(inputData as Float32Array);
             } else if (Array.isArray(inputData)) {
