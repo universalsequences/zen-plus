@@ -75,6 +75,17 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
 
     useEffect(() => {
+        window.addEventListener("click", resume);
+        return () => window.removeEventListener("click", resume);
+    }, [patch]);
+
+    const resume = useCallback(() => {
+        if (patch && patch.audioContext.state === "suspended") {
+            patch.audioContext.resume();
+        }
+    }, [patch]);
+
+    useEffect(() => {
         if (props.isCustomView) {
             patch.setObjectNodes = setObjectNodes;
         }

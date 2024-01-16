@@ -57,6 +57,8 @@ export class PatchImpl implements Patch {
         this.type = PatchType.Zen;
         this.objectNodes = [];
         this.messageNodes = [];
+
+        // TODO: ensure that this is base patch...
         this.audioContext = new AudioContext({ sampleRate: 44100 });
         this.worklets = [];
         this.waiting = false;
