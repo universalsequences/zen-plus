@@ -63,6 +63,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         updatePositions,
         setDraggingSegmentation,
         draggingCable,
+        setDraggingCable,
         draggingSegmentation,
     } = usePosition();
 
@@ -82,6 +83,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
 
     useEffect(() => {
         patch.onNewMessage = onNewMessage;
+        console.log("patch =", patch);
     }, [patch, onNewMessage]);
 
     useKeyBindings(scrollRef);
@@ -90,20 +92,40 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
 
     const lastClick = useRef(0);
 
-    const onMouseUp = useCallback((e: MouseEvent) => {
-        console.log("on mouse up");
+    let draggingCableRef = useRef<any | null>(null);
+    useEffect(() => {
+        draggingCableRef.current = draggingCable;
+    }, [draggingCable]);
+
+    const onMouseUpNode = useCallback((e: MouseEvent | React.MouseEvent<HTMLDivElement>) => {
+        setDraggingNode(null);
+        setResizingNode(null);
+    }, [setDraggingNode, setResizingNode]);
+
+    const onMouseUp = useCallback((e: MouseEvent | React.MouseEvent<HTMLDivElement>) => {
+        console.log('on mouse up=', draggingCable);
+
+        if (draggingCableRef.current) {
+            e.stopPropagation();
+            setDraggingCable(null);
+            return;
+        }
+
         if (resizingPatch) {
+            e.stopPropagation();
             setResizingPatch(null);
         }
+
         if (isCustomView) {
             return;
         }
         if (lockedMode) {
             return;
         }
+
         setDraggingSegmentation(null);
+
         if (selection && selection.patch === patch) {
-            console.log('selected called...');
             let all = [...patch.objectNodes, ...patch.messageNodes];
             let filtered = all.filter(
                 node => {
@@ -114,12 +136,9 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                     return position.x + w >= selection.x1 && position.x <= selection.x2 &&
                         position.y + h >= selection.y1 && position.y <= selection.y2;
                 });
-            console.log('filtered = ', filtered);
             setSelectedNodes(filtered);
         }
-        setDraggingNode(null);
-        setResizingNode(null);
-    }, [patch, presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
+    }, [patch, setDraggingCable, presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
 
     const draggingNodeRef = useRef<DraggingNode | null>(null);
     const resizingNodeRef = useRef<ResizingNode | null>(null);
@@ -291,16 +310,18 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
 
     useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
+        window.addEventListener("mouseup", onMouseUpNode);
         return () => {
             window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onMouseUp);
+            window.removeEventListener("mouseup", onMouseUpNode);
         }
     }, [
         presentationMode,
         draggingSegmentation,
         patch,
         setDraggingSegmentation,
+        draggingCable,
+        setDraggingCable,
         resizingPatch,
         setResizingPatch,
         setGridTemplate,
@@ -527,6 +548,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             <div
                 style={style}
                 onClick={onClick}
+                onMouseUp={isCustomView ? undefined : onMouseUp}
                 onMouseMove={onSelectionMove}
                 onMouseDown={onMouseDown}
                 className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
@@ -585,7 +607,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 }
             </div>
         </>);
-    }, [maxWidth, gridTemplate, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
+    }, [maxWidth, setDraggingCable, gridTemplate, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
 
     return mem;
 };

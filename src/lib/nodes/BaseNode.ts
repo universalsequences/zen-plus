@@ -4,6 +4,7 @@ import {
     AttributeOptions,
     Patch, IOConnection, ConnectionType, SerializedConnection, IOlet, Message, ObjectNode, MessageNode, Node, Attributes
 } from './types';
+import { OperatorContextType } from './context';
 import { v4 as uuidv4 } from 'uuid';
 import { uuid } from '@/lib/uuid/IDGenerator';
 
@@ -93,7 +94,7 @@ export class BaseNode implements Node {
         if (inlet.connectionType === ConnectionType.AUDIO &&
             outlet.connectionType === ConnectionType.AUDIO) {
             this.connectAudioNode(connection);
-        } else if (compile && (outlet.connectionType === ConnectionType.ZEN || outlet.connectionType === ConnectionType.GL)) {
+        } else if (compile && (outlet.connectionType === ConnectionType.ZEN || outlet.connectionType === ConnectionType.GL || inlet.connectionType === ConnectionType.ZEN || inlet.connectionType === ConnectionType.GL)) {
             this.patch.recompileGraph();
         }
         return connection;

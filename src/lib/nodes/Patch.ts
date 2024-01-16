@@ -42,8 +42,9 @@ export class PatchImpl implements Patch {
     skipRecompile: boolean;
     skipRecompile2: boolean;
     setZenCode?: (x: string | null) => void;
+    setVisualsCode?: (x: string | null) => void;
     previousSerializedPatch?: SerializedPatch;
-    previousTokenId: number;
+    previousDocId?: string;
 
     constructor() {
         this.id = uuid();
@@ -62,18 +63,17 @@ export class PatchImpl implements Patch {
         this.storedStatement = undefined;
         this.missedConnections = [];
         this.outputStatements = [];
-        this.previousTokenId = 0;
     }
 
     getAllNodes(): ObjectNode[] {
         let nodes = [... this.objectNodes];
-        let subpatches = nodes.filter(x => x.subpatch).map(x => x.subpatch);
+        let subpatches = nodes.filter(x => x.subpatch).map(x => x.subpatch) as Patch[];
         return [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes())];
     }
 
     getAllMessageNodes(): MessageNode[] {
         let nodes = [... this.objectNodes];
-        let subpatches = nodes.filter(x => x.subpatch).map(x => x.subpatch);
+        let subpatches = nodes.filter(x => x.subpatch).map(x => x.subpatch) as Patch[];
         return [...this.messageNodes, ...subpatches.flatMap((x: Patch) => x.getAllMessageNodes())];
     }
 
@@ -86,8 +86,10 @@ export class PatchImpl implements Patch {
         }
         let startTime = new Date().getTime();
         if (this.skipRecompile || this.skipRecompile2) {
+            console.log("skipping...");
             return;
         }
+        console.log("disconnecting...");
         this.skipRecompile2 = true;
         this.disconnectGraph();
         this.outputStatements = [];
@@ -100,6 +102,7 @@ export class PatchImpl implements Patch {
         let objectNodes = this.objectNodes; //getAllNodes();
         let _objectNodes = objectNodes;
         if (true) { //this.name === undefined) {
+            console.log('going thru objects...');
             for (let node of _objectNodes) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
@@ -113,11 +116,12 @@ export class PatchImpl implements Patch {
                         n.lastMessage = undefined;
                     });
                 node.lastSentMessage = undefined;
-                if ((node as ObjectNode).name !== "param") {
+                if ((node as ObjectNode).name !== "param" && (node as ObjectNode).name !== "uniform") {
                     node.storedMessage = undefined;
                 }
             }
 
+            console.log('node');
             for (let node of _objectNodes) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
@@ -141,6 +145,7 @@ export class PatchImpl implements Patch {
         }
 
 
+        console.log('initing matgrices and everything');
 
         let a = new Date().getTime();
         let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");

@@ -1,4 +1,5 @@
-import { UniformDefinition, UGen, Context, Generated, GLType } from './types';
+import { ChildContext, UniformDefinition, UGen, Context, Generated, GLType } from './types';
+import { memo } from './memo';
 
 /**
  * handle uniforms similar to params in zen
@@ -13,15 +14,22 @@ export const uniform = (type: GLType, val: number): Uniform => {
     let contexts: Context[] = [];
     let uniformDefinition: UniformDefinition;
     let lastValue: Data = val;
-
+    let id = "_" + Math.floor(100000 * Math.random());
     let _uniform: Uniform = (): UGen => {
-        return (context: Context): Generated => {
-            contexts.push(context);
-            let [uniformName] = context.useVariables("uniform");
+        return memo((context: Context): Generated => {
+            let _context = context;
+            while ((_context as ChildContext).parentContext) {
+                _context = (_context as ChildContext).parentContext;
+            }
+            let [uniformName] = context.useVariables("uniform" + id);
+            if (uniformDefinition) {
+                uniformName = uniformDefinition.name;
+            }
             uniformDefinition = {
                 name: uniformName,
                 type
             };
+            contexts.push(_context);
 
             let generated: Generated = context.emit(
                 type, "", uniformName);
@@ -30,8 +38,11 @@ export const uniform = (type: GLType, val: number): Uniform => {
             }
             generated.uniforms.push(uniformDefinition);
             context.uniforms.push(_uniform);
+            if ((context as ChildContext).parentContext) {
+                (context as ChildContext).parentContext.uniforms.push(_uniform);
+            }
             return generated;
-        };
+        });
     };
 
     _uniform.set = (v: Data = lastValue) => {

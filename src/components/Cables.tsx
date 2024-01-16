@@ -33,13 +33,12 @@ const Cables = () => {
                 {notSelected.map((node, i) =>
                     <ObjectCables
                         setDraggingSegmentation={setDraggingSegmentation}
-                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
+                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={node.id} node={node} />)}
                 {selected.map((node, i) =>
                     <ObjectCables
                         setDraggingSegmentation={setDraggingSegmentation}
-                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
-                <AlignmentHelper /
-                >
+                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={node.id} node={node} />)}
+                <AlignmentHelper />
                 {!presentationMode && <Dragging />}
 
             </svg>
@@ -67,16 +66,12 @@ const Dragging = () => {
 
     useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
+        //window.addEventListener("mouseup", onMouseUp);
         return () => {
-            window.removeEventListener("mouseup", onMouseUp);
+            //window.removeEventListener("mouseup", onMouseUp);
             window.removeEventListener("mousemove", onMouseMove);
         }
     }, [draggingCable, setCurrent, setDraggingCable]);
-
-    const onMouseUp = useCallback((e: MouseEvent) => {
-        setDraggingCable(null);
-    }, [setDraggingCable]);
 
     const onMouseMove = useCallback((e: MouseEvent) => {
         if (!scrollRef.current) {
@@ -285,5 +280,5 @@ const Edge: React.FC<{
         return p;
     };
 
-
+ObjectCables.displayName = "ObjectCables";
 export default Cables;

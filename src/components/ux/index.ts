@@ -13,7 +13,7 @@ import Audio from './Audio';
 import Comment from './Comment';
 import HTMLViewer from './HTMLViewer';
 
-interface NodeProps {
+export interface NodeProps {
     objectNode: ObjectNode;
 }
 

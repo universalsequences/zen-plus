@@ -23,7 +23,7 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
                     {doc && <div className="mt-2 w-52">{doc.description}</div>}
                 </div>
                 {attributeNames.map(
-                    attribute => <Attribute attribute={attribute} node={node} />)}
+                    (attribute, i) => <Attribute key={i} attribute={attribute} node={node} />)}
             </div>
         </div>
     );

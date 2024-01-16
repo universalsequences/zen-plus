@@ -1,18 +1,27 @@
-import { GLType, Arg, UniformDefinition, Error, Generated, EmittedVariables, UGen, Context } from './types';
+import { GLType, Arg, UniformDefinition, Error, Generated, EmittedVariables, UGen, Context, ChildContext } from './types';
+import { Varying } from './varying';
+import { Attribute, emitAttributes } from './attributes';
+import { emitFunctions, emitArguments } from './functions';
 import { Uniform } from './uniforms';
 
 export class ContextImpl implements Context {
     idx: number;
     emittedVariables: EmittedVariables;
+    attributes: Attribute[];
     errors: Error[];
     webGLRenderingContext: WebGLRenderingContext | null;
     webGLProgram: WebGLProgram | null;
     uniforms: Uniform[];
+    varyings: Varying[];
+    siblingContext?: Context;
 
-    constructor() {
+    constructor(siblingContext?: Context) {
         this.idx = 0;
+        this.siblingContext = siblingContext;
         this.emittedVariables = {};
+        this.attributes = [];
         this.uniforms = [];
+        this.varyings = [];
         this.errors = [];
         this.webGLRenderingContext = null;
         this.webGLProgram = null;
@@ -20,7 +29,6 @@ export class ContextImpl implements Context {
 
     initializeUniforms() {
         for (let uni of this.uniforms) {
-            console.log('initializing uni=', uni);
             uni.set!();
         }
     }
@@ -54,7 +62,14 @@ export class ContextImpl implements Context {
             return "vec3";
         } else if (type === GLType.Vec4) {
             return "vec4";
+        } else if (type === GLType.Mat2) {
+            return "mat2";
+        } else if (type === GLType.Mat3) {
+            return "mat3";
+        } else if (type === GLType.Mat4) {
+            return "mat4";
         } else {
+            console.log('type print type = ', GLType.Mat4, type);
             return "sampler2D";
         }
     }
@@ -85,10 +100,21 @@ export class ContextImpl implements Context {
             uniforms: Array.from(_uniforms),
             variable,
             type,
-            variables: Array.from(_variables)
+            variables: Array.from(_variables),
+            functions: emitFunctions(...args),
+            functionArguments: emitArguments(...args),
+            attributes: emitAttributes(...args),
         };
     }
 
+}
+
+export class ChildContextImpl extends ContextImpl implements ChildContext {
+    parentContext: Context;
+    constructor(parentContext: Context) {
+        super();
+        this.parentContext = parentContext;
+    }
 }
 
 export const float = (x: number): UGen => {
@@ -132,16 +158,3 @@ export const emitType = (gens: Generated[]) => {
     return maxType;
 };
 
-export const printType = (type: GLType): string => {
-    if (type === GLType.Float) {
-        return "float";
-    } else if (type === GLType.Vec2) {
-        return "vec2";
-    } else if (type === GLType.Vec3) {
-        return "vec3";
-    } else if (type === GLType.Vec4) {
-        return "vec4";
-    } else {
-        return "sampler2D";
-    }
-};

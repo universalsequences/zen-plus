@@ -135,7 +135,6 @@ const PatchInner: React.FC<{
     });
 
     let out = React.useMemo(() => {
-        console.log("patch inner");
         let inner = <div
             className={(draggingCable ? " dragging-cable " : "") + "patcher-background"}
         ><div
@@ -241,4 +240,5 @@ const PatchInner: React.FC<{
     return out;
 });
 
+PatchInner.displayName = 'PatchInner';
 export default PatchInner;

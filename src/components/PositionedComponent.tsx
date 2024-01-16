@@ -6,15 +6,17 @@ import { MessageType, ObjectNode, MessageNode, Orientation, Patch, Coordinate, P
 import { useSelection } from '@/contexts/SelectionContext';
 import { usePosition } from '@/contexts/PositionContext';
 import { usePositionStyle } from '@/hooks/usePositionStyle';
+import { OperatorContextType } from '@/lib/nodes/context';
 
 const PositionedComponent: React.FC<{
     isCustomView?: boolean,
+    isError?: boolean,
     text?: string,
     lockedModeRef: React.MutableRefObject<boolean>
     skipOverflow?: boolean,
     children: React.ReactNode,
     node: ObjectNode | MessageNode
-}> = ({ text, node, isCustomView, children, skipOverflow, lockedModeRef }) => {
+}> = ({ text, node, isCustomView, children, isError, skipOverflow, lockedModeRef }) => {
 
     const { setSelectedNodes, selectedNodes } = useSelection();
     const { sizeIndex, setDraggingNode, setResizingNode, updateSize, updateZIndex, maxZIndex } = usePosition();
@@ -157,7 +159,8 @@ const PositionedComponent: React.FC<{
             minWidth: `${minWidth}px`,
         };
         let _size = (node as ObjectNode).size;
-        if ((node as ObjectNode).name === "slider" || ((node as ObjectNode).name === "knob")) {
+        if ((node as ObjectNode).name === "slider" || ((node as ObjectNode).name === "knob") ||
+            (node as ObjectNode).operatorContextType === OperatorContextType.NUMBER) {
             _style.minWidth = "unset";
         }
         let allowSize = false;
@@ -165,6 +168,10 @@ const PositionedComponent: React.FC<{
             _style.width = _size.width;
             _style.height = _size.height;
             allowSize = true;
+        }
+
+        if (isError) {
+            className += " has-error";
         }
 
         return (
@@ -211,7 +218,7 @@ const PositionedComponent: React.FC<{
                 {children}
             </div>);
 
-    }, [node, size, children, style, text]);
+    }, [node, isError, size, children, style, text]);
     return out;
 };
 

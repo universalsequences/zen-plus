@@ -62,6 +62,7 @@ const SVGCanvas: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             style={{ minWidth: 50, minHeight: 50 }} className="">
             {l.map(
                 (x, i) => x.type === "path" ? <path
+                key={i}
                     onMouseDown={(e: any) => {
                         e.stopPropagation();
                         setDragging(i);

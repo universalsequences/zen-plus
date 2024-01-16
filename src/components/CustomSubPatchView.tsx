@@ -34,7 +34,7 @@ const Inner = () => {
         setVisibleObjectNodes(nodes);
     }, [objectNodes, setVisibleObjectNodes]);
 
-    return (<PatchComponent visibleObjectNodes={visibleObjectNodes} isCustomView={true} index={0} />
+    return (<PatchComponent maxWidth={100} maxHeight={100} visibleObjectNodes={visibleObjectNodes} isCustomView={true} index={0} />
     );
 };
 export default CustomSubPatchView;

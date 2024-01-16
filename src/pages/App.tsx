@@ -4,6 +4,7 @@ import Image from 'next/image'
 import React, { useState, useEffect } from 'react';
 import PatchComponent from '@/components/PatchComponent';
 import { MessageProvider } from '@/contexts/MessageContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { TilesProvider } from '@/contexts/TilesContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { StorageProvider } from '@/contexts/StorageContext';
@@ -23,7 +24,8 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import {
-    goerli
+    goerli,
+    //zoraTestnet
 } from 'wagmi/chains';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
 import { infuraProvider } from 'wagmi/providers/infura';
@@ -72,21 +74,23 @@ export default function App() {
                 })}
                 chains={chains}>
                 <Theme appearance="dark" >
-                    <SettingsProvider>
-                        <MessageProvider>
-                            <StorageProvider>
-                                <SelectionProvider>
-                                    <PatchesProvider basePatch={basePatch}>
-                                        <TilesProvider>
-                                            <main className="flex min-h-screen flex-col h-full w-full">
-                                                <PatchesComponent />
-                                            </main>
-                                        </TilesProvider>
-                                    </PatchesProvider>
-                                </SelectionProvider>
-                            </StorageProvider>
-                        </MessageProvider>
-                    </SettingsProvider>
+                    <AuthProvider>
+                        <SettingsProvider>
+                            <MessageProvider>
+                                <StorageProvider>
+                                    <SelectionProvider>
+                                        <PatchesProvider basePatch={basePatch}>
+                                            <TilesProvider>
+                                                <main className="flex min-h-screen flex-col h-full w-full">
+                                                    <PatchesComponent />
+                                                </main>
+                                            </TilesProvider>
+                                        </PatchesProvider>
+                                    </SelectionProvider>
+                                </StorageProvider>
+                            </MessageProvider>
+                        </SettingsProvider>
+                    </AuthProvider>
                 </Theme>
             </RainbowKitProvider>
         </WagmiConfig>

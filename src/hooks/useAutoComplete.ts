@@ -5,13 +5,16 @@ import { OperatorContextType, OperatorContext, getAllContexts } from '@/lib/node
 import { NodeFunction, ObjectNode } from '@/lib/nodes/types';
 
 export interface ContextDefinition {
-    definition: Definition & { tokenId?: number };
+    definition: Definition & { id?: string };
     context?: OperatorContext;
 }
 
-const _sortContexts = (contexts: OperatorContext[], type: OperatorContextType): OperatorContext[] => {
+const _sortContexts = (contexts: OperatorContext[], type: OperatorContextType, filter?: boolean): OperatorContext[] => {
     // stay within the operator context
     let contextA = contexts.filter(x => x.type === type);
+    if (filter) {
+        return contextA;
+    }
     let contextB = contexts.filter(x => x.type !== type);
     return [...contextA, ...contextB];
 }
@@ -21,12 +24,11 @@ let dist = (a: ObjectNode, b: ObjectNode): number => {
 };
 
 const sortContexts = (contexts: OperatorContext[], node: ObjectNode): OperatorContext[] => {
-    if (node.text && node.operatorContextType) {
-        return _sortContexts(contexts, node.operatorContextType);
+    if (node.text && node.operatorContextType && node.operatorContextType !== OperatorContextType.NUMBER) {
+        return _sortContexts(contexts, node.operatorContextType, true);
     }
 
-
-    let nodes = node.patch.objectNodes.filter(
+    let nodes = node.patch.objectNodes.filter(x => x.operatorContextType !== OperatorContextType.NUMBER).filter(
         x => x !== node).sort(
             (a, b) => dist(a, node) - dist(b, node));
 
@@ -37,7 +39,7 @@ const sortContexts = (contexts: OperatorContext[], node: ObjectNode): OperatorCo
     return contexts;
 };
 
-export const useAutoComplete = (text: string, objectNode: ObjectNode) => {
+export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: boolean) => {
     let [autoCompletes, setAutoCompletes] = useState<ContextDefinition[]>([]);
     let { onchainSubPatches } = useStorage();
 
@@ -74,18 +76,18 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode) => {
             if (_name.startsWith(_text)) {
                 options.push({
                     definition: {
-                        description: "user generated supatch #" + elem.tokenId,
+                        description: "user generated supatch #" + elem.id,
                         name: elem.name as string,
                         numberOfInlets: 0,
                         numberOfOutlets: 0,
-                        tokenId: elem.tokenId
+                        id: elem.id
                     }
                 });
             }
         }
 
         setAutoCompletes(options);
-    }, [text, setAutoCompletes]);
+    }, [text, setAutoCompletes, editing]);
 
     return { autoCompletes, setAutoCompletes };
 };

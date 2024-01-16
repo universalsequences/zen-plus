@@ -1,4 +1,10 @@
 "use client"
+import { useAuth } from '@/contexts/AuthContext';
+import { useSwitchNetwork } from 'wagmi';
+import {
+    goerli,
+    zoraTestnet
+} from 'wagmi/chains';
 import Toolbar from './Toolbar';
 import SearchWindow from './SearchWindow';
 import { Backfill } from './Backfill';
@@ -19,12 +25,19 @@ import { useTilesContext } from '@/contexts/TilesContext';
 
 
 export default function PatchesComponent() {
+    const { switchNetwork } = useSwitchNetwork();
+    useEffect(() => {
+        if (switchNetwork) {
+            switchNetwork(goerli.id);
+        }
+    }, [switchNetwork]);
     let { rootTile, selectedPatch, patches } = usePatches();
     let { gridTemplate } = useTilesContext();
 
     let { lastResizingTime, setSelection, setSelectedNodes, setSelectedConnection, selection } = useSelection();
     let [showSearch, setShowSearch] = useState(false);
 
+    const { googleSignIn, user } = useAuth();
     const { lightMode } = useSettings();
 
     useEffect(() => {
@@ -77,6 +90,23 @@ export default function PatchesComponent() {
     }, [setSelection, selection]);
 
     return React.useMemo(() => {
+        console.log('user = ', user);
+        if (!user) {
+            return <div
+                className={"flex bg-black w-full h-full min-h-screen " + (lightMode ? "light-mode" : "")}>
+                <div className="flex flex-col w-full mt-5 patches justify-center">
+                    <div className="text-6xl text-center w-64 h-64 m-auto bg-zinc-950 flex">
+                        <span className="m-auto">
+                            zen+
+                        </span>
+
+                    </div>
+                    <button onClick={googleSignIn} className="cursor-pointer px-6 py-1 bg-zinc-900 rounded-full m-auto flex">
+                        sign in
+                    </button>
+                </div>
+            </div >
+        }
         return <>
             <div
                 onClick={onClick}
@@ -95,6 +125,6 @@ export default function PatchesComponent() {
             {/*<Backfill />*/}
 
         </>
-    }, [patches, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode]);
+    }, [patches, user, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode]);
 
 }

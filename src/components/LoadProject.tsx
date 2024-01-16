@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { mergeDiffs } from '@/lib/onchain/merge';
 import pako from 'pako';
 import { MINTER_CONTRACT, DROP_CONTRACT } from './WriteOnChain';
@@ -23,23 +24,27 @@ interface Props {
 
     patch: Patch;
 }
+
+
 const LoadProject = (props: Props) => {
     const publicClient = usePublicClient();
 
-    const { getPatches } = useStorage();
+    const { fetchPatch, fetchPatchesForEmail, getPatches } = useStorage();
     const { patch } = props;
     const [patches, setPatches] = useState<Project[]>([]);
     const { updatePositions, sizeIndexRef, setSizeIndex } = usePosition();
-    const { loadProject } = usePatch();
+    const { loadProjectPatch, loadProject } = usePatch();
 
-    const { data, isError, isLoading } = useContractRead({
-        address: MINTER_CONTRACT,
-        abi: abi,
-        functionName: 'getPatchHeads',
-        args: [false]
-    })
+    let [projects, setProjects] = useState<any[]>([]);
 
-    console.log("get patch heads data=", data);
+    let { user } = useAuth();
+
+    useEffect(() => {
+        if (user) {
+            fetchPatchesForEmail(user.email).then(
+                setProjects);
+        }
+    }, [user]);
 
     const _loadPatch = useCallback((x: Project) => {
         patch.name = x.name;
@@ -57,8 +62,26 @@ const LoadProject = (props: Props) => {
         props.hide();
     }, [patch]);
 
-    const loadPatchToken = useCallback(async (x: number) => {
-        console.log("abi = ", erc.abi, x);
+    const loadPatchToken = useCallback(async (saved: any) => {
+        let serialized = await fetchPatch(saved);
+        loadProjectPatch(serialized);
+
+        patch.name = saved.name;
+        let updates: Coordinates = {};
+        let sizes = { ...sizeIndexRef.current }
+        for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
+            updates[node.id] = node.position;
+            if (node.size) {
+                sizes[node.id] = node.size;
+            }
+        }
+        setSizeIndex(sizes);
+        updatePositions(updates);
+        patch.previousDocId = saved.id;
+        patch.previousSerializedPatch = serialized;
+
+        props.hide();
+        /*
         const data = await publicClient.readContract({
             address: DROP_CONTRACT,
             abi: erc.abi,
@@ -75,7 +98,8 @@ const LoadProject = (props: Props) => {
             let applied = await mergeDiffs(publicClient, x);
             _loadPatch({ name: json.name, json: applied as unknown as any });
         }
-        patch.previousTokenId = x;
+        */
+        // patch.previousTokenId = x;
 
     }, [patch]);
 
@@ -89,9 +113,9 @@ const LoadProject = (props: Props) => {
             <div
                 style={{ borderColor: "#ffffff3f", backgroundColor: "#00000012" }}
                 className="flex-1 mt-4 overflow-y-scroll p-3 border ">
-                {data ? [... (data as any[])].reverse().map(
+                {[... (projects as any[])].reverse().map(
                     (head, index) =>
-                        <ProjectOption key={index} head={head} loadPatchToken={loadPatchToken} />) : <></>}
+                        <ProjectOption key={index} head={head} loadPatchToken={loadPatchToken} />)}
                 {patches.map(
                     (project, index) =>
                         <div
@@ -107,7 +131,7 @@ const LoadProject = (props: Props) => {
 export default LoadProject;
 
 
-function base64ToJson(base64String: string) {
+function base64ToJson(base64String: string): any | null {
     // Step 1: Extract the Base64 encoded string (if it's part of a data URI)
     const splitData = base64String.split(',');
     const encodedString = splitData.length > 1 ? splitData[1] : base64String;
@@ -120,7 +144,6 @@ function base64ToJson(base64String: string) {
         const json = JSON.parse(decodedString);
         return json;
     } catch (e) {
-        console.error('Error parsing JSON:', e);
         return null;
     }
 }

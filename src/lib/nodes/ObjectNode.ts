@@ -182,7 +182,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         let nodeFunction: NodeFunction = context.api[name];
 
         if (!nodeFunction && this.operatorContextType === OperatorContextType.GL) {
-            nodeFunction = createGLFunction(this);
+            nodeFunction = createGLFunction(this, definition);
             if (definition.numberOfInlets === 0) {
                 this.needsLoad = true;
             }
@@ -221,6 +221,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     setupStaticNumberObject(num: number, compile: boolean) {
+        this.operatorContextType = OperatorContextType.NUMBER;
         this.fn = (message: Message) => [num];
         this.inlets.length = 0;
         if (this.outlets.length === 0) {
@@ -372,9 +373,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             ConnectionType.AUDIO :
             t === OperatorContextType.ZEN ?
                 ConnectionType.ZEN :
-                t === OperatorContextType.GL ?
-                    ConnectionType.GL :
-                    ConnectionType.CORE
+                t === OperatorContextType.NUMBER ?
+                    ConnectionType.NUMBER :
+                    t === OperatorContextType.GL ?
+                        ConnectionType.GL :
+                        ConnectionType.CORE
         super.newIOlet(this.outlets, name, c || calculated);
     }
 

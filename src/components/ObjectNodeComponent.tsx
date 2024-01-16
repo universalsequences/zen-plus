@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { TypeError, TypeSuccess } from '@/lib/nodes/typechecker';
 import { fetchOnchainSubPatch } from '@/lib/onchain/fetch';
 import { usePublicClient } from 'wagmi';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import { OperatorContext, OperatorContextType, getAllContexts, getOperatorContext } from '@/lib/nodes/context';
 import { ContextDefinition } from '@/hooks/useAutoComplete';
 import AutoCompletes from './AutoCompletes';
-import { index } from './ux/index';
+import { index, NodeProps } from './ux/index';
 import Attributes from './Attributes';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
 import { SizeIndex, usePosition, DraggingNode } from '@/contexts/PositionContext';
@@ -16,10 +17,15 @@ import { useSelection } from '@/contexts/SelectionContext';
 import { useAutoComplete } from '@/hooks/useAutoComplete';
 import { usePatch } from '@/contexts/PatchContext';
 import CustomSubPatchView from './CustomSubPatchView';
+import { useMessage } from '@/contexts/MessageContext';
+import { useStorage } from '@/contexts/StorageContext';
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const { setSelection, lockedMode, selectedNodes, setSelectedNodes } = useSelection();
     const { updatePosition, sizeIndexRef } = usePosition();
+
+    let { messages } = useMessage();
+    let errorMessage = messages[objectNode.id];
 
     let lockedModeRef = useRef(lockedMode);
     useEffect(() => {
@@ -36,13 +42,15 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
             setSelectedNodes={setSelectedNodes}
             updatePosition={updatePosition}
             isSelected={isSelected}
+            typeError={errorMessage as (TypeError | undefined)}
         />
-    }, [objectNode, setSelectedNodes, isSelected, setSelection]);
+    }, [objectNode, setSelectedNodes, isSelected, setSelection, errorMessage]);
 
     return out;
 };
 
 const InnerObjectNodeComponent: React.FC<{
+    typeError: TypeSuccess | TypeError | undefined,
     setSelection: any,
     isSelected: boolean,
     lockedModeRef: React.MutableRefObject<boolean>,
@@ -52,6 +60,7 @@ const InnerObjectNodeComponent: React.FC<{
     objectNode: ObjectNode
 }> =
     ({
+        typeError,
         updatePosition,
         setSelection,
         lockedModeRef,
@@ -60,11 +69,14 @@ const InnerObjectNodeComponent: React.FC<{
         objectNode,
         setSelectedNodes,
     }) => {
+
+
         const publicClient = usePublicClient();
         const ref = useRef<HTMLDivElement | null>(null);
         const lastSubPatchClick = useRef(0);
         const inputRef = useRef<HTMLInputElement | null>(null);
         const [selected, setSelected] = useState(0);
+        const { fetchSubPatchForDoc } = useStorage();
 
         const { isCustomView, newObjectNode, setPatch } = usePatch();
         const [editing, setEditing] = useState(objectNode.text === "");
@@ -80,7 +92,7 @@ const InnerObjectNodeComponent: React.FC<{
             }
         }, [objectNode]);
 
-        const { setAutoCompletes, autoCompletes } = useAutoComplete(text, objectNode);
+        const { setAutoCompletes, autoCompletes } = useAutoComplete(text, objectNode, editing);
 
         let objectNodes = objectNode.subpatch ? objectNode.subpatch.objectNodes : undefined;
         let messageNodes = objectNode.subpatch ? objectNode.subpatch.messageNodes : undefined;
@@ -91,14 +103,18 @@ const InnerObjectNodeComponent: React.FC<{
             setSelected(0);
         }, [setText, setSelected, objectNode]);
 
-        const enterText = useCallback(async (text: string, context?: OperatorContext, tokenId?: number) => {
+        const enterText = useCallback(async (text: string, context?: OperatorContext, id?: string) => {
             if (!context) {
                 context = getOperatorContext(OperatorContextType.ZEN);
             }
             let success = true
-            if (tokenId) {
-                let serializedSubPatch = await fetchOnchainSubPatch(publicClient, tokenId);
-                success = objectNode.parse(text, context.type, true, serializedSubPatch);
+            if (id) {
+                let serializedSubPatch = await fetchSubPatchForDoc(id);
+                if (serializedSubPatch) {
+                    success = objectNode.parse(text, context.type, true, serializedSubPatch);
+                } else {
+                    success = false;
+                }
             } else {
                 success = objectNode.parse(text, context.type);
             }
@@ -137,7 +153,7 @@ const InnerObjectNodeComponent: React.FC<{
                     if (objectNode.text.split(" ")[0] === name) {
                         name = objectNode.text;
                     }
-                    enterText(name, autoCompletes[selected].context, autoCompletes[selected].definition.tokenId);
+                    enterText(name, autoCompletes[selected].context, autoCompletes[selected].definition.id);
                 } else {
                     enterText(text);
                 }
@@ -179,11 +195,8 @@ const InnerObjectNodeComponent: React.FC<{
                 };
                 copied.size = json.size;
             } else {
-                let id = copied.id;
                 let size = objectNode.size;
-                let json = objectNode.getJSON();
-                copied.fromJSON(json, true);
-                copied.id = id;
+                copied.parse(objectNode.text, objectNode.operatorContextType, false);
                 if (size) {
                     copied.size = { ...size };
                 }
@@ -260,7 +273,7 @@ const InnerObjectNodeComponent: React.FC<{
             }
         }, [editing, objectNode, isSelected, setSelectedNodes, setEditing, setPatch, setPatches, patches]);
 
-        let CustomComponent = objectNode.name ? index[objectNode.name] : undefined;
+        let CustomComponent = (objectNode.name ? index[objectNode.name] : undefined) as unknown as React.ComponentType<NodeProps>;
         let isCustomSubPatchView = objectNode.attributes["Custom Presentation"];
 
         return (
@@ -268,7 +281,8 @@ const InnerObjectNodeComponent: React.FC<{
                 isCustomView={isCustomView}
                 text={parsedText}
                 lockedModeRef={lockedModeRef}
-                skipOverflow={error !== null || (editing && autoCompletes.length > 0)}
+                isError={(typeError && !(typeError as TypeSuccess).success) || (error !== null)}
+                skipOverflow={(error !== null || (typeError && !(typeError as TypeSuccess).success)) || (editing && autoCompletes.length > 0)}
                 node={objectNode}>
                 <ContextMenu.Root>
                     <ContextMenu.Content
@@ -332,14 +346,14 @@ const InnerObjectNodeComponent: React.FC<{
                                             name = text;
                                         }
                                         setText(name);
-                                        enterText(name, x.context, x.definition.tokenId);
+                                        enterText(name, x.context, x.definition.id);
                                         setAutoCompletes([]);
                                     }} />}
-                                {editing && error &&
+                                {((typeError && !(typeError as TypeSuccess).success) || editing && (error)) &&
                                     <div
                                         style={{ left: "0px", bottom: "-20px" }}
                                         className="absolute bg-red-500 text-white rounded-lg px-2">
-                                        {error}
+                                        {typeError ? (typeError as TypeError).error : error}
                                     </div>}
                             </>
                         </div>

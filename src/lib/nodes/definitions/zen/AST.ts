@@ -420,7 +420,7 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     let output: UGen | undefined = undefined;
     let _name = "";
     if (isSimpleFunction(zenOperator, _simpleFunctions)) {
-        output = (zenOperator as SimpleFunction)(...compiledArgs);
+        output = (zenOperator as SimpleFunction)(...compiledArgs as Arg[]);
     } else {
         // a few functions require a bespoke params field to work
         let compoundOperator = operator as CompoundOperator;
@@ -482,7 +482,8 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             let body = compiledArgs[0];
             let args = compiledArgs.slice(1);
             _name = name;
-            output = latchcall(body as LazyFunction, invocationNumber, ...args as UGen[]);
+            let _args = args as UGen[];
+            output = latchcall(body as LazyFunction, invocationNumber, _args[0], ..._args.slice(1) );
         } else if (name === "message") {
             output = message(compoundOperator.params as string, compiledArgs[0] as Arg, compiledArgs[1] as Arg);
         } else if (name === "modeling.synth") {

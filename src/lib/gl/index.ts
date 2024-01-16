@@ -1,6 +1,10 @@
 export * from './math';
+export * from './attributes';
+export * from './varying';
 export * from './zen';
+export * from './matrix';
 export * from './coordinates';
+export * from './functions';
 export * from './uniforms';
 export { GLType } from './types';
 

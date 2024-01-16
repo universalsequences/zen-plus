@@ -48,7 +48,7 @@ const Attribute = (props: Props) => {
                     {options.map(x => <option key={x} value={x as string}>{x}</option>)}
                 </select>
                 : <input
-                    value={value === true ? 1 : value === false ? 0 : value}
+                    value={value === true ? 1 : value === false ? 0 : value as string}
                     onChange={onChange}
                     className="outline-none text-white  flex-1 text-center w-20 bg-black rounded-full px-1"></input>}
         </div>);

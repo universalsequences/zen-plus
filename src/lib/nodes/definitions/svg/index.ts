@@ -76,7 +76,7 @@ const path = (node: ObjectNode, l: Lazy, c: Lazy, stroke: Lazy, strokeWidth: Laz
             }
         }
 
-        let p: SVGObject = { type: "path", stroke: stroke() as string, d, strokeWidth: strokeWidth() as number || 2 };
+        let p: SVGObject = {coordinate: [0,0], type: "path", stroke: stroke() as string, d, strokeWidth: strokeWidth() as number || 2};
         return [p];
     };
 };

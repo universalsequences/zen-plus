@@ -26,7 +26,6 @@ const IOletsComponent = (props: Props) => {
         if (props.isOutlet) {
             e.stopPropagation();
 
-
             let rect = scrollRef.current.getBoundingClientRect();
             let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
             let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
@@ -59,10 +58,10 @@ const IOletsComponent = (props: Props) => {
     let numIOlets = props.iolets.length;
     let [hover, setHover] = useState<IOlet | null>(null);
 
-    if (isCustomView) {
-        return <></>;
-    }
     let memoed = React.useMemo(() => {
+        if (isCustomView) {
+            return <></>;
+        }
         return (
             <div className={props.className + ' w-full justify-between iolets'}>
                 {props.iolets.map(
@@ -99,7 +98,7 @@ const IOletsComponent = (props: Props) => {
                 )
                 }
             </div >);
-    }, [props.iolets, numIOlets, draggingCable, props.text, opened, hover, setHover]);
+    }, [props.iolets, numIOlets, draggingCable, props.text, opened, hover, setHover, isCustomView]);
     return memoed;
 }
 

@@ -5,23 +5,19 @@ import { abi } from '@/lib/abi/sound-drop-abi';
 
 import { useContractWrite, usePrepareContractWrite, useAccount } from 'wagmi';
 
-export const SOUND_CONTRACT = "0xBb94E2Bbc2f04FaAcd5BB432a4FcCBcaF56F3A20";
+export const SOUND_CONTRACT = "0xA19bF6D2ad5642A506ED11aDd628EBbFD5BADCc2";
 
-const MintSound: React.FC<{ setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues }) => {
+const MintSound: React.FC<{ visuals: string, setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues, visuals }) => {
     let account = useAccount();
-    console.log('mint sound account=', account);
-
     const publicClient = usePublicClient();
 
-    console.log('setting new drop =', dsp);
-    let args = [dsp, parameterNames, minValues, maxValues, 0, 100];
-    console.log('args =', args);
+    let args = [dsp, visuals, parameterNames, minValues, maxValues, 0, 100];
 
     const { config } = usePrepareContractWrite({
         address: SOUND_CONTRACT,
         abi: abi,
         functionName: 'newDrop',
-        args
+        args 
     })
 
     const written = useRef(false);
@@ -32,7 +28,6 @@ const MintSound: React.FC<{ setDropAddress: (x: string | null) => void, dsp: str
         });
 
 
-    console.log('config/write', config, write);
     useEffect(() => {
         if (data && !transactionError && !transactionLoading) {
             console.log("waiting for trans data=", transactionData);
@@ -60,10 +55,7 @@ export default (MintSound);
 
 
 export async function fetchNewDrop(provider: any, transactionHash: string): Promise<string | null> {
-    console.log('waiting for receipt...', transactionHash);
     const receipt = await provider.getTransactionReceipt({ hash: transactionHash });
-
-    console.log('receipt got=', receipt);
 
     // Check if there are logs and the logs are from the expected contract
     if (receipt && receipt.logs && receipt.logs.length > 0) {

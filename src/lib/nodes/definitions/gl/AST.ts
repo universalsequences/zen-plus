@@ -1,5 +1,5 @@
 import {
-    Arg, UGen
+    Arg, UGen, stringToType,
 } from '@/lib/gl/types';
 import { ObjectNode } from '@/lib/nodes/types';
 import * as gl from '@/lib/gl/index';
@@ -40,8 +40,8 @@ type CompiledStatements = {
     [id: string]: UGen;
 }
 
-export const compileStatement = (statement: Statement, _api = api, _simpleFunctions = simpleFunctions): UGen => {
-    let _compiled = _compileStatement(statement, undefined, undefined, undefined, _api, _simpleFunctions);
+export const compileStatement = (statement: Statement): UGen | string | gl.GLType => {
+    let _compiled = _compileStatement(statement, undefined, undefined, undefined, api, simpleFunctions);
     return _compiled as UGen;
 }
 
@@ -86,12 +86,13 @@ export const getZObjects = (statement: Statement,): ObjectNode[] => {
     }
 };
 
-export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = [], _api: API, _simpleFunctions: API): UGen => {
-    if (!statement.node) {
-        //console.log("no node for statement", statement);
-    }
+export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = [], _api: API, _simpleFunctions: API): UGen | string => {
     if (typeof statement === "number") {
         return gl.float(statement as number);
+    }
+
+    if (typeof statement === "string") {
+        return statement;
     }
 
     if (!Array.isArray(statement)) {
@@ -119,11 +120,7 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     // recursively compile the statements
     let compiledArgs = statements.filter(x => x !== undefined).map(arg => _compileStatement(arg as Statement, compiled, depth + 1, newList, _api, _simpleFunctions));
     if (zobject && compiled[zobject.id]) {
-        //let _depth = calculateDepth(statement);
-        //if (!_depth.some(x => x[0] && x[0].name === "history")) {
-        //console.log('cached compiled already=', zobject.id, statement);
         return compiled[zobject.id];
-        //}
     }
 
 
@@ -132,12 +129,25 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     let output: UGen | undefined = undefined;
     let _name = "";
     if (isSimpleFunction(zenOperator, _simpleFunctions)) {
-        output = (zenOperator as SimpleFunction)(...compiledArgs);
+        output = (zenOperator as SimpleFunction)(...compiledArgs as UGen[]);
     } else {
-        let compoundOperator = operator as CompoundOperator;
-        if (compoundOperator.name === "uniform" && compoundOperator.uniform) {
-            console.log('uniform ast=', compoundOperator.uniform);
-            output = compoundOperator.uniform();
+        if ((operator as string) === "defun") {
+            output = gl.defun(compiledArgs[0] as UGen, compiledArgs[1] as string);
+        } else {
+            let compoundOperator = operator as CompoundOperator;
+            if (compoundOperator.name === "argument") {
+                output = gl.argument(compiledArgs[0] as string, compoundOperator.value as number, stringToType(compiledArgs[1] as string));
+            } else if (compoundOperator.name === "attribute" && compoundOperator.attribute) {
+                output = compoundOperator.attribute(); // we evaluate it
+            } else if (compoundOperator.name === "varying") {
+                if (compoundOperator.attribute) {
+                    output = gl.varying(compoundOperator.attribute()); // we evaluate it
+                } else {
+                    output = gl.varying(compiledArgs[0] as UGen); // we evaluate it
+                }
+            } else if (compoundOperator.name === "uniform" && compoundOperator.uniform) {
+                output = compoundOperator.uniform();
+            }
         }
     }
 
@@ -173,26 +183,14 @@ const isSimpleFunction = (func: ZenFunction, _simpleFunctions: API): boolean => 
     return Object.values(_simpleFunctions).includes(func);
 };
 
-const simpleFunctions: API = {
-    '+': gl.add,
-    '-': gl.sub,
-    '*': gl.mult,
-    'uv': gl.uv,
-    'x': gl.unpack("x"),
-    'y': gl.unpack("y"),
-    'sin': gl.sin,
-    'vec4': gl.vec4,
-    'vec3': gl.vec3,
-    'vec2': gl.vec2,
-    'pow': gl.pow,
-    '%': gl.mod,
-    'dot': gl.dot,
-    'length': gl.length,
-    'smoothstep': gl.smoothstep,
-    'step': gl.step,
-};
 
-const api: API = {
+let simpleFunctions: API = {}
+
+let api: API = {
     ...simpleFunctions
 };
 
+export const registerFunction = (name: string, fn: ZenFunction) => {
+    simpleFunctions[name] = fn;
+    api[name] = fn;
+};

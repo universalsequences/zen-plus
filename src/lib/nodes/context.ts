@@ -30,7 +30,8 @@ export enum OperatorContextType {
     WEBGPU,
     SVG,
     ONCHAIN,
-    GL
+    GL,
+    NUMBER
 }
 
 export const getAllAPIs = (): API[] => {

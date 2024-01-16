@@ -1,8 +1,12 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import {
+    goerli,
+} from 'wagmi/chains';
 import MintSound from './MintSound';
 import { usePatches } from '@/contexts/PatchesContext';
 import Attributes from './Attributes';
 import { SubPatch, Patch, ObjectNode } from '@/lib/nodes/types';
+import { useSwitchNetwork } from 'wagmi';
 import { Share1Icon } from '@radix-ui/react-icons'
 import { useSelection } from '@/contexts/SelectionContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -15,12 +19,21 @@ interface Parameters {
 }
 
 const Sidebar = () => {
-    const { patches, zenCode } = usePatches();
+    const { patches, visualsCode, zenCode } = usePatches();
     const account = useAccount();
     const [minting, setMinting] = useState(false);
     const [dropAddress, setDropAddress] = useState<string | null>(null);
 
     const [parameters, setParameters] = useState<Parameters | null>(null);
+
+    let [opened, setOpened] = useState(false);
+    const { switchNetwork } = useSwitchNetwork();
+
+    useEffect(() => {
+        if (opened && switchNetwork) {
+            switchNetwork(goerli.id);
+        }
+    }, [opened, switchNetwork]);
 
     useEffect(() => {
         let patch = patches[0];
@@ -52,7 +65,7 @@ const Sidebar = () => {
     const inner = React.useMemo(() => {
         return (
             <div>
-                {minting && parameters && zenCode ? <MintSound parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
+                {minting && parameters && visualsCode && zenCode ? <MintSound visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
                 {!account ? <div
                     className="absolute top-2 right-2 px-2 py-1  cursor-pointer z-30 ">
                     <ConnectButton />
@@ -77,9 +90,8 @@ const Sidebar = () => {
                 </div>
             </div>
         );
-    }, [zenCode, minting, parameters]);
+    }, [zenCode, visualsCode, minting, parameters]);
 
-    let [opened, setOpened] = useState(false);
 
     return <div
         style={{ zIndex: 100000000 }}

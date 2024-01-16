@@ -11,6 +11,7 @@ export type Connections = {
 
 interface IPatchesContext {
     zenCode: string | null;
+    visualsCode: string | null;
     audioWorklet: AudioWorkletNode | null;
     setAudioWorklet: (x: AudioWorkletNode | null) => void;
     liftPatchTile: (x: Patch) => void;
@@ -51,7 +52,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     const [gridTemplate, setGridTemplate] = useState("1fr 1fr");
     const [selectedPatch, setSelectedPatch] = useState<Patch | null>(null);
     const [zenCode, setZenCode] = useState<string | null>(null);
-
+    const [visualsCode, setVisualsCode] = useState<string | null>(null);
     const [gridLayout, setGridLayout] = useState<GridLayout[]>([{ gridArea: "1/1/1/1" }]);
 
     const [rootTile, setRootTile] = useState<Tile | null>(null);
@@ -199,7 +200,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
     useEffect(() => {
         basePatch.setZenCode = setZenCode;
-    }, [setZenCode]);
+        basePatch.setVisualsCode = setVisualsCode;
+    }, [setZenCode, setVisualsCode]);
 
     basePatch.setAudioWorklet = setAudioWorklet;
 
@@ -244,7 +246,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             rootTile,
             changeTileForPatch,
             closePatch,
-            switchTileDirection
+            switchTileDirection,
+            visualsCode
         }}>
         {children}
     </PatchesContext.Provider>;

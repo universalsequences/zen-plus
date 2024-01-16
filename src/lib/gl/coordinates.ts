@@ -1,7 +1,7 @@
 import { memo } from './memo';
 import { func } from './math';
 import { Context, Arg, UGen, Generated, GLType } from './types';
-import { printType, emitType } from './context';
+import { emitType } from './context';
 
 const coord = (dir: "x" | "y") => {
     return (): UGen => {
@@ -9,7 +9,7 @@ const coord = (dir: "x" | "y") => {
             // we ask for a new variable name
             let [xVar] = context.useVariables(dir + "Val");
             let _type = GLType.Float;
-            let type = printType(GLType.Float);
+            let type = context.printType(GLType.Float);
             let code = `${type} ${xVar} = gl_FragCoord.${dir};`;
 
             return context.emit(
@@ -27,7 +27,7 @@ export const unpack = (field: "x" | "y" | "z" | "w") => {
             let [fieldVar] = context.useVariables(field + "Val");
             let _vector = context.gen(vector);
             let _type = GLType.Float;
-            let type = printType(GLType.Float);
+            let type = context.printType(GLType.Float);
             let code = `${type} ${fieldVar} = ${_vector.variable}.${field};`;
 
             return context.emit(
@@ -60,9 +60,10 @@ export const vector = (input: UGen): Vector => {
 export const uv = (): Vector => {
     return vector(memo((context: Context): Generated => {
         let [uvVar] = context.useVariables("uv");
-        let type = printType(GLType.Vec2);
-        let code = `${type} ${uvVar} = (gl_FragCoord.xy-resolution)/resolution.y;
-`;
+        let type = context.printType(GLType.Vec2);
+        let code = `${type} ${uvVar} = ((gl_FragCoord.xy-resolution)/resolution.y) ;
+        `;
+        //let code = `${ type } ${ uvVar } = ((gl_FragCoord.xy - resolution) / resolution);
         return context.emit(
             GLType.Vec2,
             code,
@@ -76,8 +77,8 @@ export const vec = (type: GLType) => {
         return vector(memo((context: Context): Generated => {
             let _inputs = inputs.map(input => context.gen(input));
             let [vec] = context.useVariables("vectorVal");
-            let _type = printType(type);
-            let code = `${_type} ${vec} = ${_type}(${_inputs.map(i => i.variable).join(",")});`;
+            let _type = context.printType(type);
+            let code = `${_type} ${vec} = ${_type} (${_inputs.map(i => i.variable).join(",")}); `;
             return context.emit(
                 type,
                 code,

@@ -3,8 +3,6 @@ import { useSelection } from '@/contexts/SelectionContext';
 import { ObjectNode } from '@/lib/nodes/types';
 import { arrayBufferToArray } from '@/lib/audio/arrayBufferToArray';
 
-const bufferToArrayBuffer = require('buffer-to-arraybuffer');
-
 export type ByteTypeNames = {
     [x: string]: Int8ArrayConstructor | Int32ArrayConstructor
 }

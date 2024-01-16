@@ -1,4 +1,9 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { useStorage } from '@/contexts/StorageContext';
+import { OnchainSubPatch, fetchOnchainSubPatch } from '@/lib/onchain/fetch';
+import { abi } from '@/lib/abi/minter-abi';
+import { MINTER_CONTRACT, DROP_CONTRACT } from '@/components/WriteOnChain';
+import { usePublicClient, useContractRead } from 'wagmi'
 import pako from 'pako';
 import { getSegmentation } from '@/lib/cables/getSegmentation';
 import { usePosition } from '@/contexts/PositionContext';
@@ -33,6 +38,7 @@ interface PatcherContext {
     newMessageNode: (x: MessageNode, position: Coordinate) => void;
     newObjectNode: (x: ObjectNode, position: Coordinate) => void;
     isCustomView: boolean;
+    loadProjectPatch: (x: SerializedPatch) => void;
 }
 
 interface Props {
@@ -74,6 +80,16 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         }
     }, [setObjectNodes, patch]);
 
+    const loadProjectPatch = useCallback((serializedPatch: SerializedPatch) => {
+        patch.objectNodes = [];
+        patch.messageNodes = [];
+        let connections = patch.fromJSON(serializedPatch);
+        //patch.previousSerializedPatch = _json;
+        setConnections(connections);
+        setObjectNodes([...patch.objectNodes]);
+        setMessageNodes([...patch.messageNodes]);
+    }, [setMessageNodes, setObjectNodes, patch, setConnections]);
+
     const loadProject = useCallback((project: Project) => {
         patch.name = project.name;
         patch.objectNodes = [];
@@ -84,13 +100,13 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             const decompressed = pako.inflate(binaryBuffer, { to: 'string' });
             let _json = JSON.parse(decompressed);
             let connections = patch.fromJSON(_json);
-            patch.previousSerializedPatch = _json;
+            //patch.previousSerializedPatch = _json;
             setConnections(connections);
             setObjectNodes([...patch.objectNodes]);
             setMessageNodes([...patch.messageNodes]);
         } else {
             let connections = patch.fromJSON(project.json);
-            patch.previousSerializedPatch = project.json;
+            //patch.previousSerializedPatch = project.json;
             setConnections(connections);
             setObjectNodes([...patch.objectNodes]);
             setMessageNodes([...patch.messageNodes]);
@@ -127,13 +143,10 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     }, [setConnections, connections]);
 
     const segmentCables = useCallback((sizeIndex: SizeIndex) => {
-        console.log('segment cables called...', connections);
         for (let id in connections) {
             for (let connection of connections[id]) {
-                console.log('connection segmentation=', connection.segmentation);
                 if ((!(connection.segmentation) || connection.segmentation < 0) && sizeIndex[id]) {
                     let segment = getSegmentation(connection, sizeIndex);
-                    console.log('segment for connection = ', segment);
                     if (segment !== undefined && !isNaN(segment)) {
                         connection.segmentation = segment;
                     }
@@ -248,6 +261,47 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         setObjectNodes(patch.objectNodes);
     }, [setObjectNodes, patch]);
 
+    /*
+    const publicClient = usePublicClient();
+    const { data: subpatches, isError, isLoading } = useContractRead({
+        address: MINTER_CONTRACT,
+        abi: abi,
+        functionName: 'getPatchHeads',
+        args: [true]
+    })
+
+
+    let flagg = useRef(false);
+    useEffect(() => {
+        if (!(patch as SubPatch).parentPatch && subpatches && !flagg.current) {
+            flagg.current = true;
+            fetchAll(subpatches);
+        }
+    }, [subpatches]);
+
+    let { storePatch } = useStorage();
+    const fetchAll = async (list: any) => {
+        let fetched: any[] = [];
+        let position = { x: 100, y: 100 };
+        for (let elem of list) {
+            let tokenId = elem.tokenId;
+            let _patch = await fetchOnchainSubPatch(publicClient, tokenId);
+            let node = new ObjectNodeImpl(patch);
+            node.parse(elem.name, undefined, undefined, _patch);
+            position = {
+                ...position,
+                y: position.y + 30
+            }
+            // newObjectNode(node, position);
+            let __patch = node.subpatch;
+            if (__patch) {
+                console.log('storing patch', elem.name);
+                await storePatch(elem.name, __patch, true, "alecresende@gmail.com");
+            }
+        }
+    };
+    */
+
     const newMessageNode = useCallback((messageNode: MessageNode, position: Coordinate) => {
         messageNode.position = position;
         patch.messageNodes = [...patch.messageNodes, messageNode];
@@ -270,6 +324,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             loadProject,
             segmentCable,
             segmentCables,
+            loadProjectPatch,
             isCustomView: props.isCustomView ? true : false
         }}>
         {children}

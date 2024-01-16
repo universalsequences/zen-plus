@@ -96,8 +96,18 @@
 //    z-index:100000000000 !important;
 //}
 
+.node-component.has-error {
+    background-color: rgb(255 188 188 / 90%) !important;
+    .bg-dark-transparent {
+        background-color: #0000002f;
+    }
+}
+
 .node-component.context-type-1 {
     background-color: #d2ff00;
+}
+.node-component.context-type-7 {
+    background-color: #ffffff;
 }
 
 .node-component.context-type-2 {

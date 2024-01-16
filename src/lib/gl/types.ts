@@ -1,4 +1,7 @@
 import { Uniform } from './uniforms';
+import { Varying } from './varying';
+import { AttributeDefinition, Attribute } from './attributes';
+import { Argument } from './functions';
 /**
  * zen-gl takes the same approach as zen to compile
  * expressions into GL (but potentially other shader langauges like metal/webgpu)
@@ -9,6 +12,10 @@ export type EmittedVariables = {
 };
 
 export type Error = string;
+
+export type ChildContext = Context & {
+    parentContext: Context
+}
 
 export interface Context {
     idx: number;
@@ -24,15 +31,62 @@ export interface Context {
     webGLProgram: WebGLProgram | null;
     uniforms: Uniform[];
     initializeUniforms: () => void;
+    attributes: Attribute[];
+    varyings: Varying[];
+    siblingContext?: Context;
 }
 
 export enum GLType {
+    Mat2,
+    Mat3,
+    Mat4,
     Float,
     Vec2,
     Vec3,
     Vec4,
-    Sampler2D
+    Sampler2D,
+    Function
 }
+
+export const stringToType = (type: string): GLType => {
+    if (type === "float") {
+        return GLType.Float;
+    } else if (type === "vec2") {
+        return GLType.Vec2;
+    } else if (type === "vec3") {
+        return GLType.Vec3;
+    } else if (type === "vec4") {
+        return GLType.Vec4;
+    } else if (type === "mat2") {
+        return GLType.Mat2;
+    } else if (type === "mat3") {
+        return GLType.Mat3;
+    } else if (type === "mat4") {
+        return GLType.Mat4;
+    } else {
+        return GLType.Sampler2D;
+    }
+};
+
+export const stringToTypeString = (type: string): string => {
+    if (type === "float") {
+        return "GLType.Float";
+    } else if (type === "vec2") {
+        return "GLType.Vec2";
+    } else if (type === "vec3") {
+        return "GLType.Vec3";
+    } else if (type === "vec4") {
+        return "GLType.Vec4";
+    } else if (type === "mat3") {
+        return "GLType.Mat3";
+    } else if (type === "mat4") {
+        return "GLType.Mat4";
+    } else if (type === "mat2") {
+        return "GLType.Mat2";
+    } else {
+        return "GLType.Sampler2D";
+    }
+};
 
 export interface UniformDefinition {
     type: GLType;
@@ -42,8 +96,11 @@ export interface UniformDefinition {
 export interface Generated {
     code: string; /*  the code generated */
     variable?: string; /* the current variable */
-    variables?: string[];
-    uniforms?: UniformDefinition[];
+    variables?: string[]; /* all variables */
+    uniforms?: UniformDefinition[]; /* all uniforms */
+    attributes?: AttributeDefinition[]; /* all uniforms */
+    functions?: Generated[]; /* functions defined throughtout */
+    functionArguments?: Argument[]; /* any arguments */
     context?: Context;
     type: GLType;
 }

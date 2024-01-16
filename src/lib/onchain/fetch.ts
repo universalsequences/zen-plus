@@ -6,7 +6,8 @@ import * as erc from '@/lib/abi/erc721-abi';
 import { SerializedPatch } from '@/lib/nodes/types';
 
 export interface OnchainSubPatch {
-    tokenId: number;
+    id: string;
+    //tokenId: number;
     name: string;
 }
 

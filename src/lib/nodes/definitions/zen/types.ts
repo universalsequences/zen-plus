@@ -1,4 +1,6 @@
 import { AccumParams } from '../../../zen/accum';
+import { Attribute } from '@/lib/gl/attributes';
+import { MessageType } from '@/lib/nodes/typechecker';
 import { Uniform } from '@/lib/gl/uniforms';
 import { ObjectNode } from '../../types';
 import { RoundMode } from '../../../zen/math';
@@ -30,6 +32,7 @@ export interface CompoundOperator {
     range?: Range;
     outputNumber?: number;
     variableName?: string;
+    attribute?: Attribute;
     value?: number;
     material?: Material;
     physicalModel?: PhysicalModel;
@@ -51,6 +54,7 @@ export type Operator = "string" | CompoundOperator;
 
 export type BaseStatement = BlockGen | Component | number | [Operator, ...Statement[]];
 export type Statement = BaseStatement & {
-    node?: ObjectNode
+    node?: ObjectNode,
+    type?: MessageType
 };
 

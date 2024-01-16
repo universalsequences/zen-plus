@@ -1,201 +1,93 @@
 import { API } from '@/lib/nodes/context';
+import { attribute, Attribute, AttributeGen } from '@/lib/gl/attributes';
+import { printCode } from './printCode';
+import { FunctionSignature, DataType, MessageType, functionType, maxCompatibleType, strictGLType, GLTypeCheck } from '@/lib/nodes/typechecker';
+import { stringToType, GLType, UGen, Arg } from '@/lib/gl/types';
 import { Uniform } from '@/lib/gl/uniforms';
-import { doc } from './doc';
-import { CompoundOperator, Statement } from '@/lib/nodes/definitions/zen/types'
+import { Definition } from '@/lib/docs/docs';
+import * as DOC from './doc';
+import { Operator, CompoundOperator, Statement } from '@/lib/nodes/definitions/zen/types'
 import { ObjectNode, Message, Lazy } from '@/lib/nodes/types'
 import * as gl from '@/lib/gl/index';
-import { compileStatement } from '@/lib/nodes/definitions/gl/AST';
+import { registerFunction, compileStatement } from '@/lib/nodes/definitions/gl/AST';
 
-doc(
-    '+',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "adds two numbers in GL",
-        fn: gl.add
-    });
+export const doc = (name: string, definition: Definition) => {
+    DOC.doc(name, definition);
+    if (definition.fn) {
+        registerFunction(name, definition.fn);
+    }
+}
 
-doc(
-    '-',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "subtracts two numbers in GL",
-        fn: gl.sub
-    });
+const typed_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => UGen, typeChecker: GLTypeCheck, fnString?: string) => {
+    doc(
+        name,
+        {
+            numberOfInlets,
+            numberOfOutlets: 1,
+            description: `${name} ${numberOfInlets} GLSL expressions together`,
+            fn,
+            fnString,
+            glTypeChecker: typeChecker
+        })
+};
 
-doc(
-    '*',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "multiplies two numbers in GL",
-        fn: gl.mult
-    });
+const flexible_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => UGen, fnString?: string) =>
+    typed_op(name, numberOfInlets, fn, maxCompatibleType(null, [DataType.GL(GLType.Float), DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)]), fnString);
 
-doc(
-    '/',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "divides two numbers in GL",
-        fn: gl.div
-    });
-
-doc(
-    '%',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "takes modulo of two numbers in GL",
-        fn: gl.mod
-    });
-
-doc(
-    'dot',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "takes dot product of two vectors in GL",
-        fn: gl.mod
-    });
-
-doc(
-    'pow',
-    {
-        inletNames: ['num1', 'num2'],
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "takes power of two numbers in GL",
-        fn: gl.pow
-    });
-
-doc(
-    'length',
-    {
-        inletNames: ['num1'],
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "takes length of vector in GL",
-        fn: gl.length
-    });
+const strict_vec_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => UGen, outputType: GLType, fnString?: string) =>
+    typed_op(name, numberOfInlets, fn,
+        strictGLType(
+            DataType.GL(outputType),
+            [DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)],
+            [DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)],
+            [DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)
+            ]),
+        fnString
+    );
 
 
-doc(
-    'uv',
-    {
-        numberOfInlets: 0,
-        numberOfOutlets: 1,
-        description: "create uv",
-        fn: gl.uv
-    });
 
-doc(
-    'x',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "create uv",
-        fn: gl.unpack("x")
-    });
+const strict_float_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => UGen, outputType: GLType) =>
+    typed_op(name, numberOfInlets, fn,
+        strictGLType(
+            DataType.GL(outputType),
+            [DataType.GL(GLType.Float)],
+            [DataType.GL(GLType.Float)],
+            [DataType.GL(GLType.Float)],
+            [DataType.GL(GLType.Float)]));
 
-doc(
-    'y',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "create uv",
-        fn: gl.unpack("y")
-    });
-
-doc(
-    'sin',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "computes the sin of input",
-        fn: gl.sin
-    });
-
-doc(
-    'cos',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "computes the cos of input",
-        fn: gl.cos
-    });
-
-doc(
-    'floor',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "computes the floor of input",
-        fn: gl.floor
-    });
-
-doc(
-    'ceil',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        description: "computes the ceil of input",
-        fn: gl.ceil
-    });
-
-doc(
-    'vec4',
-    {
-        numberOfInlets: 4,
-        numberOfOutlets: 1,
-        description: "creates a vec4 gl object",
-        fn: gl.vec4
-    });
-
-doc(
-    'vec3',
-    {
-        numberOfInlets: 3,
-        numberOfOutlets: 1,
-        description: "creates a vec3 gl object",
-        fn: gl.vec3
-    });
-
-doc(
-    'smoothstep',
-    {
-        numberOfInlets: 3,
-        numberOfOutlets: 1,
-        description: "calculates a smoothstep of 3 numbers",
-        fn: gl.smoothstep
-    });
-
-doc(
-    'step',
-    {
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "calculates a step of 2 numbers",
-        fn: gl.step
-    });
-
-
-doc(
-    'vec2',
-    {
-        numberOfInlets: 2,
-        numberOfOutlets: 1,
-        description: "creates a vec2 gl object",
-        fn: gl.vec2
-    });
-
+flexible_op("+", 2, gl.add, "add");
+flexible_op('-', 2, gl.sub, "sub");
+flexible_op('*', 2, gl.mult, "mult");
+flexible_op('/', 2, gl.div, "div");
+flexible_op('%', 2, gl.mod, "mod");
+strict_vec_op('dot', 2, gl.dot, GLType.Float);
+flexible_op('pow', 2, gl.pow);
+strict_vec_op('length', 1, gl.length, GLType.Float);
+strict_vec_op('uv', 0, gl.uv, GLType.Vec2);
+strict_vec_op('x', 1, gl.unpack("x"), GLType.Float, `unpack("x")`);
+strict_vec_op('y', 1, gl.unpack("y"), GLType.Float, `unpack("y")`);
+strict_vec_op('z', 1, gl.unpack("z"), GLType.Float, `unpack("z")`);
+flexible_op('sin', 1, gl.sin);
+flexible_op('cos', 1, gl.cos);
+flexible_op('floor', 1, gl.floor);
+flexible_op('abs', 1, gl.abs);
+flexible_op('sqrt', 1, gl.sqrt);
+flexible_op('max', 2, gl.max);
+flexible_op('min', 2, gl.min);
+flexible_op('exp', 1, gl.exp);
+flexible_op('exp2', 1, gl.exp2);
+flexible_op('sign', 1, gl.sign);
+flexible_op('tan', 1, gl.tan);
+flexible_op('ceil', 1, gl.ceil);
+strict_float_op('vec4', 4, gl.vec4, GLType.Vec4);
+strict_float_op('vec3', 3, gl.vec3, GLType.Vec3);
+strict_float_op('vec2', 2, gl.vec2, GLType.Vec2);
+flexible_op('smoothstep', 3, gl.smoothstep);
+flexible_op('mix', 3, gl.mix);
+flexible_op('step', 2, gl.step);
+strict_float_op('perspectiveMatrix', 4, gl.perspectiveMatrix, GLType.Mat4);
+strict_vec_op('cameraMatrix', 3, gl.viewMatrix, GLType.Mat4);
 
 doc(
     "uniform",
@@ -211,10 +103,10 @@ export const gl_uniform = (node: ObjectNode, name: Lazy) => {
     let uniform: Uniform;
     return (message: Message) => {
         if (!uniform) {
-            uniform = gl.uniform(gl.GLType.Float, 0);
-            console.log('created uniform', uniform);
+            let defaultValue = node.storedMessage === undefined ?
+                node.attributes["min"] as number || 0 : node.storedMessage as number;
+            uniform = gl.uniform(gl.GLType.Float, defaultValue);
         }
-
 
         if (typeof message === "string" && message !== "bang" && message.split(" ").length === 2) {
             let split = message.split(" ");
@@ -223,6 +115,7 @@ export const gl_uniform = (node: ObjectNode, name: Lazy) => {
 
         if (typeof message === "number") {
             uniform.set!(message as number);
+            node.storedMessage = message;
             return [];
         }
         let operator: CompoundOperator = {
@@ -231,36 +124,326 @@ export const gl_uniform = (node: ObjectNode, name: Lazy) => {
         };
         let statement: Statement = [operator];
         statement.node = node;
+        statement.type = DataType.GL(GLType.Float);
+        return [statement];
+    };
+};
+
+doc(
+    'defun',
+    {
+        inletNames: ["body", "name"],
+        numberOfInlets: 2,
+        numberOfOutlets: 1,
+        description: "creates a function",
+    });
+
+export const defun = (node: ObjectNode, name: Lazy) => {
+    return (body: Message) => {
+
+        let statement: Statement = ["defun" as Operator, body as Statement, name() as Statement];
+        statement.node = node;
+        let args: Statement[] = parseArguments(body as Statement);
+        console.log('arguments parsed = ', args);
+        args.sort((a, b) => (Array.isArray(a) && Array.isArray(b)) ? (a[0]! as CompoundOperator).value! - (b[0] as CompoundOperator).value! : 0);
+
+        let nodes = new Set<ObjectNode>();
+        let _args: Statement[] = []
+        for (let s of args) {
+            if (s.node && nodes.has(s.node)) {
+                continue;
+            }
+            if (s.node) {
+                nodes.add(s.node);
+                _args.push(s);
+            }
+        }
+
+        let returnType = (body as Statement).type;
+        let argTypes: (MessageType)[] = _args.map(x => x.type).filter(x => x !== undefined) as MessageType[];
+
+        let functionSignature: FunctionSignature = {
+            arguments: argTypes,
+            returnType: returnType!
+        };
+
+        statement.type = DataType.GL(GLType.Function, functionSignature);
+
+        console.log('defun function type=', statement.type);
+
+        return [statement];
+    };
+};
+
+const parseArguments = (statement: Statement): Statement[] => {
+    if (Array.isArray(statement)) {
+        let compoundOperator = statement[0] as CompoundOperator;
+        if (compoundOperator && compoundOperator.name === "argument") {
+            return [statement];
+        }
+        let args: Statement[] = [];
+        for (let a of statement.slice(1)) {
+            args = [...args, ...parseArguments(a as Statement)];
+        }
+        return args;
+    }
+    return [];
+};
+
+doc(
+    'argument',
+    {
+        inletNames: ["none", "name", "number", "type"],
+        numberOfInlets: 4,
+        numberOfOutlets: 1,
+        description: "creates argument for function"
+    });
+
+export const argument = (node: ObjectNode, name: Lazy, num: Lazy, type: Lazy) => {
+    node.needsLoad = true;
+    return (message: Message) => {
+        let statement: Statement = [{ name: "argument", value: num() as number } as CompoundOperator, name() as Statement, type() as Statement];
+        statement.node = node;
+
+        // we have the type...
+        statement.type = DataType.GL(stringToType(type() as string));
+
+        return [statement];
+    };
+};
+
+doc(
+    'mat2',
+    {
+        inletNames: ["matrix list"],
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        description: "creates argument for function",
+        fn: gl.mat2
+    });
+
+const mat = (op: string, type: GLType) => (node: ObjectNode) => {
+    node.needsLoad = true;
+    return (message: Message) => {
+        if (!Array.isArray(message)) {
+            return [];
+        }
+        let statement: Statement = [op as Operator, ...message as Statement[]];
+        statement.node = node;
+
+        // we have the type...
+        statement.type = DataType.GL(type);
+
+        return [statement];
+    };
+};
+
+doc(
+    'mat2',
+    {
+        inletNames: ["matrix list"],
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        description: "creates argument for function",
+        fn: gl.mat2
+    });
+
+doc(
+    'mat3',
+    {
+        inletNames: ["matrix list"],
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        description: "creates argument for function",
+        fn: gl.mat3
+    });
+
+doc(
+    'mat4',
+    {
+        inletNames: ["matrix list"],
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        description: "creates argument for function",
+        fn: gl.mat4
+    });
+
+
+export const mat2 = mat("mat2", GLType.Mat2);
+export const mat3 = mat("mat3", GLType.Mat3);
+export const mat4 = mat("mat4", GLType.Mat4);
+
+doc(
+    'call',
+    {
+        inletNames: ["function", "argument1", "argument2", "argument3", "argument4"],
+        numberOfInlets: (x) => x,
+        numberOfOutlets: 1,
+        description: "creates argument for function",
+        fn: gl.call,
+        glTypeChecker: functionType(null)
+    });
+
+
+doc(
+    'attribute',
+    {
+        inletNames: ["data", "type", "size", "is instance"],
+        numberOfInlets: 4,
+        numberOfOutlets: 1,
+        description: "generates an attribute",
+        defaultValue: 0
+    });
+
+export const gl_attribute = (node: ObjectNode, type: Lazy, size: Lazy, isInstance: Lazy) => {
+    let attr: Attribute;
+    return (data: Message) => {
+        // so given an attribute we want to generate a new 
+        console.log('attribute called with data=', data);
+        if (!Array.isArray(data)) {
+            // trigger type error
+            return [];
+        }
+        let array: number[] = data as number[];
+
+        let _type = stringToType(type() as string);
+        if (!attr) {
+            attr = attribute(_type, array, (size() as number) || 2, isInstance() as number ? true : false);
+            console.log('generating attr');
+        } else {
+            // we already have an attribute so we just want to update it
+            attr.set!(data as number[]);
+            return [];
+        }
+
+        // lets create the attribute
+
+
+        let operator: CompoundOperator = { name: "attribute", attribute: attr };
+        let statement: Statement = [operator];
+
+        statement.type = DataType.GL(_type);
+
+        statement.node = node;
+        console.log(statement);
+        return [statement];
+    };
+};
+
+doc(
+    'varying',
+    {
+        inletNames: ["attribute"],
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        description: "converts attribute to a varying so that fragment shader can access attribute",
+    });
+
+export const gl_varying = (node: ObjectNode) => {
+    let attr: Attribute;
+    return (data: Message) => {
+        let _statement = data as Statement;
+        console.log('varying called with...', data);
+        if (!Array.isArray(_statement)) {
+            return [];
+        }
+        let compoundOperator: CompoundOperator = _statement[0] as CompoundOperator;
+        let attr = compoundOperator.attribute;
+        let operator: CompoundOperator = { name: "varying", attribute: attr };
+        let statement: Statement = [operator, data as Statement];
+
+        statement.node = node;
+        statement.type = attr ? DataType.GL(attr.get!().type) : (data as Statement).type as MessageType;
         return [statement];
     };
 };
 
 
+
 doc(
     "canvas",
     {
-        numberOfInlets: 1,
+        numberOfInlets: 3,
         numberOfOutlets: 1,
         description: "canvas",
+        defaultValue: 0,
+        inletNames: ["fragment graph", "vertex graph", "indices"]
     }
 )
 
-export const gl_canvas = (objectNode: ObjectNode) => {
+export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: Lazy) => {
+    if (!objectNode.attributes["draw type"]) {
+        objectNode.attributes["draw type"] = "TRIANGLE_STIP";
+    }
+
+    objectNode.attributeOptions = {
+        "draw type": ["TRIANGLE_STRIP", "LINE_STRIP"]
+    };
+
     return (message: Message) => {
         let statement = message as Statement;
-        // compile the statement
-        let compiled = compileStatement(statement);
-        let generated = gl.zen(compiled);
 
-        if (objectNode.patch.onNewMessage) {
-            objectNode.patch.onNewMessage(objectNode.id, generated);
+        if (statement.type && statement.type.subType !== GLType.Vec4) {
+            statement = ["vec4" as Operator, statement];
         }
+
+        let vertexStatement = vertexGraph() as Statement | number | undefined;
+
+        if (typeof vertexStatement === "number") {
+            vertexStatement = undefined;
+        } else if (vertexStatement !== undefined && vertexStatement.type && vertexStatement.type.subType !== GLType.Vec4) {
+            vertexStatement = ["vec4" as Operator, vertexStatement];
+        }
+
+        setTimeout(() => {
+            let code = printCode(statement);
+            if (objectNode.patch.setVisualsCode) {
+                objectNode.patch.setVisualsCode(code);
+            }
+        }, 500);
+        // compile the statement
+
+        let compiled = compileStatement(statement);
+        if (typeof compiled === "function") {
+            if (!vertexStatement) {
+                let generated = gl.zen(compiled);
+                if (Array.isArray(indices())) {
+                    generated.indices = indices() as number[];
+                }
+                generated.drawType = objectNode.attributes["draw type"] === "LINE_STRIP" ? gl.DrawType.LINE_STRIP : gl.DrawType.TRIANGLE_STRIP;
+
+                if (objectNode.patch.onNewMessage) {
+                    objectNode.patch.onNewMessage(objectNode.id, generated);
+                }
+            } else {
+                // there is also a vertex statement
+                let vertexCompiled = compileStatement(vertexStatement);
+                if (typeof vertexCompiled === "function") {
+                    let generated = gl.zen(compiled, vertexCompiled);
+                    if (Array.isArray(indices())) {
+                        generated.indices = indices() as number[];
+                    }
+                    generated.drawType = objectNode.attributes["draw type"] === "LINE_STRIP" ? gl.DrawType.LINE_STRIP : gl.DrawType.TRIANGLE_STRIP;
+                    if (objectNode.patch.onNewMessage) {
+                        objectNode.patch.onNewMessage(objectNode.id, generated);
+                    }
+                }
+            }
+        }
+
         return [];
     };
 };
 export const api: API = {
     canvas: gl_canvas,
-    uniform: gl_uniform
+    uniform: gl_uniform,
+    argument,
+    defun,
+    attribute: gl_attribute,
+    varying: gl_varying,
+    mat2,
+    mat3,
+    mat4,
 };
 
 

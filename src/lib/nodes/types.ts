@@ -1,5 +1,6 @@
 import { BlockGen } from '../zen';
-import { ZenGraph } from '@/lib/gl/zen';
+import { TypeSuccess, TypeError } from './typechecker';
+import { RenderJob } from '@/lib/gl/zen';
 import { SVGObject } from './definitions/svg/index';
 import { ParamGen, param } from '@/lib/zen/index';
 import { OperatorContextType } from './context';
@@ -31,7 +32,7 @@ export interface Coordinate {
 
 // for the most part, nodes will deal with statements
 
-export type Message = string | number | string[] | number[] | Statement | Float32Array | SVGObject | ZenGraph;
+export type Message = string | number | string[] | number[] | Statement | Float32Array | SVGObject | RenderJob | TypeError | TypeSuccess;
 export type Lazy = () => Message;
 
 /**
@@ -50,7 +51,8 @@ export enum ConnectionType {
     AUDIO,
     ZEN,
     CORE,
-    GL
+    GL,
+    NUMBER
 }
 
 export interface IOConnection {
@@ -159,11 +161,12 @@ export type Patch = Identifiable & {
     skipRecompile: boolean;
     skipRecompile2: boolean;
     setZenCode?: (x: string | null) => void;
+    setVisualsCode?: (x: string | null) => void;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
     setObjectNodes?: (x: ObjectNode[]) => void; // tells the front-end a new audioworklet has been compiled
     onNewMessage?: (id: string, value: Message) => void;
     previousSerializedPatch?: SerializedPatch;
-    previousTokenId: number;
+    previousDocId?: string;
     viewed?: boolean;
 }
 

@@ -17,21 +17,22 @@ const ProjectOption: React.FC<{ head: any, loadPatchToken: (x: number) => void }
 
     return (<div className="flex flex-col">
         <div
-            onClick={() => loadPatchToken(head.tokenId)}
+            onClick={() => loadPatchToken(head)}
             className="flex hover:bg-zinc-300 hover:text-black p-1 cursor-pointer">
-            <div className="w-10 text-zinc-600">
+            {head.tokenId && <div className="w-10 text-zinc-600">
                 #{head.tokenId.toString()}
-            </div> <div>{head.name}</div> <div
+            </div>} <div>{head.name}</div> <div
                 onClick={(e: React.MouseEvent<HTMLDivElement>) => {
                     e.stopPropagation();
                     setOpened(true);
                 }}
-                className="ml-auto flex w-12"><CommitIcon className="mr-2" /> {head.revisionNumber.toString()}</div>
+                className="ml-auto flex w-12"><CommitIcon className="mr-2" /> {head.commits ? head.commits.length : head.revisionNumber ? head.revisionNumber.toString() : 0}</div>
         </div>
         <div className="flex flex-col ml-3">
             {revisions.slice(1).map(
                 (revision, index) =>
                     <div
+                    key={index}
                         onClick={() => loadPatchToken(revision.tokenId)}
                         className="flex hover:bg-zinc-300 hover:text-black p-1 cursor-pointer">
                         <div className="w-10 text-zinc-600">
