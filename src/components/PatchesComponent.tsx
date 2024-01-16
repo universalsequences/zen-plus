@@ -3,23 +3,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSwitchNetwork } from 'wagmi';
 import {
     goerli,
-    zoraTestnet
 } from 'wagmi/chains';
-import Toolbar from './Toolbar';
 import SearchWindow from './SearchWindow';
-import { Backfill } from './Backfill';
-
 import { useSettings } from '@/contexts/SettingsContext';
 import React, { useEffect, useState, useCallback } from 'react';
-import PatchWrapper from './PatchWrapper';
 import Sidebar from './Sidebar';
 import ZenCodeSidebar from './ZenCodeSidebar';
-import PatchComponent from '@/components/PatchComponent';
-import { PatchesProvider } from '@/contexts/PatchesContext';
-import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
 import { usePatches } from '@/contexts/PatchesContext';
 import { useSelection } from '@/contexts/SelectionContext';
-import { PatchImpl } from '@/lib/nodes/Patch';
 import PatchTile from './PatchTile';
 import { useTilesContext } from '@/contexts/TilesContext';
 
@@ -66,13 +57,6 @@ export default function PatchesComponent() {
             setShowSearch(true);
         }
     }, [setShowSearch]);
-
-    /*
-    let nodes = patches[0].getAllNodes();
-    let ids = nodes.map(x => x.id);
-    let setids = new Set(ids);
-        console.log("ids=%s unique=%s", ids.length, setids.size);
-        */
 
     const onClick = useCallback((e: any) => {
         if (e.button == 2) {
@@ -122,8 +106,6 @@ export default function PatchesComponent() {
                 <ZenCodeSidebar />
                 {showSearch && <SearchWindow hide={() => setShowSearch(false)} />}
             </div >
-            {/*<Backfill />*/}
-
         </>
     }, [patches, user, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode]);
 
