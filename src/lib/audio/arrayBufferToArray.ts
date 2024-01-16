@@ -1,5 +1,3 @@
-const bufferToArrayBuffer = require('buffer-to-arraybuffer');
-
 export type ByteTypeNames = {
     [x: string]: Int8ArrayConstructor | Int32ArrayConstructor
 }
@@ -14,10 +12,11 @@ export const arrayBufferToArray = async (raw: ArrayBuffer, audioContext: AudioCo
     let blob = new ArrayType(raw)
     let type = new TextDecoder().decode(blob.slice(0, 4));
     if (type === "RIFF") {
-        let audioBuffer = await audioContext.decodeAudioData(bufferToArrayBuffer(blob));
+        let audioBuffer = await audioContext.decodeAudioData(blob.buffer);
         return audioBuffer.getChannelData(0);
     } else {
         return new Float32Array(blob);
     }
 
 };
+

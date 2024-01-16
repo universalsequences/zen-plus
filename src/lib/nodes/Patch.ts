@@ -86,10 +86,8 @@ export class PatchImpl implements Patch {
         }
         let startTime = new Date().getTime();
         if (this.skipRecompile || this.skipRecompile2) {
-            console.log("skipping...");
             return;
         }
-        console.log("disconnecting...");
         this.skipRecompile2 = true;
         this.disconnectGraph();
         this.outputStatements = [];
@@ -102,7 +100,6 @@ export class PatchImpl implements Patch {
         let objectNodes = this.objectNodes; //getAllNodes();
         let _objectNodes = objectNodes;
         if (true) { //this.name === undefined) {
-            console.log('going thru objects...');
             for (let node of _objectNodes) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
@@ -144,8 +141,6 @@ export class PatchImpl implements Patch {
             }
         }
 
-
-        console.log('initing matgrices and everything');
 
         let a = new Date().getTime();
         let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
