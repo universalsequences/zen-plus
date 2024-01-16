@@ -465,7 +465,9 @@ export class PatchImpl implements Patch {
                             publish(e.data.type, [e.data.subType, e.data.body]);
                         };
 
+                        console.log('received audio worklet now trying to connect to destination');
                         if (ret.workletNode.channelCount <= 1) {
+                            console.log('channel count is 1 or less so connecting directly to dest', this.audioContext);
                             ret.workletNode.connect(this.audioContext.destination);
                             this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
                         } else {

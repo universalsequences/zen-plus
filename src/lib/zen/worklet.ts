@@ -38,6 +38,7 @@ export const createWorklet = (
                     outputChannelCount: [graph.numberOfOutputs]
                 })
 
+            console.log("on compilation complete=", workletNode);
 
             workletNode.port.onmessage = (e: MessageEvent) => {
                 let type = e.data.type
@@ -85,7 +86,9 @@ export const createWorklet = (
             return workletNode;
         };;
 
+        console.log('adding audio worklet to module', ctxt);
         await ctxt.audioWorklet.addModule(url);
+        console.log('successfully added worklet to module');
         if (onlyCompile) {
             resolve(onCompilation);
             return;
