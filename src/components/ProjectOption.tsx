@@ -36,6 +36,7 @@ const ProjectOption: React.FC<{ head: any, loadPatchToken: (x: number) => void }
             {revisions.map(
                 (head, index) =>
                     <div
+                        key={index}
                         onClick={() => loadPatchToken(head)}
                         className="flex hover:bg-zinc-300 hover:text-black p-1 cursor-pointer">
                         <div>{head.name}</div>

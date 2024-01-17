@@ -99,7 +99,7 @@ const Documentation = () => {
                             Works published this way are deployed as a standalone <White>ERC721</White> contract-- owned by the user-- where each minted token can be a unique variation of the project. The contracts themselves are custom <White>Zora Drop Contracts</White>.
                         </P>
                         <P>
-                            All <White>param</White> nodes marked with the "@onchain 1" attribute will be dynamically generated per token, within the defined ranges of that <White>param</White> node (the min/max attributes).
+                            All <White>param</White> nodes marked with the <White>@onchain 1</White> attribute will be dynamically generated per token, within the defined ranges of that <White>param</White> node (the min/max attributes).
                         </P>
                     </div>
                     <div className="my-auto ml-5">
