@@ -1,4 +1,3 @@
-import { Landing } from './landing/Landing';
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useState, useRef, useEffect } from 'react';
@@ -15,8 +14,6 @@ import PatchesComponent from '@/components/PatchesComponent';
 import { Theme } from '@radix-ui/themes';
 import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
 import { PatchImpl } from '@/lib/nodes/Patch';
-import '@/styles/radix.scss';
-import '@rainbow-me/rainbowkit/styles.css';
 
 import {
     getDefaultWallets,
