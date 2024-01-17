@@ -295,7 +295,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         if (patch.objectNodes.length < 1) {
             let node = new ObjectNodeImpl(patch);
             node.parse("out 1");
-            let position = { x: window.innerWidth / 2, y: window.innerHeight - 300 };
+            let position = { x: 100, y: 100 };
             newObjectNode(node, position);
             updatePosition(node.id, position);
         }

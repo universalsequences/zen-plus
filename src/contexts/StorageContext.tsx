@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useCallback, useEffect } fr
 import { useAuth } from './AuthContext';
 import { applyDiffs } from '@/lib/onchain/merge';
 import { decompress } from '@/lib/onchain/fetch';
-import { addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
+import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 
 import { db } from '@/lib/db/firebase';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,14 +23,13 @@ export interface Project {
 }
 
 interface IStorageContext {
-    savePatch: (x: string, patch: SerializedPatch) => Promise<string>;
-    saveSubPatch: (x: string, patch: SerializedPatch) => void;
     getPatches: (key: string) => Project[];
     onchainSubPatches: OnchainSubPatch[];
     storePatch: (name: string, patch: Patch, isSubPatch: boolean, email: string) => Promise<void>;
     fetchPatchesForEmail: (email: string) => Promise<any[]>;
     fetchPatch: (x: any) => Promise<SerializedPatch>;
     fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
+    fetchRevisions: (head: any) => Promise<any[]>;
 }
 
 interface Props {
@@ -65,7 +64,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         if (user) {
             fetchPatchesForEmail(user.email, true).then(
                 docs => {
-                    console.log('subpatches we found=', docs);
                     if (docs) {
                         setSubPatches(docs.map((x: any) => ({ name: x.name, id: x.id } as OnchainSubPatch)));
                     }
@@ -116,50 +114,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     };
 
 
-    const savePatch = useCallback((name: string, patchToSave: SerializedPatch): Promise<string> => {
-        return new Promise(resolve => {
-            fetch('/api/compress', {
-                method: "POST",
-                body: JSON.stringify(patchToSave)
-            }).then(
-                async r => {
-                    let payload = await r.json();
-                    /*
-                    let storageName = `patch.${name}`;
-                    let projects = JSON.parse(window.localStorage.getItem("patch") || "[]")
-                    window.localStorage.setItem("patch", JSON.stringify([...projects, name]));
-                    window.localStorage.setItem(storageName, JSON.stringify(payload));
-                    */
-                    resolve(payload.compressed);
-                });
-        });
-
-    }, []);
-
-    const saveSubPatch = useCallback((name: string, patchToSave: SerializedPatch) => {
-        fetch('/api/compress', {
-            method: "POST",
-            body: JSON.stringify(patchToSave)
-        }).then(
-            async r => {
-                let payload = await r.json();
-                let storageName = `subpatch.${name}`;
-                let projects = JSON.parse(window.localStorage.getItem("subpatch") || "[]")
-                window.localStorage.setItem("subpatch", JSON.stringify([...projects, name]));
-                window.localStorage.setItem(storageName, JSON.stringify(payload));
-            });
-    }, []);
-
-    const storePatch = async (name: string, patch: Patch, isSubPatch: boolean, email: string) => {
-        let json: any = patch.getJSON();
-        let prev = patch.previousSerializedPatch;
-        let current = json;
-        if (prev && current && patch.previousDocId) {
-            const diff = jsonpatch.compare(prev, current);
-            console.log("DIFF=", diff);
-            json = diff;
-        }
-
+    const compress = async (json: any): Promise<string> => {
         // we gotta save it now
         // Convert the string to a Blob
         let resp = await fetch('/api/compress', {
@@ -167,23 +122,40 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             body: JSON.stringify(json)
         })
         let payload = await resp.json();
-        let compressed = (payload.compressed);
+        let compressed = payload.compressed;
+        return compressed;
+    };
 
+    const uploadCompressedData = async (compressed: string): Promise<string> => {
         const diffBlob = new Blob([compressed], { type: 'text/plain' });
-
 
         // Create a storage reference from our storage service
         const uniqueId = uuidv4(); // Generates a unique ID
         let path = `patches/${uniqueId}`;
-
         const diffRef = ref(storage, path);
-
         // Upload the Blob
         let snapshot = await uploadBytes(diffRef, diffBlob);
+        return snapshot.ref.fullPath;
+    };
+
+    const storePatch = async (name: string, patch: Patch, isSubPatch: boolean, email: string) => {
+        let json: any = patch.getJSON();
+
+        let originalCompressed = await compress(json);
+
+        let prev = patch.previousSerializedPatch;
+        let current = json;
+        if (prev && current && patch.previousDocId) {
+            const diff = jsonpatch.compare(prev, current);
+            json = diff;
+        }
+
+        let compressed = await compress(json);
         let document: any = {
             createdAt: new Date(),
             name,
-            commit: snapshot.ref.fullPath,
+            patch: await uploadCompressedData(originalCompressed),
+            commit: await uploadCompressedData(compressed),
             user: email,
             isSubPatch
         };
@@ -201,15 +173,12 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
                     document.commits = commits;
                 }
             } catch (error) {
-                console.log('error fetching previous doc id');
             }
         }
-        console.log('adding doc=', document);
         addDoc(collection(db, 'patches'), document).then(
             doc => {
                 let docId = doc.id
                 patch.previousDocId = docId;
-                console.log('sertting previous doc id=', docId);
                 patch.previousSerializedPatch = patch.getJSON();
             });
 
@@ -228,20 +197,25 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
                 }
             });
             let date = new Date();
-            console.log('documents matching=', email, documents);
             documents.sort((a: any, b: any) => a.createdAt.seconds - b.createdAt.seconds);
             return documents;
         } catch (error) {
-            console.error('Error fetching documents:', error);
             throw error;
         }
     }
 
+    /*
+    const fetchCommitDocs = async (ids: string[]): Promise<any[]> => {
+
+    };
+    */
+
     const fetchCommit = async (id: string): Promise<any | null> => {
-        console.log('fetch commit = ', id);
         const docRef = doc(db, 'patches', id);
         try {
+            let a = new Date().getTime();
             const docSnap = await getDoc(docRef);
+            let b = new Date().getTime();
             if (docSnap.exists()) {
                 let document = docSnap.data();
                 let commit = document.commit;
@@ -250,6 +224,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
                 let r = await fetch(downloadUrl);
                 let text = await r.text();
                 let decompressed: any = decompress(text);
+                let c = new Date().getTime();
                 return decompressed;
             }
         } catch (e) {
@@ -259,13 +234,11 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     };
 
     const fetchSubPatchForDoc = async (id: string): Promise<SerializedPatch | null> => {
-        console.log("fetch subpatch for doc=", id);
         const docRef = doc(db, 'patches', id);
         try {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 let document = docSnap.data();
-                console.log('document = ', document);
                 return fetchPatch(document);
             }
         } catch (e) {
@@ -278,39 +251,61 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         let commits = x.commits || [];
         let fileRef = ref(storage, commit);
         try {
+            if (x.patch) {
+                let fileRef = ref(storage, x.patch);
+                const downloadUrl = await getDownloadURL(fileRef);
+                let r = await fetch(downloadUrl);
+                let text = await r.text();
+                let decompressed: SerializedPatch = decompress(text);
+                return decompressed;
+            }
             const downloadUrl = await getDownloadURL(fileRef);
             let r = await fetch(downloadUrl);
             let text = await r.text();
             let decompressed: SerializedPatch = decompress(text);
-            console.log('File download URL:', downloadUrl, text);
-            console.log("decompressed = ", decompressed);
 
             if (commits.length === 0) {
                 return decompressed;
             } else {
                 let _commits = [decompressed];
+                let a = new Date().getTime();
                 for (let c of commits) {
                     _commits.push(await fetchCommit(c));
                 }
-                console.log(_commits);
+                let b = new Date().getTime();
                 let applied: SerializedPatch = applyDiffs(_commits);
                 return applied;
 
             }
         } catch (error) {
-            console.error('Error getting file download URL:', error);
             throw error;
         }
+    };
+
+    const fetchRevisions = async (head: any): Promise<any[]> => {
+        let list = [];
+        for (let commit of head.commits) {
+            const docRef = doc(db, 'patches', commit);
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    let document = docSnap.data();
+                    list.push(document);
+                }
+            } catch (e) {
+            }
+        }
+        console.log('returning list =', list);
+        return list;
     };
 
     return <StorageContext.Provider
         value={{
             fetchPatchesForEmail,
-            saveSubPatch,
             storePatch,
             getPatches,
             fetchPatch,
-            savePatch,
+            fetchRevisions,
             fetchSubPatchForDoc,
             onchainSubPatches: (subpatches || []) as OnchainSubPatch[]
         }}>

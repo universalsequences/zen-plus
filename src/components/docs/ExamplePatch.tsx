@@ -1,8 +1,7 @@
-"use client"
-import Home from '@/components/Home';
-import '@/styles/styles.scss';
+import { Landing } from './landing/Landing';
 import Image from 'next/image'
-import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useRef, useEffect } from 'react';
 import PatchComponent from '@/components/PatchComponent';
 import { MessageProvider } from '@/contexts/MessageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -54,24 +53,41 @@ const wagmiConfig = createConfig({
     publicClient
 })
 
-export default function App() {
+export default function ExamplePatch() {
+    let [basePatch, setBasePatch] = useState<Patch | null>(null);
+    let patchRef = useRef<Patch | null>(null);
+    useEffect(() => {
+        let p = new PatchImpl();
+        patchRef.current = p;
+        setBasePatch(p);
+    }, [setBasePatch]);
+
+    useEffect(() => {
+        return () => {
+            if (patchRef.current) {
+                patchRef.current.disconnectGraph();
+            }
+        };
+    }, []);
+
+    if (!basePatch) {
+        return <></>;
+    }
     return (
-        <WagmiConfig config={wagmiConfig}>
-            <RainbowKitProvider
-                theme={darkTheme({
-                    accentColor: 'black',
-                    accentColorForeground: 'white',
-                    borderRadius: 'small',
-                })}
-                chains={chains}>
-                <Theme appearance="dark" >
-                    <AuthProvider>
-                        <NavProvider>
-                            <Home />
-                        </NavProvider>
-                    </AuthProvider>
-                </Theme>
-            </RainbowKitProvider>
-        </WagmiConfig>
+        <SettingsProvider>
+            <MessageProvider>
+                <StorageProvider>
+                    <SelectionProvider>
+                        <PatchesProvider basePatch={basePatch}>
+                            <TilesProvider>
+                                <main className="flex w-full h-full example-patch">
+                                    <PatchesComponent />
+                                </main>
+                            </TilesProvider>
+                        </PatchesProvider>
+                    </SelectionProvider>
+                </StorageProvider>
+            </MessageProvider>
+        </SettingsProvider>
     )
 }

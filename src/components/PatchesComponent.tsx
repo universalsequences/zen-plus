@@ -1,4 +1,5 @@
 "use client"
+import { Landing } from './landing/Landing';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSwitchNetwork } from 'wagmi';
 import {
@@ -36,7 +37,7 @@ export default function PatchesComponent() {
             // Cancel the event as stated by the standard.
             e.preventDefault();
             // Chrome requires returnValue to be set.
-            e.returnValue = 'Please save before leaving? Are you sure?';
+            //e.returnValue = 'Please save before leaving? Are you sure?';
         });
 
     }, []);
@@ -74,23 +75,6 @@ export default function PatchesComponent() {
     }, [setSelection, selection]);
 
     return React.useMemo(() => {
-        console.log('user = ', user);
-        if (!user) {
-            return <div
-                className={"flex bg-black w-full h-full min-h-screen " + (lightMode ? "light-mode" : "")}>
-                <div className="flex flex-col w-full mt-5 patches justify-center">
-                    <div className="text-6xl text-center w-64 h-64 m-auto bg-zinc-950 flex">
-                        <span className="m-auto">
-                            zen+
-                        </span>
-
-                    </div>
-                    <button onClick={googleSignIn} className="cursor-pointer px-6 py-1 bg-zinc-900 rounded-full m-auto flex">
-                        sign in
-                    </button>
-                </div>
-            </div >
-        }
         return <>
             <div
                 onClick={onClick}

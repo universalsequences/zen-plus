@@ -84,10 +84,10 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph(recompileGraph?: boolean) {
-        if (true) {
-        }
+        console.log("recompileGraph(%s)", recompileGraph, this.name);
         let startTime = new Date().getTime();
         if (this.skipRecompile || this.skipRecompile2) {
+            console.log("SKIP RECOMPILE");
             return;
         }
         this.skipRecompile2 = true;
@@ -220,6 +220,7 @@ export class PatchImpl implements Patch {
 
 
         if (this.name === undefined) {
+            console.log("name was undefined");
             let calls = _objectNodes.filter(node => node.name === "call" || node.name === "latchcall");
             calls.forEach(
                 call => {
@@ -230,6 +231,7 @@ export class PatchImpl implements Patch {
                 });
 
             let inputs = this.getAllNodes().filter(node => node.name === "in");
+            console.log("inputs to fetch ", inputs);
             inputs.forEach(
                 input => {
                     // get the patch
@@ -239,9 +241,11 @@ export class PatchImpl implements Patch {
                     if (p.parentNode) {
                         if (p.parentNode.inlets[inletNumber].connections.length === 0) {
                             // send a 0 then
+                            console.log("no connections so sending via outlets of input", input.outlets[0].connections);
                             for (let c of input.outlets[0].connections) {
                                 let { destinationInlet, destination } = c;
                                 let value = (input.attributes["default"] as number) || 0;
+                                console.log('sending value =%s to dest=', value, destination, destinationInlet);
                                 destination.receive(destinationInlet, value);
                             }
                         }

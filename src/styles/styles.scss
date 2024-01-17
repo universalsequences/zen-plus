@@ -376,3 +376,18 @@ svg {
     cursor: pointer;
     /* Additional styling for the knob */
 }
+
+.example-patch {
+    .mt-5 {
+        margin: 0px;
+    }
+    .min-h-screen {
+        min-height: unset !important;
+    }
+    .overflow-scroll {
+        overflow: visible;
+    }
+    .bg-toolbar {
+        display: none;
+    }
+}

@@ -36,56 +36,23 @@ const PatchDropdown = React.memo((props: Props) => {
     const [option, setOption] = useState<Option | null>(null);
     const { patch, children } = props;
     let [name, setName] = useState(patch.name);
-    const { storePatch, savePatch, saveSubPatch } = useStorage();
-    const [compressed, setCompressed] = useState<string | null>(null);
-    const [tokenId, setTokenId] = useState<number | null>(null);
+    const { storePatch } = useStorage();
     const { setLightMode, lightMode } = useSettings();
 
     let account = useAccount();
 
     useEffect(() => {
-        setName(name);
+        setName(name)
     }, [patch.name]);
 
     let isSubPatch: boolean = (patch as SubPatch).parentPatch !== undefined;
 
-
     const save = useCallback(() => {
-        let json = patch.getJSON();
         if (name && user && user.email) {
             storePatch(name, patch, isSubPatch, user.email);
         }
-
-        /*
-        if (isSubPatch) {
-        savePatch(name as string, json).then(
-            x => {
-                console.log('compressed=', x);
-                setCompressed(x);
-                //setCompressed(x);
-            });
-        // we are saving a sub patch
-        //saveSubPatch(name as string, json);
-
-        // subpatches always have 
-    } else {
-        let prev = patch.previousSerializedPatch;
-        let current = json;
-        if (prev && current && patch.previousDocId) {
-            const diff = jsonpatch.compare(prev, current);
-            console.log("DIFF=", diff);
-            json = diff;
-        }
-        savePatch(name as string, json).then(
-            x => {
-                console.log('compressed=', x);
-                setCompressed(x);
-                //setCompressed(x);
-            });
-    }
-    */
         setOption(null);
-    }, [patch, name, isSubPatch, setOption, account, setCompressed]);
+    }, [patch, name, isSubPatch, setOption, account]);
 
     useEffect(() => {
         window.addEventListener("keydown", onKeyDown);
@@ -115,78 +82,7 @@ const PatchDropdown = React.memo((props: Props) => {
         }
     }, [patch]);
 
-    /*
-    useEffect(() => {
-        if (tokenId) {
-            patch.previousTokenId = tokenId;
-            patch.previousSerializedPatch = patch.getJSON();
-            setCompressed(null);
-        }
-    }, [tokenId, setCompressed]);
-    */
-
     const { logout, user } = useAuth();
-
-    useEffect(() => {
-        if (name && compressed && user) {
-            // we gotta save it now
-            // Convert the string to a Blob
-            const diffBlob = new Blob([compressed], { type: 'text/plain' });
-
-
-            // Create a storage reference from our storage service
-            const uniqueId = uuidv4(); // Generates a unique ID
-            let path = `patches/${uniqueId}`;
-
-            const diffRef = ref(storage, path);
-
-            // Upload the Blob
-            uploadBytes(diffRef, diffBlob).then(async (snapshot) => {
-                console.log('Uploaded a blob or file!');
-                console.log('snapshot we got=', snapshot);
-                if (user.email) {
-                    let email = user.email;
-                    let document: any = {
-                        createdAt: new Date(),
-                        name,
-                        commit: path,
-                        user: email,
-                        isSubPatch
-                    };
-                    if (patch.previousDocId) {
-                        console.log('had prev doc');
-                        const docRef = doc(db, 'patches', patch.previousDocId);
-                        try {
-                            const docSnap = await getDoc(docRef);
-                            if (docSnap.exists()) {
-                                console.log('Document data:', docSnap.data());
-                                let previousDoc = docSnap.data();
-                                let commits = [patch.previousDocId];
-                                if (previousDoc.commits) {
-                                    commits = [...commits, ...previousDoc.commits];
-                                }
-                                document.commits = commits;
-                                console.log('commits is now', commits);
-                            }
-                        } catch (error) {
-                            console.log('error fetching previous doc id');
-                        }
-                    }
-                    console.log('adding doc=', document);
-                    addDoc(collection(db, 'patches'), document).then(
-                        doc => {
-                            let docId = doc.id
-                            patch.previousDocId = docId;
-                            console.log('sertting previous doc id=', docId);
-                            patch.previousSerializedPatch = patch.getJSON();
-                            setCompressed(null);
-
-                        });
-                }
-                // You can get the download URL or file metadata here
-            });
-        }
-    }, [name, compressed, user, setCompressed, isSubPatch]);
 
     return (
         <div>

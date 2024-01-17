@@ -1,7 +1,7 @@
 "use client"
-import Home from '@/components/Home';
-import '@/styles/styles.scss';
+import { Landing } from './landing/Landing';
 import Image from 'next/image'
+import { useAuth } from '@/contexts/AuthContext';
 import React, { useState, useEffect } from 'react';
 import PatchComponent from '@/components/PatchComponent';
 import { MessageProvider } from '@/contexts/MessageContext';
@@ -55,23 +55,32 @@ const wagmiConfig = createConfig({
 })
 
 export default function App() {
+    let [basePatch, setBasePatch] = useState<Patch | null>(null);
+    useEffect(() => {
+        setBasePatch(new PatchImpl());
+    }, [setBasePatch]);
+    const { user } = useAuth();
+    if (!user) {
+        return <Landing />;
+    }
+    if (!basePatch) {
+        return <></>;
+    }
     return (
-        <WagmiConfig config={wagmiConfig}>
-            <RainbowKitProvider
-                theme={darkTheme({
-                    accentColor: 'black',
-                    accentColorForeground: 'white',
-                    borderRadius: 'small',
-                })}
-                chains={chains}>
-                <Theme appearance="dark" >
-                    <AuthProvider>
-                        <NavProvider>
-                            <Home />
-                        </NavProvider>
-                    </AuthProvider>
-                </Theme>
-            </RainbowKitProvider>
-        </WagmiConfig>
+        <SettingsProvider>
+            <MessageProvider>
+                <StorageProvider>
+                    <SelectionProvider>
+                        <PatchesProvider basePatch={basePatch}>
+                            <TilesProvider>
+                                <main className="flex min-h-screen flex-col h-full w-full">
+                                    <PatchesComponent />
+                                </main>
+                            </TilesProvider>
+                        </PatchesProvider>
+                    </SelectionProvider>
+                </StorageProvider>
+            </MessageProvider>
+        </SettingsProvider>
     )
 }

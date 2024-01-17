@@ -168,6 +168,7 @@ export type Patch = Identifiable & {
     previousSerializedPatch?: SerializedPatch;
     previousDocId?: string;
     viewed?: boolean;
+    disconnectGraph: () => void;
 }
 
 export type SubPatch = Patch & {

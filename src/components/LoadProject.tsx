@@ -29,7 +29,7 @@ interface Props {
 const LoadProject = (props: Props) => {
     const publicClient = usePublicClient();
 
-    const { fetchPatch, fetchPatchesForEmail, getPatches } = useStorage();
+    const { fetchPatch, fetchPatchesForEmail } = useStorage();
     const { patch } = props;
     const [patches, setPatches] = useState<Project[]>([]);
     const { updatePositions, sizeIndexRef, setSizeIndex } = usePosition();
@@ -47,7 +47,7 @@ const LoadProject = (props: Props) => {
     }, [user]);
 
     const _loadPatch = useCallback((x: Project) => {
-        patch.name = x.name;
+        // patch.name = x.name;
         loadProject(x);
         let updates: Coordinates = {};
         let sizes = { ...sizeIndexRef.current }
@@ -66,7 +66,7 @@ const LoadProject = (props: Props) => {
         let serialized = await fetchPatch(saved);
         loadProjectPatch(serialized);
 
-        patch.name = saved.name;
+        // patch.name = saved.name;
         let updates: Coordinates = {};
         let sizes = { ...sizeIndexRef.current }
         for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
@@ -79,33 +79,8 @@ const LoadProject = (props: Props) => {
         updatePositions(updates);
         patch.previousDocId = saved.id;
         patch.previousSerializedPatch = serialized;
-
         props.hide();
-        /*
-        const data = await publicClient.readContract({
-            address: DROP_CONTRACT,
-            abi: erc.abi,
-            functionName: 'tokenURI',
-            args: [x]
-        })
-
-        let json = base64ToJson(data as string);
-        let previous_token_id = parseInt(json.previous_token_id);
-
-        if (previous_token_id === 0) {
-            _loadPatch({ name: json.name, json: { compressed: json.diff } as unknown as any });
-        } else {
-            let applied = await mergeDiffs(publicClient, x);
-            _loadPatch({ name: json.name, json: applied as unknown as any });
-        }
-        */
-        // patch.previousTokenId = x;
-
     }, [patch]);
-
-    useEffect(() => {
-        setPatches([...getPatches(props.isSubPatch ? "subpatch" : "patch")].reverse());
-    }, []);
 
     return (
         <div className="text-xs flex flex-col h-96 w-96 select-none">

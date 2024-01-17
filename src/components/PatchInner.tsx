@@ -96,7 +96,7 @@ const PatchInner: React.FC<{
         if (patch.objectNodes.length < 1) {
             let node = new ObjectNodeImpl(patch);
             node.parse("out 1");
-            let position = { x: window.innerWidth / 2, y: window.innerHeight - 300 };
+            let position = { x: 280, y: 200 };
             newObjectNode(node, position);
             updatePosition(node.id, position);
         }
