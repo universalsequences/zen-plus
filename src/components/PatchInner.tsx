@@ -93,16 +93,6 @@ const PatchInner: React.FC<{
     }, [selectedNodes])
 
     useEffect(() => {
-        if (patch.objectNodes.length < 1) {
-            let node = new ObjectNodeImpl(patch);
-            node.parse("out 1");
-            let position = { x: 280, y: 200 };
-            newObjectNode(node, position);
-            updatePosition(node.id, position);
-        }
-    }, [objectNodes]);
-
-    useEffect(() => {
         if (lockedMode) {
             setDraggingNode(null);
             setSelectedNodes([]);

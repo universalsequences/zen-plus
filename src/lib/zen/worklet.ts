@@ -27,12 +27,13 @@ export const createWorklet = (
         const url = `data:application/javascript;base64,${workletBase64}`;
 
         const onCompilation = (): AudioWorkletNode => {
+            console.log("graph =", graph);
             const workletNode = new AudioWorkletNode(
                 ctxt,
                 name,
                 {
                     channelInterpretation: 'discrete',
-                    numberOfInputs: graph.numberOfInputs,
+                    numberOfInputs: 1, //graph.context.numberOfInputs,
                     numberOfOutputs: 1,
                     channelCount: graph.numberOfOutputs,
                     outputChannelCount: [graph.numberOfOutputs]
@@ -58,7 +59,7 @@ export const createWorklet = (
 
             // Send initial data (Param & Data operators) to the worklet
             if (graph.context.target === Target.C) {
-                fetch("https://zequencer.io/compile", {
+                fetch("http://localhost:7171/compile", {
                     method: "POST",
                     headers: { 'Content-Type': 'text/plain' },
                     body: wasm

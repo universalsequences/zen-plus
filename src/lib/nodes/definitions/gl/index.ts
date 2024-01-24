@@ -1,7 +1,7 @@
 import { API } from '@/lib/nodes/context';
 import { attribute, Attribute, AttributeGen } from '@/lib/gl/attributes';
 import { printCode } from './printCode';
-import { FunctionSignature, DataType, MessageType, functionType, maxCompatibleType, strictGLType, GLTypeCheck } from '@/lib/nodes/typechecker';
+import { FunctionSignature, DataType, MessageType, functionType, maxCompatibleType, equalArguments, strictGLType, GLTypeCheck } from '@/lib/nodes/typechecker';
 import { stringToType, GLType, UGen, Arg } from '@/lib/gl/types';
 import { Uniform } from '@/lib/gl/uniforms';
 import { Definition } from '@/lib/docs/docs';
@@ -11,10 +11,10 @@ import { ObjectNode, Message, Lazy } from '@/lib/nodes/types'
 import * as gl from '@/lib/gl/index';
 import { registerFunction, compileStatement } from '@/lib/nodes/definitions/gl/AST';
 
-export const doc = (name: string, definition: Definition) => {
+export const doc = (name: string, definition: Definition, registerName: string = name) => {
     DOC.doc(name, definition);
     if (definition.fn) {
-        registerFunction(name, definition.fn);
+        registerFunction(registerName, definition.fn);
     }
 }
 
@@ -31,8 +31,13 @@ const typed_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => 
         })
 };
 
+const conditional_op = (name: string, fn: (...args: Arg[]) => UGen, fnString: string) =>
+    typed_op(name, 2, fn, equalArguments(DataType.GL(GLType.Bool), [DataType.GL(GLType.Float), DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)]), fnString);
+
+
 const flexible_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => UGen, fnString?: string) =>
     typed_op(name, numberOfInlets, fn, maxCompatibleType(null, [DataType.GL(GLType.Float), DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)]), fnString);
+
 
 const strict_vec_op = (name: string, numberOfInlets: number, fn: (...args: Arg[]) => UGen, outputType: GLType, fnString?: string) =>
     typed_op(name, numberOfInlets, fn,
@@ -56,6 +61,12 @@ const strict_float_op = (name: string, numberOfInlets: number, fn: (...args: Arg
             [DataType.GL(GLType.Float)],
             [DataType.GL(GLType.Float)]));
 
+conditional_op("<", gl.lt, "lt");
+conditional_op("==", gl.eq, "eq");
+conditional_op(">", gl.gt, "gt");
+conditional_op(">=", gl.gte, "gte");
+conditional_op("<=", gl.lte, "lte");
+
 flexible_op("+", 2, gl.add, "add");
 flexible_op('-', 2, gl.sub, "sub");
 flexible_op('*', 2, gl.mult, "mult");
@@ -68,6 +79,13 @@ strict_vec_op('uv', 0, gl.uv, GLType.Vec2);
 strict_vec_op('x', 1, gl.unpack("x"), GLType.Float, `unpack("x")`);
 strict_vec_op('y', 1, gl.unpack("y"), GLType.Float, `unpack("y")`);
 strict_vec_op('z', 1, gl.unpack("z"), GLType.Float, `unpack("z")`);
+strict_vec_op('xy', 1, gl.unpack("xy"), GLType.Vec2, `unpack("xy")`);
+strict_vec_op('xyz', 1, gl.unpack("xyz"), GLType.Vec3, `unpack("xyz")`);
+strict_vec_op('xyy', 1, gl.unpack("xyy"), GLType.Vec3, `unpack("xyy")`);
+strict_vec_op('yyx', 1, gl.unpack("yyx"), GLType.Vec3, `unpack("yyx")`);
+strict_vec_op('yxy', 1, gl.unpack("yxy"), GLType.Vec3, `unpack("yxy")`);
+strict_vec_op('xxx', 1, gl.unpack("xxx"), GLType.Vec3, `unpack("xxx")`);
+flexible_op('normalize', 1, gl.normalize);
 flexible_op('sin', 1, gl.sin);
 flexible_op('cos', 1, gl.cos);
 flexible_op('floor', 1, gl.floor);
@@ -88,6 +106,77 @@ flexible_op('mix', 3, gl.mix);
 flexible_op('step', 2, gl.step);
 strict_float_op('perspectiveMatrix', 4, gl.perspectiveMatrix, GLType.Mat4);
 strict_vec_op('cameraMatrix', 3, gl.viewMatrix, GLType.Mat4);
+
+doc(
+    "sumLoop",
+    {
+        numberOfInlets: 3,
+        inletNames: ["body", "iterations", "initialVal"],
+        numberOfOutlets: 1,
+        description: "iterates on body summing the result",
+        fn: gl.sumLoop,
+    });
+
+export const sumLoop = (node: ObjectNode, iterations: Lazy, initialVal: Lazy) => {
+    return (body: Message) => {
+        if ((body as Statement).type !== (initialVal() as Statement).type) {
+            // type error
+        }
+        let statement: Statement = ["sumLoop" as Operator, body as Statement, iterations() as Statement, initialVal() as Statement];
+        statement.node = node;
+        statement.type = (body as Statement).type;
+        return [statement];
+    };
+};
+
+doc(
+    "breakIf",
+    {
+        numberOfInlets: 2,
+        inletNames: ["condition", "else"],
+        numberOfOutlets: 1,
+        description: "breaks out of loop if condition is met, otherwise returns the else",
+        fn: gl.breakIf,
+    });
+
+export const breakIf = (node: ObjectNode, elseStatement: Lazy) => {
+    return (condition: Message) => {
+        /*
+        if ((body as Statement).type !== (initialVal() as Statement).type) {
+            // type error
+        }
+        */
+
+        let statement: Statement = ["breakIf" as Operator, condition as Statement, elseStatement() as Statement];
+        statement.node = node;
+        statement.type = (elseStatement() as Statement).type;
+        return [statement];
+    };
+};
+
+
+doc(
+    "switch",
+    {
+        numberOfInlets: 3,
+        inletNames: ["cond", "then", "else"],
+        numberOfOutlets: 1,
+        description: "conditional switch statement",
+        fn: gl.zswitch,
+    },
+    "zswitch");
+
+export const zswitch = (node: ObjectNode, thenStatement: Lazy, elseStatement: Lazy) => {
+    return (condition: Message): Statement[] => {
+        //if ((body as Statement).type !== (initialVal() as Statement).type) {
+        //    // type error
+        //}
+        let statement: Statement = ["zswitch" as Operator, condition as Statement, thenStatement() as Statement, elseStatement() as Statement];
+        statement.node = node;
+        statement.type = (thenStatement() as Statement).type;
+        return [statement];
+    };
+};
 
 doc(
     "uniform",
@@ -144,7 +233,6 @@ export const defun = (node: ObjectNode, name: Lazy) => {
         let statement: Statement = ["defun" as Operator, body as Statement, name() as Statement];
         statement.node = node;
         let args: Statement[] = parseArguments(body as Statement);
-        console.log('arguments parsed = ', args);
         args.sort((a, b) => (Array.isArray(a) && Array.isArray(b)) ? (a[0]! as CompoundOperator).value! - (b[0] as CompoundOperator).value! : 0);
 
         let nodes = new Set<ObjectNode>();
@@ -169,8 +257,6 @@ export const defun = (node: ObjectNode, name: Lazy) => {
 
         statement.type = DataType.GL(GLType.Function, functionSignature);
 
-        console.log('defun function type=', statement.type);
-
         return [statement];
     };
 };
@@ -182,8 +268,13 @@ const parseArguments = (statement: Statement): Statement[] => {
             return [statement];
         }
         let args: Statement[] = [];
+        let i = 0;
         for (let a of statement.slice(1)) {
+            if (statement[0] as string === "call" && i === 0) {
+                continue;
+            }
             args = [...args, ...parseArguments(a as Statement)];
+            i++;
         }
         return args;
     }
@@ -299,7 +390,6 @@ export const gl_attribute = (node: ObjectNode, type: Lazy, size: Lazy, isInstanc
     let attr: Attribute;
     return (data: Message) => {
         // so given an attribute we want to generate a new 
-        console.log('attribute called with data=', data);
         if (!Array.isArray(data)) {
             // trigger type error
             return [];
@@ -309,7 +399,6 @@ export const gl_attribute = (node: ObjectNode, type: Lazy, size: Lazy, isInstanc
         let _type = stringToType(type() as string);
         if (!attr) {
             attr = attribute(_type, array, (size() as number) || 2, isInstance() as number ? true : false);
-            console.log('generating attr');
         } else {
             // we already have an attribute so we just want to update it
             attr.set!(data as number[]);
@@ -325,7 +414,6 @@ export const gl_attribute = (node: ObjectNode, type: Lazy, size: Lazy, isInstanc
         statement.type = DataType.GL(_type);
 
         statement.node = node;
-        console.log(statement);
         return [statement];
     };
 };
@@ -343,7 +431,6 @@ export const gl_varying = (node: ObjectNode) => {
     let attr: Attribute;
     return (data: Message) => {
         let _statement = data as Statement;
-        console.log('varying called with...', data);
         if (!Array.isArray(_statement)) {
             return [];
         }
@@ -395,12 +482,12 @@ export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: La
             vertexStatement = ["vec4" as Operator, vertexStatement];
         }
 
-        setTimeout(() => {
-            let code = printCode(statement);
-            if (objectNode.patch.setVisualsCode) {
-                objectNode.patch.setVisualsCode(code);
-            }
-        }, 500);
+        //setTimeout(() => {
+        let code = printCode(statement);
+        if (objectNode.patch.setVisualsCode) {
+            objectNode.patch.setVisualsCode(code);
+        }
+        //}, 500);
         // compile the statement
 
         let compiled = compileStatement(statement);
@@ -444,6 +531,9 @@ export const api: API = {
     mat2,
     mat3,
     mat4,
+    sumLoop,
+    switch: zswitch,
+    breakIf: breakIf
 };
 
 

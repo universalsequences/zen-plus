@@ -1,4 +1,5 @@
 import { BlockGen } from '../zen';
+import Assistant from '@/lib/openai/assistant';
 import { TypeSuccess, TypeError } from './typechecker';
 import { RenderJob } from '@/lib/gl/zen';
 import { SVGObject } from './definitions/svg/index';
@@ -62,6 +63,7 @@ export interface IOConnection {
     destinationInlet: IOlet; // which inlet of the destination this goes to
     segmentation?: number;  // y position of segmentation
     created?: boolean;
+    splitter?: ChannelSplitterNode;
 }
 
 export type IOlet = Identifiable & {
@@ -70,6 +72,7 @@ export type IOlet = Identifiable & {
     lastMessage?: Message;
     hidden?: boolean;
     connectionType?: ConnectionType; // default = ZEN
+    messagesReceived?: number;
 }
 
 export type AttributeOptions = {
@@ -97,11 +100,12 @@ export type Node = Identifiable & Attributed & {
     patch: Patch;
     inlets: IOlet[];
     outlets: IOlet[];
-    newInlet: (name?: string) => void;
-    newOutlet: (name?: string) => void;
+    newInlet: (name?: string, type?: ConnectionType) => void;
+    newOutlet: (name?: string, type?: ConnectionType) => void;
     connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
-    disconnect: (connection: IOConnection, compile: boolean) => void;
+    disconnect: (connection: IOConnection, compile: boolean, ignoreAudio?: boolean) => void;
     connectAudioNode: (connection: IOConnection) => void;
+    disconnectAudioNode: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message) => void;
 }
@@ -127,6 +131,7 @@ export type ObjectNode = Positioned & Node & {
     lastSentMessage?: Message;
     storedMessage?: Message;
     storedParameterValue?: number;
+    merger?: ChannelMergerNode;
 }
 
 export type MessageNode = Positioned & Node & {
@@ -147,8 +152,10 @@ export type Patch = Identifiable & {
     messageNodes: MessageNode[];
     presentationMode: boolean;
     compile: (x: Statement, outputNumber: number) => void;
+    assistant: Assistant;
     recompileGraph: (force?: boolean) => void;
     type: PatchType;
+    isZenBase: () => boolean;
     audioContext: AudioContext;
     historyDependencies: Statement[];
     historyNodes: Set<ObjectNode>;
@@ -161,6 +168,7 @@ export type Patch = Identifiable & {
     skipRecompile: boolean;
     skipRecompile2: boolean;
     setZenCode?: (x: string | null) => void;
+    zenCode?: string;
     setVisualsCode?: (x: string | null) => void;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled
     setObjectNodes?: (x: ObjectNode[]) => void; // tells the front-end a new audioworklet has been compiled
@@ -169,6 +177,7 @@ export type Patch = Identifiable & {
     previousDocId?: string;
     viewed?: boolean;
     disconnectGraph: () => void;
+    isZen: boolean;
 }
 
 export type SubPatch = Patch & {

@@ -19,7 +19,7 @@ const PositionedComponent: React.FC<{
 }> = ({ text, node, isCustomView, children, isError, skipOverflow, lockedModeRef }) => {
 
     const { setSelectedNodes, selectedNodes } = useSelection();
-    const { sizeIndex, setDraggingNode, setResizingNode, updateSize, updateZIndex, maxZIndex } = usePosition();
+    const { nearestInlet, sizeIndex, setDraggingNode, setResizingNode, updateSize, updateZIndex, maxZIndex } = usePosition();
 
     const ref = useRef<HTMLDivElement | null>(null);
 
@@ -174,6 +174,10 @@ const PositionedComponent: React.FC<{
             className += " has-error";
         }
 
+        if (nearestInlet && nearestInlet.node === node) {
+            className = className.replaceAll("overflow-hidden", "");
+        }
+
         return (
             <div
                 ref={ref}
@@ -218,7 +222,7 @@ const PositionedComponent: React.FC<{
                 {children}
             </div>);
 
-    }, [node, isError, size, children, style, text]);
+    }, [node, isError, size, children, style, text, nearestInlet]);
     return out;
 };
 

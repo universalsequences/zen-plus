@@ -13,7 +13,7 @@ interface Props {
     text?: string;
 }
 const IOletsComponent = (props: Props) => {
-    const { scrollRef, setDraggingCable, draggingCable } = usePosition();
+    const { setNearestInlet, nearestInlet, scrollRef, setDraggingCable, draggingCable } = usePosition();
     const { isCustomView, patch, registerConnection } = usePatch();
     const { opened, zoomRef } = useSelection();
 
@@ -47,10 +47,14 @@ const IOletsComponent = (props: Props) => {
                 let connection = sourceNode.connect(props.node, iolet, sourceOutlet, true);
                 connection.created = true;
                 registerConnection(sourceNode.id, connection);
+                setDraggingCable(null);
+                setNearestInlet(null);
             } else if (destNode && destInlet && props.isOutlet) {
                 let connection = props.node.connect(destNode, destInlet, iolet, true);
                 connection.created = true;
                 registerConnection(props.node.id, connection);
+                setDraggingCable(null);
+                setNearestInlet(null);
             }
         }
     }, [draggingCable, setDraggingCable]);
@@ -78,10 +82,13 @@ const IOletsComponent = (props: Props) => {
                                     <div
                                         key={i}
                                         style={{ zIndex: 10000000000000000 }}
-                                        onMouseUp={() => onMouseUp(iolet)}
+                                        onMouseUp={(e: any) => {
+                                            e.stopPropagation();
+                                            onMouseUp(iolet);
+                                        }}
                                         onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => onMouseDown(
                                             e, iolet)}
-                                        className={(iolet.hidden ? "opacity-0 " : "") + (iolet.connections.length > 0 ? "  border-teal-400 bg-black hover:bg-teal-400 " : "bg-zinc-400 border-zinc-100 hover:border-red-500 ") + " border-2 w-2 h-2 rounded-full  hover:bg-red-500 z-30"}>
+                                        className={(nearestInlet && nearestInlet.node === props.node && nearestInlet.iolet === i && props.isOutlet === nearestInlet.isOutlet ? "nearest-inlet " : "") + (iolet.hidden ? "opacity-0 " : "") + (iolet.connections.length > 0 ? "  border-teal-400 bg-black hover:bg-teal-400 " : "bg-zinc-400 border-zinc-100 hover:border-red-500 ") + " border-2 w-2 h-2 rounded-full  hover:bg-red-500 z-30"}>
                                     </div>
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal
@@ -98,7 +105,7 @@ const IOletsComponent = (props: Props) => {
                 )
                 }
             </div >);
-    }, [props.iolets, numIOlets, draggingCable, props.text, opened, hover, setHover, isCustomView]);
+    }, [props.iolets, nearestInlet, numIOlets, draggingCable, props.text, opened, hover, setHover, isCustomView]);
     return memoed;
 }
 

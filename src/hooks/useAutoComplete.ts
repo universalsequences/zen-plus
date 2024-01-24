@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useStorage } from '@/contexts/StorageContext';
 import { API, Definition } from '@/lib/docs/docs';
 import { OperatorContextType, OperatorContext, getAllContexts } from '@/lib/nodes/context';
-import { NodeFunction, ObjectNode } from '@/lib/nodes/types';
+import { NodeFunction, SubPatch, ObjectNode } from '@/lib/nodes/types';
 
 export interface ContextDefinition {
     definition: Definition & { id?: string };
@@ -51,6 +51,9 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
         let _text = text.split(" ")[0].toLowerCase();
         let options: ContextDefinition[] = [];
         let contexts = sortContexts(getAllContexts(), objectNode);
+        if (!(objectNode.patch as SubPatch).parentNode) {
+            contexts = contexts.filter(x => x.type !== OperatorContextType.ZEN);
+        }
         for (let context of contexts) {
             let { definitions } = context;
             for (let name in definitions) {

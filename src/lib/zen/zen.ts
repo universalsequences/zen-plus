@@ -60,6 +60,7 @@ export const float = (x: number): UGen => {
 export const input = (inputNumber: number = 0): UGen => {
     return (context: Context) => {
         let name = context.input(inputNumber);
+        console.log("input zen called with inputNumber=", name);
         return {
             code: name,
             functions: [],
@@ -74,9 +75,21 @@ export const input = (inputNumber: number = 0): UGen => {
 };
 
 
-// The way this works w/o outputs: each output will go in a different argument
 export const zen = (...inputs: UGen[]): ZenGraph => {
-    let context: Context = new Context(Target.Javascript);
+    return zenWithTarget(Target.Javascript, ...inputs);
+}
+
+export const zenJavascript = (...inputs: UGen[]): ZenGraph => {
+    return zenWithTarget(Target.Javascript, ...inputs);
+}
+
+export const zenC = (...inputs: UGen[]): ZenGraph => {
+    return zenWithTarget(Target.C, ...inputs);
+}
+
+// The way this works w/o outputs: each output will go in a different argument
+export const zenWithTarget = (target: Target, ...inputs: UGen[]): ZenGraph => {
+    let context: Context = new Context(target);
     let code = "";
     let lastVariable = "";
     let numberOfOutputs = 1;
@@ -128,7 +141,7 @@ output0 = ${lastVariable};
         variable: lastVariable,
         variables: variables,
         histories,
-        numberOfInputs: numberOfInputs + 1,
+        numberOfInputs: context.numberOfInputs,
         numberOfOutputs,
         params,
         functions,

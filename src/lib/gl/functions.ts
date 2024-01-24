@@ -102,14 +102,16 @@ export interface Argument {
     name: string;
     num: number;
     type: GLType;
+    variable: string;
 }
 
 export const argument = (name: string, num: number, type: GLType): UGen => {
     return memo((context: Context): Generated => {
         let [_var] = context.useVariables("funcArg");
+        name = name + _var;
         let out = `${context.printType(type)} ${_var} = ${name}; `;
         let generated: Generated = context.emit(type, out, _var);
-        let args = [...(generated.functionArguments || []), { name, num, type }];
+        let args = [...(generated.functionArguments || []), { name, num, type, variable: _var }];
         // dedupe
         args = Array.from(new Set(args));
         generated.functionArguments = args;

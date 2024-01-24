@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useInletChecker } from '@/hooks/useInletChecker';
+import AssistantSidebar from './AssistantSidebar';
 import { useTilesContext } from '@/contexts/TilesContext';
 import PatchInner from './PatchInner';
 import { useNodeOperations } from '@/hooks/useEncapsulation';
@@ -64,6 +66,9 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         setDraggingSegmentation,
         draggingCable,
         setDraggingCable,
+        checkNearInlets,
+        nearestInlet,
+        setNearestInlet,
         draggingSegmentation,
     } = usePosition();
 
@@ -98,12 +103,38 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
     }, [draggingCable]);
 
     const onMouseUpNode = useCallback((e: MouseEvent | React.MouseEvent<HTMLDivElement>) => {
+        if (resizingPatch) {
+            setResizingPatch(null);
+            return;
+        }
         setDraggingNode(null);
         setResizingNode(null);
-    }, [setDraggingNode, setResizingNode]);
+    }, [setDraggingNode, setResizingNode, setResizingPatch, resizingPatch, nearestInlet, draggingCable]);
 
     const onMouseUp = useCallback((e: MouseEvent | React.MouseEvent<HTMLDivElement>) => {
-        console.log('on mouse up=', draggingCable);
+        if (nearestInlet && draggingCable) {
+            if (draggingCable.sourceNode) {
+                let destInlet = nearestInlet.node.inlets[nearestInlet.iolet]
+
+                let connection = draggingCable.sourceNode.connect(
+                    nearestInlet.node, destInlet, draggingCable.sourceOutlet as any, true);
+
+                connection.created = true;
+                registerConnection(draggingCable.sourceNode.id, connection);
+
+                setNearestInlet(null);
+                setDraggingCable(null);
+            } else if (draggingCable.destNode && draggingCable.destInlet) {
+                let connection = nearestInlet.node.connect(
+                    draggingCable.destNode, draggingCable.destInlet, nearestInlet.node.outlets[nearestInlet.iolet], true);
+                connection.created = true;
+
+                registerConnection(nearestInlet.node.id, connection);
+
+                setNearestInlet(null);
+                setDraggingCable(null);
+            }
+        }
 
         if (draggingCableRef.current) {
             e.stopPropagation();
@@ -111,10 +142,6 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             return;
         }
 
-        if (resizingPatch) {
-            e.stopPropagation();
-            setResizingPatch(null);
-        }
 
         if (isCustomView) {
             return;
@@ -138,7 +165,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 });
             setSelectedNodes(filtered);
         }
-    }, [patch, setDraggingCable, presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
+    }, [patch, draggingCable, nearestInlet, setNearestInlet, setDraggingCable, setDraggingCable, presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
 
     const draggingNodeRef = useRef<DraggingNode | null>(null);
     const resizingNodeRef = useRef<ResizingNode | null>(null);
@@ -159,6 +186,16 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
     }, [selectedNodes])
 
     const onMouseMove = useCallback((e: MouseEvent) => {
+
+        if (draggingCable && scrollRef.current) {
+            let rect = scrollRef.current.getBoundingClientRect();
+            let client = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;// - offset.x;
+            let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
+            checkNearInlets(x, y);
+            return;
+        }
+
         if (!scrollRef.current) {
             return;
         }
@@ -285,12 +322,14 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             }
         }
     }, [
+        draggingCable,
         presentationMode,
         draggingSegmentation,
         resizingPatch,
         setGridTemplate,
         updatePositions, scrollRef, selection, setSelection, selectedNodes, updateSize, lockedMode]);
 
+    /*
     useEffect(() => {
         if (patch.objectNodes.length < 1) {
             let node = new ObjectNodeImpl(patch);
@@ -300,6 +339,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             updatePosition(node.id, position);
         }
     }, [objectNodes]);
+    */
 
     useEffect(() => {
         if (lockedMode) {
@@ -316,9 +356,12 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             window.removeEventListener("mouseup", onMouseUpNode);
         }
     }, [
+        nearestInlet,
         presentationMode,
         draggingSegmentation,
         patch,
+        draggingCable,
+        resizingPatch,
         setDraggingSegmentation,
         draggingCable,
         setDraggingCable,
@@ -605,9 +648,14 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                         {selectedPatch === patch ? <Toolbar patch={patch} /> : ''}
                     </>
                 }
+                {
+                    !isCustomView && <>
+                        {selectedPatch === patch ? <AssistantSidebar /> : ''}
+                    </>
+                }
             </div>
         </>);
-    }, [maxWidth, setDraggingCable, gridTemplate, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
+    }, [draggingCable, nearestInlet, setNearestInlet, maxWidth, setDraggingCable, gridTemplate, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
 
     return mem;
 };

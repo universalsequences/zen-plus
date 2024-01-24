@@ -6,8 +6,8 @@ doc(
     'speakers~',
     {
         description: "represents the speakers with outlets per output channel",
-        numberOfInlets: 0,
-        numberOfOutlets: 2,
+        numberOfInlets: 1,
+        numberOfOutlets: 0,
         outletType: ConnectionType.AUDIO
     });
 
@@ -18,6 +18,30 @@ export const speakers = (node: ObjectNode) => {
 
     // so upon the "compilation" stage of the Patch, we need to search for "speaker~"
     // nodes and wrap this object node with that audio worklet node
+
+    if (typeof node.attributes["channels"] === "number") {
+        for (let i = 0; i < node.attributes["channels"]; i++) {
+            if (!node.inlets[i]) {
+                node.newInlet("channel input" + (i + 1), ConnectionType.AUDIO);
+            }
+        }
+    }
+
+    let numberOfInputs = (node.attributes["channels"] || 1) as number;
+    if (node.audioNode && node.audioNode.numberOfInputs !== numberOfInputs) {
+        node.audioNode.disconnect();
+        node.audioNode = undefined;
+    }
+
+    if (!node.audioNode) {
+        // need to create an audio node that connects to speakers
+        let ctxt = node.patch.audioContext;
+        let splitter = ctxt.createChannelMerger((node.attributes["channels"] || 1) as number);
+        console.log('merger = ', splitter);
+        node.audioNode = splitter; //node.patch.audioContext.destination;
+        splitter.connect(ctxt.destination);
+
+    }
 
     return (_message: Message) => [];
 };

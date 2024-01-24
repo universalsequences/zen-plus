@@ -92,8 +92,10 @@ export const zen_peek = (
             if (maxLength()) {
                 let ret = [operator, index() as Statement, channel() as Statement, maxLength() as Statement] as Statement;
                 (ret as Statement).node = node;
+                console.log("max length=", maxLength());
                 return [ret];
             } else {
+                console.log("no max length");
                 let ret = [operator, index() as Statement, channel() as Statement] as Statement;
                 (ret as Statement).node = node;
                 return [ret];
@@ -112,6 +114,7 @@ export const zen_peek = (
                     ...node,
                     id: node.id + '_' + i
                 };
+                console.log("Max lenth=", maxLength());
                 outputs.push(ret as Statement);
             } else {
                 let ret = [operator, index() as Statement, i as Statement];
@@ -119,6 +122,7 @@ export const zen_peek = (
                     ...node,
                     id: node.id + '_' + i
                 };
+                console.log("No max length");
                 outputs.push(ret as Statement);
             }
         }

@@ -74,6 +74,7 @@ export const _printStatement = (
     let zobject = statement.node!;
     if (zobject && variables[zobject.id] !== undefined) {
         return variables[zobject.id].name
+    } else {
     }
 
     let opArgs = "";
@@ -111,12 +112,8 @@ export const _printStatement = (
     } else if (_name === "argument") {
         let compoundOperator = operator as CompoundOperator;
         output = `gl.argument(${_printStatement(statements[0] as Statement, variables, uniforms, deep + 1)}, ${compoundOperator.value as number}, gl.${stringToTypeString(statements[1] as string)})`;
-    } else if (_name === "uniform" && (zobject.attributes["onchain"] || zobject.storedMessage !== undefined)) {
-        if (zobject.attributes["onchain"]) {
-            output = `gl.uniform(gl.GLType.Float, ${zobject.arguments[0]})`;
-        } else {
-            output = `gl.uniform(gl.GLType.Float, ${zobject.storedMessage})`;
-        }
+    } else if (_name === "uniform") {
+        output = `gl.uniform(gl.GLType.Float, ${zobject.storedMessage || 0})`;
         uniformName = zobject.arguments[0] as string; // store the name so we may emit it
     } else if (statements.length === 0) {
         output = `${op} (${opArgs})`;

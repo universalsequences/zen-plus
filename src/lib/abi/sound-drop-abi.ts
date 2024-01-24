@@ -41,6 +41,16 @@ export const { abi } = {
             "inputs": [
                 {
                     "internalType": "string",
+                    "name": "name",
+                    "type": "string"
+                },
+                {
+                    "internalType": "string",
+                    "name": "description",
+                    "type": "string"
+                },
+                {
+                    "internalType": "string",
                     "name": "dsp",
                     "type": "string"
                 },
@@ -65,6 +75,16 @@ export const { abi } = {
                     "type": "int64[]"
                 },
                 {
+                    "internalType": "string[]",
+                    "name": "inputs",
+                    "type": "string[]"
+                },
+                {
+                    "internalType": "string[]",
+                    "name": "outputs",
+                    "type": "string[]"
+                },
+                {
                     "internalType": "uint104",
                     "name": "price",
                     "type": "uint104"
@@ -87,4 +107,4 @@ export const { abi } = {
             "type": "function"
         }
     ]
-}
+};

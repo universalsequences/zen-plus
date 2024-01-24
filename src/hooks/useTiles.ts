@@ -68,6 +68,7 @@ export const useTiles = (patch: Patch) => {
 
     const onResizePatch = useCallback((e: MouseEvent) => {
         if (!resizingPatch) {
+            console.log('no resizing patch.');
             return;
         }
 
@@ -157,6 +158,7 @@ export const useTiles = (patch: Patch) => {
                     newGridTemplate = percentA + " " + percentB;
                 }
             }
+            console.log('setting grid template=', newGridTemplate);
             setGridTemplate(newGridTemplate);
         }
 

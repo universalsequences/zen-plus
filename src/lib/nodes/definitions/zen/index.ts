@@ -1,4 +1,5 @@
 import { Lazy, Message, ObjectNode, NodeFunction } from '../../types';
+import { PatchImpl } from '@/lib/nodes/Patch';
 import { membraneAPI } from './physical-modeling/membrane';
 import { gate } from './gate';
 import { message } from './message';
@@ -7,7 +8,7 @@ import { functions } from './functions';
 //import { speakers, scope_tilde, number_tilde } from './audio/index';
 //import { comment } from './comment';
 //import { matrix } from './matrix';
-import { Statement, Operator } from './types';
+import { Statement, Operator, CompoundOperator } from './types';
 import { doc } from './doc';
 import { zen_history } from './history';
 import { math } from './math';
@@ -54,7 +55,7 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
         // simply tell the patcher to "compile" at this outputnumber
         // in the subpatch case, that will handle piping it out of the patch
         // in the base patch, it will kick off the ZEN compilation
-        if ((_node.patch as SubPatch).parentNode) {
+        if (!_node.patch.isZenBase()) {
             _node.patch.compile(message as Statement, outputNumber);
         } else {
             _node.patch.compile(outMessage as Statement, outputNumber);
@@ -74,13 +75,26 @@ doc(
 
 const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     let inputNumber = args[0]() as number;
+    let subpatch = (node.patch as SubPatch);
     let parentNode = (node.patch as SubPatch).parentNode;
     while (parentNode && parentNode.inlets.length < inputNumber) {
         parentNode.newInlet();
     }
     let name: string | undefined = args[1] ? args[1]() as string : undefined;
     parentNode.inlets[inputNumber - 1].name = name;
+
+    if (!subpatch.parentPatch.isZen) {
+        console.log("node is needs load = true");
+        node.needsLoad = true;
+    }
+
     return (message: Message) => {
+        console.log("INPUT CALLED WITH message = ", message, inputNumber);
+        if (!subpatch.parentPatch.isZen) {
+            let statement: Statement = [{ name: "input", value: (args[0]() as number) - 1 } as CompoundOperator];
+            statement.node = node;
+            return [statement];
+        }
         return [];
     };
 };
@@ -95,7 +109,7 @@ doc(
     });
 
 const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
-    let subpatch = node.subpatch || new SubpatchImpl(node.patch, node);
+    let subpatch = node.subpatch || (new SubpatchImpl(node.patch, node));
     node.subpatch = subpatch;
     subpatch.clearState();
 

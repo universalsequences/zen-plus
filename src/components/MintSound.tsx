@@ -5,19 +5,21 @@ import { abi } from '@/lib/abi/sound-drop-abi';
 
 import { useContractWrite, usePrepareContractWrite, useAccount } from 'wagmi';
 
-export const SOUND_CONTRACT = "0xA19bF6D2ad5642A506ED11aDd628EBbFD5BADCc2";
+//export const SOUND_CONTRACT = "0xA663b3D6EBd6143fEb07df36454d8362603cf03b";
+export const SOUND_CONTRACT = "0x3cB2C7D1Eefd0496b2A54E180E3C846D7b6451E1";
 
-const MintSound: React.FC<{ visuals: string, setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues, visuals }) => {
+const MintSound: React.FC<{ numEditions: number, price: bigint, name: string, description: string, visuals: string, setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues, visuals, name, description, numEditions, price }) => {
     let account = useAccount();
     const publicClient = usePublicClient();
 
-    let args = [dsp, visuals, parameterNames, minValues, maxValues, 0, 100];
+    let args = [name, description, dsp, visuals, parameterNames, minValues, maxValues, [], ["left", "right"], price, numEditions];
+    console.log("mint sound=", args);
 
     const { config } = usePrepareContractWrite({
         address: SOUND_CONTRACT,
         abi: abi,
         functionName: 'newDrop',
-        args 
+        args
     })
 
     const written = useRef(false);

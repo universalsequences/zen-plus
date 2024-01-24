@@ -19,7 +19,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     parentNode: ObjectNode;
 
     constructor(parentPatch: Patch, parentNode: ObjectNode, clean?: boolean) {
-        super();
+        super(parentPatch.audioContext, true);
         this.parentPatch = parentPatch;
         this.parentNode = parentNode;
         this._setupInitialNodes();
@@ -52,7 +52,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
 
     recompileGraph(force?: boolean): void {
-        if (force) {
+        if (force || !this.parentPatch.isZen) {
             super.recompileGraph()
         } else {
             this.parentPatch.recompileGraph();
@@ -62,6 +62,13 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     compile(statement: Statement, outputNumber: number) {
         // this will get called for any outs that get called...
         // this should look at the node 
+        if (!this.parentPatch.isZen) {
+            // then we are actually in at the top of a Zen Patch and thus should compile properly
+            console.log("parent patch compilation caught!");
+            super.compile(statement, outputNumber);
+            return;
+        }
+
         this.parentNode.send(this.parentNode.outlets[outputNumber - 1], statement);
     }
 
@@ -94,6 +101,11 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
 
     newHistoryDependency(newHistory: Statement, object: ObjectNode) {
+        if (!this.parentPatch.isZen) {
+            // then we are actually in at the top of a Zen Patch and thus should compile properly
+            super.newHistoryDependency(newHistory, object);
+            return;
+        }
         this.parentPatch.newHistoryDependency(newHistory, object);
     }
 }

@@ -1,4 +1,6 @@
 import { OperatorContextType, OperatorContext, getOperatorContext } from './context';
+import { DataType } from '@/lib/nodes/typechecker';
+import { GLType } from '@/lib/gl/index';
 import { createGLFunction } from './definitions/create';
 import { Statement, Operator } from './definitions/zen/types';
 import pako from 'pako';
@@ -196,7 +198,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (compile && this.name !== "zen" && (this.operatorContextType === OperatorContextType.ZEN ||
             this.operatorContextType === OperatorContextType.GL)) {
             if (!this.patch.skipRecompile) {
-                console.log('recompile graph objnode!', 2);
                 this.patch.recompileGraph();
             }
         }
@@ -210,10 +211,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 const decompressed = pako.inflate(binaryBuffer, { to: 'string' });
                 let json = JSON.parse(decompressed);
                 this.subpatch.fromJSON(json, true);
-                console.log(json, this);
             } else {
                 this.subpatch.fromJSON(patchPreset, true);
-                console.log(patchPreset, this, this);
             }
 
         }
@@ -228,7 +227,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             this.newOutlet();
         }
         if (compile) {
-            console.log('recompile graph objectNode!');
             this.patch.recompileGraph();
         }
     }
@@ -296,10 +294,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         for (let i = 0; i < _numberOfOutlets; i++) {
             if (!this.outlets[i]) {
                 // no inlet yet, so we need to create one
+                let outletType = this.name === "zen" && !this.patch.isZen ?
+                    ConnectionType.AUDIO : definition.outletType;
                 if (outletNames && outletNames[i]) {
-                    this.newOutlet(outletNames[i], definition.outletType);
+                    this.newOutlet(outletNames[i], outletType);
                 } else {
-                    this.newOutlet(undefined, definition.outletType);
+                    this.newOutlet(undefined, outletType);
                 }
             } else {
                 // inlet already exists.. so just change name if necessary
@@ -409,6 +409,47 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         return false;
     }
 
+    applyInletSumming(inlet: IOlet, message: Message): Message {
+        if (typeof message === "string") {
+            return message;
+        }
+        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun") {
+            return message;
+        }
+        let lastMessage: Message | undefined = inlet.lastMessage;
+        if (lastMessage !== undefined && ((inlet.lastMessage as Statement).node === undefined || ((message as Statement).node === undefined) || (inlet.lastMessage as Statement).node !== (message as Statement).node)) {
+            if (this.operatorContextType === OperatorContextType.ZEN ||
+                this.operatorContextType === OperatorContextType.GL) {
+                if ((message as Statement).node && (message as Statement).node!.id.includes("history")) {
+                    return message;
+                }
+                if ((lastMessage as Statement).node && (lastMessage as Statement).node!.id.includes("history")) {
+                    return message;
+                }
+                // then we want to simply
+                //                console.log("inlet has a last message already...", this.text, this);
+                //                console.log("applying inlet summing...", message, inlet.lastMessage);
+                let operator = this.operatorContextType === OperatorContextType.GL ? "+" : "add";
+                let statement: Statement = [operator as Operator, inlet.lastMessage as Statement, message as Statement];
+                let newId = Math.round((Math.random() * 1000000))
+                statement.node = {
+                    ... this,
+                    id: newId + '_sumation' //(message as Statement).node ? (message as Statement).node!.id + '_sumation' : newId + '_sumation'
+                };
+                let type = ((message as Statement).type || (inlet.lastMessage as Statement).type);
+                if (type !== undefined) {
+                    statement.type = type;
+                } else if (this.operatorContextType === OperatorContextType.GL) {
+                    statement.type = DataType.GL(GLType.Float);
+                }
+                this.lastSentMessage = undefined;
+                //                console.log('returning a sum', statement);
+                return statement;
+            }
+        }
+        return message;
+    }
+
     receive(inlet: IOlet, message: Message) {
         if (!this.fn) {
             return;
@@ -418,9 +459,34 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        //        console.log(this.name, "receive", this.inlets.indexOf(inlet), message);
-
+        message = this.applyInletSumming(inlet, message);
         super.receive(inlet, message);
+
+        let indexOf = this.inlets.indexOf(inlet);
+
+        if (indexOf > 0) {
+            let argumentNumber = indexOf - 1;
+            this.arguments[argumentNumber] = message;
+        }
+
+        if (inlet.messagesReceived === undefined) {
+            inlet.messagesReceived = 0;
+        }
+        inlet.messagesReceived++;
+
+
+        if (this.operatorContextType === OperatorContextType.ZEN ||
+            this.operatorContextType === OperatorContextType.GL) {
+
+            //if (typeof message !== "string" && inlet.messagesReceived < inlet.connections.length) {
+            if (typeof message !== "string" && this.inlets.some(inlet => inlet.messagesReceived! < inlet.connections.length)) {
+
+                if ((this.name === "accum" && indexOf >= 2) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "canvas") {
+                } else {
+                    return;
+                }
+            }
+        }
 
         // these are subpatches
         if (this.name === "zen") {
@@ -428,23 +494,26 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data") {
+        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
+
+            //} else {
             return;
+            //}
+        } else {
         }
 
-        let indexOf = this.inlets.indexOf(inlet);
 
         if (indexOf == 0) {
             // we are sending through the main inlet, i.e. run the function
-            if (this.inlets.some((x, i) => x.lastMessage === undefined) && this.name !== "out") {
+            if (this.inlets.some((x, i) => x.lastMessage === undefined) && this.name !== "out" && (this.name !== "in")) {
                 return;
             }
             let a = new Date().getTime();
             let ret: Message[] = this.fn(message);
             let b = new Date().getTime();
             if (b - a > 5) {
-                //console.log("fn=%s patch=%s took %s ms", this.text, this.patch.name || this.patch.id, b - a, ret);
             }
+
             for (let i = 0; i < ret.length; i++) {
                 if (this.outlets[i]) {
                     this.send(this.outlets[i], ret[i]);
@@ -456,7 +525,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             let argumentNumber = indexOf - 1;
             this.arguments[argumentNumber] = message;
 
-            if (this.inlets.some((c, i) => c.lastMessage === undefined) && this.name !== "out") {
+            if (this.inlets.some((c, i) => c.lastMessage === undefined) && this.name !== "out" && (this.name !== "in")) {
                 return;
             }
 
@@ -468,8 +537,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 let ret: Message[] = this.fn(lastMessage);
                 let b = new Date().getTime();
                 if (b - a > 5) {
-                    //console.log("fn=%s patch=%s took %s ms", this.text, this.patch.name || this.patch.id, b - a, ret);
                 }
+
                 for (let i = 0; i < ret.length; i++) {
                     if (this.outlets[i]) {
                         this.send(this.outlets[i], ret[i]);
@@ -600,6 +669,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             if (!this.outlets[i]) {
                 this.newOutlet(`channel ${i + 1}`, ConnectionType.AUDIO);
             }
+        }
+        for (let inlet of this.inlets) {
+            inlet.connectionType = ConnectionType.AUDIO
+        }
+        for (let outlet of this.outlets) {
+            outlet.connectionType = ConnectionType.AUDIO
         }
     }
 }

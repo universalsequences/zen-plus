@@ -1,4 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { OperatorContextType } from '@/lib/nodes/context';
+import Assistant from '@/lib/openai/assistant';
 import { useStorage } from '@/contexts/StorageContext';
 import { OnchainSubPatch, fetchOnchainSubPatch } from '@/lib/onchain/fetch';
 import { abi } from '@/lib/abi/minter-abi';
@@ -39,6 +41,7 @@ interface PatcherContext {
     newObjectNode: (x: ObjectNode, position: Coordinate) => void;
     isCustomView: boolean;
     loadProjectPatch: (x: SerializedPatch) => void;
+    assist: (prompt: string) => Promise<ObjectNode[]>;
 }
 
 interface Props {
@@ -73,6 +76,141 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const [patch, setPatch] = useState<Patch>(props.patch);
     const [objectNodes, setObjectNodes] = useState<ObjectNode[]>([]);
     const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
+    let assistantNodes = useRef<ObjectNode[]>([]);
+
+    const assist = useCallback((prompt: string): Promise<ObjectNode[]> => {
+        return new Promise((resolve) => {
+            patch.assistant.createThread(prompt).then(
+                msgData => {
+                    // first clear the old assistant nodes
+                    console.log('deleting previous nodes...', [...assistantNodes.current]);
+                    patch.objectNodes = [];
+                    setObjectNodes([])
+                    // deleteNodes(patch.assistant.nodesAdded);
+                    assistantNodes.current = [];
+                    if (msgData) {
+                        let msg = msgData[2];
+                        console.log(msg);
+                        let operations = msgData.find(x => !x.includes("json") && x.includes("create") && !x.includes("...")) as string;
+                        if (operations === undefined) {
+                            operations = msgData.find(x => x.includes("json")) as string;
+                            let start = operations.indexOf("[");
+                            let end = operations.indexOf("]");
+                            operations = operations.slice(start, end + 1);
+                        }
+                        let ops = [];
+                        try {
+                            ops = JSON.parse(operations);
+                        } catch (e) {
+                            ops = operations.split("\n").filter(x => x.trim() !== "");
+                        }
+                        console.log("ops = ", ops);
+                        let ids: any = {};
+                        let coordinates: Coordinates = {};
+                        let positions = {};
+                        let outNumber = 1;
+                        let inNumber = 1;
+                        let nodes: ObjectNode[] = [];
+                        for (let op of ops) {
+                            let tokens = Array.isArray(op) ? op : op.split(" ");
+                            console.log(tokens);
+                            let [operationType, operatorName, id, x, y] = tokens;
+                            operatorName = operatorName.replaceAll("$1", "");
+
+                            let position = {
+                                x: parseInt(x),
+                                y: parseInt(y)
+                            };
+                            if (operationType === "comment") {
+                                let [operationType, x, y, ...comments] = tokens;
+                                let comment = comments.join(" ").replace("\'", "");
+                                let node = new ObjectNodeImpl(patch);
+                                let text = "comment " + comment;
+                                console.log("parsing =", text);
+                                let success = node.parse("comment", OperatorContextType.CORE); // " + comment);
+                                node.text = text;
+                                console.log('comment node=', node);
+
+                                node.position = {
+                                    x: parseInt(x),
+                                    y: parseInt(y)
+                                };
+
+                                ids[id] = node;
+                                newObjectNode(node, node.position);
+                                nodes.push(node);
+                            } else if (operationType === "create" || operationType === "number") {
+                                let node = new ObjectNodeImpl(patch);
+                                if (operatorName === "number") {
+                                    operatorName = tokens[2];
+                                    id = tokens[3];
+                                    position.x = parseInt(tokens[4]);
+                                    position.y = parseInt(tokens[5]);
+                                } else if (operationType === "create" && tokens.length === 6) {
+                                    console.log("TOKENS.length=6 moving");
+                                    operatorName = tokens[1] + " " + tokens[2];
+                                    id = tokens[3]
+                                    position.x = parseInt(tokens[4]);
+                                    position.y = parseInt(tokens[5]);
+                                }
+                                if (operatorName === "out") {
+                                    operatorName = "out " + outNumber;
+                                    outNumber++;
+                                }
+                                if (operatorName === "in") {
+                                    operatorName = "in " + inNumber;
+                                    inNumber++;
+                                }
+                                let ret = node.parse(operatorName, OperatorContextType.ZEN, false);
+                                if (!ret) {
+                                    console.log("MISSING OPERATOR NAME=", operatorName);
+                                } else {
+                                }
+                                node.position = position;
+                                console.log('saving node=%s with id=%s tokens.length=%s', node.name, id, tokens.length);
+                                ids[id] = node;
+                                newObjectNode(node, position);
+                                nodes.push(node);
+                            }
+                        }
+
+                        let connections: Connections = {};
+                        for (let op of ops) {
+                            let tokens = Array.isArray(op) ? op : op.split(" ");
+                            console.log(tokens);
+                            let [operationType, source, dest, sourceOutlet, destInlet] = tokens;
+                            if (operationType === "connect") {
+                                let _source = ids[source];
+                                let _dest = ids[dest];
+                                if (!_dest || !_source) {
+                                    console.log("there was no source for id=", dest, source);
+                                    continue;
+                                }
+                                let outlet = parseInt(sourceOutlet);
+                                let inlet = parseInt(destInlet);
+                                if (!_dest.inlets[inlet] || !_source.outlets[outlet]) {
+                                    continue;
+                                }
+                                let c = _source.connect(_dest, _dest.inlets[inlet], _source.outlets[outlet], false);
+
+                                if (!connections[_source.id]) {
+                                    connections[_source.id] = [];
+                                }
+
+                                connections[_source.id].push(c);
+
+                            }
+                        }
+                        updateConnections(connections);
+                        patch.recompileGraph();
+                        patch.assistant.nodesAdded = nodes;
+                        resolve(nodes);
+                    }
+                });
+        });
+    }, [
+        patch, setObjectNodes, connections, setConnections,
+        objectNodes]);
 
     useEffect(() => {
         window.addEventListener("click", resume);
@@ -232,7 +370,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
 
             for (let outlet of node.outlets) {
                 for (let connection of outlet.connections) {
-                    connection.destination.disconnect(connection, false);
+                    connection.destination.disconnect(connection, false, true);
+                    console.log("node.disconnect connection", node, connection);
                     node.disconnect(connection, false);
                     let id = node.id;
                     if ((connections[id])) {
@@ -246,6 +385,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             }
             for (let inlet of node.inlets) {
                 for (let connection of inlet.connections) {
+                    console.log("node.disconnect connection", node, connection);
                     connection.source.disconnect(connection, false);
                     node.disconnect(connection, false);
                     let id = (connection.source as any).id;
@@ -336,6 +476,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             segmentCable,
             segmentCables,
             loadProjectPatch,
+            assist,
             isCustomView: props.isCustomView ? true : false
         }}>
         {children}

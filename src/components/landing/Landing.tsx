@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Works from '@/components/works/Works';
 import Documentation from '@/components/docs/Documentation';
 import Nav from './Nav';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,9 +8,10 @@ import { useNav, NavOption } from '@/contexts/NavContext';
 export const Landing = () => {
     const { navOption } = useNav();
     const { googleSignIn } = useAuth();
+    const [showNav, setShowNav] = useState(true);
     return <div
         className={"flex bg-black w-full h-full min-h-screen " + (false ? "light-mode" : "")}>
-        <Nav />
+        {showNav && <Nav />}
 
         {navOption === NavOption.Home ? <>
             <div className="flex flex-col w-full mt-5 patches justify-center">
@@ -32,7 +34,8 @@ export const Landing = () => {
                 </div>
             </div>
         </> :
-            <Documentation />
+            navOption === NavOption.Docs ? < Documentation /> :
+                <Works setShowNav={setShowNav} />
         }
     </div >
 

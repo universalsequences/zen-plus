@@ -40,6 +40,7 @@ export enum GLType {
     Mat2,
     Mat3,
     Mat4,
+    Bool,
     Float,
     Vec2,
     Vec3,
@@ -49,7 +50,9 @@ export enum GLType {
 }
 
 export const stringToType = (type: string): GLType => {
-    if (type === "float") {
+    if (type === "bool") {
+        return GLType.Bool;
+    } else if (type === "float") {
         return GLType.Float;
     } else if (type === "vec2") {
         return GLType.Vec2;
@@ -71,6 +74,8 @@ export const stringToType = (type: string): GLType => {
 export const stringToTypeString = (type: string): string => {
     if (type === "float") {
         return "GLType.Float";
+    } else if (type === "bool") {
+        return "GLType.Bool";
     } else if (type === "vec2") {
         return "GLType.Vec2";
     } else if (type === "vec3") {

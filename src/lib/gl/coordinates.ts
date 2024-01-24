@@ -21,13 +21,13 @@ const coord = (dir: "x" | "y") => {
 };
 
 // unpacks vector element (like vec.x/vec.y/vec.z/vec.w))
-export const unpack = (field: "x" | "y" | "z" | "w") => {
+export const unpack = (field: "x" | "y" | "z" | "w" | "xy" | "yx" | "xyz" | "xxy" | "xyy" | "yyx" | "yxy" | "xxx") => {
     return (vector: Arg): UGen => {
         return memo((context: Context): Generated => {
             let [fieldVar] = context.useVariables(field + "Val");
             let _vector = context.gen(vector);
-            let _type = GLType.Float;
-            let type = context.printType(GLType.Float);
+            let _type = field.length === 1 ? GLType.Float : field.length === 2 ? GLType.Vec2 : GLType.Vec3;
+            let type = context.printType(_type);
             let code = `${type} ${fieldVar} = ${_vector.variable}.${field};`;
 
             return context.emit(

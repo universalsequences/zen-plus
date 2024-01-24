@@ -159,8 +159,9 @@ export class Context {
     };
 
     input(inputNumber: number): string {
-        if (inputNumber > this.numberOfInputs) {
-            this.numberOfInputs = inputNumber;
+        if (inputNumber + 1 > this.numberOfInputs) {
+            this.numberOfInputs = inputNumber + 1;
+            console.log('number of inputs=', this.numberOfInputs);
         }
         return 'in' + inputNumber;
     }

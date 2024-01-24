@@ -4,11 +4,13 @@ import PresentationMode from './PresentationMode';
 import PatchDropdown from './PatchDropdown';
 import LoadProject from './LoadProject';
 import { useStorage } from '@/contexts/StorageContext';
+import { usePosition } from '@/contexts/PositionContext';
 import * as Dialog from '@radix-ui/react-dialog';
 import { GlobeIcon, CaretRightIcon, Cross2Icon } from '@radix-ui/react-icons'
 import { DropdownMenu } from '@radix-ui/themes';
 import { usePatch } from '@/contexts/PatchContext';
 import { usePatches } from '@/contexts/PatchesContext';
+import Assistant from './Assistant';
 import {
     Patch, SubPatch
 } from '@/lib/nodes/types';
@@ -19,11 +21,12 @@ enum Option {
 }
 const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
+    const { updatePositions } = usePosition();
     // for now this will simply tell us what nested subpatches are
     const [option, setOption] = useState<Option | null>(null);
 
     const { changeTileForPatch, closePatch, patches, setPatches } = usePatches();
-    //const { patch, setPatch } = usePatch();
+    const { assist } = usePatch();
     let breadcrumbs: any[] = [];
     let _patch: Patch = patch;
     let [editing, setEditing] = useState(false);
@@ -107,11 +110,15 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         setPatches(_p);
     }, [patches, setPatches, patch]);
 
+    let [showAssist, setShowAssist] = useState(false);
+    let [assistText, setAssistText] = useState("");
+    let [loading, setLoading] = useState(false);
+
     if (breadcrumbs.length === 1) {
         return <div
             style={{ height: 35 }}
             className="flex fixed top-0 left-0  full w-full">
-            <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-2 overflow-hidden top-toolbar ">
+            <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-2  top-toolbar ">
                 <PatchDropdown patch={patch}>
                     <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
                 </PatchDropdown>
@@ -131,7 +138,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         onClick={(e: any) => e.stopPropagation()}
         onMouseDown={(e: any) => e.stopPropagation()}
         className="flex fixed top-0 left-0  full w-full ">
-        <div className="flex-1 m-1 bg-toolbar relative flex px-2 overflow-hidden rounded-full top-toolbar">
+        <div className="flex-1 m-1 bg-toolbar relative flex px-2  rounded-full top-toolbar">
             <PatchDropdown patch={patch}>
                 <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
             </PatchDropdown>

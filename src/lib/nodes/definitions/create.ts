@@ -12,7 +12,6 @@ export const createGLFunction = (objectNode: ObjectNode, definition: Definition)
             }
             statement.node = o;
 
-
             if (definition.glTypeChecker) {
                 let statements = message === "bang" ? args.map(x => x() as Statement) : [message as Statement, ...args.map(x => x() as Statement)];
                 let inputTypes: MessageType[] = statements.map(

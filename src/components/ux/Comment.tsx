@@ -12,6 +12,7 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         objectNode.text = "comment " + e.target.value;
     }, [setText, objectNode]);
 
+    let first = useRef(true);
     const adjustHeight = () => {
         const textarea = textareaRef.current;
         if (textarea) {
@@ -27,7 +28,14 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
             // Use setTimeout to allow the browser to render the height reset
             //setTimeout(() => {
-            textarea.style.height = `${textarea.scrollHeight + 0 * totalVerticalPaddingAndBorder}px`;
+
+            if (first.current) {
+                textarea.style.height = '17';
+                first.current = false;
+            } else {
+                textarea.style.height = "0";
+                textarea.style.height = `${Math.max(10, textarea.scrollHeight + 0 * totalVerticalPaddingAndBorder)}px`;
+            }
             //}, 0);
         }
     };

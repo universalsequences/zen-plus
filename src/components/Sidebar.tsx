@@ -57,12 +57,11 @@ const Sidebar = () => {
                 }
             }}
             style={{
-                top: "-1px",
+                top: "0px",
                 left: "-40px",
-                borderTop: "1px solid white", borderLeft: "1px solid white", borderBottom: "1px solid white"
             }}
 
-            className="cursor-pointer absolute p-2 w-10 h-10 bg-toolbar">
+            className="cursor-pointer absolute p-2 w-10 h-10 bg-toolbar sidebar-btn ">
             <CubeIcon
                 style={{
                     opacity: selectedNodes.length > 0 ? 1 : 0.5

@@ -36,6 +36,9 @@ interface PositionerContext {
     sizeIndexRef: React.MutableRefObject<SizeIndex>;
     deletePositions: (x: ObjectNode[]) => void;
     sizeIndex: SizeIndex;
+    setNearestInlet: (x: NearestInlet | null) => void;
+    nearestInlet: NearestInlet | null;
+    checkNearInlets: (x: number, y: number) => void;
     setSizeIndex: (x: SizeIndex) => void;
     preparePresentationMode: boolean;
     setPreparePresentationMode: (x: boolean) => void;
@@ -78,6 +81,7 @@ export type Coordinates = {
 }
 
 type ZIndices = {
+
     [x: string]: number;
 }
 
@@ -88,6 +92,12 @@ type Size = {
 
 export type SizeIndex = {
     [id: string]: Size;
+}
+
+export interface NearestInlet {
+    node: ObjectNode | MessageNode;
+    iolet: number;
+    isOutlet: boolean;
 }
 
 export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
@@ -129,6 +139,51 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]);
     let [presentationMode, setPresentationMode] = useState(patch.presentationMode);
+    const [nearestInlet, setNearestInlet] = useState<NearestInlet | null>(null);
+
+    const checkNearInlets = useCallback((x: number, y: number) => {
+        if (!draggingCable) {
+            return;
+        }
+        // find nearest 
+        let nearestDist: number = 1000000;
+        let nearestNode: ObjectNode | MessageNode | null = null;
+        let nearestInlet: number = 0;
+        for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
+            if (draggingCable.destNode ? draggingCable.destNode === node : node === draggingCable.sourceNode) {
+                continue;
+            }
+            let position = node.position;
+            let size = sizeIndexRef.current[node.id] || { width: 30, height: 10 };
+            let width = size.width;
+
+            let iolets = draggingCable.destNode ? node.outlets : node.inlets;
+            for (let i = 0; i < iolets.length; i++) {
+                if (iolets[i].hidden) {
+                    continue;
+                }
+                if (iolets[i].connections.filter(x => draggingCable.destNode ? draggingCable.destNode === x.destination : draggingCable.sourceNode === x.source).length > 0) {
+                    continue;
+                }
+                let offX = i * width / iolets.length;
+                let distance = Math.sqrt(Math.pow((position.x + offX) - x, 2) + Math.pow(position.y - y, 2));
+                if (distance < 100 && distance < nearestDist) {
+                    nearestDist = distance;
+                    nearestNode = node;
+                    nearestInlet = i;
+                }
+            }
+        }
+        if (nearestNode) {
+            setNearestInlet({
+                node: nearestNode,
+                iolet: nearestInlet,
+                isOutlet: draggingCable.destNode !== undefined
+            });
+        } else {
+            setNearestInlet(null);
+        }
+    }, [setNearestInlet, draggingCable]);
 
     const updatePositions = useCallback((updates: Coordinates): Coordinates => {
         if (!scrollRef.current) {
@@ -303,7 +358,10 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             presentationMode,
             setPresentationMode,
             preparePresentationMode,
-            setPreparePresentationMode
+            setPreparePresentationMode,
+            checkNearInlets,
+            nearestInlet,
+            setNearestInlet
         }}>
         {children}
     </PositionContext.Provider>;

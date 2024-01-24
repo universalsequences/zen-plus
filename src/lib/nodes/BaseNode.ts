@@ -100,18 +100,34 @@ export class BaseNode implements Node {
         return connection;
     }
 
+    disconnectAudioNode(connection: IOConnection) {
+        if (connection.splitter) {
+            connection.splitter.disconnect();
+            let sourceNode = (this as any as ObjectNode).audioNode;
+            if (sourceNode) {
+                sourceNode.disconnect(connection.splitter);
+            }
+            connection.splitter = undefined;
+        }
+    }
+
     connectAudioNode(connection: IOConnection) {
         let { destination, sourceOutlet, destinationInlet } = connection;
         let sourceNode = (this as any as ObjectNode).audioNode;
         let destNode = (destination as any as ObjectNode).audioNode;
         if (sourceNode && destNode) {
             let splitter = this.patch.audioContext.createChannelSplitter(this.outlets.length);
+            connection.splitter = splitter;
             sourceNode.connect(splitter);
+
+            if ((connection.destination as ObjectNode).merger) {
+                destNode = (connection.destination as ObjectNode).merger!;
+            }
             splitter.connect(destNode, this.outlets.indexOf(sourceOutlet), destination.inlets.indexOf(destinationInlet));
         }
     };
 
-    disconnect(connection: IOConnection, compile: boolean = true) {
+    disconnect(connection: IOConnection, compile: boolean = true, ignoreAudio?: boolean) {
         for (let outlet of this.outlets) {
             outlet.connections = outlet.connections.filter(
                 x => x !== connection);
@@ -123,10 +139,13 @@ export class BaseNode implements Node {
                 x => x !== connection);
         }
 
-        console.log("disconnecting so recompile");
 
-        if (compile && connection.destinationInlet.connectionType === ConnectionType.ZEN) {
-            console.log("connecting so recompiling");
+        if (connection.destinationInlet.connectionType === ConnectionType.AUDIO &&
+            connection.sourceOutlet.connectionType === ConnectionType.AUDIO) {
+            if (!ignoreAudio) {
+                this.disconnectAudioNode(connection);
+            }
+        } else if (compile && connection.destinationInlet.connectionType === ConnectionType.ZEN) {
             this.patch.recompileGraph();
         }
     }

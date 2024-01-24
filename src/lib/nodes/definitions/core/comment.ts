@@ -15,7 +15,7 @@ export const comment = (_node: ObjectNode) => {
         _node.size.width = 120;
     }
     if (_node.attributes.fontSize === undefined) {
-        _node.attributes.fontSize = 15;
+        _node.attributes.fontSize = 12;
     }
     return (x: Message) => [];
 }

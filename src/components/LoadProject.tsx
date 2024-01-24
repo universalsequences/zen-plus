@@ -9,7 +9,7 @@ import ProjectOption from './ProjectOption';
 import { usePosition } from '@/contexts/PositionContext';;
 import { usePatch, Coordinates } from '@/contexts/PatchContext';
 import { Project, useStorage } from '@/contexts/StorageContext';
-import { Patch } from '@/lib/nodes/types';
+import { SerializedPatch, Patch } from '@/lib/nodes/types';
 import { abi } from '@/lib/abi/minter-abi';
 import * as erc from '@/lib/abi/erc721-abi';
 import { PublicClient } from 'viem';
@@ -65,6 +65,14 @@ const LoadProject = (props: Props) => {
     const loadPatchToken = useCallback(async (saved: any) => {
         let serialized = await fetchPatch(saved);
         loadProjectPatch(serialized);
+        /*
+        let item = window.localStorage.getItem("patch.beat-fusion relative");
+        if (!item) {
+            return;
+        }
+        */
+        //let serialized = JSON.parse(item) as SerializedPatch;
+        //loadProjectPatch(serialized);
 
         // patch.name = saved.name;
         let updates: Coordinates = {};

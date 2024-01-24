@@ -3,7 +3,7 @@ import { memo } from './memo';
 import { Context, Arg, UGen, Generated, GLType } from './types';
 import { emitType } from './context';
 
-const op = (operator: string, name: string) => {
+const op = (operator: string, name: string, strictType?: GLType) => {
     return (...args: Arg[]): UGen => {
         return memo((context: Context): Generated => {
             let _args: Generated[] = args.map((arg: Arg) => context.gen(arg));
@@ -12,7 +12,7 @@ const op = (operator: string, name: string) => {
             let [opVar] = context.useVariables(name + "Val");
 
             // determine type from the args (e.g. 5 + vec2(2,5) -> vec2)
-            let _type = emitType(_args);
+            let _type = strictType === undefined ? emitType(_args) : strictType;
             let type = context.printType(_type);
 
             let code = `${type} ${opVar} = ${_args.map(x => x.variable).join(operator)};`;
@@ -49,6 +49,11 @@ export const add = op("+", "add");
 export const sub = op("-", "sub");
 export const mult = op("*", "mult");
 export const div = op("/", "div");
+export const lt = op("<", "lt", GLType.Bool);
+export const gt = op(">", "gt", GLType.Bool);
+export const gte = op(">=", "gte", GLType.Bool);
+export const lte = op("<=", "lte", GLType.Bool);
+export const eq = op("==", "eq", GLType.Bool);
 export const pow = func("pow", "pow", Math.pow);
 export const floor = func("floor", "floor", Math.floor);
 export const ceil = func("ceil", "ceil", Math.ceil);

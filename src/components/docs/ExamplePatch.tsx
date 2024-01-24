@@ -54,7 +54,7 @@ export default function ExamplePatch() {
     let [basePatch, setBasePatch] = useState<Patch | null>(null);
     let patchRef = useRef<Patch | null>(null);
     useEffect(() => {
-        let p = new PatchImpl();
+        let p = new PatchImpl(new AudioContext({ sampleRate: 44100 }));
         patchRef.current = p;
         setBasePatch(p);
     }, [setBasePatch]);

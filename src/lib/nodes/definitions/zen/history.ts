@@ -85,9 +85,10 @@ export const zen_history = (object: ObjectNode) => {
             // have we already processed this history?
 
             let basePatch = object.patch;
-            while ((basePatch as SubPatch).parentPatch) {
+            while (!basePatch.isZenBase()) {
                 basePatch = (basePatch as SubPatch).parentPatch;
             }
+
             if (basePatch.historyNodes.has(object)) {
                 return [];
             }
@@ -121,7 +122,7 @@ export const zen_history = (object: ObjectNode) => {
             let statement: Statement = [{ name: "history", history: h } as CompoundOperator];
             statement.node = {
                 ...object,
-                id: object.id + '_' + 0
+                id: object.id + '_history' + 0
             };
             return [statement];
         } else {

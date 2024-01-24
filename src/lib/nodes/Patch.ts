@@ -1,4 +1,5 @@
-import { Patch, SubPatch, PatchType, SerializedPatch, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
+import { IOConnection, Patch, SubPatch, PatchType, SerializedPatch, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
+import Assistant from '@/lib/openai/assistant';
 import { containsSameHistory } from './definitions/zen/history';
 import { initMemory, ZenWorklet } from '@/lib/zen/worklet';
 import { traverseForwards } from './traverse';
@@ -43,11 +44,17 @@ export class PatchImpl implements Patch {
     skipRecompile2: boolean;
     setZenCode?: (x: string | null) => void;
     setVisualsCode?: (x: string | null) => void;
+    zenCode?: string;
     previousSerializedPatch?: SerializedPatch;
     previousDocId?: string;
+    isZen: boolean;
+    merger?: ChannelMergerNode;
+    assistant: Assistant;
 
-    constructor() {
+    constructor(audioContext: AudioContext, isZen: boolean = false) {
+        this.isZen = isZen;
         this.id = uuid();
+        this.assistant = new Assistant(this);
         this.presentationMode = false;
         this.historyNodes = new Set<ObjectNode>();
         this.skipRecompile = false;
@@ -59,7 +66,7 @@ export class PatchImpl implements Patch {
         this.messageNodes = [];
 
         // TODO: ensure that this is base patch...
-        this.audioContext = new AudioContext({ sampleRate: 44100 });
+        this.audioContext = audioContext; //new AudioContext({ sampleRate: 44100 });
         this.worklets = [];
         this.waiting = false;
         this.storedStatement = undefined;
@@ -83,11 +90,18 @@ export class PatchImpl implements Patch {
         return this.objectNodes.filter(node => node.inlets.length === 0 && node.name !== "history");
     }
 
-    recompileGraph(recompileGraph?: boolean) {
-        console.log("recompileGraph(%s)", recompileGraph, this.name);
-        let startTime = new Date().getTime();
+    isZenBase() {
+        if (!(this as Patch as SubPatch).parentPatch) {
+            return false;
+        }
+        if (!(this as Patch as SubPatch).parentPatch.isZen) {
+            return true;
+        }
+        return false;
+    }
+
+    recompileGraph() {
         if (this.skipRecompile || this.skipRecompile2) {
-            console.log("SKIP RECOMPILE");
             return;
         }
         this.skipRecompile2 = true;
@@ -108,11 +122,20 @@ export class PatchImpl implements Patch {
                     continue;
                 }
                 if (node.subpatch) {
+                    node.inlets.forEach(x => {
+                        if (x.connections.length > 0) {
+                            x.messagesReceived = undefined;
+                            x.lastMessage = undefined;
+                        }
+                    });
                     continue;
                 }
                 node.inlets.forEach(
                     n => {
-                        n.lastMessage = undefined;
+                        if (n.connections.length > 0) {
+                            n.lastMessage = undefined;
+                            n.messagesReceived = undefined;
+                        }
                     });
                 node.lastSentMessage = undefined;
                 if ((node as ObjectNode).name !== "param" && (node as ObjectNode).name !== "uniform") {
@@ -120,7 +143,6 @@ export class PatchImpl implements Patch {
                 }
             }
 
-            console.log('node');
             for (let node of _objectNodes) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
@@ -131,16 +153,24 @@ export class PatchImpl implements Patch {
                 }
                 node.inlets.forEach(
                     n => {
-                        n.lastMessage = undefined;
+                        if (n.connections.length > 0) {
+                            n.lastMessage = undefined;
+                            n.messagesReceived = undefined;
+                        }
                     });
                 node.parse(node.text, node.operatorContextType, false);
             }
         }
 
-        for (let node of objectNodes) {
-            if (node.subpatch) {
-                node.subpatch.recompileGraph(true);
+        if ((this as Patch as SubPatch).parentPatch) {
+            // we are in a zen node so we proceed as usual
+            for (let node of objectNodes) {
+                if (node.subpatch) {
+                    node.subpatch.recompileGraph(true);
+                }
             }
+        } else {
+            // we are at the base patch so skip all subpatches...
         }
 
 
@@ -160,11 +190,26 @@ export class PatchImpl implements Patch {
                 }
             });
 
+        if (this.isZenBase()) {
+            let audioInputs = this.getAllNodes().filter(node => node.name === "in").filter(node => !(node.patch as SubPatch).parentPatch.isZen);
+            audioInputs.forEach(
+                input => input.receive(input.inlets[0], "bang"));
+        }
+
         sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument" || node.name === "uniform");
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
                     sourceNode.receive(sourceNode.inlets[0], "bang");
+                }
+            });
+
+        sourceNodes = objectNodes.filter(node => node.name === "data" && node.inlets[0].connections.length === 0);
+        //console.log('source nodes data=', sourceNodes);
+        sourceNodes.forEach(
+            sourceNode => {
+                if (sourceNode.fn) {
+                    sourceNode.receive(sourceNode.inlets[0], [0]);
                 }
             });
 
@@ -189,7 +234,7 @@ export class PatchImpl implements Patch {
                 }
             });
 
-        sourceNodes = objectNodes.filter(node => node.needsLoad && node.inlets[0] && node.inlets[0].connections.length === 0);
+        sourceNodes = objectNodes.filter(node => node.needsLoad && node.name !== "in" && node.inlets[0] && node.inlets[0].connections.length === 0);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -205,7 +250,7 @@ export class PatchImpl implements Patch {
                 }
             });
 
-        sourceNodes = objectNodes.filter(node => node.needsLoad && !(node.inlets[0] && node.inlets[0].connections.length === 0));
+        sourceNodes = objectNodes.filter(node => node.needsLoad && node.name !== "in" && !(node.inlets[0] && node.inlets[0].connections.length === 0));
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -219,8 +264,7 @@ export class PatchImpl implements Patch {
             });
 
 
-        if (this.name === undefined) {
-            console.log("name was undefined");
+        if (this.isZenBase()) {
             let calls = _objectNodes.filter(node => node.name === "call" || node.name === "latchcall");
             calls.forEach(
                 call => {
@@ -230,8 +274,7 @@ export class PatchImpl implements Patch {
                     return;
                 });
 
-            let inputs = this.getAllNodes().filter(node => node.name === "in");
-            console.log("inputs to fetch ", inputs);
+            let inputs = this.getAllNodes().filter(node => node.name === "in").filter(node => node.patch !== this);
             inputs.forEach(
                 input => {
                     // get the patch
@@ -241,16 +284,15 @@ export class PatchImpl implements Patch {
                     if (p.parentNode) {
                         if (p.parentNode.inlets[inletNumber].connections.length === 0) {
                             // send a 0 then
-                            console.log("no connections so sending via outlets of input", input.outlets[0].connections);
                             for (let c of input.outlets[0].connections) {
                                 let { destinationInlet, destination } = c;
                                 let value = (input.attributes["default"] as number) || 0;
-                                console.log('sending value =%s to dest=', value, destination, destinationInlet);
                                 destination.receive(destinationInlet, value);
                             }
                         }
                     }
                 });
+
         }
 
 
@@ -279,10 +321,16 @@ export class PatchImpl implements Patch {
     }
 
     disconnectGraph() {
+        //console.log('disconnect graph called...');
         this.worklets.forEach(({ workletNode, splitter, graph, merger }) => {
             workletNode.port.postMessage({
                 type: "dispose"
             });
+            //console.log('disconnect audio graph called');
+            for (let connection of this.getAudioConnections()) {
+                connection.source.disconnectAudioNode(connection);
+            }
+
             workletNode.disconnect();
             graph.context.disposed = true;
             workletNode.port.onmessage = null;
@@ -355,12 +403,11 @@ export class PatchImpl implements Patch {
         this.counter++;
         let id = this.counter;
 
-        if (this.name === undefined) {
-        }
         setTimeout(() => {
             if (id !== this.counter) {
                 return
             }
+            console.log('statement to compile = ', statement);
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
                 let _statement = ["s" as Operator];
@@ -395,6 +442,7 @@ export class PatchImpl implements Patch {
             }
             let ast = compileStatement(statement);
             let inputFile = printStatement(statement);
+            console.log(inputFile);
             inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
             inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
             inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
@@ -435,6 +483,7 @@ export class PatchImpl implements Patch {
             inputFile = replaceAll(inputFile, " = ", "=");
             inputFile = getFunctionNames(inputFile);
 
+            this.zenCode = inputFile;
             if (this.setZenCode) {
                 this.setZenCode(inputFile);
             }
@@ -445,7 +494,7 @@ export class PatchImpl implements Patch {
             createWorklet(
                 this.audioContext,
                 zenGraph,
-                'zen' + id)
+                'zen' + this.id + '_' + id + new Date().getTime())
                 .then(
                     (ret) => {
 
@@ -471,11 +520,18 @@ export class PatchImpl implements Patch {
                             publish(e.data.type, [e.data.subType, e.data.body]);
                         };
 
-                        console.log('received audio worklet now trying to connect to destination');
+                        let merger = this.audioContext.createChannelMerger(zenGraph.numberOfInputs);
+                        let parentNode = (this as Patch as SubPatch).parentNode;
+                        if (parentNode) {
+                            console.log("parent node.merger = ", merger, parentNode);
+                            parentNode.merger = merger;
+                            merger.connect(ret.workletNode);
+                        }
+                        this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph, merger: merger });
+
+                        /*
                         if (ret.workletNode.channelCount <= 1) {
-                            console.log('channel count is 1 or less so connecting directly to dest', this.audioContext);
                             ret.workletNode.connect(this.audioContext.destination);
-                            this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph });
                         } else {
                             let splitter = this.audioContext.createChannelSplitter(ret.workletNode.channelCount);
                             try {
@@ -488,8 +544,16 @@ export class PatchImpl implements Patch {
                             } catch (E) {
                             }
                         }
+                        */
+
+                        //let parentNode = (this as unknown as SubPatch).parentNode;
+
+                        if (parentNode) {
+                            parentNode.useAudioNode(this.audioNode);
+                        }
 
                         this.setupAudioNode(this.audioNode);
+
                         if (this.setAudioWorklet) {
                             this.setAudioWorklet(ret.workletNode);
                         }
@@ -514,7 +578,33 @@ export class PatchImpl implements Patch {
         }, 50);
     }
 
+    getAudioConnections() {
+        let parentNode = (this as Patch as SubPatch).parentNode;
+        let connections: IOConnection[] = [];
+        for (let outlet of parentNode.outlets) {
+            outlet.connections.forEach(
+                c => connections.push(c));
+        }
+        for (let inlet of parentNode.inlets) {
+            inlet.connections.forEach(
+                c => connections.push(c));
+        }
+        return connections;
+    }
+
     setupAudioNode(audioNode: AudioNode) {
+        let parentNode = (this as Patch as SubPatch).parentNode;
+        if (parentNode) {
+            for (let outlet of parentNode.outlets) {
+                outlet.connections.forEach(
+                    c => parentNode.connectAudioNode(c));
+            }
+            for (let inlet of parentNode.inlets) {
+                inlet.connections.forEach(
+                    c => c.source.connectAudioNode(c));
+            }
+        }
+
         let nodes = this.getAllNodes();
         let speakerNodes = nodes.filter(x => x.name === "speakers~");
         for (let node of speakerNodes) {
@@ -681,9 +771,43 @@ export class PatchImpl implements Patch {
 
 
         if (!(this as Patch as SubPatch).parentNode) {
-            this.recompileGraph();
+            this.initialLoadCompile();
+            /*
+           for (let node of this.objectNodes) {
+               if (node.subpatch && node.subpatch.isZenBase()) {
+                   for (let outlet of node.outlets) {
+                       for (let c of outlet.connections) {
+                           if (c.splitter) {
+                               node.disconnectAudioNode(c);
+                           }
+                           node.connectAudioNode(c);
+                       }
+                   }
+               }
+           }
+           */
         }
         return _connections;
+    }
+
+    async initialLoadCompile() {
+        for (let node of this.objectNodes) {
+            if (node.subpatch && node.subpatch.isZenBase()) {
+                console.log("initial compile for zen base=", node.subpatch.id, node.subpatch.name);
+                node.subpatch.recompileGraph();
+                let i = 0;
+                while (!node.audioNode) {
+                    console.log('sleeping...');
+                    await sleep(10);
+                    i++;
+                    if (i > 50) {
+                        // max wwait time of 500 ms
+                        break;
+                    }
+                }
+            }
+        }
+        this.sendAttributeMessages();
     }
 
     resolveMissedConnections() {
@@ -795,3 +919,11 @@ const getFunctionNames = (dslCode: string) => {
 
 };
 
+
+const sleep = (time: number): Promise<void> => {
+    return new Promise((resolve: () => void) => {
+        setTimeout(() => {
+            resolve();
+        }, time);
+    });
+};

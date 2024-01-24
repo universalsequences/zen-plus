@@ -56,6 +56,8 @@ export class ContextImpl implements Context {
     printType(type: GLType): string {
         if (type === GLType.Float) {
             return "float";
+        } else if (type === GLType.Bool) {
+            return "bool";
         } else if (type === GLType.Vec2) {
             return "vec2";
         } else if (type === GLType.Vec3) {

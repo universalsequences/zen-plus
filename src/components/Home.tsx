@@ -57,8 +57,11 @@ const wagmiConfig = createConfig({
 export default function App() {
     let [basePatch, setBasePatch] = useState<Patch | null>(null);
     useEffect(() => {
-        setBasePatch(new PatchImpl());
+        setBasePatch(new PatchImpl(new AudioContext({ sampleRate: 44100 })));
     }, [setBasePatch]);
+
+    useEffect(() => {
+    }, []);
     const { user } = useAuth();
     if (!user) {
         return <Landing />;

@@ -99,6 +99,33 @@ export const userDefinedType_arg2 = (_outputType: MessageType | null, ...allowed
     }
 };
 
+export const equalArguments = (_outputType: MessageType | null, allowed: MessageType[]): GLTypeCheck => {
+    return {
+        check: (inputs: MessageType[]): MessageType | null => {
+            // ensure the inputs are all the same..
+            let converted = glAllowedCheck(inputs, allowed);
+            if (converted === null) {
+                return null;
+            }
+            for (let i = 0; i < inputs.length; i++) {
+                for (let j = 0; j < inputs.length; j++) {
+                    if (i === j) {
+                        continue;
+                    }
+                    let glType1 = convertToGlType(inputs[i]);
+                    let glType2 = convertToGlType(inputs[j]);
+                    if (glType1 && glType2 && !eqTypes(DataType.GL(glType1), DataType.GL(glType2))) {
+                        return null;
+                    }
+                }
+            }
+            return _outputType;
+        },
+        allowed: [allowed],
+        outputType: _outputType
+    }
+};
+
 export const maxCompatibleType = (_outputType: MessageType | null, allowed: MessageType[]): GLTypeCheck => {
     return {
         check: (inputs: MessageType[]): MessageType | null => {
@@ -121,8 +148,6 @@ export const functionType = (_outputType: MessageType | null): GLTypeCheck => {
             // first arg is function...
             let { type, subType, functionSignature } = inputs[0];
 
-            console.log("functionSig", functionSignature);
-
             if (!functionSignature) {
                 return null;
             }
@@ -131,7 +156,6 @@ export const functionType = (_outputType: MessageType | null): GLTypeCheck => {
 
             // ensure the arguments fit the function signature
             let argInputs = inputs.slice(1);
-            console.log("function type arg inputs = ", argInputs);
 
             for (let i = 0; i < functionSignature.arguments.length; i++) {
                 if (!argInputs[i]) {
@@ -145,7 +169,6 @@ export const functionType = (_outputType: MessageType | null): GLTypeCheck => {
                 }
             }
 
-            console.log('function type called...', outputType);
             return outputType;
         },
         allowed: [],
@@ -162,29 +185,23 @@ export const strictGLType = (outputType: MessageType | null, ...allowed: Message
             for (let i = 0; i < inputs.length; i++) {
                 let _allowed = allowed[i];
                 if (_allowed === undefined) {
-                    console.log('allowed missing', i);
                     return null;
                 }
                 if (!inputs[i]) {
-                    console.log('input missing', i);
                     return null;
                 }
                 if (inputs[i].type === CoreType.Number || inputs[i].type === CoreType.GL) {
                     let inputType = convertToGlType(inputs[i]);
                     if (inputType === null) {
-                        console.log("allowed type 1", inputs[i]);
                         return null;
                     }
                     if (!_allowed.map(x => x.subType).includes(inputType)) {
-                        console.log('inputs[%s]=', i, inputs[i]);
-                        console.log("allowed did not have inputType = ", _allowed, inputType);
                         return null;
                     }
                 } else {
                     let inputType = inputs[i];
                     if (!_allowed.some(x => eqTypes(inputType, x))) {
                         // type did not exist in allowds
-                        console.log("allowed type 2");
                         return null;
                     }
                 }

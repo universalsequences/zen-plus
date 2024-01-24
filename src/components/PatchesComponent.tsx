@@ -1,4 +1,5 @@
 "use client"
+import AssistantSidebar from './AssistantSidebar';
 import { Landing } from './landing/Landing';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSwitchNetwork } from 'wagmi';

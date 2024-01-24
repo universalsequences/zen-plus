@@ -11,7 +11,7 @@ import { getStorage, ref, uploadBytes } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCMrvhv98-diTWV3RgAp4VxCmn-q5EBQgs",
+    apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
     authDomain: "zen-plus-eaed2.firebaseapp.com",
     projectId: "zen-plus-eaed2",
     storageBucket: "zen-plus-eaed2.appspot.com",

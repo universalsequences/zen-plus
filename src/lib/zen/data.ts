@@ -172,6 +172,7 @@ export const peek = (
         if (length) {
             __length = variableContext.gen(length);
             maxChannel = __length.variable;
+            console.log("__length =", __length);
         }
 
         // todo: make this prettier... basically want the raw idx value
@@ -190,7 +191,7 @@ else if (${channelIdx} < 0) ${channelIdx} += ${multichannelBlock.channels};
 ${varKeyword} ${peekIdx} = ${perChannel} * ${channelIdx} + ${preIdx};
 ${varKeyword} ${frac} = ${peekIdx} - ${floor}(${peekIdx});
 ${intKeyword} ${nextIdx} = ${floor}(${peekIdx}) + 1;
-if (${nextIdx} >= ${perChannel} * (${_channel.variable} + ${maxChannel})) {
+if (${nextIdx} >= (${perChannel} * (${_channel.variable})) + ${maxChannel}) {
    ${nextIdx} =  ${perChannel} * (${_channel.variable});
 }
 ${intKeyword} ${peekIdx2} = ${idx} + ${floor}(${peekIdx});
