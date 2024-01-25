@@ -40,54 +40,61 @@ export const { abi } = {
         {
             "inputs": [
                 {
-                    "internalType": "string",
-                    "name": "name",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "description",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "collectionImage",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "dsp",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string",
-                    "name": "visuals",
-                    "type": "string"
-                },
-                {
-                    "internalType": "string[]",
-                    "name": "parameterNames",
-                    "type": "string[]"
-                },
-                {
-                    "internalType": "int64[]",
-                    "name": "minValues",
-                    "type": "int64[]"
-                },
-                {
-                    "internalType": "int64[]",
-                    "name": "maxValues",
-                    "type": "int64[]"
-                },
-                {
-                    "internalType": "string[]",
-                    "name": "inputs",
-                    "type": "string[]"
-                },
-                {
-                    "internalType": "string[]",
-                    "name": "outputs",
-                    "type": "string[]"
+                    "components": [
+                        {
+                            "internalType": "string",
+                            "name": "name",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "description",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "collectionImage",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "dsp",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "visuals",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string[]",
+                            "name": "parameterNames",
+                            "type": "string[]"
+                        },
+                        {
+                            "internalType": "int64[]",
+                            "name": "minValues",
+                            "type": "int64[]"
+                        },
+                        {
+                            "internalType": "int64[]",
+                            "name": "maxValues",
+                            "type": "int64[]"
+                        },
+                        {
+                            "internalType": "string[]",
+                            "name": "inputs",
+                            "type": "string[]"
+                        },
+                        {
+                            "internalType": "string[]",
+                            "name": "outputs",
+                            "type": "string[]"
+                        }
+                    ],
+                    "internalType": "struct SoundDropCreator.DropInfo",
+                    "name": "data",
+                    "type": "tuple"
                 },
                 {
                     "internalType": "uint104",
@@ -112,5 +119,4 @@ export const { abi } = {
             "type": "function"
         }
     ]
-}
-
+};

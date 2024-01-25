@@ -308,6 +308,16 @@ export const { abi } = {
                     "internalType": "bool",
                     "name": "useExternalRenderer",
                     "type": "bool"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "createdAt",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "string",
+                    "name": "image",
+                    "type": "string"
                 }
             ],
             "stateMutability": "view",
@@ -327,4 +337,5 @@ export const { abi } = {
             "type": "function"
         }
     ]
-};
+}
+

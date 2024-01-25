@@ -10,7 +10,22 @@ const MintSound: React.FC<{ screenshot: string, numEditions: number, price: bigi
     let account = useAccount();
     const publicClient = usePublicClient();
 
-    let args = [name, description, screenshot, dsp, visuals, parameterNames, minValues, maxValues, [], ["left", "right"], price, numEditions];
+    let args = [
+        {
+            name,
+            description,
+            collectionImage: screenshot,
+            dsp,
+            visuals,
+            parameterNames,
+            minValues,
+            maxValues,
+            inputs: [],
+            outputs: ["left", "right"]
+        },
+        price,
+        numEditions
+    ];
     console.log("mint sound=", args);
 
     const { config } = usePrepareContractWrite({

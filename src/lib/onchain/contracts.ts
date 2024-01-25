@@ -3,7 +3,7 @@ type Contracts = {
     [x: string]: `0x${string}`
 }
 export const contracts: Contracts = {
-    DropCreator: "0xE75Bb4b3452bFeb55AC5489aE6446ac845F93e54",
-    MetadataRenderer: "0xc993d779181Eb3e5cb8154D48d304df1a05B83a3",
-    ZenModule: "0x7c18c279c2457c102998681dd94cb14c64b3d5d6"
+    DropCreator: "0xc1f3515FcBF40DA55C04E673962d5990987BEF1e",
+    MetadataRenderer: "0x7Dc7f306Be5b79962c110e59e239C79bd1Bda12a",
+    ZenModule: "0x030c53750ecca0037dc5687b083c3edf50f8a983"
 };
