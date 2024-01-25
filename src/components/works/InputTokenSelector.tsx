@@ -5,7 +5,7 @@ import { WorkOption, fetchWorkOptions } from '@/lib/works/fetchWorks';
 import { MixerVerticalIcon } from '@radix-ui/react-icons'
 import { useContractRead, usePublicClient, usePrepareContractWrite, useContractWrite, useWalletClient, useAccount } from 'wagmi'
 import * as ZenModule from '@/lib/abi/zen-module-abi';
-import { ZEN_MODULE } from './WorkEditor';
+import { contracts } from '@/lib/onchain/contracts';
 
 const InputTokenSelector: React.FC<{ inputNumber: number, destinationContract: string, sourceContract: string, tokenId: number }> = ({ sourceContract, destinationContract, tokenId, inputNumber }) => {
     const [selectedToken, setSelectedToken] = useState<number | null>(null);
@@ -18,7 +18,7 @@ const InputTokenSelector: React.FC<{ inputNumber: number, destinationContract: s
     let args = [destinationContract, tokenId, inputNumber, sourceContract, selectedToken, 0];
     console.log("args =", args);
     const { data: writerData, isLoading: isLoadingWriter, isSuccess: isSuccessWriter, write } = useContractWrite({
-        address: ZEN_MODULE as `0x${string}`,
+        address: contracts.ZenModule as `0x${string}`,
         abi: ZenModule.abi,
         functionName: "configureToken",
         args: [destinationContract, tokenId, inputNumber, sourceContract, selectedToken, 0]
