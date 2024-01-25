@@ -24,8 +24,8 @@ const ModuleConnector: React.FC<{ inputNumber: number, contractAddress: string, 
 
     return <div className="flex-1 overflow-scroll">
         {works.map(
-            work =>
-                <div onClick={() => setSelected(work)} className="flex px-2 py-1 cursor-pointer">
+            (work, i) =>
+                <div key={i} onClick={() => setSelected(work)} className="flex px-2 py-1 cursor-pointer">
                     <div>{work.name}</div>
                     <div className="ml-auto text-zinc-400">{trunc(work.ownerAddress)}</div>
                 </div>)}
