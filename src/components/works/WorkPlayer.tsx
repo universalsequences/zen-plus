@@ -82,7 +82,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                         {_totalSupply} minted tokens
                     </div>
                     <div className="flex flex-wrap text-base">
-                        {totalSupply ? new Array(mintedToken ? mintedToken : _totalSupply).fill(0).map((a, i) => <span onClick={() => setActiveAnimation(i + 1)} className={activeAnimation === i + 1 ? " w-6 bg-white text-black mr-3 " : " text-center w-6 mr-2 cursor-pointer"}>{i + 1}</span>) : ""}
+                        {totalSupply ? new Array(mintedToken ? mintedToken : _totalSupply).fill(0).map((a, i) => <span key={i} onClick={() => setActiveAnimation(i + 1)} className={activeAnimation === i + 1 ? " w-6 bg-white text-black mr-3 " : " text-center w-6 mr-2 cursor-pointer"}>{i + 1}</span>) : ""}
                     </div>
                 </div>}
 

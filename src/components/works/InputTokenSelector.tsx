@@ -41,6 +41,7 @@ const InputTokenSelector: React.FC<{ inputNumber: number, destinationContract: s
         <div className="flex-wrap flex p-3 overflow-scroll">
             {new Array(_totalSupply).fill(0).map((a, i) => <div
                 onClick={() => setSelectedToken(i + 1)}
+                key={i}
                 className={(selectedToken === i + 1 ? "bg-white text-black" : "") + " text-center text-base w-4 cursor-pointer"}>{i + 1}</div>)}
         </div>
         {selectedToken && <button onClick={onClick} className="bg-zinc-300 text-zinc-600 cursor-pointer rounded-full px-4 py-1 mx-auto">

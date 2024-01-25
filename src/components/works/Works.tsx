@@ -49,7 +49,7 @@ const Works: React.FC<{ setShowNav: (x: boolean) => void }> = ({ setShowNav }) =
         return <WorkPlayer close={() => setSelectedWork(null)} work={selectedWork} />;
     }
     return <div className="px-24  flex flex-wrap items-start content-start">
-        {works.map(x => <Work select={() => setSelectedWork(x)} work={x} />)}
+        {works.map((x, i) => <Work key={i} select={() => setSelectedWork(x)} work={x} />)}
     </div>;
 };
 

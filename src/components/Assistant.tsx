@@ -49,7 +49,7 @@ const Assistant = () => {
         {showAssist && <div style={{ backgroundColor: "#595959c2", zIndex: 1000000 }} className="flex flex-col  w-64 p-4 items-start">
             {patch.assistant.messages.length > 0 && <div style={{ maxHeight: 200 }} className="flex flex-col overflow-scroll w-full">
                 {patch.assistant.messages.map(
-                    x => <div className="flex flex-col w-full text-xs">
+                    (x, i) => <div key={i} className="flex flex-col w-full text-xs">
                         <div className="">
                             {x.role === "assistant" ? "applied to patch" : x.message}
                         </div>
