@@ -1,6 +1,7 @@
 // pages/api/get-html/[tokenId].ts
 
-import { abi } from '@/lib/abi/erc721-abi';
+import { abi } from '@/lib/abi/metadata-abi';
+import { contracts } from '@/lib/onchain/contracts';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Web3 from 'web3';
 
@@ -12,10 +13,10 @@ const web3 = new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/
 // Cache for storing fetched HTML content
 
 async function getHTML(contractAddress: string, tokenId: string): Promise<string | null> {
-    const contract = new web3.eth.Contract(abi as any, contractAddress);
+    const contract = new web3.eth.Contract(abi as any, contracts.MetadataRenderer);
 
     try {
-        const tokenURI: string = await contract.methods.tokenURI(tokenId).call() as string;
+        const tokenURI: string = await contract.methods.onchainTokenURI(contractAddress, tokenId).call() as string;
         // Check if tokenURI is base64 encoded, if not, assume it's a URL
         let metadataJSON;
         if (tokenURI.startsWith('data:application/json;base64,')) {

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import ModuleConnector from './ModuleConnector';
 import { MixerVerticalIcon } from '@radix-ui/react-icons'
+import { contracts } from '@/lib/onchain/contracts';
 import { usePublicClient, useContractRead } from 'wagmi'
 import { abi } from '@/lib/abi/zen-module-abi';
-
-export const ZEN_MODULE = "0xc22cd00cfa6e1b272fc75dc3f4940d8b833a7c76";
 
 const WorkEditor: React.FC<{ contractAddress: string, tokenId: number }> = ({ contractAddress, tokenId }) => {
     // work editor shows what is connected already and lets you connect them 
@@ -12,7 +11,7 @@ const WorkEditor: React.FC<{ contractAddress: string, tokenId: number }> = ({ co
     const [selectedInput, setSelectedInput] = useState<number | null>(null);
 
     const { data, isError, isLoading } = useContractRead({
-        address: ZEN_MODULE as `0x${string}`,
+        address: contracts.ZenModule,
         abi: abi,
         functionName: 'getWorkToken',
         args: [contractAddress, tokenId]
