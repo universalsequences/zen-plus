@@ -18,7 +18,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/
 // Initialize the cors middleware
 const cors = Cors({
     methods: ['GET', 'HEAD', 'POST'], // Set the methods you want to allow
-    origin: 'https://testnet.zora.co', // Replace with the specific hostname you want to allow
+    origin: '*', // Replace with the specific hostname you want to allow
 });
 
 // Helper method to initialize and use CORS in your API route
