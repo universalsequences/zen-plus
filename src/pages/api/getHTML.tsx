@@ -15,7 +15,7 @@ async function getHTML(contractAddress: string, tokenId: string): Promise<string
     const contract = new web3.eth.Contract(abi as any, contractAddress);
 
     try {
-        const tokenURI = await contract.methods.tokenURI(tokenId).call();
+        const tokenURI: string = await contract.methods.tokenURI(tokenId).call() as string;
         // Check if tokenURI is base64 encoded, if not, assume it's a URL
         let metadataJSON;
         if (tokenURI.startsWith('data:application/json;base64,')) {
