@@ -183,6 +183,7 @@ export type Patch = Identifiable & {
 export type SubPatch = Patch & {
     parentNode: ObjectNode;
     parentPatch: Patch;
+    patchType: OperatorContextType;
     clearState: () => void;
     processMessageForParam: (x: Message) => boolean;
 }
@@ -219,6 +220,7 @@ export type SerializedPatch = Identifiable & {
     name?: string;
     size?: Size;
     isCustomView?: boolean;
+    attributes?: Attributes;
 };
 
 export type SerializedMessageNode = Identifiable & {

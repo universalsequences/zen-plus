@@ -93,7 +93,6 @@ export const printStatement = (statement: Statement): string => {
     }
     for (let i = 0; i < blocks.length; i++) {
         let interpolation = blocks[i].interpolation === "none" ? "none" : "linear";
-        console.log('blocks[%s] = ', i, blocks[i]);
         if (blocks[i].getInitData!()) {
             let str = "[" + Array.from(blocks[i].getInitData!()).join(',') + "]";
             let size = blocks[i].getSize!();
@@ -365,21 +364,17 @@ export const getZObjects = (statement: Statement,): ObjectNode[] => {
 };
 
 export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = [], _api: API, _simpleFunctions: API): UGen | (() => string | number) => {
-    console.log("_compileStatement", statement);
     if (!statement.node) {
         //console.log("no node for statement", statement);
     }
     if (typeof statement === "number") {
         if (_api === api) {
-            console.log("FLOAT CALLED...", statement);
             return float(statement as number);
         } else {
-            console.log("change");
             return () => (statement as number);
         }
     }
     if (typeof statement === "string") {
-        console.log("string");
         return () => (statement as string);
     }
 
@@ -396,9 +391,7 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     let compoundOperator = operator as CompoundOperator;
     let name = compoundOperator.name;
 
-    console.log("COMPILE STATEMNT", statement, zobject && zobject.id);
     if (zobject && compiled[zobject.id]) {
-        console.log('variable already existed...', compiled[zobject.id]);
         return compiled[zobject.id];
     }
 
@@ -427,7 +420,6 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     let output: UGen | undefined = undefined;
     let _name = "";
     if (isSimpleFunction(zenOperator, _simpleFunctions)) {
-        console.log("is simple function", operator, compiledArgs);
         output = (zenOperator as SimpleFunction)(...compiledArgs as Arg[]);
     } else {
         // a few functions require a bespoke params field to work
@@ -468,7 +460,6 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
         } else if (name === "argument") {
             output = argument(compoundOperator.value!, compoundOperator.variableName!);
         } else if (name === "input") {
-            console.log("AST input =", compoundOperator.value);
             output = input(compoundOperator.value!);
         } else if (name === "rawSumLoop") {
             //let range: Range = compoundOperator.range!;
@@ -477,9 +468,6 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             let size: number = compoundOperator.value!;
             let name: string = compoundOperator.variableName!;
             output = defun(name, size, ...compiledArgs as UGen[]);
-            if (name === "jaki_core") {
-                console.log("AST for jaki_core returned=", name, compiledArgs, size);
-            }
         } else if (name === "call") {
             let invocationNumber: number = compoundOperator.value!;
             let body = compiledArgs[0];

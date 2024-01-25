@@ -80,6 +80,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
        * adds attributes to object and removes them from string
      */
     parseAttributes(text: string, context: OperatorContext): string {
+        delete this.attributes["min"];
+        delete this.attributes["max"];
         let tokens = text.split(" ").filter(x => x.length > 0);
         let name = tokens[0];
         let nonAttributeTokens = [name];
@@ -346,6 +348,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (message !== undefined) {
             let inputNode = inputNodes.find(x => x.arguments[0] === inputNumber);
             if (inputNode && inputNode.outlets[0]) {
+                let ogType = (message as Statement).type;
+                if (inputNode.attributes["min"] !== undefined) {
+                    message = ["max" as Operator, inputNode.attributes["min"] as number, message as Statement];
+                    (message as Statement).type = ogType;
+                }
+                if (inputNode.attributes["max"] !== undefined) {
+                    message = ["min" as Operator, inputNode.attributes["max"] as number, message as Statement];
+                    (message as Statement).type = ogType;
+                }
                 let outlet = inputNode.outlets[0];
                 for (let connection of outlet.connections) {
                     let { destination, destinationInlet } = connection;
@@ -616,7 +627,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         if (json.subpatch) {
-            this.parse("zen", json.operatorContextType || OperatorContextType.ZEN, false);
+            this.parse(json.text.includes("zen") && json.text.includes("@type") ? json.text : "zen", OperatorContextType.ZEN, false);
         } else {
             this.parse(json.text, json.operatorContextType || OperatorContextType.ZEN, false);
         }

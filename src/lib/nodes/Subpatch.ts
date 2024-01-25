@@ -1,7 +1,7 @@
 import { Statement } from './definitions/zen/types';
 import { OperatorContextType } from './context';
 import { PatchImpl } from './Patch';
-import { ObjectNode, Message, Patch, SubPatch } from './types';
+import { ConnectionType, ObjectNode, Message, Patch, SubPatch } from './types';
 import ObjectNodeImpl from './ObjectNode';
 
 
@@ -17,13 +17,35 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
     parentPatch: Patch;
     parentNode: ObjectNode;
+    patchType: OperatorContextType;
 
-    constructor(parentPatch: Patch, parentNode: ObjectNode, clean?: boolean) {
+    constructor(parentPatch: Patch, parentNode: ObjectNode) {
         super(parentPatch.audioContext, true);
         this.parentPatch = parentPatch;
         this.parentNode = parentNode;
         this._setupInitialNodes();
         this.parentNode.newAttribute("Custom Presentation", false);
+
+        this.patchType = OperatorContextType.ZEN;
+        if ((this.parentPatch as SubPatch).parentPatch) {
+            this.patchType = (this.parentPatch as SubPatch).patchType;
+        } else {
+            if (typeof this.parentNode.attributes["type"] === "string") {
+                if (this.parentNode.attributes["type"].toLowerCase() === "gl") {
+                    this.patchType = OperatorContextType.GL;
+                }
+            }
+        }
+        if (this.patchType === OperatorContextType.GL) {
+            this.parentNode.operatorContextType = OperatorContextType.GL;
+            for (let inlet of this.parentNode.inlets) {
+                inlet.connectionType = ConnectionType.GL;
+            }
+            for (let outlet of this.parentNode.outlets) {
+                outlet.connectionType = ConnectionType.GL;
+            }
+        }
+        console.log("subpatch type=", this.id, this.patchType);
     }
 
     _setupInitialNodes() {
@@ -53,7 +75,11 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
     recompileGraph(force?: boolean): void {
         if (force || !this.parentPatch.isZen) {
-            super.recompileGraph()
+            if (!force && this.patchType !== OperatorContextType.ZEN) {
+                this.parentPatch.recompileGraph();
+            } else {
+                super.recompileGraph()
+            }
         } else {
             this.parentPatch.recompileGraph();
         }
@@ -62,7 +88,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     compile(statement: Statement, outputNumber: number) {
         // this will get called for any outs that get called...
         // this should look at the node 
-        if (!this.parentPatch.isZen) {
+        if (!this.parentPatch.isZen && this.patchType === OperatorContextType.ZEN) {
             // then we are actually in at the top of a Zen Patch and thus should compile properly
             console.log("parent patch compilation caught!");
             super.compile(statement, outputNumber);

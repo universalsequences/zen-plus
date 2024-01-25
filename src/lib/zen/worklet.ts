@@ -22,12 +22,10 @@ export const createWorklet = (
     return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
         let { code, wasm } = createWorkletCode(name, graph);
         let workletCode = code;
-        console.log(workletCode);
         const workletBase64 = btoa(workletCode);
         const url = `data:application/javascript;base64,${workletBase64}`;
 
         const onCompilation = (): AudioWorkletNode => {
-            console.log("graph =", graph);
             const workletNode = new AudioWorkletNode(
                 ctxt,
                 name,
@@ -38,8 +36,6 @@ export const createWorklet = (
                     channelCount: graph.numberOfOutputs,
                     outputChannelCount: [graph.numberOfOutputs]
                 })
-
-            console.log("on compilation complete=", workletNode);
 
             workletNode.port.onmessage = (e: MessageEvent) => {
                 let type = e.data.type
@@ -87,9 +83,7 @@ export const createWorklet = (
             return workletNode;
         };;
 
-        console.log('adding audio worklet to module', ctxt);
         await ctxt.audioWorklet.addModule(url);
-        console.log('successfully added worklet to module');
         if (onlyCompile) {
             resolve(onCompilation);
             return;

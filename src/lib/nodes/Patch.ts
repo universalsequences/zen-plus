@@ -101,7 +101,9 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph() {
+        console.log("RECOMPILE GRAPH=", this.name);
         if (this.skipRecompile || this.skipRecompile2) {
+            console.log('skipping');
             return;
         }
         this.skipRecompile2 = true;
@@ -114,7 +116,7 @@ export class PatchImpl implements Patch {
 
         // re-parse every node so that we "start from scratch"
         let objectNodes = this.objectNodes; //getAllNodes();
-        let _objectNodes = objectNodes;
+        let _objectNodes = this.name === undefined ? this.getAllNodes() : objectNodes; //objectNodes;
         if (true) { //this.name === undefined) {
             for (let node of _objectNodes) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
@@ -196,7 +198,7 @@ export class PatchImpl implements Patch {
                 input => input.receive(input.inlets[0], "bang"));
         }
 
-        sourceNodes = objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument" || node.name === "uniform");
+        sourceNodes = _objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument" || node.name === "uniform");
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -221,7 +223,7 @@ export class PatchImpl implements Patch {
 
         this.waiting = false;
 
-        sourceNodes = objectNodes.filter(node => (node.inlets.length === 0 && !node.needsLoad));
+        sourceNodes = _objectNodes.filter(node => (node.inlets.length === 0 && !node.needsLoad));
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -442,7 +444,6 @@ export class PatchImpl implements Patch {
             }
             let ast = compileStatement(statement);
             let inputFile = printStatement(statement);
-            console.log(inputFile);
             inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
             inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
             inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
@@ -641,6 +642,7 @@ export class PatchImpl implements Patch {
                 json.isCustomView = parentNode.attributes["Custom Presentation"] ? true : false;
                 json.size = parentNode.size;
             }
+            json.attributes = parentNode.attributes;
         }
         return json;
     }
@@ -787,10 +789,14 @@ export class PatchImpl implements Patch {
            }
            */
         }
+
+        console.log("FROM JSON PATCH=", this, x);
         return _connections;
     }
 
     async initialLoadCompile() {
+        this.recompileGraph()
+
         for (let node of this.objectNodes) {
             if (node.subpatch && node.subpatch.isZenBase()) {
                 console.log("initial compile for zen base=", node.subpatch.id, node.subpatch.name);

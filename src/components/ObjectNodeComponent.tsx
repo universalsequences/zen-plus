@@ -111,6 +111,9 @@ const InnerObjectNodeComponent: React.FC<{
             if (id) {
                 let serializedSubPatch = await fetchSubPatchForDoc(id);
                 if (serializedSubPatch) {
+                    if (serializedSubPatch.attributes && serializedSubPatch.attributes["type"]) {
+                        objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
+                    }
                     success = objectNode.parse(text, context.type, true, serializedSubPatch);
                 } else {
                     success = false;

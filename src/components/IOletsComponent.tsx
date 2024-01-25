@@ -40,8 +40,9 @@ const IOletsComponent = (props: Props) => {
         }
     }, []);
 
-    const onMouseUp = useCallback((iolet: IOlet) => {
+    const onMouseUp = useCallback((e: any, iolet: IOlet) => {
         if (draggingCable) {
+            e.stopPropagation();
             let { sourceNode, sourceOutlet, destNode, destInlet } = draggingCable;
             if (sourceNode && sourceOutlet && !props.isOutlet) {
                 let connection = sourceNode.connect(props.node, iolet, sourceOutlet, true);
@@ -83,8 +84,8 @@ const IOletsComponent = (props: Props) => {
                                         key={i}
                                         style={{ zIndex: 10000000000000000 }}
                                         onMouseUp={(e: any) => {
-                                            e.stopPropagation();
-                                            onMouseUp(iolet);
+                                            // e.stopPropagation();
+                                            onMouseUp(e, iolet);
                                         }}
                                         onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => onMouseDown(
                                             e, iolet)}

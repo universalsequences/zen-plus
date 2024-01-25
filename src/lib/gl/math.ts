@@ -35,7 +35,7 @@ export const func = (
             let _ins = ins.map(f => context.gen(f));
             let [opVar] = context.useVariables(`${name}Val`);
 
-            let _type = __type === undefined ? _ins[0].type : __type;
+            let _type = __type === undefined ? emitType(_ins) : __type;
             let type = context.printType(_type);
             let code = ins.length > 0 && jsFunc && ins.every(x => typeof x === "number") ?
                 `${type} ${opVar} = ${jsFunc(...ins as number[])};` :

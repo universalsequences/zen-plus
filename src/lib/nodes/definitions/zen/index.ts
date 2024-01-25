@@ -3,7 +3,7 @@ import { PatchImpl } from '@/lib/nodes/Patch';
 import { membraneAPI } from './physical-modeling/membrane';
 import { gate } from './gate';
 import { message } from './message';
-import { API } from '@/lib/nodes/context';
+import { API, OperatorContextType } from '@/lib/nodes/context';
 import { functions } from './functions';
 //import { speakers, scope_tilde, number_tilde } from './audio/index';
 //import { comment } from './comment';
@@ -55,7 +55,7 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
         // simply tell the patcher to "compile" at this outputnumber
         // in the subpatch case, that will handle piping it out of the patch
         // in the base patch, it will kick off the ZEN compilation
-        if (!_node.patch.isZenBase()) {
+        if (!_node.patch.isZenBase() || (_node.patch as SubPatch).patchType !== OperatorContextType.ZEN) {
             _node.patch.compile(message as Statement, outputNumber);
         } else {
             _node.patch.compile(outMessage as Statement, outputNumber);
@@ -90,8 +90,16 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 
     return (message: Message) => {
         console.log("INPUT CALLED WITH message = ", message, inputNumber);
-        if (!subpatch.parentPatch.isZen) {
+        if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
             let statement: Statement = [{ name: "input", value: (args[0]() as number) - 1 } as CompoundOperator];
+            let ogType = statement.type;
+            if (node.attributes["min"] !== undefined) {
+                statement = ["max" as Operator, node.attributes["min"] as number, statement];
+            }
+            if (node.attributes["max"] !== undefined) {
+                statement = ["min" as Operator, node.attributes["max"] as number, statement];
+            }
+            statement.type = ogType;
             statement.node = node;
             return [statement];
         }
