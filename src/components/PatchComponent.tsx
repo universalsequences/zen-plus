@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useInletChecker } from '@/hooks/useInletChecker';
 import AssistantSidebar from './AssistantSidebar';
 import { useTilesContext } from '@/contexts/TilesContext';
 import PatchInner from './PatchInner';
