@@ -51,6 +51,11 @@ export const { abi } = {
                 },
                 {
                     "internalType": "string",
+                    "name": "collectionImage",
+                    "type": "string"
+                },
+                {
+                    "internalType": "string",
                     "name": "dsp",
                     "type": "string"
                 },
@@ -107,4 +112,5 @@ export const { abi } = {
             "type": "function"
         }
     ]
-};
+}
+

@@ -59,6 +59,22 @@ const Sidebar = () => {
         }
     }, [user, dropAddress, name, description, price, numEditions, patches]);
 
+    const [screenshot, setScreenshot] = useState<string | null>(null);
+    useEffect(() => {
+        if (opened) {
+            let canvases = document.getElementsByClassName("rendered-canvas")
+            let canvas = canvases[0];
+            console.log("canvas = ", canvas);
+            if (canvas) {
+                captureAndSendCanvas(canvas as HTMLCanvasElement).then(
+                    x => {
+                        console.log('setting screenshot ', x);
+                        setScreenshot("https://zequencer.mypinata.cloud/ipfs/" + x);
+                    });
+            }
+        }
+    }, [opened, setScreenshot]);
+
     useEffect(() => {
         if (opened && switchNetwork) {
             switchNetwork(goerli.id);
@@ -97,10 +113,11 @@ const Sidebar = () => {
 
 
     const inner = React.useMemo(() => {
+        console.log('screenshot = ', screenshot);
         return (
             <div>
-                {minting && parameters && visualsCode && zenCode ?
-                    <MintSound numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
+                {screenshot && minting && parameters && visualsCode && zenCode ?
+                    <MintSound screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
                 {!account ? <div>
                     <ConnectButton />
                 </div>
@@ -151,7 +168,7 @@ const Sidebar = () => {
                 </div>
             </div>
         );
-    }, [zenCode, visualsCode, minting, parameters, name, description, price, numEditions]);
+    }, [zenCode, visualsCode, minting, parameters, name, description, price, numEditions, screenshot]);
 
 
     return <div
@@ -178,3 +195,49 @@ const Sidebar = () => {
     </div >
 }
 export default Sidebar;
+
+// Function to convert base64 to blob
+function base64ToBlob(base64: string, mimeType: string) {
+    const byteString = atob(base64.split(',')[1]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeType });
+}
+
+// Function to capture the canvas and send the image
+function captureAndSendCanvas(canvas: HTMLCanvasElement): Promise<string> {
+
+    return new Promise((resolve: (x: string) => void) => {
+        // Convert canvas to base64 image
+        const base64Image = canvas.toDataURL('image/png');
+        console.log(canvas);
+        console.log(base64Image);
+
+        // Convert base64 to blob
+        const imageBlob = base64ToBlob(base64Image, 'image/png');
+        console.log(imageBlob);
+
+        // Prepare FormData
+        const formData = new FormData();
+        formData.append('file', imageBlob, 'screenshot.png');
+
+        // Send the image to the server
+        fetch('/api/uploadImage', {
+            method: 'POST',
+            body: formData,
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Upload successful', data.data.IpfsHash);
+                resolve(data.data.IpfsHash);
+
+            })
+            .catch(error => {
+                console.error('Error uploading image:', error);
+            });
+    });
+}
+

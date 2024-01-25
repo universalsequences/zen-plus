@@ -65,7 +65,7 @@ export type ZenRenderFunction = (width: number, height: number) => void;
 
 export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRenderFunction | null => {
     // first we attach to it...
-    const gl: WebGLRenderingContext | null = canvas.getContext('webgl');
+    const gl: WebGLRenderingContext | null = canvas.getContext('webgl', { preserveDrawingBuffer: true });
 
     if (!gl) {
         console.error('Unable to initialize WebGL. Your browser may not support it.');

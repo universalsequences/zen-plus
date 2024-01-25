@@ -6,11 +6,11 @@ import { abi } from '@/lib/abi/sound-drop-abi';
 
 import { useContractWrite, usePrepareContractWrite, useAccount } from 'wagmi';
 
-const MintSound: React.FC<{ numEditions: number, price: bigint, name: string, description: string, visuals: string, setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues, visuals, name, description, numEditions, price }) => {
+const MintSound: React.FC<{ screenshot: string, numEditions: number, price: bigint, name: string, description: string, visuals: string, setDropAddress: (x: string | null) => void, dsp: string, parameterNames: string[], minValues: number[], maxValues: number[] }> = ({ dsp, setDropAddress, parameterNames, minValues, maxValues, visuals, name, description, numEditions, price, screenshot }) => {
     let account = useAccount();
     const publicClient = usePublicClient();
 
-    let args = [name, description, dsp, visuals, parameterNames, minValues, maxValues, [], ["left", "right"], price, numEditions];
+    let args = [name, description, screenshot, dsp, visuals, parameterNames, minValues, maxValues, [], ["left", "right"], price, numEditions];
     console.log("mint sound=", args);
 
     const { config } = usePrepareContractWrite({

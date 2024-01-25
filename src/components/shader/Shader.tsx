@@ -36,7 +36,7 @@ const Shader: React.FC<{ zenGraph: gl.RenderJob, width: number, height: number }
     }, [zenGraph]);
 
     return <div>
-        <canvas style={{ width, height }} className="bg-black" ref={ref} />
+        <canvas style={{ width, height }} className="bg-black rendered-canvas" ref={ref} />
     </div>
 
 };
