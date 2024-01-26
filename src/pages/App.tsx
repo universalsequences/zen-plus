@@ -26,8 +26,8 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import {
-    goerli,
-    //zoraTestnet
+    //goerli,
+    zora
 } from 'wagmi/chains';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
 import { infuraProvider } from 'wagmi/providers/infura';
@@ -35,7 +35,7 @@ import { publicProvider } from 'wagmi/providers/public';
 
 
 const { chains, publicClient } = configureChains(
-    [goerli],
+    [zora],
     [
         infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
         publicProvider()

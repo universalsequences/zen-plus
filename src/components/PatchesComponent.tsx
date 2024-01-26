@@ -4,7 +4,7 @@ import { Landing } from './landing/Landing';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSwitchNetwork } from 'wagmi';
 import {
-    goerli,
+    zora
 } from 'wagmi/chains';
 import SearchWindow from './SearchWindow';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -21,7 +21,7 @@ export default function PatchesComponent() {
     const { switchNetwork } = useSwitchNetwork();
     useEffect(() => {
         if (switchNetwork) {
-            switchNetwork(goerli.id);
+            switchNetwork(zora.id);
         }
     }, [switchNetwork]);
     let { rootTile, selectedPatch, patches } = usePatches();

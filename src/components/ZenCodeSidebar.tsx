@@ -1,9 +1,10 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { useNetwork } from 'wagmi';
 import { parseEther } from 'viem'
 import { db } from '@/lib/db/firebase';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import {
-    goerli,
+    zora
 } from 'wagmi/chains';
 import { useAuth } from '@/contexts/AuthContext';
 import MintSound from './MintSound';
@@ -39,10 +40,11 @@ const Sidebar = () => {
     const { switchNetwork } = useSwitchNetwork();
 
     const { user } = useAuth();
+    const { chain } = useNetwork();
 
     const [screenshot, setScreenshot] = useState<string | null>(null);
     useEffect(() => {
-        if (user && dropAddress && account && patches[0]) {
+        if (user && dropAddress && account && patches[0] && chain) {
             // write to firebase
             let document: any = {
                 ownerAddress: account.address,
@@ -54,12 +56,13 @@ const Sidebar = () => {
                 price,
                 numEditions,
                 patchId: patches[0].previousDocId,
-                image: screenshot
+                image: screenshot,
+                chain: chain.id
             };
             addDoc(collection(db, 'drops'), document).then((snap) => {
             });
         }
-    }, [user, dropAddress, name, description, price, numEditions, patches, screenshot]);
+    }, [user, chain, dropAddress, name, description, price, numEditions, patches, screenshot]);
 
     useEffect(() => {
         if (opened) {
@@ -78,7 +81,7 @@ const Sidebar = () => {
 
     useEffect(() => {
         if (opened && switchNetwork) {
-            switchNetwork(goerli.id);
+            switchNetwork(zora.id);
         }
     }, [opened, switchNetwork]);
 
@@ -117,8 +120,8 @@ const Sidebar = () => {
         console.log('screenshot = ', screenshot);
         return (
             <div>
-                {screenshot && minting && parameters && visualsCode && zenCode ?
-                    <MintSound screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
+                {screenshot && minting && parameters && visualsCode && zenCode && chain ?
+                    <MintSound chainId={chain.id} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
                 {!account ? <div>
                     <ConnectButton />
                 </div>
@@ -161,15 +164,16 @@ const Sidebar = () => {
                         </div>
                 }
                 <div
-                    style={{ maxHeight: 500, minHeight: 100 }}
+                    style={{ maxHeight: 100, minHeight: 100 }}
                     className="w-full h-full text-xs overflow-scroll relative">
                     <pre className="p-1">
                         {zenCode}
                     </pre>
                 </div>
+                <ConnectButton />
             </div>
         );
-    }, [zenCode, visualsCode, minting, parameters, name, description, price, numEditions, screenshot]);
+    }, [zenCode, visualsCode, minting, parameters, name, description, price, numEditions, screenshot, chain]);
 
 
     return <div
