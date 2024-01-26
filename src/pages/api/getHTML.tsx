@@ -34,8 +34,8 @@ function runMiddleware(req: any, res: any, fn: any) {
 }
 
 
-async function getHTML(contractAddress: string, tokenId: string): Promise<string | null> {
-    const contract = new web3.eth.Contract(abi as any, contracts[5].MetadataRenderer);
+async function getHTML(contractAddress: string, tokenId: string, chainId: number): Promise<string | null> {
+    const contract = new web3.eth.Contract(abi as any, contracts[chainId].MetadataRenderer);
     try {
         const tokenURI: string = await contract.methods.onchainTokenURI(contractAddress, tokenId).call() as string;
         // Check if tokenURI is base64 encoded, if not, assume it's a URL
@@ -60,7 +60,14 @@ async function getHTML(contractAddress: string, tokenId: string): Promise<string
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     await runMiddleware(req, res, cors);
 
-    const { contractAddress, tokenId } = req.query;
+    const { contractAddress, tokenId, chainId } = req.query;
+
+    let _chainId = 5;
+    if (typeof chainId === "string") {
+        _chainId = parseInt(chainId);
+    } else if (typeof chainId === "number") {
+        _chainId = chainId;
+    }
 
     if (typeof tokenId !== 'string' || typeof contractAddress !== 'string') {
         res.status(400).send('Token ID must be a string');
@@ -68,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        let html = await getHTML(contractAddress, tokenId);
+        let html = await getHTML(contractAddress, tokenId, _chainId);
 
         if (html) {
             res.send(html);
