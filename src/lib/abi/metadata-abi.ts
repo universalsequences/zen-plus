@@ -66,6 +66,32 @@ export const { abi } = {
                     "type": "address"
                 }
             ],
+            "name": "AudioLibraryAddress",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "GLLibraryAddress",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
             "name": "ZenModuleInitialized",
             "type": "event"
         },
@@ -253,6 +279,30 @@ export const { abi } = {
         {
             "inputs": [
                 {
+                    "internalType": "address",
+                    "name": "dropAddress",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenId",
+                    "type": "uint256"
+                }
+            ],
+            "name": "tokenImage",
+            "outputs": [
+                {
+                    "internalType": "string",
+                    "name": "",
+                    "type": "string"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
                     "internalType": "uint256",
                     "name": "tokenId",
                     "type": "uint256"
@@ -267,6 +317,102 @@ export const { abi } = {
                 }
             ],
             "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "string",
+                    "name": "base",
+                    "type": "string"
+                }
+            ],
+            "name": "ugradeViewerBase",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "target",
+                    "type": "address"
+                },
+                {
+                    "internalType": "string",
+                    "name": "base",
+                    "type": "string"
+                }
+            ],
+            "name": "updateImageBase",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bool",
+                    "name": "update",
+                    "type": "bool"
+                }
+            ],
+            "name": "updateNeedsViewerBase",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "chunk",
+                    "type": "address"
+                }
+            ],
+            "name": "upgradeZenAudioLibraryChunk1",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "chunk",
+                    "type": "address"
+                }
+            ],
+            "name": "upgradeZenAudioLibraryChunk2",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "chunk",
+                    "type": "address"
+                }
+            ],
+            "name": "upgradeZenAudioLibraryChunk3",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "chunk",
+                    "type": "address"
+                }
+            ],
+            "name": "upgradeZenGLLibrary",
+            "outputs": [],
+            "stateMutability": "nonpayable",
             "type": "function"
         },
         {
@@ -318,6 +464,16 @@ export const { abi } = {
                     "internalType": "string",
                     "name": "image",
                     "type": "string"
+                },
+                {
+                    "internalType": "string",
+                    "name": "imageBase",
+                    "type": "string"
+                },
+                {
+                    "internalType": "bool",
+                    "name": "isImageBaseConfigured",
+                    "type": "bool"
                 }
             ],
             "stateMutability": "view",
