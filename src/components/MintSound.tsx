@@ -26,10 +26,9 @@ const MintSound: React.FC<{ screenshot: string, numEditions: number, price: bigi
         price,
         numEditions
     ];
-    console.log("mint sound=", args);
 
     const { config } = usePrepareContractWrite({
-        address: contracts.DropCreator,
+        address: contracts[5].DropCreator,
         abi: abi,
         functionName: 'newDrop',
         args

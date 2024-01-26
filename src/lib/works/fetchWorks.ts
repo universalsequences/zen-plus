@@ -1,6 +1,7 @@
 
 import { db } from '@/lib/db/firebase';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
+
 export interface WorkOption {
     createdAt: any;
     editionSize: number;
@@ -12,6 +13,7 @@ export interface WorkOption {
     price: string;
     chainId: number;
     patchId: string;
+    image?: string;
 };
 
 

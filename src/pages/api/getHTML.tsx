@@ -35,7 +35,7 @@ function runMiddleware(req: any, res: any, fn: any) {
 
 
 async function getHTML(contractAddress: string, tokenId: string): Promise<string | null> {
-    const contract = new web3.eth.Contract(abi as any, contracts.MetadataRenderer);
+    const contract = new web3.eth.Contract(abi as any, contracts[5].MetadataRenderer);
     try {
         const tokenURI: string = await contract.methods.onchainTokenURI(contractAddress, tokenId).call() as string;
         // Check if tokenURI is base64 encoded, if not, assume it's a URL

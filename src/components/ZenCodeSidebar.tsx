@@ -40,6 +40,7 @@ const Sidebar = () => {
 
     const { user } = useAuth();
 
+    const [screenshot, setScreenshot] = useState<string | null>(null);
     useEffect(() => {
         if (user && dropAddress && account && patches[0]) {
             // write to firebase
@@ -52,14 +53,14 @@ const Sidebar = () => {
                 description,
                 price,
                 numEditions,
-                patchId: patches[0].previousDocId
+                patchId: patches[0].previousDocId,
+                image: screenshot
             };
             addDoc(collection(db, 'drops'), document).then((snap) => {
             });
         }
-    }, [user, dropAddress, name, description, price, numEditions, patches]);
+    }, [user, dropAddress, name, description, price, numEditions, patches, screenshot]);
 
-    const [screenshot, setScreenshot] = useState<string | null>(null);
     useEffect(() => {
         if (opened) {
             let canvases = document.getElementsByClassName("rendered-canvas")

@@ -11,7 +11,7 @@ const WorkEditor: React.FC<{ contractAddress: string, tokenId: number }> = ({ co
     const [selectedInput, setSelectedInput] = useState<number | null>(null);
 
     const { data, isError, isLoading } = useContractRead({
-        address: contracts.ZenModule,
+        address: contracts[5].ZenModule,
         abi: abi,
         functionName: 'getWorkToken',
         args: [contractAddress, tokenId]

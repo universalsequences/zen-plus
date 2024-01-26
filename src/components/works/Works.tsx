@@ -14,6 +14,7 @@ export interface WorkOption {
     price: string;
     chainId: number;
     patchId: string;
+    image?: string;
 };
 
 const Works: React.FC<{ setShowNav: (x: boolean) => void }> = ({ setShowNav }) => {
@@ -49,7 +50,7 @@ const Works: React.FC<{ setShowNav: (x: boolean) => void }> = ({ setShowNav }) =
         return <WorkPlayer close={() => setSelectedWork(null)} work={selectedWork} />;
     }
     return <div className="px-24  flex flex-wrap items-start content-start">
-        {works.map((x, i) => <Work key={i} select={() => setSelectedWork(x)} work={x} />)}
+        {works.filter(x => x.image).map((x, i) => <Work key={i} select={() => setSelectedWork(x)} work={x} />)}
     </div>;
 };
 
@@ -58,10 +59,11 @@ const Work: React.FC<{ select: () => void, work: WorkOption }> = ({ select, work
     return (
         <div
             onClick={() => select()}
-            className="border border-zinc-600 m-1 w-64 h-24 cursor-pointer">
+            className="border border-zinc-600 m-1 w-64 h-50 cursor-pointer">
             <div className="p-2">
                 {work.name}
             </div>
+            <img src={work.image} className="w-24 h-24 mx-auto my-2" />
             <div className="flex">
                 <div className="p-2">
                     <div>
