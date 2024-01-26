@@ -7,9 +7,9 @@ type Contracts = {
 }
 
 const goerliContracts: Contracts = {
-    DropCreator: "0x261e4f05a23B646249150A28dDB748419Fe2E60c",
-    MetadataRenderer: "0x8E6274c2b9c8a613Bd3a79674dF55d29f961dDf4",
-    ZenModule: "0xe877463bded3ea9e2615065196a88bb365d40a6a"
+    DropCreator: "0xdf5760ACd3e4Cc50eC9f43D7a39abaF38a570742",
+    MetadataRenderer: "0x4201b293a49615d8f6aA8fE34aD6791a2C371Ff7",
+    ZenModule: "0x5412f942505925199517a4d77612e1356ca1cb0e"
 };
 
 export const contracts: ContractsByChain = {
