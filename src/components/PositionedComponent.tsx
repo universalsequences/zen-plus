@@ -198,7 +198,7 @@ const PositionedComponent: React.FC<{
                             className="absolute bottom-0 right-0 w-1 h-1 bg-zinc-300 cursor-se-resize z-30" />
                         <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 " />
                         <div className="absolute bottom-0 left-0 w-1 h-1 bg-zinc-300 " />
-                        {(allowSize || isCustom) && <div
+                        {((node as ObjectNode).name !== "divider" && (allowSize || isCustom)) && <div
                             onClick={(e: any) => e.stopPropagation()}
                             onMouseDown={
                                 (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => startResizing(e, Orientation.Y)}

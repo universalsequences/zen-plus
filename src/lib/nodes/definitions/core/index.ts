@@ -2,7 +2,7 @@ import { API } from '@/lib/nodes/context';
 import { knob, slider } from './slider';
 import { interval } from './metro';
 import { strings } from './strings';
-import { umenu } from './umenu';
+import { divider, umenu } from './umenu';
 import { order } from './order';
 import { math } from './math';
 import { lists } from './list';
@@ -23,6 +23,7 @@ export const api: API = {
     interval,
     attrui,
     umenu,
+    divider,
     slider,
     knob,
     ...strings

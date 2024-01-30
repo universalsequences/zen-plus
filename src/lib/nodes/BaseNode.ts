@@ -56,7 +56,7 @@ export class BaseNode implements Node {
         for (let connection of connections) {
             let { source, destination, destinationInlet } = connection;
             if (source as any === this && destinationInlet) {
-                destination.receive(destinationInlet, msg);
+                destination.receive(destinationInlet, msg, this);
             }
         }
     }
@@ -150,9 +150,8 @@ export class BaseNode implements Node {
         }
     }
 
-    receive(inlet: IOlet, msg: Message) {
+    receive(inlet: IOlet, msg: Message, fromNode?: Node) {
         inlet.lastMessage = msg;
-
         /** rest gets implemented by other extended classes */
     }
 

@@ -1,4 +1,5 @@
 import Matrix from './Matrix';
+import Divider from './Divider';
 import GLCanvas from './GLCanvas';
 import SVGCanvas from './SVGCanvas';
 import Slider from './Slider';
@@ -32,5 +33,6 @@ export const index: ComponentIndex = {
     "umenu": UMenu,
     "canvas": GLCanvas,
     "slider": Slider,
-    "knob": Knob
+    "knob": Knob,
+    "divider": Divider
 };

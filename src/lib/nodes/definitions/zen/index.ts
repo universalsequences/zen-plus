@@ -1,4 +1,4 @@
-import { Lazy, Message, ObjectNode, NodeFunction } from '../../types';
+import { ConnectionType, Lazy, Message, ObjectNode, NodeFunction } from '../../types';
 import { PatchImpl } from '@/lib/nodes/Patch';
 import { membraneAPI } from './physical-modeling/membrane';
 import { gate } from './gate';
@@ -84,12 +84,10 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     parentNode.inlets[inputNumber - 1].name = name;
 
     if (!subpatch.parentPatch.isZen) {
-        console.log("node is needs load = true");
         node.needsLoad = true;
     }
 
     return (message: Message) => {
-        console.log("INPUT CALLED WITH message = ", message, inputNumber);
         if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
             let statement: Statement = [{ name: "input", value: (args[0]() as number) - 1 } as CompoundOperator];
             let ogType = statement.type;
@@ -114,12 +112,36 @@ doc(
         description: "subpatch of patch",
         numberOfInlets: 1,
         numberOfOutlets: 1,
+        attributeOptions: { type: ["zen", "gl"] }
     });
 
 const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     let subpatch = node.subpatch || (new SubpatchImpl(node.patch, node));
     node.subpatch = subpatch;
     subpatch.clearState();
+    if (!node.attributes["type"]) {
+        node.attributes["type"] = "zen";
+        node.attributeCallbacks["type"] = (type) => {
+            if (type === "gl") {
+                node.operatorContextType = OperatorContextType.GL;
+                subpatch.patchType = OperatorContextType.GL;
+            } else {
+                node.operatorContextType = OperatorContextType.ZEN;
+                subpatch.patchType = OperatorContextType.ZEN;
+            }
+            for (let inlet of node.inlets) {
+                inlet.connectionType = ConnectionType.GL;
+            }
+            for (let outlet of node.outlets) {
+                outlet.connectionType = ConnectionType.GL;
+            }
+        };
+    }
+
+
+    node.attributeOptions = {
+        "type": ["zen", "gl"]
+    };
 
     return (message: Message) => {
         /*

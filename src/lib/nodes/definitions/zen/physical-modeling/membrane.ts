@@ -45,6 +45,12 @@ export const modeling_component = (node: ObjectNode,
         if (msg === "bang" && returnedUpstream) {
             return [];
         }
+
+        if (node.inlets[0].connections.length > 0 && msg === "bang") {
+            return [];
+        } else {
+        }
+
         // if msg === "bang" (and not the initial bang) then we are just creating this... and this is the
         // entry point by design
 

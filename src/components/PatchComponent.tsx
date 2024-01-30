@@ -593,7 +593,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 onMouseUp={isCustomView ? undefined : onMouseUp}
                 onMouseMove={onSelectionMove}
                 onMouseDown={onMouseDown}
-                className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-900 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
+                className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-100 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
 
                 }>
                 {!isCustomView && <>
@@ -645,11 +645,6 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 {
                     !isCustomView && <>
                         {selectedPatch === patch ? <Toolbar patch={patch} /> : ''}
-                    </>
-                }
-                {
-                    !isCustomView && <>
-                        {selectedPatch === patch ? <AssistantSidebar /> : ''}
                     </>
                 }
             </div>

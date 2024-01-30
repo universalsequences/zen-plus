@@ -4,6 +4,7 @@ import { parseEther } from 'viem'
 import { db } from '@/lib/db/firebase';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import {
+    goerli,
     zora
 } from 'wagmi/chains';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,7 @@ import { usePatches } from '@/contexts/PatchesContext';
 import Attributes from './Attributes';
 import { SubPatch, Patch, ObjectNode } from '@/lib/nodes/types';
 import { useSwitchNetwork } from 'wagmi';
-import { Share1Icon } from '@radix-ui/react-icons'
+import { CameraIcon, Cross2Icon, Share1Icon } from '@radix-ui/react-icons'
 import { useSelection } from '@/contexts/SelectionContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
@@ -23,7 +24,7 @@ interface Parameters {
     minValues: number[];
 }
 
-const Sidebar = () => {
+const Sidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
     const { selectedPatch, patches, visualsCode } = usePatches();
     let zenCode = selectedPatch ? selectedPatch.zenCode : "";
     const account = useAccount();
@@ -36,7 +37,7 @@ const Sidebar = () => {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
 
-    let [opened, setOpened] = useState(false);
+    let [opened, setOpened] = useState(true);
     const { switchNetwork } = useSwitchNetwork();
 
     const { user } = useAuth();
@@ -65,7 +66,7 @@ const Sidebar = () => {
     }, [user, chain, dropAddress, name, description, price, numEditions, patches, screenshot]);
 
     useEffect(() => {
-        if (opened) {
+        if (!screenshot) {
             let canvases = document.getElementsByClassName("rendered-canvas")
             let canvas = canvases[0];
             console.log("canvas = ", canvas);
@@ -77,11 +78,11 @@ const Sidebar = () => {
                     });
             }
         }
-    }, [opened, setScreenshot]);
+    }, [setScreenshot, screenshot]);
 
     useEffect(() => {
         if (opened && switchNetwork) {
-            switchNetwork(zora.id);
+            switchNetwork(goerli.id);
         }
     }, [opened, switchNetwork]);
 
@@ -116,66 +117,102 @@ const Sidebar = () => {
     }, [patches, opened, setParameters, minting]);
 
 
+    console.log("drop address=", dropAddress);
     const inner = React.useMemo(() => {
         console.log('screenshot = ', screenshot);
         return (
-            <div>
-                {screenshot && minting && parameters && visualsCode && zenCode && chain ?
-                    <MintSound chainId={chain.id} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''}
-                {!account ? <div>
-                    <ConnectButton />
-                </div>
-                    :
-                    minting ?
+            <div className="w-96 relative">
+                <Cross2Icon onClick={hide} className="absolute top-0 cursor-pointer right-3" />
+
+                {dropAddress && <div className="h-32">Deployed on <a className="underline text-blue-500" href={"https://testnet.zora.co/collect/gor:" + dropAddress}>zora</a> </div>}
+                {
+                    switchNetwork && chain && <div className="flex mb-1">
                         <div
-                            className="bg-white px-2 py-1 rounded-full text-black cursor-pointer z-30 active:bg-red-500">
-                            deploying onchain</div> :
-                        <div className="flex flex-col items-start">
-                            <input style={{ borderBottom: "1px solid #2d2d2d" }} value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} placeholder="Name for work" className="px-2 outline-none" />
-                            <input style={{ borderBottom: "1px solid #2d2d2d" }} value={description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)} placeholder="Desciption for work" className="px-2 outline-none" />
-                            <div className="relative"><input style={{ borderBottom: "1px solid #2d2d2d" }} value={price} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                let float = parseFloat(e.target.value)
-                                if (e.target.value === "." || e.target.value === "0." || e.target.value === "") {
-                                    float = 0;
-                                }
-                                if (!isNaN(float) && float >= 0) {
-                                    setPrice(e.target.value);
-                                }
-                            }} placeholder="Price" className="px-2 outline-none" />
-                                <div className="absolute top-1 right-5 z-30">eth</div>
-                            </div>
-                            <div className="relative"><input style={{ borderBottom: "1px solid #2d2d2d" }} value={numEditions} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                let float = parseInt(e.target.value)
-                                if (!isNaN(float) && float > 0) {
-                                    setNumEditions(float);
-                                }
-                            }} placeholder="Editions" className="px-2 outline-none" />
-                                <div className="absolute top-1 right-5 z-30">editions</div>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    if (name !== "" && description !== "") {
-                                        setMinting(true);
+                            onClick={() => switchNetwork(goerli.id)}
+                            className={"cursor-pointer " + (chain.id === goerli.id ? "border-bottom text-white " : " text-zinc-400")}>testnet</div>
+                        <div
+                            onClick={() => switchNetwork(zora.id)}
+                            className={"cursor-pointer ml-5 " + (chain.id === zora.id ? "border-bottom text-white " : " text-zinc-400")}>zora network</div>
+                    </div>
+                }
+                {
+                    screenshot && minting && parameters && visualsCode && zenCode && chain ?
+                        <MintSound chainId={chain.id} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''
+                }
+                {
+                    !account ? <div>
+                        <ConnectButton />
+                    </div>
+                        :
+                        minting ?
+                            <div
+                                className="bg-white px-2 py-1 rounded-full text-black cursor-pointer z-30 active:bg-red-500">
+                                deploying onchain</div> :
+                            (parameters && visualsCode && zenCode && chain ? <div className="flex flex-col items-start">
+                                <input style={{ borderBottom: "1px solid #2d2d2d" }} value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} placeholder="Name for work" className="px-2 outline-none w-full mb-1 bg-black-clear " />
+                                <textarea style={{ borderBottom: "1px solid #2d2d2d" }} value={description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} placeholder="Desciption for work" className="px-2 mb-1 outline-none" />
+                                <div className="relative mb-1"><input style={{ borderBottom: "1px solid #2d2d2d" }} value={price} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                    let float = parseFloat(e.target.value)
+                                    if (e.target.value === "." || e.target.value === "0." || e.target.value === "") {
+                                        float = 0;
                                     }
-                                }}
-                                className=" bg-white px-2 py-1 rounded-full text-black cursor-pointer z-30 active:bg-red-500">
-                                Mint Onchain
-                            </button>
-                        </div>
+                                    if (!isNaN(float) && float >= 0) {
+                                        setPrice(e.target.value);
+                                    }
+                                }} placeholder="Price" className="px-2 outline-none" />
+                                    <div className="absolute bottom-1 text-zinc-400 text-xs right-5 z-30">eth</div>
+                                </div>
+                                <div className="relative"><input style={{ borderBottom: "1px solid #2d2d2d" }} value={numEditions} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                    let float = parseInt(e.target.value)
+                                    if (!isNaN(float) && float > 0) {
+                                        setNumEditions(float);
+                                    }
+                                }} placeholder="Editions" className="px-2 outline-none" />
+                                    <div className="absolute text-zinc-400 bottom-1 text-xs right-5 z-30">editions</div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (name !== "" && description !== "") {
+                                            setMinting(true);
+                                        }
+                                    }}
+                                    className={(name === "" || description === "" ? "opacity-80 blur-sm  pointer-events-none" : "") + " bg-clear-button px-2 py-1  cursor-pointer z-30 active:bg-red-500 mt-3"}>
+                                    Mint Onchain
+                                </button>
+                            </div>
+                                : <div className="flex">
+                                    <ul>
+                                        <li>
+                                            missing something
+                                            screenshot && minting && parameters && visualsCode && zenCode && chain
+                                            {!visualsCode && <div>missing visuals</div>}
+                                            {!screenshot && <div>missing screenshot</div>}
+                                            {!parameters && <div>missing parameters</div>}
+                                            {!zenCode && <div>missing dsp</div>}
+                                            {!chain && <div>missing chain</div>}
+                                        </li>
+                                    </ul>
+                                </div>)
                 }
                 <div
-                    style={{ maxHeight: 100, minHeight: 100 }}
-                    className="w-full h-full text-xs overflow-scroll relative">
+                    style={{ maxHeight: 100, minHeight: 50 }}
+                    className="w-full h-full text-xs overflow-scroll relative my-5">
                     <pre className="p-1">
                         {zenCode}
                     </pre>
                 </div>
+                <div className="w-64 h-64 relative border border-zinc-400 overflow-hidden">
+                    {screenshot && <img src={screenshot} className="h-64" />}
+                    <CameraIcon onClick={() => setScreenshot(null)} className="absolute bottom-2 right-2 cursor-pointer" />
+                </div>
                 <ConnectButton />
-            </div>
+            </div >
         );
-    }, [zenCode, visualsCode, minting, parameters, name, description, price, numEditions, screenshot, chain]);
+    }, [zenCode, setScreenshot, dropAddress, visualsCode, minting, parameters, name, description, price, numEditions, screenshot, chain, switchNetwork]);
 
 
+    return inner;
+    /*
     return <div
         style={{ zIndex: 100000000 }}
         onMouseDown={(e: any) => e.stopPropagation()}
@@ -196,8 +233,7 @@ const Sidebar = () => {
             <Share1Icon
                 className="w-6 h-6 " />
         </div>
-        {dropAddress ? <div className="h-32">Deployed on <a className="underline text-blue-500" href={"https://testnet.zora.co/collect/gor:" + dropAddress}>zora</a> </div> : opened ? inner : ""}
-    </div >
+    */
 }
 export default Sidebar;
 

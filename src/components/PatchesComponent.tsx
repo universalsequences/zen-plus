@@ -18,12 +18,6 @@ import { useTilesContext } from '@/contexts/TilesContext';
 
 
 export default function PatchesComponent() {
-    const { switchNetwork } = useSwitchNetwork();
-    useEffect(() => {
-        if (switchNetwork) {
-            switchNetwork(zora.id);
-        }
-    }, [switchNetwork]);
     let { rootTile, selectedPatch, patches } = usePatches();
     let { gridTemplate } = useTilesContext();
 
@@ -88,7 +82,6 @@ export default function PatchesComponent() {
                     </div>
                 </div>
                 <Sidebar />
-                <ZenCodeSidebar />
                 {showSearch && <SearchWindow hide={() => setShowSearch(false)} />}
             </div >
         </>

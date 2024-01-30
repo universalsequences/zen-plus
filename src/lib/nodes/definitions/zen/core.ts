@@ -71,13 +71,9 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
             let defaultValue = object.attributes["default"] as number;
             if (object.storedMessage !== undefined) {
                 _param = param(object.storedMessage as number, name() as string);
-                if (name() === "wet") {
-                }
                 object.storedParameterValue = object.storedMessage as number;
             } else {
                 _param = param(defaultValue, name() as string);
-                if (name() === "wet") {
-                }
                 object.storedParameterValue = defaultValue;
             }
         }

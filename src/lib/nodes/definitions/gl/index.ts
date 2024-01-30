@@ -261,7 +261,7 @@ export const defun = (node: ObjectNode, name: Lazy) => {
     };
 };
 
-const parseArguments = (statement: Statement): Statement[] => {
+export const parseArguments = (statement: Statement): Statement[] => {
     if (Array.isArray(statement)) {
         let compoundOperator = statement[0] as CompoundOperator;
         if (compoundOperator && compoundOperator.name === "argument") {
@@ -270,7 +270,7 @@ const parseArguments = (statement: Statement): Statement[] => {
         let args: Statement[] = [];
         let i = 0;
         for (let a of statement.slice(1)) {
-            if (statement[0] as string === "call" && i === 0) {
+            if ((statement[0] as string === "call" || statement[0] as string === "polycall") && i === 0) {
                 continue;
             }
             args = [...args, ...parseArguments(a as Statement)];

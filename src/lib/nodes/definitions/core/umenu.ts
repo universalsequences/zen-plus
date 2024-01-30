@@ -2,6 +2,24 @@ import { doc } from './doc';
 import { ObjectNode, Message } from '../../types';
 
 doc(
+    'divider',
+    {
+        numberOfInlets: 0,
+        numberOfOutlets: 0,
+        description: "ux divider (line)"
+    });
+
+export const divider = (node: ObjectNode) => {
+    if (!node.size) {
+        node.size = {
+            width: 100,
+            height: 1,
+        };
+    }
+    return () => [];
+};
+
+doc(
     'umenu',
     {
         numberOfInlets: 1,
@@ -31,6 +49,7 @@ export const umenu = (node: ObjectNode) => {
             message = node.storedMessage;
         }
         node.storedMessage = message;
+        node.saveData = message;
         let options = (node.attributes["options"] as string).split(",")
         let index = options.indexOf(message as string);
         return [message, index];

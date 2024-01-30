@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import ZenCodeSidebar from './ZenCodeSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { db } from '@/lib/db/firebase';
@@ -23,7 +24,8 @@ enum Option {
     Save,
     Load,
     CustomPresentation,
-    Settings
+    Settings,
+    Export
 }
 
 interface Props {
@@ -100,7 +102,7 @@ const PatchDropdown = React.memo((props: Props) => {
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Content
                         style={{ zIndex: 10000000000000000 }}
-                        color="indigo" className="bg-white text-zinc-800 p-3 DropdownMenuContent text-xs" sideOffset={5}>
+                        color="indigo" className="bg-zinc-800  text-zinc-200 w-40 py-3 DropdownMenuContent text-sm" sideOffset={5}>
                         <Dialog.Trigger
                         >
                             <DropdownMenu.Item
@@ -136,6 +138,13 @@ const PatchDropdown = React.memo((props: Props) => {
                                 className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
                                 Settings
                             </DropdownMenu.Item>}
+                            {isSubPatch && <DropdownMenu.Item
+                                onClick={() => {
+                                    setOption(Option.Export); //Option.CustomPresentation);
+                                }}
+                                className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
+                                Export To NFT
+                            </DropdownMenu.Item>}
                             <DropdownMenu.Item
                                 onClick={() => {
                                     logout();
@@ -152,67 +161,68 @@ const PatchDropdown = React.memo((props: Props) => {
                         className="center-fixed" />
                     <Dialog.Content
                         onInteractOutside={() => setOption(null)}
-                        style={{ zIndex: 100000000000 }}
+                        style={{ zIndex: 10000000 }}
                         className="center-fixed dark-modal  p-5 text-white rounded-lg outline-none">
-                        {option === Option.Settings ?
-                            <div className="flex flex-col">
-                                <div className="text-base">Settings</div>
-                                <div>
-                                    <form>
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <label className="Label" htmlFor="airplane-mode" style={{ paddingRight: 15 }}>
-                                                Light Mode
-                                            </label>
-                                            <Switch.Root
-                                                onCheckedChange={(e: boolean) => {
-                                                    setLightMode(e);
-                                                }}
-                                                checked={lightMode}
-                                                className="SwitchRoot" id="airplane-mode">
-                                                <Switch.Thumb className="SwitchThumb" />
-                                            </Switch.Root>
-                                        </div>
-                                    </form>
-                                </div>
-                                <Dialog.Close asChild>
-                                    <button
-                                        onClick={() => setOption(null)}
-                                        className="bg-black mt-3 px-2 py-1 text-white rounded-full">Close</button>
-                                </Dialog.Close>
-                            </div> : option === Option.CustomPresentation ? <>
-                                <div style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
+                        {option === Option.Export ? <ZenCodeSidebar hide={() => setOption(null)} /> :
+                            option === Option.Settings ?
+                                <div className="flex flex-col">
+                                    <div className="text-base">Settings</div>
+                                    <div>
+                                        <form>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <label className="Label" htmlFor="airplane-mode" style={{ paddingRight: 15 }}>
+                                                    Light Mode
+                                                </label>
+                                                <Switch.Root
+                                                    onCheckedChange={(e: boolean) => {
+                                                        setLightMode(e);
+                                                    }}
+                                                    checked={lightMode}
+                                                    className="SwitchRoot" id="airplane-mode">
+                                                    <Switch.Thumb className="SwitchThumb" />
+                                                </Switch.Root>
+                                            </div>
+                                        </form>
+                                    </div>
                                     <Dialog.Close asChild>
                                         <button
-                                            onClick={customPresentation}
-                                            className="bg-black px-2 py-1 text-white rounded-full">Custom</button>
+                                            onClick={() => setOption(null)}
+                                            className="bg-black mt-3 px-2 py-1 text-white rounded-full">Close</button>
                                     </Dialog.Close>
-                                </div>
-                            </> :
-                                option === Option.Save ? <>
-                                    <fieldset className="Fieldset">
-                                        <label className="Label mr-4" htmlFor="name">
-                                            Name
-                                        </label>
-                                        <input
-                                            style={{ borderBottom: "1px solid #4f4f4f" }}
-                                            className="Input px-2 bg-black-clear text-white outline-none"
-                                            placeholder="Enter name to save"
-                                            value={name}
-                                            onChange={
-                                                (e: any) => setName(e.target.value)} defaultValue="" />
-                                    </fieldset>
-                                    <div className="save-connect" style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
-                                        {account.address ?
-                                            <Dialog.Close asChild>
-                                                <button
-                                                    onClick={save}
-                                                    className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
-                                            </Dialog.Close> : <ConnectButton />}
+                                </div> : option === Option.CustomPresentation ? <>
+                                    <div style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
+                                        <Dialog.Close asChild>
+                                            <button
+                                                onClick={customPresentation}
+                                                className="bg-black px-2 py-1 text-white rounded-full">Custom</button>
+                                        </Dialog.Close>
                                     </div>
                                 </> :
-                                    <>
-                                        <LoadProject hide={() => setOption(null)} isSubPatch={isSubPatch} patch={patch} />
-                                    </>}
+                                    option === Option.Save ? <>
+                                        <fieldset className="Fieldset">
+                                            <label className="Label mr-4" htmlFor="name">
+                                                Name
+                                            </label>
+                                            <input
+                                                style={{ borderBottom: "1px solid #4f4f4f" }}
+                                                className="Input px-2 bg-black-clear text-white outline-none"
+                                                placeholder="Enter name to save"
+                                                value={name}
+                                                onChange={
+                                                    (e: any) => setName(e.target.value)} defaultValue="" />
+                                        </fieldset>
+                                        <div className="save-connect" style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
+                                            {account.address ?
+                                                <Dialog.Close asChild>
+                                                    <button
+                                                        onClick={save}
+                                                        className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
+                                                </Dialog.Close> : <ConnectButton />}
+                                        </div>
+                                    </> :
+                                        <>
+                                            <LoadProject hide={() => setOption(null)} isSubPatch={isSubPatch} patch={patch} />
+                                        </>}
                     </Dialog.Content>
                 </Dialog.Portal>
             </Dialog.Root>

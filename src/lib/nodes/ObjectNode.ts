@@ -8,7 +8,7 @@ import { Definition } from '../docs/docs';
 import { BaseNode } from './BaseNode';
 import { v4 as uuidv4 } from 'uuid';
 import { uuid, registerUUID } from '@/lib/uuid/IDGenerator';
-import { SerializedPatch, Size } from './types';
+import { Node, SerializedPatch, Size } from './types';
 
 import {
     ConnectionType,
@@ -56,6 +56,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     size?: Size;
     audioNode?: AudioNode;
     operatorContextType: OperatorContextType;
+    storedMessage?: Message;
 
     constructor(patch: Patch) {
         super(patch);
@@ -338,7 +339,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         return otherArguments;
     }
 
-    pipeSubPatch(inlet: IOlet, message: Message) {
+    pipeSubPatch(inlet: IOlet, message: Message, fromNode?: Node) {
         let subpatch = this.subpatch;
         if (!subpatch) {
             return;
@@ -360,7 +361,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 let outlet = inputNode.outlets[0];
                 for (let connection of outlet.connections) {
                     let { destination, destinationInlet } = connection;
-                    destination.receive(destinationInlet, message);
+                    destination.receive(destinationInlet, message, fromNode);
                 }
             }
         }
@@ -420,11 +421,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         return false;
     }
 
-    applyInletSumming(inlet: IOlet, message: Message): Message {
+    applyInletSumming(inlet: IOlet, message: Message, fromNode?: Node): Message {
         if (typeof message === "string") {
             return message;
         }
-        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun") {
+        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun") {
             return message;
         }
         let lastMessage: Message | undefined = inlet.lastMessage;
@@ -437,31 +438,47 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 if ((lastMessage as Statement).node && (lastMessage as Statement).node!.id.includes("history")) {
                     return message;
                 }
-                // then we want to simply
-                //                console.log("inlet has a last message already...", this.text, this);
-                //                console.log("applying inlet summing...", message, inlet.lastMessage);
+                // go thru the market messages and this message and add them
+                let nodes = new Set<Node>();
+                if (fromNode) {
+                    nodes.add(fromNode);
+                }
+                let statement = message as Statement;
                 let operator = this.operatorContextType === OperatorContextType.GL ? "+" : "add";
-                let statement: Statement = [operator as Operator, inlet.lastMessage as Statement, message as Statement];
+                for (let markedMessage of inlet.markedMessages || []) {
+                    let node = markedMessage.node;
+                    if (node && nodes.has(node)) {
+                        continue;
+                    }
+                    if (node) {
+                        nodes.add(node);
+                    }
+                    let type = ((statement).type || (markedMessage.message as Statement).type);
+                    statement = [operator as Operator, statement, markedMessage.message as Statement];
+                    statement.type = type;
+                    let newId = Math.round((Math.random() * 1000000))
+                    statement.node = {
+                        ... this,
+                        id: newId + '_sumation' //(message as Statement).node ? (message as Statement).node!.id + '_sumation' : newId + '_sumation'
+                    };
+                }
+                if (typeof statement === "number") {
+                    return statement;
+                }
                 let newId = Math.round((Math.random() * 1000000))
                 statement.node = {
                     ... this,
-                    id: newId + '_sumation' //(message as Statement).node ? (message as Statement).node!.id + '_sumation' : newId + '_sumation'
+                    id: newId + '_sumation'
                 };
-                let type = ((message as Statement).type || (inlet.lastMessage as Statement).type);
-                if (type !== undefined) {
-                    statement.type = type;
-                } else if (this.operatorContextType === OperatorContextType.GL) {
-                    statement.type = DataType.GL(GLType.Float);
-                }
+
                 this.lastSentMessage = undefined;
-                //                console.log('returning a sum', statement);
                 return statement;
             }
         }
         return message;
     }
 
-    receive(inlet: IOlet, message: Message) {
+    receive(inlet: IOlet, message: Message, fromNode?: Node) {
         if (!this.fn) {
             return;
         }
@@ -469,9 +486,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (this.processMessageForAttributes(message)) {
             return;
         }
-
-        message = this.applyInletSumming(inlet, message);
-        super.receive(inlet, message);
+        let ogMessage = message;
+        message = this.applyInletSumming(inlet, message, fromNode);
+        super.receive(inlet, message, fromNode);
+        if (!inlet.markedMessages) {
+            inlet.markedMessages = [];
+        }
+        inlet.markedMessages.push({ message: ogMessage, node: fromNode });
 
         let indexOf = this.inlets.indexOf(inlet);
 
@@ -488,12 +509,29 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         if (this.operatorContextType === OperatorContextType.ZEN ||
             this.operatorContextType === OperatorContextType.GL) {
+            let INLETS = [];
+            for (let inlet of this.inlets) {
+                for (let connection of inlet.connections) {
+                    let node = (connection.source as ObjectNode);
+                    if (node && node.name === "in") {
+                        // then we actually want the inlet refering to that
+                        let num = (node.arguments[0] as number) - 1;
+                        let baseNode = (connection.source.patch as SubPatch).parentNode;
+                        let _inlet = baseNode.inlets[num];
+                        if (_inlet) {
+                            inlet = _inlet;
+                            break;
+                        }
+                    }
+                }
+                INLETS.push(inlet);
+            }
 
-            //if (typeof message !== "string" && inlet.messagesReceived < inlet.connections.length) {
-            if (typeof message !== "string" && this.inlets.some(inlet => inlet.messagesReceived! < inlet.connections.length)) {
-
-                if ((this.name === "accum" && indexOf >= 2) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "canvas") {
+            let _inlets = INLETS.filter(inlet => inlet.messagesReceived! < inlet.connections.filter(x => x.source && (!(x.source as ObjectNode).name || (x.source as ObjectNode).name !== "attrui")).length);
+            if (typeof message !== "string" && _inlets.length > 0) {
+                if ((this.name === "accum" && indexOf >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "canvas") {
                 } else {
+                    //console.log("FAILED TO PASS", INLETS, _inlets, this.text, this);
                     return;
                 }
             }
@@ -501,15 +539,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         // these are subpatches
         if (this.name === "zen") {
-            this.pipeSubPatch(inlet, message);
+            this.pipeSubPatch(inlet, message, fromNode);
             return;
         }
 
         if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
 
-            //} else {
             return;
-            //}
         } else {
         }
 
@@ -530,7 +566,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                     this.send(this.outlets[i], ret[i]);
                 }
             }
-            this.lastSentMessage = ret[0];
+            if (ret[0]) {
+                this.lastSentMessage = ret[0];
+            }
         } else if (indexOf > 0) {
             // store the message in arguments
             let argumentNumber = indexOf - 1;
@@ -555,7 +593,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                         this.send(this.outlets[i], ret[i]);
                     }
                 }
-                this.lastSentMessage = ret[0];
+                if (ret[0]) {
+                    this.lastSentMessage = ret[0];
+                }
             }
         }
     }
@@ -573,6 +613,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         if (this.buffer && this.name !== "buffer") {
             json.buffer = Array.from(this.buffer);
+        }
+
+        if (this.saveData) {
+            json.saveData = this.saveData;
         }
 
         if (!json.presentationPosition) {
@@ -610,6 +654,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (json.buffer) {
             this.buffer = new Float32Array(json.buffer);
         }
+
+        if (json.saveData) {
+            this.storedMessage = json.saveData;
+        }
+
         if (json.size) {
             this.size = json.size;
         }

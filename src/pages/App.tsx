@@ -26,7 +26,7 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import {
-    //goerli,
+    goerli,
     zora
 } from 'wagmi/chains';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
@@ -35,7 +35,7 @@ import { publicProvider } from 'wagmi/providers/public';
 
 
 const { chains, publicClient } = configureChains(
-    [zora],
+    [zora, goerli],
     [
         infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
         publicProvider()
@@ -56,22 +56,22 @@ const wagmiConfig = createConfig({
 
 export default function App() {
     return (
-        <WagmiConfig config={wagmiConfig}>
-            <RainbowKitProvider
-                theme={darkTheme({
-                    accentColor: 'black',
-                    accentColorForeground: 'white',
-                    borderRadius: 'small',
-                })}
-                chains={chains}>
-                <Theme appearance="dark" >
+        <Theme appearance="dark" >
+            <WagmiConfig config={wagmiConfig}>
+                <RainbowKitProvider
+                    theme={darkTheme({
+                        accentColor: 'black',
+                        accentColorForeground: 'white',
+                        borderRadius: 'small',
+                    })}
+                    chains={chains}>
                     <AuthProvider>
                         <NavProvider>
                             <Home />
                         </NavProvider>
                     </AuthProvider>
-                </Theme>
-            </RainbowKitProvider>
-        </WagmiConfig>
+                </RainbowKitProvider>
+            </WagmiConfig>
+        </Theme>
     )
 }

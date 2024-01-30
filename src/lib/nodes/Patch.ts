@@ -101,9 +101,7 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph() {
-        console.log("RECOMPILE GRAPH=", this.name);
         if (this.skipRecompile || this.skipRecompile2) {
-            console.log('skipping');
             return;
         }
         this.skipRecompile2 = true;
@@ -117,8 +115,9 @@ export class PatchImpl implements Patch {
         // re-parse every node so that we "start from scratch"
         let objectNodes = this.objectNodes; //getAllNodes();
         let _objectNodes = this.name === undefined ? this.getAllNodes() : objectNodes; //objectNodes;
-        if (true) { //this.name === undefined) {
-            for (let node of _objectNodes) {
+        if (this.name === undefined || this.isZenBase()) {
+            let __o = this.getAllNodes();
+            for (let node of __o) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
                     continue;
@@ -128,6 +127,7 @@ export class PatchImpl implements Patch {
                         if (x.connections.length > 0) {
                             x.messagesReceived = undefined;
                             x.lastMessage = undefined;
+                            x.markedMessages = [];
                         }
                     });
                     continue;
@@ -137,15 +137,17 @@ export class PatchImpl implements Patch {
                         if (n.connections.length > 0) {
                             n.lastMessage = undefined;
                             n.messagesReceived = undefined;
+                            n.markedMessages = [];
                         }
                     });
                 node.lastSentMessage = undefined;
-                if ((node as ObjectNode).name !== "param" && (node as ObjectNode).name !== "uniform") {
+                let name = (node as ObjectNode).name;
+                if (name === "call" || name === "defun" || name === "polycall") {
                     node.storedMessage = undefined;
                 }
             }
 
-            for (let node of _objectNodes) {
+            for (let node of __o) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
                     continue;
@@ -158,6 +160,7 @@ export class PatchImpl implements Patch {
                         if (n.connections.length > 0) {
                             n.lastMessage = undefined;
                             n.messagesReceived = undefined;
+                            n.markedMessages = [];
                         }
                     });
                 node.parse(node.text, node.operatorContextType, false);
@@ -198,16 +201,35 @@ export class PatchImpl implements Patch {
                 input => input.receive(input.inlets[0], "bang"));
         }
 
-        sourceNodes = _objectNodes.filter(node => node.name === "history" || node.name === "param" || node.name === "argument" || node.name === "uniform");
-        sourceNodes.forEach(
-            sourceNode => {
-                if (sourceNode.fn) {
-                    sourceNode.receive(sourceNode.inlets[0], "bang");
-                }
-            });
+        // first do any entry-point components
+
+        if (this.isZenBase() || this.name === undefined) {
+            let histories = this.getAllNodes().filter(node => node.name === "history");
+            histories.forEach(
+                sourceNode => {
+                    if (sourceNode.fn) {
+                        sourceNode.receive(sourceNode.inlets[0], "bang");
+                    }
+                });
+            let args = this.getAllNodes().filter(node => node.name === "argument");
+
+            args.forEach(
+                sourceNode => {
+                    if (sourceNode.fn) {
+                        sourceNode.receive(sourceNode.inlets[0], "bang");
+                    }
+                });
+
+            sourceNodes = this.getAllNodes().filter(node => node.name === "param" || node.name === "uniform");
+            sourceNodes.forEach(
+                sourceNode => {
+                    if (sourceNode.fn) {
+                        sourceNode.receive(sourceNode.inlets[0], "bang");
+                    }
+                });
+        }
 
         sourceNodes = objectNodes.filter(node => node.name === "data" && node.inlets[0].connections.length === 0);
-        //console.log('source nodes data=', sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -267,15 +289,6 @@ export class PatchImpl implements Patch {
 
 
         if (this.isZenBase()) {
-            let calls = _objectNodes.filter(node => node.name === "call" || node.name === "latchcall");
-            calls.forEach(
-                call => {
-                    if (call.fn && call.inlets[0] && call.inlets[0].lastMessage) {
-                        call.receive(call.inlets[0], call.inlets[0].lastMessage);
-                    }
-                    return;
-                });
-
             let inputs = this.getAllNodes().filter(node => node.name === "in").filter(node => node.patch !== this);
             inputs.forEach(
                 input => {
@@ -289,11 +302,21 @@ export class PatchImpl implements Patch {
                             for (let c of input.outlets[0].connections) {
                                 let { destinationInlet, destination } = c;
                                 let value = (input.attributes["default"] as number) || 0;
-                                destination.receive(destinationInlet, value);
+                                destination.receive(destinationInlet, value, input);
                             }
                         }
                     }
                 });
+
+            let calls = this.getAllNodes().filter(node => node.name === "call" || node.name === "latchcall" || node.name === "polycall");
+            calls.forEach(
+                call => {
+                    if (call.fn && call.inlets[0] && call.inlets[0].lastMessage !== undefined) {
+                        call.receive(call.inlets[0], call.inlets[0].lastMessage);
+                    }
+                    return;
+                });
+
 
         }
 
@@ -316,10 +339,6 @@ export class PatchImpl implements Patch {
             */
 
         this.skipRecompile2 = false;
-
-        if (true) {
-            //console.log("recompile ended =", this.name || this.id, new Date().getTime());
-        }
     }
 
     disconnectGraph() {
@@ -409,7 +428,6 @@ export class PatchImpl implements Patch {
             if (id !== this.counter) {
                 return
             }
-            console.log('statement to compile = ', statement);
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
                 let _statement = ["s" as Operator];
@@ -524,7 +542,6 @@ export class PatchImpl implements Patch {
                         let merger = this.audioContext.createChannelMerger(zenGraph.numberOfInputs);
                         let parentNode = (this as Patch as SubPatch).parentNode;
                         if (parentNode) {
-                            console.log("parent node.merger = ", merger, parentNode);
                             parentNode.merger = merger;
                             merger.connect(ret.workletNode);
                         }
@@ -799,11 +816,9 @@ export class PatchImpl implements Patch {
 
         for (let node of this.objectNodes) {
             if (node.subpatch && node.subpatch.isZenBase()) {
-                console.log("initial compile for zen base=", node.subpatch.id, node.subpatch.name);
                 node.subpatch.recompileGraph();
                 let i = 0;
                 while (!node.audioNode) {
-                    console.log('sleeping...');
                     await sleep(10);
                     i++;
                     if (i > 50) {

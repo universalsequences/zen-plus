@@ -75,7 +75,6 @@ ${arrayName}[${i}] = ${body.variable};
             functionArguments: emitArguments(..._bodies),
             histories: [...histories, ...outerHistories]
         };
-        console.log("pushing defun to context cache = ", name, cache, _bodies);
         context.functions.push(cache);
         return cache;
     };
@@ -196,11 +195,9 @@ export const argument = (num: number, name: string): UGen => {
         let generated: Generated = context.emit(out, _var);
         generated.isLoopDependent = true;
         let args = [...generated.functionArguments, { name, num }];
-        console.log("argument", num, name, " called with function args=", args);
         // dedupe
         args = Array.from(new Set(args));
         generated.functionArguments = args;
-        console.log('generated function arguments=', args, generated.functionArguments);
         // as these occur append them to generated
         return generated;
     });

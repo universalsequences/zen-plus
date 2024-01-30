@@ -284,7 +284,7 @@ svg {
     }
 }
 
-.selected-patch {
+.tile.selected-patch {
      border-color:  #cbffef !important;
 }
 
@@ -295,8 +295,8 @@ svg {
     margin: 1px;
     border-radius: 12px;
     overflow: hidden;
-    border-width: 3px !important;
-    border-color: #0b0b0b;
+    //border-width: 3px !important;
+    border-color: #1b1b1b !important;
 
 }
 
@@ -431,4 +431,72 @@ svg {
 .nearest-inlet {
     background-color: red !important;
     
+}
+
+.rt-DropdownMenuViewport {
+    Button {
+        width: 100%;
+    }
+}
+
+.DropdownMenuItem:hover {
+    background-color: #dfebeb;
+    color: black;
+}
+.DropdownMenuItem {
+    width: 100%;
+    outline:  none !important;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+
+.bg-clear-button, button.iekbcc0 {
+    background-color: #ffffff0f;
+    color: white;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    padding: 5px 10px 5px 10px;
+    display: flex;
+}
+
+button.ju367v1s {
+    display: flex;
+}
+
+button.iekbcc0 {
+    display: flex;
+    font-size: 8px;
+    line-height: 20px;
+    .ju367v6c {
+        border-radius: 4px;
+        padding: 1px;
+        padding-left: 2px;
+        padding-right: 2px;
+        margin-top: 0px;
+        line-height: 10px;
+        width: 16px !important;
+        height: 12px !important;
+        font-size: 6px;
+    }
+    .ju367v1p, .ju367v16, .ju367v1p {
+
+        svg {
+            transform: translate(0px, 7px);
+        }
+    }
+
+    div {
+        display: flex;
+        flex-direction: row;
+                 
+    }
+}
+[data-rk] ._9pm4ki3 {
+    z-index: 10000000000 !important;
+    pointer-events: auto;
 }

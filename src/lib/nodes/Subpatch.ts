@@ -45,7 +45,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
                 outlet.connectionType = ConnectionType.GL;
             }
         }
-        console.log("subpatch type=", this.id, this.patchType);
     }
 
     _setupInitialNodes() {
@@ -74,8 +73,12 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
 
     recompileGraph(force?: boolean): void {
-        if (force || !this.parentPatch.isZen) {
-            if (!force && this.patchType !== OperatorContextType.ZEN) {
+        if (force) {
+            super.recompileGraph();
+            return;
+        }
+        if (!this.parentPatch.isZen) {
+            if (this.patchType !== OperatorContextType.ZEN) {
                 this.parentPatch.recompileGraph();
             } else {
                 super.recompileGraph()
@@ -90,7 +93,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         // this should look at the node 
         if (!this.parentPatch.isZen && this.patchType === OperatorContextType.ZEN) {
             // then we are actually in at the top of a Zen Patch and thus should compile properly
-            console.log("parent patch compilation caught!");
             super.compile(statement, outputNumber);
             return;
         }

@@ -22,9 +22,10 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
         // history dependencies...
         let deps = [];
         let basePatch = node.patch;
-        while ((basePatch as SubPatch).parentPatch) {
+        while (!(basePatch as SubPatch).isZenBase()) {
             basePatch = (basePatch as SubPatch).parentPatch;
         }
+        // we go to the base patch and find the dependencies
         for (let dep of basePatch.historyDependencies) {
             if (dep.node && backwards.includes(dep.node)) {
                 deps.push(dep);
@@ -34,6 +35,7 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
         if (_bodies.length === 0) {
             return [];
         }
+
         let __bodies = [];
         for (let x of _bodies) {
             if (deps.length > 0) {
@@ -63,9 +65,6 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
         ];
         (ret as Statement).node = node;
         node.storedMessage = ret as Statement;
-        if (name === "jaki_core") {
-            console.log("jaki core function def=", ret);
-        }
         return [ret as Statement];
     };
 };

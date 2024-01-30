@@ -103,9 +103,13 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
             return;
         }
 
-        subpatch.objectNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
+        subpatch.objectNodes.forEach(x => {
+            x.inlets.forEach(x => x.connections = []);
+            x.outlets.forEach(y => y.connections = []);
+        });
         subpatch.messageNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
         subpatch.objectNodes = subpatch.objectNodes.filter(x => x.name !== "+");
+        console.log([...subpatch.objectNodes]);
 
         let inputNodes: ObjectNode[] = [];
         let incomingNodes: IOlet[] = [];
@@ -114,6 +118,10 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
         for (let i = 0; i < inboundConnections.length; i++) {
             let node = inboundConnections[i].destination;
             let connection = inboundConnections[i];
+
+            connection.destinationInlet.connections = connection.destinationInlet.connections.filter(x => x !== connection);
+            connection.sourceOutlet.connections = connection.sourceOutlet.connections.filter(x => x !== connection);
+
             let existingIndex = incomingNodes.indexOf(connection.sourceOutlet);
             console.log('existing index = ', existingIndex, connection.source, connection.sourceOutlet);
             let inputNode: ObjectNode = existingIndex >= 0 ? inputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
@@ -172,6 +180,8 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
         for (let i = 0; i < outboundConnections.length; i++) {
             let node = outboundConnections[i].source;
             let connection = outboundConnections[i];
+            connection.destinationInlet.connections = connection.destinationInlet.connections.filter(x => x !== connection);
+            connection.sourceOutlet.connections = connection.sourceOutlet.connections.filter(x => x !== connection);
             let existingIndex = outerNodes.indexOf(connection.sourceOutlet);
             let outputNode: ObjectNode = existingIndex >= 0 ? outputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
             if (i >= 1) {

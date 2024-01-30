@@ -73,6 +73,12 @@ export type IOlet = Identifiable & {
     hidden?: boolean;
     connectionType?: ConnectionType; // default = ZEN
     messagesReceived?: number;
+    markedMessages?: MarkedMessage[]
+}
+
+export type MarkedMessage = {
+    message: Message;
+    node?: Node;
 }
 
 export type AttributeOptions = {
@@ -107,7 +113,7 @@ export type Node = Identifiable & Attributed & {
     connectAudioNode: (connection: IOConnection) => void;
     disconnectAudioNode: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
-    receive: (inlet: IOlet, x: Message) => void;
+    receive: (inlet: IOlet, x: Message, fromNode?: Node) => void;
 }
 
 export type ObjectNode = Positioned & Node & {
@@ -132,6 +138,7 @@ export type ObjectNode = Positioned & Node & {
     storedMessage?: Message;
     storedParameterValue?: number;
     merger?: ChannelMergerNode;
+    saveData?: any;
 }
 
 export type MessageNode = Positioned & Node & {
@@ -211,6 +218,7 @@ export type SerializedObjectNode = Identifiable & {
     size?: Size;
     operatorContextType: OperatorContextType;
     numberOfOutlets?: number;
+    saveData?: any;
 };
 
 export type SerializedPatch = Identifiable & {

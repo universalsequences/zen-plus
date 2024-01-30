@@ -65,8 +65,9 @@ export const call = (lazyFunction: Arg, ...args: Arg[]): UGen => {
         let generated: Generated = context.emit(_func.type, code, variable, ..._args);
         let _funcs = generated.functions === undefined ? [] : generated.functions;
 
+
         // append function
-        generated.functions = [..._funcs, _func];
+        generated.functions = [...(_func.functions || []), ..._funcs, _func,];
         generated.uniforms = [...(generated.uniforms || []), ...(_func.uniforms || [])];
         return generated;
     });

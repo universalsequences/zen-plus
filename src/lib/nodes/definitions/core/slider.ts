@@ -15,7 +15,6 @@ export const slider = (_node: ObjectNode) => {
     return (msg: Message) => {
         if (msg === "bang") {
             if (_node.arguments[0] !== undefined) {
-                console.log('sending arguments[0]', _node.arguments[0]);
                 return [_node.arguments[0]];
             }
         }

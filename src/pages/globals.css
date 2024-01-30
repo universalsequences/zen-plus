@@ -19,7 +19,7 @@
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
-  background-image: url(/pawel5.jpg);
+  background-image: url(/ron-whitaker.jpg);
   
   background-color: #111010 !important;
   background-color: #575757 !important;
@@ -146,6 +146,7 @@ body, html {
   column-gap: 7px;
   //grid-template-columns: 1fr 1fr; /* Start with 2 columns */
   grid-template-rows: auto;
+  margin: 35px;
 }
 
 .tile {

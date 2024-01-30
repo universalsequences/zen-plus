@@ -9,6 +9,7 @@ import { WorkOption } from './Works';
 import { Step } from './enum';
 
 const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, close }) => {
+    console.log(work);
     const [opened, setOpened] = useState(false);
     const [step, setStep] = useState(Step.None);
     const [mintedToken, setMintedToken] = useState<number | null>(null);
