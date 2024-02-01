@@ -87,7 +87,6 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
 
     useEffect(() => {
         patch.onNewMessage = onNewMessage;
-        console.log("patch =", patch);
     }, [patch, onNewMessage]);
 
     useKeyBindings(scrollRef);
@@ -465,7 +464,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             }
             connections[node.id] = _connections;
         }
-        updatePositions(positions);
+        updatePositions(positions, true);
         updateConnections(connections);
     }, [patch, presentationMode]);
 
@@ -599,6 +598,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 {!isCustomView && <>
                     <div
                         onMouseDown={(e: any) => {
+                            setSelectedPatch(patch);
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
@@ -609,6 +609,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                         className="w-full h-1 absolute bottom-0 cursor-ns-resize z-30" />
                     <div
                         onMouseDown={(e: any) => {
+                            setSelectedPatch(patch);
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
@@ -619,6 +620,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                         className="w-full h-1 absolute top-0 cursor-ns-resize z-30" />
                     <div
                         onMouseDown={(e: any) => {
+                            setSelectedPatch(patch);
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
@@ -629,7 +631,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                         className="h-full w-1 absolute right-0 cursor-ew-resize z-30" />
                     {!isCustomView && <div
                         onMouseDown={(e: any) => {
-
+                            setSelectedPatch(patch);
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({

@@ -10,11 +10,40 @@ doc(
     });
 
 export const divider = (node: ObjectNode) => {
+    if (!node.attributes["orientation"]) {
+        node.attributes["orientation"] = "horizontal";
+    }
+    node.attributeOptions["orientation"] = ["horizontal", "vertical"];
+    node.attributeCallbacks["orientation"] = (orientation: string | number | boolean): void => {
+        if (orientation === "vertical") {
+            console.log('updating orientation v');
+            node.size = {
+                height: 100,
+                width: 1,
+            };
+        } else {
+            console.log('updating orientation h');
+            node.size = {
+                width: 100,
+                height: 1,
+            };
+        }
+    };
+
     if (!node.size) {
-        node.size = {
-            width: 100,
-            height: 1,
-        };
+        if (node.attributes["orientation"] === "vertical") {
+            console.log('setting size vertically');
+            node.size = {
+                height: 100,
+                width: 1,
+            };
+        } else {
+            console.log('setting size horizontally');
+            node.size = {
+                width: 100,
+                height: 1,
+            };
+        }
     }
     return () => [];
 };

@@ -22,7 +22,6 @@ export const createWorklet = (
     return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
         let { code, wasm } = createWorkletCode(name, graph);
         let workletCode = code;
-        //console.log(workletCode);
         const workletBase64 = btoa(workletCode);
         const url = `data:application/javascript;base64,${workletBase64}`;
 
@@ -56,7 +55,7 @@ export const createWorklet = (
 
             // Send initial data (Param & Data operators) to the worklet
             if (graph.context.target === Target.C) {
-                fetch("http://localhost:7171/compile", {
+                fetch("https://zequencer.io/compile", {
                     method: "POST",
                     headers: { 'Content-Type': 'text/plain' },
                     body: wasm
@@ -94,8 +93,61 @@ export const createWorklet = (
     });
 };
 
+interface ParsedCode {
+    code: string;
+    messageIdx: number;
+    messageConstants: string[];
+    messageArray: string;
+}
+
+const parseMessages = (target: Target, code: string, parsed: ParsedCode): ParsedCode => {
+    let beginToken = "@beginMessage";
+    let endToken = "@endMessage";
+    let indexOf = code.indexOf(beginToken);
+    let messageIdx = parsed.messageIdx;
+    let messageConstants = [];
+    while (indexOf > -1) {
+        let end = code.indexOf(endToken);
+        if (end === -1) {
+            break;
+        }
+        let messageKey = code.slice(indexOf + beginToken.length, end);
+        messageConstants.push(messageKey);
+        if (target === Target.C) {
+            code = code.slice(0, indexOf) + `${messageIdx++}` + code.slice(end + endToken.length);
+        } else {
+            code = code.slice(0, indexOf) + `this.messageKey${messageIdx++}` + code.slice(end + endToken.length);
+        }
+        indexOf = code.indexOf(beginToken);
+    }
+    messageIdx = parsed.messageIdx;
+    for (let message of messageConstants) {
+        parsed.messageArray += `this.messageKey${messageIdx} = "${message}";` + "\n";
+        parsed.messageArray += `this.messageKeys[${messageIdx - 1}] = "${message}";` + "\n";
+        messageIdx++;
+    }
+
+    parsed.messageIdx = messageIdx;
+    parsed.messageConstants = [...parsed.messageConstants, ...messageConstants];
+
+    return {
+        ...parsed,
+        code
+    }
+};
+
 const createWorkletCode = (name: string, graph: ZenGraph): CodeOutput => {
     // first lets replace all instances of @message with what we want
+    let parsed: ParsedCode = {
+        code: graph.code,
+        messageConstants: [],
+        messageIdx: 1,
+        messageArray: ""
+    };
+
+    parsed = parseMessages(graph.context.target, graph.code, parsed);
+
+    /*
     let messageConstants: string[] = [];
     let beginToken = "@beginMessage";
     let endToken = "@endMessage";
@@ -123,7 +175,19 @@ const createWorkletCode = (name: string, graph: ZenGraph): CodeOutput => {
         messageIdx++;
     }
 
-    const { code, wasm } = genProcess(graph);
+    */
+
+    graph.code = parsed.code;
+    let { code, wasm } = genProcess(graph);
+
+
+    parsed = parseMessages(graph.context.target, graph.context.target === Target.C ? wasm : code, parsed);
+
+    if (graph.context.target === Target.C) {
+        wasm = parsed.code;
+    } else {
+        code = parsed.code;
+    }
 
     let out = `
 class ${name}Processor extends AudioWorkletProcessor {
@@ -176,7 +240,7 @@ this.port.postMessage({type: "error-compiling", data: "yo"});
     ${prettyPrint("    ", genMemory(graph))}
 
     this.messageKeys = [];
-    ${messageArray}
+    ${parsed.messageArray}
 
     this.createSineTable();
     

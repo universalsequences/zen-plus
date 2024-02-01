@@ -50,9 +50,46 @@ export const list_length = (node: ObjectNode, ...args: Lazy[]) => {
     };
 }
 
+doc(
+    'list.create',
+    {
+        numberOfInlets: 2,
+        numberOfOutlets: 1,
+        inletNames: ["trigger", "length"],
+        description: "returns a new list of given length"
+    });
+
+export const list_create = (node: ObjectNode, len: Lazy) => {
+    return (message: Message): Message[] => {
+        return [new Array(len()).fill(0)] as Message[];
+    };
+}
+
+doc(
+    'list.set',
+    {
+        numberOfInlets: 2,
+        numberOfOutlets: 1,
+        inletNames: ["[index,element]", "list"],
+        description: "returns a new list of given length"
+    });
+
+export const list_set = (node: ObjectNode, list: Lazy) => {
+    return (message: Message): Message[] => {
+        let [index, msg] = message as [number, Message];
+        let _list = list() as Message[];
+        _list[index] = msg;
+        return [_list as Message];
+    };
+}
+
+
+
 
 
 export const lists = {
+    "list.set": list_set,
+    "list.create": list_create,
     "list.length": list_length,
     unpack,
     pak

@@ -202,3 +202,14 @@ export const argument = (num: number, name: string): UGen => {
         return generated;
     });
 }
+
+export const invocation = (): UGen => {
+    return memo((context: Context): Generated => {
+        let [_var] = context.useVariables("invoc");
+        let varKeyword = (context as LoopContext).context ? (context as LoopContext).context.varKeyword : context.varKeyword;
+        let code = `${varKeyword} ${_var} = invocation;
+`;
+        return context.emit(code, _var);
+    });
+}
+

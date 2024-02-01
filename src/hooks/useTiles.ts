@@ -158,7 +158,6 @@ export const useTiles = (patch: Patch) => {
                     newGridTemplate = percentA + " " + percentB;
                 }
             }
-            console.log('setting grid template=', newGridTemplate);
             setGridTemplate(newGridTemplate);
         }
 

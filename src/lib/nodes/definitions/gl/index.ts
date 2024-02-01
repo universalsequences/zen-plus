@@ -76,6 +76,8 @@ strict_vec_op('dot', 2, gl.dot, GLType.Float);
 flexible_op('pow', 2, gl.pow);
 strict_vec_op('length', 1, gl.length, GLType.Float);
 strict_vec_op('uv', 0, gl.uv, GLType.Vec2);
+strict_vec_op('nuv', 0, gl.nuv, GLType.Vec2);
+strict_vec_op('resolution', 0, gl.resolution, GLType.Vec2);
 strict_vec_op('x', 1, gl.unpack("x"), GLType.Float, `unpack("x")`);
 strict_vec_op('y', 1, gl.unpack("y"), GLType.Float, `unpack("y")`);
 strict_vec_op('z', 1, gl.unpack("z"), GLType.Float, `unpack("z")`);
@@ -106,6 +108,24 @@ flexible_op('mix', 3, gl.mix);
 flexible_op('step', 2, gl.step);
 strict_float_op('perspectiveMatrix', 4, gl.perspectiveMatrix, GLType.Mat4);
 strict_vec_op('cameraMatrix', 3, gl.viewMatrix, GLType.Mat4);
+
+doc(
+    "texture2D",
+    {
+        numberOfInlets: 2,
+        numberOfOutlets: 1,
+        inletNames: ["textureUniform", "2D coord"],
+        fn: gl.texture2D,
+        description: "samples a texture at a 2D point returning a vec4"
+    });
+
+export const texture2D = (node: ObjectNode, coord: Lazy) => {
+    return (tex: Message) => {
+        let statement: Statement = ["texture2D" as Operator, tex as Statement, coord() as Statement];
+        statement.type = DataType.GL(GLType.Vec4);
+        return [statement];
+    };
+};
 
 doc(
     "sumLoop",
@@ -174,6 +194,9 @@ export const zswitch = (node: ObjectNode, thenStatement: Lazy, elseStatement: La
         let statement: Statement = ["zswitch" as Operator, condition as Statement, thenStatement() as Statement, elseStatement() as Statement];
         statement.node = node;
         statement.type = (thenStatement() as Statement).type;
+        if (statement.type === undefined) {
+            statement.type = DataType.GL(GLType.Float);
+        }
         return [statement];
     };
 };
@@ -181,20 +204,37 @@ export const zswitch = (node: ObjectNode, thenStatement: Lazy, elseStatement: La
 doc(
     "uniform",
     {
-        numberOfInlets: 2,
+        numberOfInlets: 3,
         numberOfOutlets: 1,
+        inletNames: ["value", "name", "size"],
         description: "uniform",
+        defaultValue: 4
     }
 )
 
-export const gl_uniform = (node: ObjectNode, name: Lazy) => {
+export const gl_uniform = (node: ObjectNode, name: Lazy, size: Lazy) => {
     node.needsLoad = true;
+
+    node.attributeOptions["type"] = ["float", "Sampler2D"];
+    if (!node.attributes["type"]) {
+        node.attributes["type"] = "float";
+    }
+
     let uniform: Uniform;
+    let _type: GLType;
     return (message: Message) => {
         if (!uniform) {
             let defaultValue = node.storedMessage === undefined ?
                 node.attributes["min"] as number || 0 : node.storedMessage as number;
-            uniform = gl.uniform(gl.GLType.Float, defaultValue);
+            // lets create the gl based on the type
+            _type = node.attributes["type"] === "float" ? GLType.Float : GLType.Sampler2D;
+            if (_type === GLType.Float) {
+                uniform = gl.uniform(GLType.Float, defaultValue);
+            } else {
+                let _size = size() as number;
+                let initialData = new Array(_size * 4).fill(0);
+                uniform = gl.uniform(GLType.Sampler2D, initialData, _size, node.attributes["feedback"] ? true : false);
+            }
         }
 
         if (typeof message === "string" && message !== "bang" && message.split(" ").length === 2) {
@@ -202,8 +242,8 @@ export const gl_uniform = (node: ObjectNode, name: Lazy) => {
             message = parseFloat(split[1]);
         }
 
-        if (typeof message === "number") {
-            uniform.set!(message as number);
+        if (typeof message === "number" || Array.isArray(message)) {
+            uniform.set!(message as (number | number[]));
             node.storedMessage = message;
             return [];
         }
@@ -213,7 +253,8 @@ export const gl_uniform = (node: ObjectNode, name: Lazy) => {
         };
         let statement: Statement = [operator];
         statement.node = node;
-        statement.type = DataType.GL(GLType.Float);
+
+        statement.type = DataType.GL(_type === undefined ? GLType.Float : _type);
         return [statement];
     };
 };
@@ -532,6 +573,7 @@ export const api: API = {
     mat3,
     mat4,
     sumLoop,
+    texture2D,
     switch: zswitch,
     breakIf: breakIf
 };

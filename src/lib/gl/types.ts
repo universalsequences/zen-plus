@@ -1,4 +1,5 @@
 import { Uniform } from './uniforms';
+import { Texture } from './texture';
 import { Varying } from './varying';
 import { AttributeDefinition, Attribute } from './attributes';
 import { Argument } from './functions';
@@ -28,11 +29,13 @@ export interface Context {
     emitError: (error: Error) => void;
     errors: Error[];
     webGLRenderingContext: WebGLRenderingContext | null;
+    initializeTextures: (x: WebGLRenderingContext, canvas: HTMLCanvasElement) => Texture | null;
     webGLProgram: WebGLProgram | null;
     uniforms: Uniform[];
     initializeUniforms: () => void;
     attributes: Attribute[];
     varyings: Varying[];
+    textures: Texture[];
     siblingContext?: Context;
 }
 

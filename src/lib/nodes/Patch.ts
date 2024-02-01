@@ -211,7 +211,7 @@ export class PatchImpl implements Patch {
                         sourceNode.receive(sourceNode.inlets[0], "bang");
                     }
                 });
-            let args = this.getAllNodes().filter(node => node.name === "argument");
+            let args = this.getAllNodes().filter(node => node.name === "argument" || node.name === "invocation");
 
             args.forEach(
                 sourceNode => {

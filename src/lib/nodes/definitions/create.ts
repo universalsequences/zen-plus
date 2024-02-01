@@ -22,6 +22,7 @@ export const createGLFunction = (objectNode: ObjectNode, definition: Definition)
                     }
                     return [];
                 }
+
                 let outputType: MessageType | null = definition.glTypeChecker.check(inputTypes);
                 if (outputType === null) {
                     // error

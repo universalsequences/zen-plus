@@ -145,7 +145,8 @@ export class BaseNode implements Node {
             if (!ignoreAudio) {
                 this.disconnectAudioNode(connection);
             }
-        } else if (compile && connection.destinationInlet.connectionType === ConnectionType.ZEN) {
+        } else if (compile && (connection.destinationInlet.connectionType === ConnectionType.ZEN ||
+            connection.destinationInlet.connectionType === ConnectionType.GL)) {
             this.patch.recompileGraph();
         }
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { abi } from '@/lib/abi/erc721-abi';
-import { usePublicClient, useContractRead } from 'wagmi'
+import { usePublicClient, useContractRead, useSwitchNetwork } from 'wagmi'
 import { ethers } from 'ethers';
 import WorkEditor from './WorkEditor';
 import { ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
@@ -15,7 +15,16 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     const [mintedToken, setMintedToken] = useState<number | null>(null);
     const [activeAnimation, setActiveAnimation] = useState<number | null>(null);
     //const publicClient = usePublicClient();
+    const { switchNetwork } = useSwitchNetwork();
 
+    useEffect(() => {
+        if (switchNetwork) {
+            let chainId = work.chainId || 5;
+            switchNetwork(chainId);
+        }
+    }, [work, switchNetwork]);
+
+    console.log('work drop address=', work.dropAddress);
     const { data: totalSupply, isError, isLoading } = useContractRead({
         address: work.dropAddress as `0x${string}`,
         abi: abi,

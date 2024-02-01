@@ -33,6 +33,10 @@ const PositionedComponent: React.FC<{
     }, [maxZIndex])
 
     useEffect(() => {
+        let name = (node as ObjectNode).name;
+        if (((node as MessageNode).message === undefined && name === undefined) || name == "divider") {
+            return;
+        }
         if (!isCustomView && ref.current && !(node as ObjectNode).attributes["Custom Presentation"]) {
             let size = {
                 width: ref.current.offsetWidth,
@@ -50,6 +54,10 @@ const PositionedComponent: React.FC<{
                 height: node.size.height
             });
             */
+        } else {
+            if (((node as MessageNode).message !== undefined)) {
+                return;
+            }
         }
     }, [node.attributes, text]);
 
@@ -132,6 +140,12 @@ const PositionedComponent: React.FC<{
             className += " message-node";
         }
         let isSelected = selectedNodes.includes(node);
+        if ((node as ObjectNode).name === "divider") {
+            minWidth = 1;
+            if (!isSelected) {
+                className = className.replaceAll("border", "");
+            }
+        }
         if (!isSelected) {
             let _n = (node as ObjectNode);
             let name = _n.name;
@@ -170,6 +184,13 @@ const PositionedComponent: React.FC<{
             allowSize = true;
         }
 
+        if ((node as ObjectNode).name === "divider" && _size) {
+            _style.width = _size.width;
+            _style.height = _size.height;
+            console.log("size=", _size);
+            allowSize = true;
+        }
+
         if (isError) {
             className += " has-error";
         }
@@ -198,12 +219,12 @@ const PositionedComponent: React.FC<{
                             className="absolute bottom-0 right-0 w-1 h-1 bg-zinc-300 cursor-se-resize z-30" />
                         <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 " />
                         <div className="absolute bottom-0 left-0 w-1 h-1 bg-zinc-300 " />
-                        {((node as ObjectNode).name !== "divider" && (allowSize || isCustom)) && <div
+                        {(((node as ObjectNode).name !== "divider" || node.attributes["orientation"] === "vertical") && (allowSize || isCustom)) && <div
                             onClick={(e: any) => e.stopPropagation()}
                             onMouseDown={
                                 (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => startResizing(e, Orientation.Y)}
                             className={"absolute bottom-0 left-0 h-0.5 w-full cursor-ns-resize z-10 " + (isCustom ? "" : "")} />}
-                        {<div
+                        {((node as ObjectNode).name !== "divider" || node.attributes["orientation"] === "horizontal") && < div
                             onClick={(e: any) => e.stopPropagation()}
                             onMouseDown={
                                 (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => startResizing(e, Orientation.X)}

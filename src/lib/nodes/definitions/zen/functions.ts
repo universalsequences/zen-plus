@@ -193,12 +193,31 @@ const argument = (node: ObjectNode, num: Lazy, name: Lazy) => {
     }
 }
 
+doc(
+    'invocation',
+    {
+        description: "the # invocation of the function call ",
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+    });
+const invocation = (node: ObjectNode, num: Lazy, name: Lazy) => {
+    return (message: Message) => {
+        let ret: Statement = ["invocation" as Operator];
+        ret.node = node;
+
+        return [ret] as Statement[];
+    }
+}
+
+
+
 export const functions: API = {
     defun,
     call,
     argument,
     polycall,
-    latchcall
+    latchcall,
+    invocation
 }
 
 export const getUpstreamNodes = (patch: Patch): ObjectNode[] => {

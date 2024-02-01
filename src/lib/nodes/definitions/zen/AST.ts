@@ -18,7 +18,7 @@ import { createSpiderWeb, SpiderWeb } from '../../../zen/physical-modeling/web-m
 import { Material } from '../../../zen/physical-modeling/spider-web';
 import { click, Clicker } from '../../../zen/click';
 import { Range, variable, rawSumLoop } from '../../../zen/loop'
-import { nth, LazyFunction, latchcall, call, defun, argument } from '../../../zen/functions';
+import { invocation, nth, LazyFunction, latchcall, call, defun, argument } from '../../../zen/functions';
 import { sampstoms, mstosamps } from '../../../zen/utils';
 import { ObjectNode } from '../../types';
 import { LazyComponent } from './physical-modeling/types';
@@ -620,6 +620,7 @@ const simpleFunctions: API = {
     delay,
     mstosamps,
     sampstoms,
+    invocation,
     interp,
     exp,
     xor,

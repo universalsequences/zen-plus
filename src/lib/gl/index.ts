@@ -1,4 +1,5 @@
 export * from './math';
+export * from './texture';
 export * from './attributes';
 export * from './varying';
 export * from './loop';

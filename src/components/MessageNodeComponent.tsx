@@ -58,6 +58,7 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageN
     return React.useMemo(() => {
         return (
             <PositionedComponent
+                text={message as string}
                 lockedModeRef={lockedModeRef}
                 node={messageNode}>
                 <ContextMenu.Root>

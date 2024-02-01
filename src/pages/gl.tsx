@@ -47,7 +47,11 @@ const dsl = () => {
     let circle2 = gl.length(gl.uv());
     let cx = gl.mult(2, gl.mult(circle2, circle));
     let cy = gl.add(gl.uv().x, gl.uv().y);
-    let frag = vec4(cx, cy, 0.7, gl.mult(0.3, gl.sub(circle2, circle)));
+
+    let tex = gl.uniform(GLType.Sampler2D, [0, 128, 128, 256, 250, 210, 320, 256, 0, 0, 0, 255, 255, 255, 255, 255], 4);
+    let color = gl.texture2D(tex(), gl.uv());
+
+    let frag = color; //vec4(cx, cy, 0.7, gl.mult(0.3, gl.sub(circle2, circle)));
 
     let i = 0;
     setInterval(() => {
@@ -120,7 +124,21 @@ const Home = () => {
             let varied = gl.vec3(gl.varying(nAttribute()));
             let normal = gl.normalize(varied);
             let lightIntensity = gl.max(gl.dot(normal, lightDir), 0.0);
-            let frag = gl.mix(vec4(gl.sin(gl.mult(.40, gl.uv().x)), 0.2, 0.2, 1), vec4(0, .0, 1.0, 1), gl.smoothstep(0.4, 0, lightIntensity));
+            // let frag = gl.mix(vec4(gl.sin(gl.mult(.40, gl.uv().x)), 0.2, 0.2, 1), vec4(0, .0, 1.0, 1), gl.smoothstep(0.4, 0, lightIntensity));
+            let tex = gl.uniform(GLType.Sampler2D, [255, 128, 128, 250, 250, 210, 0, 250, 255, 0, 0, 255, 255, 255, 255, 255], 4);
+            let color = gl.mix(gl.vec4(1, 0, 0, 1), gl.texture2D(tex(), gl.uv()), lightIntensity);
+            setInterval(() => {
+                let data = [];
+                for (let i = 0; i < 16; i++) {
+                    data[i] = Math.floor(Math.random() * 255);
+                }
+                tex.set!(data);
+
+            }, 100);
+
+            let frag = color; //vec4(cx, cy, 0.7, gl.mult(0.3, gl.sub(circle2, circle)));
+
+
 
             let vVec3 = vector(vAttribute());
 

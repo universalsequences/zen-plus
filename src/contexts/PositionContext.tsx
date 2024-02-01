@@ -52,7 +52,7 @@ interface PositionerContext {
     resizingNode: ResizingNode | null;
     setResizingNode: (x: ResizingNode | null) => void;
     updatePosition: (id: string, position: Coordinate) => void;
-    updatePositions: (x: Coordinates) => Coordinates;
+    updatePositions: (x: Coordinates, replace?: boolean) => Coordinates;
     updateZIndex: (id: string, zIndex: number) => void;
     coordinates: Coordinates;
     zIndices: ZIndices;
@@ -185,7 +185,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         }
     }, [setNearestInlet, draggingCable]);
 
-    const updatePositions = useCallback((updates: Coordinates): Coordinates => {
+    const updatePositions = useCallback((updates: Coordinates, replace?: boolean): Coordinates => {
         if (!scrollRef.current) {
             return updates;
         }
@@ -196,7 +196,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setAlignmentLines([]);
         }
 
-        let _coordinates = coordinatesRef.current;
+        let _coordinates = replace ? {} : coordinatesRef.current;
         let _size = size;
         let sizeChanged = false;
         for (let id in updates) {
@@ -224,6 +224,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         if (sizeChanged) {
             setSize(_size);
         }
+        coordinatesRef.current = _coordinates;
         setCoordinates({ ..._coordinates });
         return updates;
     }, [coordinates, setCoordinates, setSize, size, setAlignmentLines]);
@@ -232,8 +233,6 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         let _updates = { ...updates };
         let xAlignmentLines: AlignmentLine[] = [];
         let yAlignmentLines: AlignmentLine[] = [];
-        let foundX = false;
-        let foundY = false;
         let minDistanceX = Infinity;
         let minDistanceY = Infinity;
         for (let id in updates) {
@@ -253,8 +252,11 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                 let size2 = sizeIndexRef.current[_id];
                 let width1 = size1 ? size1.width : 0;
                 let height1 = size2 ? size2.height : 0;
+                let height2 = size1 ? size1.height : 0;
                 let diffX2 = Math.abs(coord1.x + width1 - coord2.x);
-                let diffY2 = Math.abs(coord1.y + height1 - coord2.y);
+                let diffY2 = Math.abs(coord2.y + height1 - coord1.y);
+
+                let diffY1 = Math.abs(coord1.y + height2 - coord2.y);
 
                 let midPointX = size2 ? (coord2.x + size2.width / 2) : coord2.x;
                 let midPointX1 = size1 ? (coord1.x + size1.width / 2) : coord1.x;
@@ -266,11 +268,6 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
                     _updates[id].x = coord2.x;
-                } else if (distance < minDistanceY && diffY < ALIGNMENT_GRID) {
-                    let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: oldCoord.x, y2: coord2.y };
-                    yAlignmentLines = [alignmentLine];
-                    minDistanceY = distance;
-                    _updates[id].y = coord2.y;
                 } else if (distance < minDistanceX && diffX2 < ALIGNMENT_GRID) {
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord2.x, y2: oldCoord.y };
                     minDistanceX = distance;
@@ -283,6 +280,28 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                     let width = size1 ? size1.width : 0;
                     _updates[id].x = midPointX - width / 2;
                 }
+
+                if (distance < minDistanceY && diffY2 < ALIGNMENT_GRID) {
+                    let alignmentLine = { x1: coord2.x, y1: coord2.y + height1, x2: coord1.x, y2: coord2.y + height1 };
+                    minDistanceY = distance;
+                    xAlignmentLines = [alignmentLine];
+                    let width = size1 ? size1.width : 0;
+                    _updates[id].y = coord2.y + height1;
+                    yAlignmentLines = [alignmentLine];
+                } else if (distance < minDistanceY && diffY1 < ALIGNMENT_GRID) {
+                    let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord1.x, y2: coord2.y };
+                    minDistanceY = distance;
+                    xAlignmentLines = [alignmentLine];
+                    _updates[id].y = coord2.y - height2;
+                    yAlignmentLines = [alignmentLine];
+                } else if (distance < minDistanceY && diffY < ALIGNMENT_GRID) {
+                    let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: oldCoord.x, y2: coord2.y };
+                    yAlignmentLines = [alignmentLine];
+                    minDistanceY = distance;
+                    _updates[id].y = coord2.y;
+                }
+
+
             }
         }
         setAlignmentLines([...xAlignmentLines, ...yAlignmentLines]);

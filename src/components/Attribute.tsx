@@ -42,7 +42,7 @@ const Attribute = (props: Props) => {
             <div className="mr-2 w-32">{attribute}</div>
             {options ?
                 <select
-                    className="text-black"
+                    className="text-white"
                     value={value as string}
                     onChange={onChangeOption}>
                     {options.map(x => <option key={x} value={x as string}>{x}</option>)}

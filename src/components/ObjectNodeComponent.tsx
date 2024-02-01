@@ -83,7 +83,7 @@ const InnerObjectNodeComponent: React.FC<{
         const [error, setError] = useState<string | null>(null);
         const [text, setText] = useState(objectNode.subpatch ? objectNode.text.replace("zen", objectNode.subpatch.name || "zen") : objectNode.text);
         const [parsedText, setParsedText] = useState("");
-        const { expandPatch, patches, setPatches } = usePatches();
+        const { setSelectedPatch, expandPatch, patches, setPatches } = usePatches();
         const [includeInPresentation, setIncludeInPresentation] = useState(objectNode.attributes["Include in Presentation"]);
 
         const _expandPatch = useCallback(() => {
@@ -260,6 +260,7 @@ const InnerObjectNodeComponent: React.FC<{
                     setSelectedNodes([]);
                 }
             } else {
+                setSelectedPatch(objectNode.patch);
                 setSelectedNodes([objectNode]);
             }
 

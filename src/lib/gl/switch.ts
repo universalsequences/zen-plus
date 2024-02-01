@@ -17,7 +17,6 @@ export const zswitch = (condition: Arg, a: Arg, b: Arg): UGen => {
 ${type} ${switchVar} = ${_condition.variable} ? ${_a.variable} : ${_b.variable};
 `;
 
-        console.log('zswitch called=', code);
         return context.emit(
             _type,
             code,

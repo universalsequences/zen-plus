@@ -1,4 +1,6 @@
 import { Generated, UGen, Context, UniformDefinition } from './types';
+import { initializeScreenQuadProgram } from './simple';
+import { Texture } from './texture';
 import { generateShader } from './shader';
 import { vec4, unpack, vector } from './coordinates';
 import { Varying } from './varying';
@@ -81,10 +83,13 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
     let _width = 0;
     let _height = 0;
 
+    let programs: ShaderProgram[] = [];
+    let feedbackTexture: Texture | null = null;
     for (let renderJob of renderJobs) {
-        const program = initShaderProgram(gl, renderJob.vertex, renderJob.fragment);
-        if (!program) return null;
-
+        const shaderProgram = initShaderProgram(gl, renderJob.vertex, renderJob.fragment);
+        if (!shaderProgram) return null;
+        let program = shaderProgram.program;
+        programs.push(shaderProgram);
 
         renderJob.fragmentContext.webGLProgram = program;
         renderJob.fragmentContext.webGLRenderingContext = gl;
@@ -94,6 +99,7 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
 
         gl.useProgram(program);
 
+        feedbackTexture = renderJob.fragmentContext.initializeTextures(gl, canvas);
         renderJob.fragmentContext.initializeUniforms();
 
         // lets go through the vertexContext to see what attributes we need to set up 
@@ -125,8 +131,6 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
                     }
                 });
 
-                //                renderJob.bind();
-
                 // Calculate counts based on whether the attribute is instanced
                 if (def.isInstance) {
                     let _instanceCount = def.data.length / def.size;
@@ -143,6 +147,7 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
                 attribute.set!(def.data);
             }
         }
+
         if (renderJob.indices) {
             let indexBuffer = gl.createBuffer();
             if (indexBuffer === null) {
@@ -164,8 +169,32 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
     gl.depthFunc(gl.LEQUAL);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+    let quadProgram = feedbackTexture ? initializeScreenQuadProgram(gl) : null;
     // this function returned is a render function
-    return (width: number, height: number) => {
+    return (width: number | "dispose", height: number) => {
+        if (width === "dispose") {
+            for (let shaderProgram of programs) {
+                for (let renderJob of renderJobs) {
+                    if (renderJob.program) {
+                        gl.detachShader(renderJob.program, shaderProgram.vertexShader);
+                        gl.detachShader(renderJob.program, shaderProgram.fragmentShader);
+                        gl.deleteProgram(renderJob.program);
+                    }
+                    for (let texture of renderJob.fragmentContext.textures) {
+                        if (texture.texture) {
+                            gl.deleteTexture(texture.texture);
+                        } else if (texture.textures) {
+                            texture.textures.forEach(x => gl.deleteTexture(x));
+                        }
+                        if (texture.frameBuffers) {
+                            texture.frameBuffers.forEach(
+                                frameBuffer => gl.deleteFramebuffer(frameBuffer));
+                        }
+                    }
+                }
+            }
+            return;
+        }
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clearDepth(1.0);
 
@@ -191,13 +220,54 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
                     canvas.height = height;
                     _width = width;
                     _height = height;
+                    if (feedbackTexture && feedbackTexture.textures) {
+                        feedbackTexture.textures.forEach(tex => {
+                            gl.bindTexture(gl.TEXTURE_2D, tex);
+                            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                            // Set any texture parameters here if needed
+                        });
+                    }
                 }
 
 
+                if (feedbackTexture && feedbackTexture.frameBuffers && feedbackTexture.textures && feedbackTexture.currentFrameBuffer !== undefined && feedbackTexture.units && feedbackTexture.uniformName) {
+                    // then we need to get the correct texture
+                    /*
+                    let current = feedbackTexture.currentFrameBuffer;
+                    let frameBuffer = feedbackTexture.frameBuffers[current];
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
+                    // finally SWAP buffers
+                    feedbackTexture.currentFrameBuffer = 1 - feedbackTexture.currentFrameBuffer;
+
+                    let sourceTextureUnit = feedbackTexture.units[current];
+
+                    let textureLocation = gl.getUniformLocation(renderJob.program, feedbackTexture.uniformName);
+                    gl.uniform1i(textureLocation, sourceTextureUnit);
+
+                    gl.activeTexture(gl.TEXTURE0 + sourceTextureUnit);
+
+                    // bind the "other" texture
+                    gl.bindTexture(gl.TEXTURE_2D, feedbackTexture.textures[1 - current]);
+                    */
+                    let current = feedbackTexture.currentFrameBuffer;
+                    let frameBuffer = feedbackTexture.frameBuffers[current];
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
+                    // Bind the texture for reading (the "other" texture)
+                    let sourceTextureUnit = feedbackTexture.units[1 - current];
+                    gl.activeTexture(gl.TEXTURE0 + sourceTextureUnit);
+                    gl.bindTexture(gl.TEXTURE_2D, feedbackTexture.textures[1 - current]);
+
+                    // Update the shader's texture uniform
+                    let textureLocation = gl.getUniformLocation(renderJob.program, feedbackTexture.uniformName);
+                    gl.uniform1i(textureLocation, sourceTextureUnit);
+                }
 
                 if (renderJob.binds) {
                     renderJob.binds.forEach(x => x());
                 }
+
                 const offset = 0;
                 let glDrawType = getDrawType(gl, renderJob.drawType);
                 if (renderJob.instanceCount! > 0) {
@@ -209,12 +279,46 @@ export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRe
                 } else {
                     gl.drawArrays(glDrawType, offset, renderJob.vertexCount!);
                 }
+
+                // we've rendered it, however for the feedback case, we need to then render
+                // to screen
+                if (feedbackTexture && feedbackTexture.frameBuffers && feedbackTexture.textures && feedbackTexture.currentFrameBuffer !== undefined && feedbackTexture.units && feedbackTexture.uniformName && quadProgram) {
+                    let program = quadProgram.program;
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, null); // Bind the default framebuffer for screen rendering
+                    gl.useProgram(program);
+
+                    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                    gl.clearDepth(1.0);
+                    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+                    let current = feedbackTexture.currentFrameBuffer;
+                    // Activate and bind the texture for sampling
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, feedbackTexture.textures[current]);
+                    let uLocation = quadProgram.textureLocation;
+                    gl.uniform1i(uLocation, 0);
+
+                    // finally renderer the quad
+                    gl.bindBuffer(gl.ARRAY_BUFFER, quadProgram.positionBuffer);
+                    gl.vertexAttribPointer(quadProgram.positionLocation, 2, gl.FLOAT, false, 0, 0);
+                    gl.enableVertexAttribArray(quadProgram.positionLocation);
+
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // 4 vertices for the full-screen quad
+                    feedbackTexture.currentFrameBuffer = 1 - feedbackTexture.currentFrameBuffer;
+
+                }
             }
         }
     };
 };
 
-const initShaderProgram = (gl: WebGLRenderingContext, vsSource: string, fsSource: string): WebGLProgram | null => {
+interface ShaderProgram {
+    vertexShader: WebGLShader;
+    fragmentShader: WebGLShader;
+    program: WebGLProgram;
+}
+const initShaderProgram = (gl: WebGLRenderingContext, vsSource: string, fsSource: string): ShaderProgram | null => {
     const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
     const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
@@ -235,7 +339,11 @@ const initShaderProgram = (gl: WebGLRenderingContext, vsSource: string, fsSource
         return null;
     }
 
-    return shaderProgram;
+    return {
+        program: shaderProgram,
+        vertexShader,
+        fragmentShader
+    };
 };
 
 const loadShader = (gl: WebGLRenderingContext, type: number, source: string): WebGLShader | null => {

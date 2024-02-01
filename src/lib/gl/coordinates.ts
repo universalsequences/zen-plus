@@ -71,6 +71,35 @@ export const uv = (): Vector => {
     }));
 };
 
+export const nuv = (): Vector => {
+    return vector(memo((context: Context): Generated => {
+        let [uvVar] = context.useVariables("nuv");
+        let type = context.printType(GLType.Vec2);
+        let code = `${type} ${uvVar} = ((gl_FragCoord.xy)/resolution.xy)/2.0 ;
+        `;
+        //let code = `${ type } ${ uvVar } = ((gl_FragCoord.xy - resolution) / resolution);
+        return context.emit(
+            GLType.Vec2,
+            code,
+            uvVar);
+    }));
+};
+
+export const resolution = (): Vector => {
+    return vector(memo((context: Context): Generated => {
+        let [uvVar] = context.useVariables("res");
+        let type = context.printType(GLType.Vec2);
+        let code = `${type} ${uvVar} = resolution.xy/2.0 ;
+        `;
+        //let code = `${ type } ${ uvVar } = ((gl_FragCoord.xy - resolution) / resolution);
+        return context.emit(
+            GLType.Vec2,
+            code,
+            uvVar);
+    }));
+}
+
+
 /**  helper function for creating vec2/vec3/vec4 **/
 export const vec = (type: GLType) => {
     return (...inputs: Arg[]) => {

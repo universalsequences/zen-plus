@@ -1,12 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import * as gl from '@/lib/gl/index';
 import { Context } from '@/lib/gl/types';
+import { useInterval } from '@/hooks/useInterval';
 import useShaderDisplay from '@/hooks/gl/useShaderDisplay';
 
 
 const Shader: React.FC<{ zenGraph: gl.RenderJob, width: number, height: number }> = ({ zenGraph, width, height }) => {
     let ref = useRef<HTMLCanvasElement>(null);
     let render = useRef<any>(null);
+    let timeout = useRef<any>();
     let widthRef = useRef(width);
     let heightRef = useRef(height);
 
@@ -15,18 +17,35 @@ const Shader: React.FC<{ zenGraph: gl.RenderJob, width: number, height: number }
         heightRef.current = height;
     }, [width, height]);
 
+    const onTick = () => {
+        requestAnimationFrame(() => {
+            if (render.current) {
+                render.current(widthRef.current, heightRef.current);
+            }
+        });
+    }
+    useInterval(onTick, 1000 / 30);
 
     useEffect(() => {
         if (ref.current) {
-            console.log('mounting graph=', zenGraph);
+            if (render.current) {
+                render.current("dispose");
+            }
             render.current = gl.mount([zenGraph], ref.current);
+
+            /*
             const loop = () => {
                 if (render.current) {
                     render.current(widthRef.current, heightRef.current);
+    
+                    // need a way of controlling frame rate
+                    // for now skip every 3
+    
                     requestAnimationFrame(loop);
                 }
             };
             loop();
+            */
 
             zenGraph.fragmentContext.initializeUniforms();
             if (zenGraph.vertexContext) {
