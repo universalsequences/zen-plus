@@ -137,6 +137,8 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             let compoundOperator = operator as CompoundOperator;
             if (compoundOperator.name === "argument") {
                 output = gl.argument(compiledArgs[0] as string, compoundOperator.value as number, stringToType(compiledArgs[1] as string));
+            } else if (compoundOperator.name === "loopAccumulator") {
+                output = gl.loopAccumulator(compiledArgs[0] as string, compiledArgs[1] as UGen);
             } else if (compoundOperator.name === "attribute" && compoundOperator.attribute) {
                 output = compoundOperator.attribute(); // we evaluate it
             } else if (compoundOperator.name === "varying") {

@@ -1,5 +1,7 @@
 import { ObjectNode, Message, Lazy } from '@/lib/nodes/types';
+import { publish } from '@/lib/messaging/queue';
 import { doc } from './doc';
+import { MutableValue } from './MutableValue';
 
 doc(
     'attrui',
@@ -11,14 +13,24 @@ doc(
 
 export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
     node.needsLoad = true;
+
+    let custom: MutableValue;
+    if (!node.custom) {
+        custom = new MutableValue(node, 1);
+        node.custom = custom;
+    } else {
+        custom = node.custom as MutableValue;
+    }
+
     // node.inlets.forEach(x => x.hidden = true);
     return (_message: Message) => {
         if (name() && value() !== undefined) {
             let msg = `${name()} ${value()}`;
-            node.storedMessage = value();
+            custom.value = value() as Message;
             return [msg];
         } else if (name() && node.storedMessage !== undefined) {
             let msg = `${name()} ${node.storedMessage}`;
+            custom.value = node.storedMessage;
             return [msg];
         }
         return [];

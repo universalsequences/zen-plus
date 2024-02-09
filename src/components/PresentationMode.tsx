@@ -11,21 +11,17 @@ const PresentationMode = () => {
 
     return <div
         onClick={() => {
-            setLockedMode(true);
             setPreparePresentationMode(true);
             setTimeout(() => {
                 setPresentationMode(!presentationMode)
                 patch.presentationMode = !presentationMode;
-                if (patch.presentationMode) {
-                    setLockedMode(true);
-                }
                 setTimeout(() => {
                     setPreparePresentationMode(false);
                 }, 1000);
             }, 50);
         }}
-        className={(presentationMode ? "bg-white" : "") + " cursor-pointer p-0.5 rounded-full h-5 w-5"}>
-        <DesktopIcon className={(presentationMode ? "invert" : "") + " w-4 h-4"} />
+        className={(presentationMode ? "bg-white" : "") + " cursor-pointer p-0.5 rounded-full h-7 w-7"}>
+        <DesktopIcon className={(presentationMode ? "invert" : "") + " w-6 h-6"} />
     </div>
 }
 

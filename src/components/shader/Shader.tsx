@@ -5,7 +5,7 @@ import { useInterval } from '@/hooks/useInterval';
 import useShaderDisplay from '@/hooks/gl/useShaderDisplay';
 
 
-const Shader: React.FC<{ zenGraph: gl.RenderJob, width: number, height: number }> = ({ zenGraph, width, height }) => {
+const Shader: React.FC<{ fps: number, zenGraph: gl.RenderJob, width: number, height: number }> = ({ zenGraph, width, height, fps = 60 }) => {
     let ref = useRef<HTMLCanvasElement>(null);
     let render = useRef<any>(null);
     let timeout = useRef<any>();
@@ -24,7 +24,7 @@ const Shader: React.FC<{ zenGraph: gl.RenderJob, width: number, height: number }
             }
         });
     }
-    useInterval(onTick, 1000 / 30);
+    useInterval(onTick, 1000 / fps);
 
     useEffect(() => {
         if (ref.current) {

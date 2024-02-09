@@ -9,7 +9,7 @@ doc(
         description: "biquad filter with multiple modes",
         numberOfInlets: 5,
         numberOfOutlets: 1,
-        inletNames: ["input", "cutoff (hz)", "resonance", "gain", "mode"]
+        inletNames: ["input", "cutoff (hz)", "resonance", "gain", "mode: lp,hp,bp,res,bandstop,allpass"]
     });
 export const zen_biquad = (object: ObjectNode, cutoff: Lazy, resonance: Lazy, gain: Lazy, mode: Lazy) => {
     return memoZen(object, "biquad" as Operator, cutoff, resonance, gain, mode);

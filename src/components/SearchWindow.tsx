@@ -44,8 +44,8 @@ const Tree: React.FC<{ patch: Patch, searchTerm: string, hide: () => void }> = (
                 hide();
             }}
             style={isSelected ? { backgroundColor: "#cffff8" } : {}}
-            className={(isSelected ? "  text-black " : "") + " pl-3 hover:bg-white hover:text-black cursor-pointer flex py-1"}><CubeIcon className="mr-1 w-2" /> {patch.name}</div>}
-        <div className="ml-3">
+            className={(isSelected ? "  text-black " : "") + " pl-3 hover:bg-white hover:text-black cursor-pointer flex py-1 " + (!patch.name ? " text-zinc-400" : "")}><CubeIcon className="mr-2 w-2" /> {patch.name || "subpatch"}</div>}
+        <div className="ml-2">
             {patch.objectNodes.filter(x => x.subpatch).map(
                 x => <Tree key={x.id} patch={x.subpatch!} searchTerm={searchTerm} hide={hide} />)}
         </div>

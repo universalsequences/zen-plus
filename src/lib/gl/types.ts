@@ -3,6 +3,7 @@ import { Texture } from './texture';
 import { Varying } from './varying';
 import { AttributeDefinition, Attribute } from './attributes';
 import { Argument } from './functions';
+import { LoopAccumulator } from './loop';
 /**
  * zen-gl takes the same approach as zen to compile
  * expressions into GL (but potentially other shader langauges like metal/webgpu)
@@ -109,6 +110,7 @@ export interface Generated {
     attributes?: AttributeDefinition[]; /* all uniforms */
     functions?: Generated[]; /* functions defined throughtout */
     functionArguments?: Argument[]; /* any arguments */
+    loopAccumulators?: LoopAccumulator[];
     context?: Context;
     type: GLType;
 }

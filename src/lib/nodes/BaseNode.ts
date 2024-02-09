@@ -2,9 +2,10 @@ import {
     SerializedOutlet,
     AttributeCallbacks,
     AttributeOptions,
+    AttributeValue,
     Patch, IOConnection, ConnectionType, SerializedConnection, IOlet, Message, ObjectNode, MessageNode, Node, Attributes
 } from './types';
-import { OperatorContextType } from './context';
+import { isCompiledType, OperatorContextType } from './context';
 import { v4 as uuidv4 } from 'uuid';
 import { uuid } from '@/lib/uuid/IDGenerator';
 
@@ -32,7 +33,11 @@ export class BaseNode implements Node {
         this.attributeDefaults = {};
     }
 
-    newAttribute(name: string, defaultValue: string | number | boolean, callback?: (x: string | number | boolean) => void) {
+    newAttribute(
+        name: string,
+        defaultValue: AttributeValue,
+        callback?: (x: AttributeValue) => void
+    ) {
         this.attributes[name] = defaultValue;
         if (defaultValue !== undefined) {
             this.attributeDefaults[name] = defaultValue;
@@ -43,7 +48,7 @@ export class BaseNode implements Node {
         }
     };
 
-    setAttribute(name: string, value: string | number | boolean) {
+    setAttribute(name: string, value: AttributeValue) {
         this.attributes[name] = value;
         if (this.attributeCallbacks[name]) {
             this.attributeCallbacks[name](value);
@@ -94,7 +99,7 @@ export class BaseNode implements Node {
         if (inlet.connectionType === ConnectionType.AUDIO &&
             outlet.connectionType === ConnectionType.AUDIO) {
             this.connectAudioNode(connection);
-        } else if (compile && (outlet.connectionType === ConnectionType.ZEN || outlet.connectionType === ConnectionType.GL || inlet.connectionType === ConnectionType.ZEN || inlet.connectionType === ConnectionType.GL)) {
+        } else if (compile && (isCompiledType(outlet.connectionType) || isCompiledType(inlet.connectionType))) {
             this.patch.recompileGraph();
         }
         return connection;

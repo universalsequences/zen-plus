@@ -1,15 +1,22 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useSelection } from '@/contexts/SelectionContext';
 import { ObjectNode } from '@/lib/nodes/types';
+import { usePosition } from '@/contexts/PositionContext';
 
 const UMenu: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+
+    const { sizeIndex } = usePosition();
+    let { width, height } = sizeIndex[objectNode.id] || { width: 72, height: 18 };
     const { lockedMode } = useSelection();
     let [selectedOption, setSelectedOption] = useState(objectNode.storedMessage as string || "");
-    let options = (objectNode.attributes["options"] as string).split(",");
+    let options = Array.isArray(objectNode.attributes["options"]) ? objectNode.attributes["options"] as number[] : (objectNode.attributes["options"] as string).split(",");
+    if (options.map(x => parseFloat(x as string)).every(x => !isNaN(x))) {
+        options = options.map(x => parseFloat(x as string));
+    }
 
     const onChangeOption = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedOption(e.target.value);
-        objectNode.receive(objectNode.inlets[0], e.target.value);
+        objectNode.receive(objectNode.inlets[0], isNaN(parseFloat(e.target.value)) ? e.target.value : parseFloat(e.target.value));
     }, [setSelectedOption]);
     return (<div
         onMouseDown={(e: any) => {
@@ -17,9 +24,10 @@ const UMenu: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 e.stopPropagation();
             }
         }}
-        className={"text-base bg-zinc-900 p-1" + (lockedMode ? "" : " pointer-events-none")}>
+        className={"bg-zinc-900 p-1" + (lockedMode ? "" : " pointer-events-none")}>
         <select
-            className="w-32 text-white bg-zinc-900 outline-none pl-1 mr-1"
+            style={{ fontSize: height * 0.75, width, height }}
+            className="text-white bg-zinc-900 outline-none pl-1 mr-1"
             placeholder="none"
             value={(selectedOption as string) || "none"}
             onChange={onChangeOption}>

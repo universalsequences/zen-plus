@@ -96,7 +96,7 @@ const NumberBox: React.FC<{
                             initValue.current = value;
                         }}
 
-                        className="w-5 h-5 mr-2 invert" />
+                        className="w-5 h-5 mr-2 invert active:fill-red-500" />
                     <div
                         onMouseDown={(e: any) => {
                             if (!lockedModeRef.current) {
@@ -111,7 +111,7 @@ const NumberBox: React.FC<{
                             initValue.current = value;
                         }}
 
-                        className="flex-1 text-white mt-0.5 w-10 flex">
+                        className="flex-1 active:text-zinc-300 text-white mt-0.5 w-10 flex">
                         <div
                             onMouseDown={() => rounding.current = true}
                             className="">

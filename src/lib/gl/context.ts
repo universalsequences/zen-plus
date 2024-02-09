@@ -2,6 +2,7 @@ import { GLType, Arg, UniformDefinition, Error, Generated, EmittedVariables, UGe
 import { Varying } from './varying';
 import { Attribute, emitAttributes } from './attributes';
 import { emitFunctions, emitArguments } from './functions';
+import { emitAccumulators } from './loop';
 import { Uniform } from './uniforms';
 import { Texture } from './texture';
 
@@ -162,7 +163,7 @@ export class ContextImpl implements Context {
 
                 textureObj.texture = webGLTexture;
 
-                this.initializeTexture(gl, webGLTexture, textureObj, true);
+                this.initializeTexture(gl, webGLTexture, textureObj, false);
             }
 
             // Update texture object
@@ -213,6 +214,7 @@ export class ContextImpl implements Context {
             variables: Array.from(_variables),
             functions: emitFunctions(...args),
             functionArguments: emitArguments(...args),
+            loopAccumulators: emitAccumulators(...args),
             attributes: emitAttributes(...args),
         };
     }

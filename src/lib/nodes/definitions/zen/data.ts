@@ -26,6 +26,11 @@ export const zen_data = (
     let block: BlockGen | null = null;
     let lastChannels: number = 0;
     let lastSize: number = 0;
+
+    _node.attributeOptions["interpolation"] = ["linaer", "none"];
+    if (!_node.attributes["interpolation"]) {
+        _node.attributes["interpolation"] = "linear";
+    }
     return (inputData: Message): Statement[] => {
         if (lastSize !== size() || lastChannels !== channels()) {
             block = null;
@@ -34,16 +39,17 @@ export const zen_data = (
         }
         if (!block) {
             let initBuffer: Float32Array | undefined = Array.isArray(inputData) ? new Float32Array(inputData as number[]) :
-                ArrayBuffer.isView(inputData) ? inputData : undefined;
+                ArrayBuffer.isView(inputData) ? inputData as Float32Array : undefined;
             block = data(
                 size() as number,
                 channels() as number,
                 initBuffer,
-                true);
+                true,
+                _node.attributes["interpolation"] as Interpolation
+            );
         } else {
             // we've already initialized the data, so we need to simply
             // feed this data into the block
-            console.log('setting...', inputData);
             if (ArrayBuffer.isView(inputData)) {
                 block.set!(inputData as Float32Array);
             } else if (Array.isArray(inputData)) {

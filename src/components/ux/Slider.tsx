@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useMessage } from '@/contexts/MessageContext';
 import { usePosition } from '@/contexts/PositionContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import { ObjectNode } from '@/lib/nodes/types';
@@ -10,7 +11,16 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let [editing, setEditing] = useState(false);
 
 
+    let { messages } = useMessage();
+    let message = messages[objectNode.id];
+    useEffect(() => {
+        if (message !== undefined) {
+            setHeight((message as number) * 100);
+        }
+    }, [message, setHeight]);
+
     const handleMouseDown = (e: any) => {
+
         if (lockedMode) {
             e.stopPropagation();
             setEditing(true);
@@ -25,6 +35,11 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             objectNode.text = "slider " + h / 100.0;
             objectNode.arguments[0] = h / 100.0;
             objectNode.send(objectNode.outlets[0], h / 100.0);
+            if (objectNode && objectNode.custom) {
+                (objectNode.custom as any).value = h / 100.0;
+            } else {
+            }
+
             setHeight(h);
         }
     };

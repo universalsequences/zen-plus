@@ -66,6 +66,7 @@ export type ZenRenderFunction = (width: number, height: number) => void;
 // this will make it super easy for onchain shit to work-- we simply call the renderer
 
 export const mount = (renderJobs: RenderJob[], canvas: HTMLCanvasElement): ZenRenderFunction | null => {
+    console.log('mounting =', renderJobs);
     // first we attach to it...
     const gl: WebGLRenderingContext | null = canvas.getContext('webgl', { preserveDrawingBuffer: true });
 

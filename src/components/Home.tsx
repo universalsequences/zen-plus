@@ -1,4 +1,6 @@
 "use client"
+import Files from '@/components/files/Files';
+import { NavOption, useNav } from '@/contexts/NavContext';
 import { Landing } from './landing/Landing';
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,18 +58,32 @@ const wagmiConfig = createConfig({
 
 export default function App() {
     let [basePatch, setBasePatch] = useState<Patch | null>(null);
+    let [fileToOpen, setFileToOpen] = useState<any | null>(null);
+    let [fileOpened, setFileOpened] = useState<any | null>(null);
     useEffect(() => {
         setBasePatch(new PatchImpl(new AudioContext({ sampleRate: 44100 })));
     }, [setBasePatch]);
+    useEffect(() => {
+        if (fileToOpen) {
+            setFileOpened(fileToOpen);
+        }
+    }, [fileToOpen, setFileOpened]);
 
     useEffect(() => {
     }, []);
     const { user } = useAuth();
-    if (!user) {
+    const { navOption } = useNav();
+    if (navOption === NavOption.Home || navOption === NavOption.Works ||
+        navOption === NavOption.Docs) {
         return <Landing />;
     }
     if (!basePatch) {
         return <></>;
+    }
+    if (navOption === NavOption.Files && user) {
+        return <StorageProvider>
+            <Files fileOpened={fileOpened} setFileToOpen={setFileToOpen} />
+        </StorageProvider>
     }
     return (
         <SettingsProvider>
@@ -77,7 +93,7 @@ export default function App() {
                         <PatchesProvider basePatch={basePatch}>
                             <TilesProvider>
                                 <main className="flex min-h-screen flex-col h-full w-full">
-                                    <PatchesComponent />
+                                    <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
                                 </main>
                             </TilesProvider>
                         </PatchesProvider>

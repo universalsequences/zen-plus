@@ -24,7 +24,7 @@ interface Parameters {
     minValues: number[];
 }
 
-const Sidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
+export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
     const { selectedPatch, patches, visualsCode } = usePatches();
     let zenCode = selectedPatch ? selectedPatch.zenCode : "";
     const account = useAccount();
@@ -120,6 +120,17 @@ const Sidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
     console.log("drop address=", dropAddress);
     const inner = React.useMemo(() => {
         console.log('screenshot = ', screenshot);
+        let patch = patches[0];
+        if (patch) {
+            while ((patch as SubPatch).parentPatch) {
+                patch = (patch as SubPatch).parentPatch;
+            }
+        }
+        let canvas = patch.getAllNodes().find(x => x.name === "canvas");
+        let fps = 32;
+        if (canvas) {
+            fps = canvas.attributes["fps"] as number;
+        }
         return (
             <div className="w-96 relative">
                 <Cross2Icon onClick={hide} className="absolute top-0 cursor-pointer right-3" />
@@ -137,7 +148,7 @@ const Sidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 }
                 {
                     screenshot && minting && parameters && visualsCode && zenCode && chain ?
-                        <MintSound chainId={chain.id} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''
+                        <MintSound chainId={chain.id} fps={fps} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''
                 }
                 {
                     !account ? <div>
@@ -235,7 +246,6 @@ const Sidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
         </div>
     */
 }
-export default Sidebar;
 
 // Function to convert base64 to blob
 function base64ToBlob(base64: string, mimeType: string) {
@@ -249,7 +259,7 @@ function base64ToBlob(base64: string, mimeType: string) {
 }
 
 // Function to capture the canvas and send the image
-function captureAndSendCanvas(canvas: HTMLCanvasElement): Promise<string> {
+export function captureAndSendCanvas(canvas: HTMLCanvasElement, useGoogle?: boolean): Promise<string> {
 
     return new Promise((resolve: (x: string) => void) => {
         // Convert canvas to base64 image
@@ -266,14 +276,18 @@ function captureAndSendCanvas(canvas: HTMLCanvasElement): Promise<string> {
         formData.append('file', imageBlob, 'screenshot.png');
 
         // Send the image to the server
-        fetch('/api/uploadImage', {
+        fetch(useGoogle ? '/api/uploadImageToGoogle' : '/api/uploadImage', {
             method: 'POST',
             body: formData,
         })
             .then(response => response.json())
             .then(data => {
-                console.log('Upload successful', data.data.IpfsHash);
-                resolve(data.data.IpfsHash);
+                if (useGoogle) {
+                    resolve(data.url);
+                } else {
+                    console.log('Upload successful', data.data.IpfsHash);
+                    resolve(data.data.IpfsHash);
+                }
 
             })
             .catch(error => {

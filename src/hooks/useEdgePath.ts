@@ -40,7 +40,7 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
             let height = (connection.source as ObjectNode).size ? (connection.source as ObjectNode).size!.height : source_h
             sourceCoordinate = {
                 x: sourceCoordinate.x + outletNumber * sourceBetween,
-                y: sourceCoordinate.y + height - 2
+                y: sourceCoordinate.y + height
             };
 
             let isStraight = Math.abs(sourceCoordinate.x - destCoordinate.x) < 4;

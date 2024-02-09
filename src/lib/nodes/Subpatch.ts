@@ -1,5 +1,5 @@
 import { Statement } from './definitions/zen/types';
-import { OperatorContextType } from './context';
+import { toConnectionType, OperatorContextType } from './context';
 import { PatchImpl } from './Patch';
 import { ConnectionType, ObjectNode, Message, Patch, SubPatch } from './types';
 import ObjectNodeImpl from './ObjectNode';
@@ -31,20 +31,29 @@ export default class Subpatch extends PatchImpl implements SubPatch {
             this.patchType = (this.parentPatch as SubPatch).patchType;
         } else {
             if (typeof this.parentNode.attributes["type"] === "string") {
-                if (this.parentNode.attributes["type"].toLowerCase() === "gl") {
-                    this.patchType = OperatorContextType.GL;
+                let types: any = {
+                    gl: OperatorContextType.GL,
+                    zen: OperatorContextType.ZEN,
+                    audio: OperatorContextType.AUDIO,
+                    core: OperatorContextType.CORE,
+                };
+                let _type = this.parentNode.attributes["type"].toLowerCase();
+                if (_type in types) {
+                    this.patchType = types[_type];
                 }
             }
         }
-        if (this.patchType === OperatorContextType.GL) {
-            this.parentNode.operatorContextType = OperatorContextType.GL;
+        if (this.patchType !== OperatorContextType.ZEN) {
+            console.log("patch type is not zen", this.patchType);
+            this.parentNode.operatorContextType = this.patchType;
             for (let inlet of this.parentNode.inlets) {
-                inlet.connectionType = ConnectionType.GL;
+                inlet.connectionType = toConnectionType(this.patchType);;
             }
             for (let outlet of this.parentNode.outlets) {
-                outlet.connectionType = ConnectionType.GL;
+                outlet.connectionType = toConnectionType(this.patchType);;
             }
         }
+        console.log("subpatch=", this);
     }
 
     _setupInitialNodes() {

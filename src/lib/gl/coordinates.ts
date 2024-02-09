@@ -24,8 +24,8 @@ const coord = (dir: "x" | "y") => {
 export const unpack = (field: "x" | "y" | "z" | "w" | "xy" | "yx" | "xyz" | "xxy" | "xyy" | "yyx" | "yxy" | "xxx") => {
     return (vector: Arg): UGen => {
         return memo((context: Context): Generated => {
-            let [fieldVar] = context.useVariables(field + "Val");
             let _vector = context.gen(vector);
+            let [fieldVar] = context.useVariables(field + "Val");
             let _type = field.length === 1 ? GLType.Float : field.length === 2 ? GLType.Vec2 : GLType.Vec3;
             let type = context.printType(_type);
             let code = `${type} ${fieldVar} = ${_vector.variable}.${field};`;
@@ -123,3 +123,9 @@ export const vec4 = vec(GLType.Vec4);
 
 export const x = coord("x");
 export const y = coord("y");
+
+export const red = () => vec4(1, 0, 0, 1);
+export const green = () => vec4(0, 1, 0, 1);
+export const blue = () => vec4(0, 0, 1, 1);
+export const black = () => vec4(0, 0, 0, 1);
+export const white = () => vec4(1, 1, 1, 1);

@@ -25,8 +25,7 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
     const { updatePosition, sizeIndexRef } = usePosition();
 
     let { messages } = useMessage();
-    let errorMessage = messages[objectNode.id];
-
+    let errorMessage = objectNode.operatorContextType === OperatorContextType.CORE ? undefined : messages[objectNode.id];
     let lockedModeRef = useRef(lockedMode);
     useEffect(() => {
         lockedModeRef.current = lockedMode;
@@ -39,12 +38,13 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
             sizeIndexRef={sizeIndexRef}
             objectNode={objectNode}
             setSelection={setSelection}
+            size={objectNode.size || null}
             setSelectedNodes={setSelectedNodes}
             updatePosition={updatePosition}
             isSelected={isSelected}
             typeError={errorMessage as (TypeError | undefined)}
         />
-    }, [objectNode, setSelectedNodes, isSelected, setSelection, errorMessage]);
+    }, [objectNode, setSelectedNodes, isSelected, setSelection, errorMessage, objectNode.size]);
 
     return out;
 };
@@ -52,6 +52,7 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
 const InnerObjectNodeComponent: React.FC<{
     typeError: TypeSuccess | TypeError | undefined,
     setSelection: any,
+    size: Size | null,
     isSelected: boolean,
     lockedModeRef: React.MutableRefObject<boolean>,
     sizeIndexRef: React.MutableRefObject<SizeIndex>,
@@ -62,6 +63,7 @@ const InnerObjectNodeComponent: React.FC<{
     ({
         typeError,
         updatePosition,
+        size,
         setSelection,
         lockedModeRef,
         sizeIndexRef,
@@ -69,9 +71,6 @@ const InnerObjectNodeComponent: React.FC<{
         objectNode,
         setSelectedNodes,
     }) => {
-
-
-        const publicClient = usePublicClient();
         const ref = useRef<HTMLDivElement | null>(null);
         const lastSubPatchClick = useRef(0);
         const inputRef = useRef<HTMLInputElement | null>(null);
@@ -143,7 +142,7 @@ const InnerObjectNodeComponent: React.FC<{
             if (e.key === "Enter") {
                 e.preventDefault();
                 if (autoCompletes[selected]) {
-                    let name = autoCompletes[selected].definition.name as string;
+                    let name = (autoCompletes[selected].definition.alias || autoCompletes[selected].definition.name) as string;
                     if (text.split(" ")[0] === name) {
                         name = text;
                     }
@@ -185,7 +184,17 @@ const InnerObjectNodeComponent: React.FC<{
         const duplicate = useCallback(() => {
             let copied = new ObjectNodeImpl(objectNode.patch);
             if (objectNode.name === "zen") {
-                copied.parse("zen");
+                let attr = "";
+                if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.GL) {
+                    attr = " @type gl";
+                }
+                if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.CORE) {
+                    attr = " @type core";
+                }
+                if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.AUDIO) {
+                    attr = " @type audio";
+                }
+                copied.parse("zen" + attr);
                 let json = objectNode.getJSON();
                 if (copied.subpatch && json.subpatch) {
                     copied.subpatch.fromJSON(
@@ -282,10 +291,11 @@ const InnerObjectNodeComponent: React.FC<{
 
         return (
             <PositionedComponent
+                isHydrated={objectNode.lastSentMessage !== undefined}
                 isCustomView={isCustomView}
                 text={parsedText}
                 lockedModeRef={lockedModeRef}
-                isError={(typeError && !(typeError as TypeSuccess).success) || (error !== null)}
+                isError={!CustomComponent && (typeError && !(typeError as TypeSuccess).success) || (error !== null)}
                 skipOverflow={(error !== null || (typeError && !(typeError as TypeSuccess).success)) || (editing && autoCompletes.length > 0)}
                 node={objectNode}>
                 <ContextMenu.Root>
@@ -337,15 +347,15 @@ const InnerObjectNodeComponent: React.FC<{
                                             className="text-zinc-100 w-full px-1 h-4 outline-none m-auto bg-dark-transparent" />
                                         :
                                         <div
-                                            className="m-auto px-1 h-4 w-full text-zinc-100 bg-dark-transparent">{text}</div>
+                                            style={{ fontSize: objectNode.attributes["font-size"] + 'pt' }}
+                                            className=" px-1 flex-1 inner-node-text  w-full text-zinc-100 bg-dark-transparent flex"><span className="my-auto">{text}</span></div>
                                 }
                                 {editing && <AutoCompletes
                                     setAutoCompletes={setAutoCompletes}
                                     selected={selected}
                                     autoCompletes={autoCompletes}
                                     selectOption={(x: ContextDefinition) => {
-
-                                        let name = x.definition.name as string;
+                                        let name = (x.definition.alias || x.definition.name) as string;
                                         if (text.split(" ")[0] === name) {
                                             name = text;
                                         }
@@ -364,7 +374,7 @@ const InnerObjectNodeComponent: React.FC<{
                     </ContextMenu.Trigger>
                 </ContextMenu.Root>
 
-            </PositionedComponent>);
+            </PositionedComponent >);
     };
 
 export default ObjectNodeComponent;

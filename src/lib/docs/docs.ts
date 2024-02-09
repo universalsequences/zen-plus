@@ -2,11 +2,16 @@ import { ConnectionType, Attributes, AttributeOptions } from '../nodes/types';
 import { GLTypeCheck } from '@/lib/nodes/typechecker';
 import { UGen, Arg } from '@/lib/gl/types';
 
+export enum NumberOfInlets {
+    Outlets = 7777
+}
 export interface Definition {
     description: string;
-    numberOfInlets: string | number | ((x: number) => number);
+    numberOfInlets: NumberOfInlets | string | number | ((x: number) => number);
     numberOfOutlets: string | number | ((x: number) => number);
     inletNames?: string[];
+    aliases?: string[];
+    alias?: string;
     outletNames?: string[];
     defaultValue?: number | string | number[];
     outletType?: ConnectionType;
@@ -32,6 +37,15 @@ export const documenter = () => {
         api[name] = {
             ...definition,
             name
+        }
+        if (definition.aliases) {
+            for (let alias of definition.aliases) {
+                api[alias] = {
+                    ...definition,
+                    name,
+                    alias
+                };
+            }
         }
     };
 

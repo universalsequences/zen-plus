@@ -90,6 +90,11 @@ export const { abi } = {
                             "internalType": "string[]",
                             "name": "outputs",
                             "type": "string[]"
+                        },
+                        {
+                            "internalType": "uint8",
+                            "name": "fps",
+                            "type": "uint8"
                         }
                     ],
                     "internalType": "struct SoundDropCreator.DropInfo",
@@ -119,4 +124,4 @@ export const { abi } = {
             "type": "function"
         }
     ]
-};
+}

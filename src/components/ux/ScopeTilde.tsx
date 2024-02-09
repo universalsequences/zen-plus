@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { usePosition } from '@/contexts/PositionContext';
 import * as THREE from 'three';
 import { useInterval } from '@/hooks/useInterval';
 import { ObjectNode } from '@/lib/nodes/types';
@@ -21,6 +22,8 @@ const ScopeTilde: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const initialized = useRef(false);
     const renderCounter = useRef(0);
 
+    const { sizeIndex } = usePosition();
+    let { width, height } = sizeIndex[objectNode.id] || { width: 300, height: 100 };
 
     useEffect(() => {
         if (!mountRef.current) return;
@@ -134,6 +137,13 @@ gl_FragColor = mix(vec4(199.0/255.0,1.0,0.1,1.0), vec4(0.0,0.0,0.0,0.0), smooths
             materialRef.current.uniforms.u_maxValue1.value = valueRef.current[0];
             materialRef.current.uniforms.u_maxValue2.value = valueRef.current[1];
             materialRef.current.uniforms.u_prevFrame.value = renderTargetsRef.current[prevIndex].texture;
+            if (mountRef.current) {
+                materialRef.current.uniforms.resolution.value = [mountRef.current.offsetWidth, mountRef.current.offsetHeight];
+                rendererRef.current.setSize(mountRef.current.offsetWidth, mountRef.current.offsetHeight);
+                for (let renderTarget of renderTargetsRef.current) {
+                    renderTarget.setSize(mountRef.current.offsetWidth, mountRef.current.offsetHeight);
+                }
+            }
             materialRef.current.needsUpdate = true;
         }
 
@@ -169,10 +179,12 @@ gl_FragColor = mix(vec4(199.0/255.0,1.0,0.1,1.0), vec4(0.0,0.0,0.0,0.0), smooths
     return (
         <div
             style={{
-                backdropFilter: "blur(8px)",
-                backgroundColor: "#62626239"
+                backdropFilter: "blur(1px)",
+                backgroundColor: "#62626209",
+                width,
+                height
             }}
-            ref={mountRef} className="w-64 h-24 text-white">
+            ref={mountRef} className=" text-white">
         </div>
     );
 }

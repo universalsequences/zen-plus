@@ -1,20 +1,28 @@
 import { API } from '@/lib/nodes/context';
+import { select, route } from './select';
+import { function_editor } from './function';
 import { knob, slider } from './slider';
+import { preset } from './preset';
 import { interval } from './metro';
 import { strings } from './strings';
 import { divider, umenu } from './umenu';
 import { order } from './order';
 import { math } from './math';
 import { lists } from './list';
-import { matrix } from './matrix';
+import { button, matrix } from './matrix';
 import { attrui } from './attrui';
 import { buffer } from './buffer';
 import { comment } from './comment';
-import { subscribe } from './messages';
+import { send, subscribe } from './messages';
 
 export const api: API = {
+    route,
     buffer,
     subscribe,
+    send,
+    button,
+    select,
+    "function": function_editor,
     matrix,
     comment,
     ...lists,
@@ -26,5 +34,7 @@ export const api: API = {
     divider,
     slider,
     knob,
+    preset,
     ...strings
 };
+

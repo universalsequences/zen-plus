@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
-import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
+import { SubPatch, Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from '@/lib/nodes/types';
 import { PatchImpl } from '@/lib/nodes/Patch';
 import { Tile } from '@/lib/tiling/types';
 import { TileNode } from '@/lib/tiling/TileNode';
@@ -11,6 +11,7 @@ export type Connections = {
 
 interface IPatchesContext {
     zenCode: string | null;
+    goToParentTile: () => void;
     visualsCode: string | null;
     audioWorklet: AudioWorkletNode | null;
     setAudioWorklet: (x: AudioWorkletNode | null) => void;
@@ -27,7 +28,9 @@ interface IPatchesContext {
     setGridTemplate: (x: string) => void;
     rootTile: TileNode | null;
     changeTileForPatch: (a: Patch, b: Patch) => void;
+    goToPreviousPatch: () => void;
     switchTileDirection: () => void;
+    resizeTile: (x: number) => void;
 }
 
 interface Props {
@@ -75,7 +78,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             _rootTile.splitDirection = rootTileRef.current.splitDirection;
             _rootTile.id = rootTileRef.current.id;
             setRootTile(_rootTile);
-            console.log('setting root tile', _rootTile);
             rootTileRef.current = _rootTile;
         }
 
@@ -84,6 +86,83 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     let rootTileRef = useRef<Tile | null>(rootTile);
 
     let flag = useRef(true);
+
+    const goToPreviousPatch = useCallback(() => {
+        let popped = patchHistory.current.pop();
+
+        if (popped && selectedPatch && rootTile) {
+            let existingTile = rootTile.findPatch(selectedPatch);
+            if (existingTile) {
+                existingTile.patch = popped;
+                let indexOf = patches.indexOf(selectedPatch);
+                if (indexOf > -1) {
+                    patches[indexOf] = popped;
+                }
+
+                let _patches = [...patches];
+                if (existingTile.parent && existingTile.parent.children[0] === existingTile.parent.children[1]) {
+                    _patches = Array.from(new Set(patches));
+                    existingTile.parent.children = [existingTile.parent.children[0]];
+                }
+
+                setSelectedPatch(popped);
+                resetRoot();
+                setPatches(Array.from(new Set(_patches)));
+                liftPatchTile(popped);
+            }
+
+        }
+    }, [setRootTile, patches, setPatches, rootTile]);
+
+    const goToParentTile = useCallback(() => {
+        if (selectedPatch && rootTile && (selectedPatch as SubPatch).parentPatch) {
+            let existingTile = rootTile.findPatch(selectedPatch);
+            if (existingTile) {
+                existingTile.patch = (selectedPatch as SubPatch).parentPatch;
+                if (existingTile.parent && existingTile.parent.children.length === 2 &&
+                    existingTile.parent.children[0].patch === existingTile.parent.children[1].patch) {
+                    existingTile.parent.children = [existingTile.parent.children[0]];
+                    existingTile.parent.size = 100;
+                }
+                let indexOf = patches.indexOf(selectedPatch);
+                if (indexOf > -1) {
+                    patches[indexOf] = existingTile.patch;
+                }
+
+                setSelectedPatch((selectedPatch as SubPatch).parentPatch);
+                resetRoot();
+                setPatches(Array.from(new Set(patches)));
+                patchHistory.current.push(selectedPatch);
+            }
+
+        }
+    }, [setRootTile, patches, setPatches, rootTile]);
+
+    const patchHistory = useRef<Patch[]>([]);
+
+    useEffect(() => {
+        if (selectedPatch) {
+        }
+    }, [selectedPatch]);
+
+    const resizeTile = useCallback((off: number) => {
+        if (selectedPatch) {
+            if (rootTile) {
+                let existingTile = rootTile.findPatch(selectedPatch);
+                let parent = null;
+                if (existingTile) {
+                    parent = existingTile.parent;
+                    if (parent) {
+                        let _off = parent.children.indexOf(existingTile) === 0 ?
+                            -4 : -4;
+                        parent.size += off * _off;
+                        resetRoot();
+                    }
+                }
+            }
+        }
+
+    }, [rootTile, resetRoot, setPatches, selectedPatch]);
 
     const switchTileDirection = useCallback(() => {
         if (selectedPatch) {
@@ -109,10 +188,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             return;
         }
         let includes = rootTileRef.current.findPatch(objectNode.subpatch as Patch);
-        console.log('expand patch=', objectNode);
-        console.log('includes=', includes);
         if (objectNode.subpatch && !includes) {
-            console.log('had a subpatch...');
             //if (patches.length === 2) {
             //    setPatches([patches[0], objectNode.subpatch]);
             //} else {
@@ -121,7 +197,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             if (rootTile) {
                 let existingTile = rootTile.findPatch(objectNode.subpatch);
                 if (existingTile) {
-                    console.log('exisitng patch so we gonna select...');
                     setSelectedPatch(objectNode.subpatch);
                     return;
                 }
@@ -131,19 +206,25 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                     if (tile) {
                         tile.patch = objectNode.subpatch;
                     }
-                    console.log('replace');
                 } else {
                     let tile = rootTile.findPatch(objectNode.patch);
-                    if (!tile) {
+                    if (true) {// !tile) {
                         let leaves = rootTile.getLeaves();
-                        console.log(leaves);
-                        leaves.sort((a, b) => a.getDepth() - b.getDepth());
-                        tile = leaves[0];
+                        let _leaves = leaves.filter(a => a.patch && (a.patch as SubPatch).parentNode).sort((a, b) => {
+                            let _a = a.patch as SubPatch;
+                            let _b = b.patch as SubPatch;
+                            if (_a && _b && _a.parentNode.size && _b.parentNode.size) {
+                                return _a.parentNode.size.height - _b.parentNode.size.height;
+                            }
+                            return 0;
+                        });
+                        if (_leaves[0]) {
+                            tile = _leaves[0];
+                        }
                     }
                     if (tile) {
                         let dir: "vertical" | "horizontal" = tile.parent ? (tile.parent.splitDirection === "vertical" ? "horizontal" : "vertical") : "horizontal";
                         //let dir: "vertical" | "horizontal" = !flag.current ? "vertical" : "horizontal";
-                        console.log("splitting direction=", dir);
                         tile.split(dir, objectNode.subpatch);
                     }
                 }
@@ -151,8 +232,10 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             flag.current = !flag.current;
             patches.forEach(p => p.viewed = true);
             objectNode.subpatch.viewed = false;
+            if (objectNode.subpatch.objectNodes.some(x => x.attributes["Include in Presentation"])) {
+                objectNode.subpatch.presentationMode = true;
+            }
             setPatches([...patches, objectNode.subpatch]);
-            // }
         }
     }, [setPatches, patches, setGridLayout, rootTile]);
 
@@ -247,7 +330,10 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             changeTileForPatch,
             closePatch,
             switchTileDirection,
-            visualsCode
+            visualsCode,
+            goToParentTile,
+            resizeTile,
+            goToPreviousPatch
         }}>
         {children}
     </PatchesContext.Provider>;

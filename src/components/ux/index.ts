@@ -1,4 +1,7 @@
 import Matrix from './Matrix';
+import Button from './Button';
+import Preset from './Preset';
+import FunctionUX from './FunctionUX';
 import Divider from './Divider';
 import GLCanvas from './GLCanvas';
 import SVGCanvas from './SVGCanvas';
@@ -34,5 +37,8 @@ export const index: ComponentIndex = {
     "canvas": GLCanvas,
     "slider": Slider,
     "knob": Knob,
-    "divider": Divider
+    "divider": Divider,
+    "function": FunctionUX,
+    "button": Button,
+    "preset": Preset
 };

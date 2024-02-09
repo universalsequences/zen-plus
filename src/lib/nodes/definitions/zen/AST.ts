@@ -4,8 +4,10 @@ import {
     input,
     accum, float, phasor, zen, history, ParamGen, Arg, History, UGen
 } from '../../../zen/index';
+import { FunctionEditor } from "@/lib/nodes/definitions/core/function";
+import { traverseBackwards } from '@/lib/nodes/traverse';
 import { Component } from '../../../zen/physical-modeling/Component';
-import { message } from '../../../zen/message';
+import { condMessage, message } from '../../../zen/message';
 import { zdf } from '../../../zen/filters/zdf';
 import { svf } from '../../../zen/filters/svf';
 import { biquad, biquadI } from '../../../zen/filters/biquad';
@@ -74,6 +76,10 @@ const output_f = output;
 
 // for the compilation we need to convert a Statement into a UGen
 
+interface BlockNode {
+    data: BlockGen;
+    node: ObjectNode;
+}
 export const printStatement = (statement: Statement): string => {
     if (statement === undefined) {
         return "";
@@ -82,7 +88,7 @@ export const printStatement = (statement: Statement): string => {
         return "component";
     }
     let variables: Variables = {};
-    let blocks: BlockGen[] = [];
+    let blocks: BlockNode[] = [];
     let histories: History[] = [];
     let body = _printStatement(statement, variables, 0, histories, blocks);
     let _variables = Object.values(variables).sort((a, b) => a.idx - b.idx);
@@ -92,18 +98,48 @@ export const printStatement = (statement: Statement): string => {
 `;
     }
     for (let i = 0; i < blocks.length; i++) {
-        let interpolation = blocks[i].interpolation === "none" ? "none" : "linear";
-        if (blocks[i].getInitData!()) {
-            let str = "[" + Array.from(blocks[i].getInitData!()).join(',') + "]";
-            let size = blocks[i].getSize!();
-            let channels = blocks[i].getChannels!();
-            varOut += `let data${i} = data(${size}, ${channels}, new Float32Array(${str}), true, "${interpolation}");
-`;
+        let block = blocks[i].data;
+        let interpolation = block.interpolation === "none" ? "none" : "linear";
+        let functions = blocks[i].node ? traverseBackwards(blocks[i].node).filter(x => (x as ObjectNode).name === "function") : [];
+        console.log("functions for blocks node=", blocks[i].node, functions);
+        let initData = block.getInitData!();
+        let needsInterpolation = false;
+        if (functions.length > 0) {
+            let func = functions[0];
+            let editor = ((func as ObjectNode).custom as FunctionEditor);
+            if (editor) {
+                let pts = [];
+                for (let point of editor.points) {
+                    pts.push(Math.round(1000 * point.x) / 1000);
+                    pts.push(Math.round(1000 * point.y) / 1000);
+                    if (point.c !== undefined) {
+                        pts.push(Math.round(1000 * point.c) / 1000);
+                    } else {
+                        pts.push(0);
+                    }
+                }
+                console.log("editor points=", editor.points, pts);
+                initData = new Float32Array(pts);
+                needsInterpolation = true;
+            }
+        }
+        if (initData) {
+            let str = "[" + Array.from(initData).join(',') + "]";
+            let size = block.getSize!();
+            let channels = block.getChannels!();
+            if (needsInterpolation) {
+                varOut += `let data${i} = data(${size}, ${channels}, interpolateCurve(${str}), true, "${interpolation}");
+`
+            } else {
+                varOut += `let data${i} = data(${size}, ${channels}, new Float32Array(${str}), true, "${interpolation}");
+            `;
+            }
+            console.log("var out =", varOut);
         } else {
-            let size = blocks[i].getSize!();
-            let channels = blocks[i].getChannels!();
+            let size = block.getSize!();
+            let channels = block.getChannels!();
             varOut += `let data${i} = data(${size}, ${channels}, undefined, true, "${interpolation}");
-`; //, new Float32Array(${str}));
+            `; //, new Float32Array(${str}));
         }
     }
     for (let variable of _variables) {
@@ -141,12 +177,12 @@ export const getVariableName = (op: string, idx: number, zobject: ObjectNode): s
         //scriptingName = scriptingName.replaceAll("/", "_");
         //scriptingName = scriptingName.replaceAll("?", "");
         let idx = zobject.id.replaceAll("-", "").slice(0, 6);
-        return `${op}_${idx}_${scriptingName}`;
+        return `${op}_${idx}_${scriptingName} `;
     }
     if (op.includes("history")) {
         op = op.replace("history", "hist");
     }
-    return `${op}${idx}`;
+    return `${op}${idx} `;
 };
 
 export const _printStatement = (
@@ -154,7 +190,7 @@ export const _printStatement = (
     variables: Variables,
     deep = 0,
     histories: History[] = [],
-    blocks: BlockGen[]
+    blocks: BlockNode[]
 ): string => {
     if (typeof statement === "number") {
         return (statement as number).toString();
@@ -190,25 +226,31 @@ export const _printStatement = (
     let created = false;
     if (_name === "peek" || _name === "poke" || _name === "clearData") {
         let data = (operator as CompoundOperator).params as BlockGen;
-        if (!blocks.includes(data)) {
-            blocks.push(data);
+        if (!blocks.some((x) => x.data === data)) {
+            blocks.push({ data, node: zobject });
             created = true;
         }
-        firstArg = "data" + blocks.indexOf(data); //(blocks.length - 1);
+        let indexOf = -1;
+        for (let i = 0; i < blocks.length; i++) {
+            if (blocks[i].data === data) {
+                indexOf = i;
+            }
+        }
+        firstArg = "data" + indexOf;
     }
 
 
     let finalArgs: string = "";
     if (_name === "round") {
         // need the round mode
-        finalArgs = `,"${(operator as CompoundOperator).params as RoundMode}"`;
+        finalArgs = `, "${(operator as CompoundOperator).params as RoundMode}"`;
     }
     if (_name === "accum") {
-        finalArgs = `,${JSON.stringify((operator as CompoundOperator).params as AccumParams)}`;
+        finalArgs = `, ${JSON.stringify((operator as CompoundOperator).params as AccumParams)} `;
     }
 
     if (_name === "output") {
-        finalArgs = `,${(operator as CompoundOperator).outputNumber}`;
+        finalArgs = `, ${(operator as CompoundOperator).outputNumber} `;
     }
     if (_name === "modeling.synth") {
         let component = (operator as CompoundOperator).modelComponent!;
@@ -247,7 +289,7 @@ export const _printStatement = (
 
     let output: string = "";
     if (exactArgs) {
-        output = `${op}(${exactArgs})`;
+        output = `${op} (${exactArgs})`;
     } else if ((_name === "rawSumLoop" || _name === "sumLoop") && (operator as CompoundOperator).range) {
         //let _variables: Variables = {};
         let _body = _printStatement(statements[0] as Statement, variables, deep + 1, histories, blocks);
@@ -277,7 +319,7 @@ ${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStat
         let custom = (operator as CompoundOperator);
 
         output = `defun("${custom.variableName}", ${custom.value},
-${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
+            ${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
     } else if (statements.length === 0) {
         output = `${op} (${opArgs})`;
     } else {
@@ -288,7 +330,7 @@ ${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printState
     if (zobject) {
         if (!variables[zobject.id]) {
             let idx = Object.keys(variables).length;
-            let name = getVariableName(op, idx, zobject); //`${op}${idx} `;
+            let name = getVariableName(op, idx, zobject); //`${ op }${ idx } `;
 
             variables[zobject.id] = {
                 idx,
@@ -462,8 +504,8 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
         } else if (name === "input") {
             output = input(compoundOperator.value!);
         } else if (name === "rawSumLoop") {
-            //let range: Range = compoundOperator.range!;
-            //output = rawSumLoop(range, compiledArgs[0] as UGen, compoundOperator.variableName!);
+            let range = compoundOperator.range!;
+            output = rawSumLoop(range as Range, compiledArgs[0] as UGen, compoundOperator.variableName!);
         } else if (name === "defun") {
             let size: number = compoundOperator.value!;
             let name: string = compoundOperator.variableName!;
@@ -483,10 +525,11 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             output = latchcall(body as LazyFunction, invocationNumber, _args[0], ..._args.slice(1));
         } else if (name === "message") {
             output = message(compoundOperator.params as string, compiledArgs[0] as Arg, compiledArgs[1] as Arg);
+        } else if (name === "condMessage") {
+            output = condMessage(compoundOperator.params as string, compiledArgs[0] as Arg, compiledArgs[1] as Arg, compiledArgs[2] as Arg);
         } else if (name === "modeling.synth") {
             let { modelComponent, modelComponents } = compoundOperator;
             if (modelComponent && modelComponents) {
-                let trig = compiledArgs[0];
                 for (let lazyComponent of modelComponents) {
                     let { component } = lazyComponent;
                     if (component === undefined) {
@@ -652,22 +695,22 @@ const printPhysicalModel = (
     variables: Variables,
     deep: number,
     histories: History[] = [],
-    blocks: BlockGen[],
+    blocks: BlockNode[],
     isEntryPoint: boolean = true,
 ): string => {
     let { web, material } = c;
     let web_string = `
-        {
-            data: ${dataFromArray(web.coeffs!, web.size, web.size)},
-            dampeningData: ${dataFromArray(web.dampening!)},
-            pointsData: ${dataFromArray(web.points!)},
-            maxNeighbors: ${web.maxNeighbors},
-            neighborsMatrix: ${JSON.stringify(web.neighborsMatrix)},
-            neighbors: ${floatArr(web.neighbors)},
-            size: ${web.size},
-            radius: ${web.radius}
-        }
-        `;
+{
+    data: ${dataFromArray(web.coeffs!, web.size, web.size)},
+    dampeningData: ${dataFromArray(web.dampening!)},
+    pointsData: ${dataFromArray(web.points!)},
+    maxNeighbors: ${web.maxNeighbors},
+    neighborsMatrix: ${JSON.stringify(web.neighborsMatrix)},
+    neighbors: ${floatArr(web.neighbors)},
+    size: ${web.size},
+    radius: ${web.radius}
+}
+`;
     let couplingCoefficient = _printStatement(
         material.couplingCoefficient,
         variables,
@@ -707,15 +750,15 @@ const printPhysicalModel = (
 
 
     let material_string = `
-        {
-            noise: ${noise},
-            couplingCoefficient: ${couplingCoefficient},
-            x: ${x || 0},
-            y: ${y || 0},
-            pitch: ${pitch},
-            release: ${release}
-        }
-        `;
+{
+    noise: ${noise},
+    couplingCoefficient: ${couplingCoefficient},
+    x: ${x || 0},
+    y: ${y || 0},
+    pitch: ${pitch},
+    release: ${release}
+}
+`;
     let component_string = `new Component(${material_string}, ${web_string}, ${isEntryPoint})`;
     return component_string;
 };
@@ -745,7 +788,7 @@ const printModelConnect = (
     let i = 0;
     let names = [];
     for (; i < models.length; i++) {
-        let name = `model${id + i}`;
+        let name = `model${id + i} `;
         names.push(name);
         if (Object.values(variables).some(x => x.name === name)) {
             continue;
@@ -760,7 +803,7 @@ const printModelConnect = (
         let a = names[j];
         let b = names[j + 1];
         let bid = `!${a}.connections.some(x => x.component === ${b}) ? ${a}.bidirectionalConnect(${b}) : 0; `;
-        let name = `model${id + i + j}`;
+        let name = `model${id + i + j} `;
         if (Object.values(variables).some(x => x.name === name)) {
             continue;
         }
@@ -772,10 +815,10 @@ const printModelConnect = (
     }
 
     let output = `s(
-            ${trigger},
-${names.map(name => name + '.currentChannel, ' + name + '.prevChannel')},
-            ${names[modelIndex]}.gen(${trigger})
-        )`;
+    ${trigger},
+    ${names.map(name => name + '.currentChannel, ' + name + '.prevChannel')},
+    ${names[modelIndex]}.gen(${trigger})
+)`;
 
     /*
     let nameD = `model${ idx + 3 } `;

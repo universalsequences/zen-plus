@@ -91,7 +91,6 @@ export const SelectionProvider: React.FC<Props> = ({ children }) => {
     }, [setAttributesIndex]);
 
 
-
     return <SelectionContext.Provider
         value={{
             attributesIndex,

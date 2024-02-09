@@ -146,3 +146,27 @@ export const getOperatorContext = (type: OperatorContextType): OperatorContext =
         };
     }
 };
+
+export const isCompiledType = (type: OperatorContextType | ConnectionType | undefined): boolean => {
+    if (type === OperatorContextType.ZEN ||
+        type === ConnectionType.ZEN ||
+        type === OperatorContextType.GL ||
+        type === ConnectionType.GL) {
+        return true;
+    }
+    return false;
+}
+
+export const toConnectionType = (type: OperatorContextType): ConnectionType => {
+    switch (type) {
+        case OperatorContextType.ZEN:
+            return ConnectionType.ZEN;
+        case OperatorContextType.GL:
+            return ConnectionType.GL;
+        case OperatorContextType.CORE:
+            return ConnectionType.CORE;
+        case OperatorContextType.AUDIO:
+            return ConnectionType.AUDIO;
+    }
+    return ConnectionType.ZEN;
+};

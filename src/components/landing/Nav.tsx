@@ -7,7 +7,7 @@ const Nav = () => {
     return <div
         style={{
         }}
-        className="fixed top-10 left-10 h-16 z-30 ">
+    >
         <div className="mx-auto table text-base">
             <NavOptions />
         </div>

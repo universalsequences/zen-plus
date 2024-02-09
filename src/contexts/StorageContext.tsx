@@ -25,7 +25,7 @@ export interface Project {
 interface IStorageContext {
     getPatches: (key: string) => Project[];
     onchainSubPatches: OnchainSubPatch[];
-    storePatch: (name: string, patch: Patch, isSubPatch: boolean, email: string) => Promise<void>;
+    storePatch: (name: string, patch: Patch, isSubPatch: boolean, email: string, screenshot?: string) => Promise<void>;
     fetchPatchesForEmail: (email: string) => Promise<any[]>;
     fetchPatch: (x: any) => Promise<SerializedPatch>;
     fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
@@ -138,7 +138,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         return snapshot.ref.fullPath;
     };
 
-    const storePatch = async (name: string, patch: Patch, isSubPatch: boolean, email: string) => {
+    const storePatch = async (name: string, patch: Patch, isSubPatch: boolean, email: string, screenshot?: string) => {
         let json: any = patch.getJSON();
 
         let originalCompressed = await compress(json);
@@ -157,8 +157,11 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             patch: await uploadCompressedData(originalCompressed),
             commit: await uploadCompressedData(compressed),
             user: email,
-            isSubPatch
+            isSubPatch,
         };
+        if (screenshot) {
+            document.screenshot = screenshot;
+        }
         if (patch.previousDocId) {
             const docRef = doc(db, 'patches', patch.previousDocId);
             try {

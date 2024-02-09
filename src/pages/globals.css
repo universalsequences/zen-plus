@@ -16,6 +16,9 @@
   }
 }
 
+body.light-mode {
+  background-image: url(https://unsplash.com/photos/17_NbEXmW8s/download?ixid=M3wxMjA3fDB8MXx0b3BpY3x8Ym84alFLVGFFMFl8fHx8fDJ8fDE3MDcyMjY3MDN8&force=true);
+}
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
@@ -147,7 +150,8 @@ body, html {
   column-gap: 7px;
   //grid-template-columns: 1fr 1fr; /* Start with 2 columns */
   grid-template-rows: auto;
-  margin: 45px;
+  margin: 15px;
+  margin-top: 35px;
 }
 
 .tile {

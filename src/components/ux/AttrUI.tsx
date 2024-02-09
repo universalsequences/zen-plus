@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState, useRef } from 'react';
+import { useMessage } from '@/contexts/MessageContext';
 import { useSelection } from "@/contexts/SelectionContext";
 import NumberBox from './NumberBox';
 import { SubPatch, ObjectNode, Message } from '@/lib/nodes/types';
@@ -54,6 +55,7 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         setSelectedOption(e.target.value);
         let text = objectNode.text.split(" ");
         text[1] = e.target.value;
+
         objectNode.text = (text.join(" "));
     }, [setSelectedOption, options]);
 
@@ -63,49 +65,64 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         text[2] = num.toString();
         objectNode.text = text.join(" ");
         objectNode.arguments[1] = num;
+        let node = objectNode;
+        if (node && node.custom) {
+            (node.custom as any).value = num;
+        }
         let message: Message = text.slice(1).join(" ");
         objectNode.send(objectNode.outlets[0], message);
     }, [setValue]);
 
     let found = (options.find(x => x.label === selectedOption)) as (Option | undefined);
     let node: ObjectNode | null = found ? (found.value) : null;
-    return (
-        <div
-            onMouseDown={(e: any) => {
-                if (lockedMode) {
-                    e.stopPropagation();
-                }
-            }}
 
-            onClick={(e: any) => {
-                loadOptions();
-                if (lockedMode) {
-                    e.stopPropagation();
-                }
+    let { messages } = useMessage();
+    let message = messages[objectNode.id];
+    useEffect(() => {
+        if (message !== undefined) {
+            setValue(message as number);
+        }
+    }, [message, setValue]);
 
-            }} className={(lockedMode ? "" : " pointer-events-none ") + "flex h-6 bg-zinc-900 w-full flex-1 border-zinc-100"} >
-            <select
-                className="w-32 text-white bg-zinc-900 outline-none pl-1 mr-1"
-                placeholder="none"
-                value={(selectedOption as string) || "none"}
-                onChange={onChangeOption}>
-                {options.map(x => <option key={x.label} value={x.label}>{x.label}</option>)}
-            </select>
+    return React.useMemo(() => {
+        return (
             <div
-                style={{ borderLeft: "1px solid #8d8787" }}
-                className={(!selectedOption ? "pointer-events-none opacity-20" : "") + " h-full flex flex-col flex-1"}>
-                <div className="my-auto w-full">
-                    <NumberBox
-                        className="bg-zinc-900"
-                        round={false}
-                        isSelected={true}
-                        value={value}
-                        setValue={onChangeValue}
-                        min={node ? (node.attributes.min as number) || 0 : 0} max={node ? (node.attributes.max as number) || 1 : 1} lockedModeRef={lockedModeRef} />
+                onMouseDown={(e: any) => {
+                    if (lockedMode) {
+                        e.stopPropagation();
+                    }
+                }}
+
+                onClick={(e: any) => {
+                    loadOptions();
+                    if (lockedMode) {
+                        e.stopPropagation();
+                    }
+
+                }} className={(lockedMode ? "" : " pointer-events-none ") + "flex h-6 bg-zinc-900 w-full flex-1 border-zinc-100"} >
+                <select
+                    className="w-32 text-white bg-zinc-900 outline-none pl-1 mr-1"
+                    placeholder="none"
+                    value={(selectedOption as string) || "none"}
+                    onChange={onChangeOption}>
+                    {options.map(x => <option key={x.label} value={x.label}>{x.label}</option>)}
+                </select>
+                <div
+                    style={{ borderLeft: "1px solid #8d8787" }}
+                    className={(!selectedOption ? "pointer-events-none opacity-20" : "") + " h-full flex flex-col flex-1"}>
+                    <div className="my-auto w-full">
+                        <NumberBox
+                            className="bg-zinc-900"
+                            round={false}
+                            isSelected={true}
+                            value={value}
+                            setValue={onChangeValue}
+                            min={node ? (node.attributes.min as number) || 0 : 0} max={node ? (node.attributes.max as number) || 1 : 1} lockedModeRef={lockedModeRef} />
+                    </div>
                 </div>
-            </div>
-        </div >
-    );
+            </div >
+        );
+    }, [objectNode.attributes.min, lockedMode, selectedOption, objectNode.attributes.max, value, onChangeValue, options]);
 }
 
 export default AttrUI;

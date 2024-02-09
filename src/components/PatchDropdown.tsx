@@ -1,20 +1,16 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import ZenCodeSidebar from './ZenCodeSidebar';
+import { captureAndSendCanvas, ZenCodeSidebar } from './ZenCodeSidebar';
+import { useNav, NavOption } from '@/contexts/NavContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, addDoc, doc, getDoc } from "firebase/firestore";
-import { db } from '@/lib/db/firebase';
-import { v4 as uuidv4 } from 'uuid';
-import { getStorage, ref, uploadBytes } from "firebase/storage";
 import * as Switch from '@radix-ui/react-switch';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import WriteOnchain from './WriteOnChain';
-import { storage } from "@/lib/db/firebase";
 import { useAccount } from 'wagmi';
 import LoadProject from './LoadProject';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useStorage } from '@/contexts/StorageContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { DropdownMenu } from '@radix-ui/themes';
+import { ArrowLeftIcon } from '@radix-ui/react-icons'
 import {
     Patch, SubPatch
 } from '@/lib/nodes/types';
@@ -42,6 +38,7 @@ const PatchDropdown = React.memo((props: Props) => {
     const { setLightMode, lightMode } = useSettings();
 
     let account = useAccount();
+    const { setNavOption } = useNav();
 
     useEffect(() => {
         setName(name)
@@ -50,10 +47,24 @@ const PatchDropdown = React.memo((props: Props) => {
     let isSubPatch: boolean = (patch as SubPatch).parentPatch !== undefined;
 
     const save = useCallback(() => {
+        // first save the image to ipfs
         if (name && user && user.email) {
-            storePatch(name, patch, isSubPatch, user.email);
+            let canvases = document.getElementsByClassName("rendered-canvas")
+            let canvas = canvases[0];
+            console.log("canvas = ", canvas);
+            if (canvas) {
+                captureAndSendCanvas(canvas as HTMLCanvasElement, true).then(
+
+                    screenshot => {
+                        if (name) {
+                            storePatch(name, patch, isSubPatch, user.email, screenshot);
+                        }
+                    });
+            } else {
+                storePatch(name, patch, isSubPatch, user.email);
+            }
+            setOption(null);
         }
-        setOption(null);
     }, [patch, name, isSubPatch, setOption, account]);
 
     useEffect(() => {
@@ -87,7 +98,7 @@ const PatchDropdown = React.memo((props: Props) => {
     const { logout, user } = useAuth();
 
     return (
-        <div>
+        <div className="my-auto">
             {/*compressed && name && <WriteOnchain isSubPatch={isSubPatch} setTokenId={setTokenId} previousTokenId={isSubPatch ? 0 : patch.previousTokenId} compressed={compressed} name={name} />*/}
             <Dialog.Root
                 open={option !== null}
@@ -105,6 +116,27 @@ const PatchDropdown = React.memo((props: Props) => {
                         color="indigo" className="bg-zinc-800  text-zinc-200 w-40 py-3 DropdownMenuContent text-sm" sideOffset={5}>
                         <Dialog.Trigger
                         >
+                            <DropdownMenu.Item
+                                onClick={() => {
+                                    let p = patch;
+                                    while ((p as SubPatch).parentPatch) {
+                                        p = (p as SubPatch).parentPatch;
+                                    }
+                                    for (let o of p.objectNodes) {
+                                        if (o.subpatch) {
+                                            o.subpatch.objectNodes = [];
+                                            o.subpatch.messageNodes = [];
+                                            o.subpatch.recompileGraph();
+                                            o.subpatch.disconnectGraph();
+                                        }
+                                    }
+                                    p.objectNodes = [];
+                                    p.messageNodes = [];
+                                    setNavOption(NavOption.Files);
+                                }}
+                                className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
+                                Go to Files <div className="RightSlot"><ArrowLeftIcon className="w-5 h-5" /></div>
+                            </DropdownMenu.Item>
                             <DropdownMenu.Item
                                 onClick={() => {
                                     console.log("onc lick called for save");
@@ -131,7 +163,7 @@ const PatchDropdown = React.memo((props: Props) => {
                                 {(patch as SubPatch).parentNode.attributes["Custom Presentation"] ?
                                     "Disable Custom Presentation" : "Enable Custom Presentation"}
                             </DropdownMenu.Item>}
-                            {!isSubPatch && <DropdownMenu.Item
+                            {<DropdownMenu.Item
                                 onClick={() => {
                                     setOption(Option.Settings);
                                 }}
@@ -147,6 +179,7 @@ const PatchDropdown = React.memo((props: Props) => {
                             </DropdownMenu.Item>}
                             <DropdownMenu.Item
                                 onClick={() => {
+                                    setNavOption(NavOption.Home);
                                     logout();
                                 }}
                                 className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
@@ -212,12 +245,11 @@ const PatchDropdown = React.memo((props: Props) => {
                                                     (e: any) => setName(e.target.value)} defaultValue="" />
                                         </fieldset>
                                         <div className="save-connect" style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
-                                            {account.address ?
-                                                <Dialog.Close asChild>
-                                                    <button
-                                                        onClick={save}
-                                                        className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
-                                                </Dialog.Close> : <ConnectButton />}
+                                            <Dialog.Close asChild>
+                                                <button
+                                                    onClick={save}
+                                                    className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
+                                            </Dialog.Close>
                                         </div>
                                     </> :
                                         <>

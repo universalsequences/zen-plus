@@ -32,6 +32,7 @@ export interface AlignmentLine {
 }
 
 interface PositionerContext {
+    setSize: (size: Size) => void;
     updateSize: (id: string, x: Size) => void;
     sizeIndexRef: React.MutableRefObject<SizeIndex>;
     deletePositions: (x: ObjectNode[]) => void;
@@ -107,10 +108,23 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
 
     useEffect(() => {
         let _size = { ...sizeIndex };
+        let maxY = 0;
+        let maxX = 0;
         for (let node of patch.objectNodes) {
             if (node.size) {
                 _size[node.id] = node.size;
             }
+            if (node.position) {
+                if (node.position.y > maxY) {
+                    maxY = node.position.y;
+                }
+                if (node.position.x > maxX) {
+                    maxX = node.position.x;
+                }
+            }
+        }
+        if (maxY > 0 || maxX > 0) {
+            setSize({ width: maxX + 300, height: maxY + 300 });
         }
         setSizeIndex(_size);
         sizeIndexRef.current = _size;
@@ -380,7 +394,8 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setPreparePresentationMode,
             checkNearInlets,
             nearestInlet,
-            setNearestInlet
+            setNearestInlet,
+            setSize
         }}>
         {children}
     </PositionContext.Provider>;

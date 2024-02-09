@@ -30,3 +30,33 @@ export const message = (
 
 };
 
+doc(
+    'condMessage',
+    {
+        numberOfInlets: 4,
+        numberOfOutlets: 1,
+        inletNames: ["value", "name", "subtype", "condition"],
+        description: 'sends message out of worklet to main thread when condition is met',
+
+    });
+
+export const condMessage = (
+    object: ObjectNode,
+    name: Lazy,
+    subType: Lazy,
+    condition: Lazy
+) => {
+    return (value: Message) => {
+        let op = {
+            name: "condMessage",
+            params: name()
+        };
+
+        let x = [[op, subType(), value, condition()]] as Statement[];
+        x[0].node = object;
+        return x;
+    };
+
+};
+
+

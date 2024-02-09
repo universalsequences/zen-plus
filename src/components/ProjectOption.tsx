@@ -54,7 +54,7 @@ const ProjectOption: React.FC<{ head: any, loadPatchToken: (x: number) => void }
 
 export default ProjectOption;
 
-const getTime = (_time: Date): string => {
+export const getTime = (_time: Date): string => {
     let time = new Date().getTime() - _time.getTime();
     let minutes = time / 1000 / 60;
     if (minutes < 60) {

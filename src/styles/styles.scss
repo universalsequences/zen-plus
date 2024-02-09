@@ -34,23 +34,14 @@
 
 .sidebar {
     width: 0px;
-    animation-name: closesidebar;
-    animation-duration: 0.2s;
-    animation-timing-function: ease-in-out;
 }
 
 .sidebar.opened-sidebar {
-    animation-timing-function: ease-in-out;
     width: 240px;
-    animation-name: opensidebar;
-    animation-duration: 0.2s;
 }
 
 .sidebar.opened-sidebar2 {
-    animation-timing-function: ease-in-out;
     width: 320px;
-    animation-name: opensidebar2;
-    animation-duration: 0.2s;
 }
 
 
@@ -99,6 +90,9 @@
     }
 }
 
+.node-component.hydrated {
+    // background-color: red;
+}
 .node-component.context-type-1 {
     background-color: #d2ff00;
 }
@@ -160,7 +154,7 @@ body {
 }
 
 .bg-toolbar.top-toolbar {
-    background-color: #17171769;
+    background-color: #2e2e2e69;
         backdrop-filter:blur(8px);
 }
 
@@ -321,7 +315,7 @@ svg {
 }
 
 .tile-container {
-    gap: 45px;
+    gap: 10px;
 }
 
 .save-connect {
@@ -499,4 +493,49 @@ button.iekbcc0 {
 [data-rk] ._9pm4ki3 {
     z-index: 10000000000 !important;
     pointer-events: auto;
+}
+
+div:active {
+    // animation: none !important;
+}
+
+.inner-node-text {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+@keyframes colorChange {
+    0% {
+        background-color: initial;
+    }
+    50% {
+        background-color: white;
+    }
+    100% {
+        background-color: initial;
+    }
+}
+
+.animate-color {
+    animation: colorChange 100ms forwards;
+}
+
+
+/* Spinner Styles */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #09f;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
 }

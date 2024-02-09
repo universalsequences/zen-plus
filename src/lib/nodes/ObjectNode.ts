@@ -1,4 +1,5 @@
 import { OperatorContextType, OperatorContext, getOperatorContext } from './context';
+import { NumberOfInlets } from '@/lib/docs/docs';
 import { DataType } from '@/lib/nodes/typechecker';
 import { GLType } from '@/lib/gl/index';
 import { createGLFunction } from './definitions/create';
@@ -8,7 +9,7 @@ import { Definition } from '../docs/docs';
 import { BaseNode } from './BaseNode';
 import { v4 as uuidv4 } from 'uuid';
 import { uuid, registerUUID } from '@/lib/uuid/IDGenerator';
-import { Node, SerializedPatch, Size } from './types';
+import { SerializableCustom, Node, SerializedPatch, Size } from './types';
 
 import {
     ConnectionType,
@@ -52,11 +53,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     text: string;
     arguments: Message[];
     subpatch?: SubPatch;
-    buffer?: Float32Array;
+    buffer?: Float32Array | Uint8Array;
     size?: Size;
     audioNode?: AudioNode;
     operatorContextType: OperatorContextType;
     storedMessage?: Message;
+    saveData?: any;
+    custom?: SerializableCustom;
 
     constructor(patch: Patch) {
         super(patch);
@@ -72,6 +75,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 this.patch.setObjectNodes(this.patch.objectNodes);
             }
         });
+        this.newAttribute("font-size", 9);
         this.arguments = [];
         this.operatorContextType = OperatorContextType.ZEN;
     }
@@ -147,6 +151,19 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         let definition: Definition | null = context.lookupDoc(name);
 
+        if (definition && definition.name) {
+            name = definition.name;
+        }
+
+        if (definition && definition.attributeOptions) {
+            for (let opt in definition.attributeOptions) {
+                if (!this.attributeOptions[opt]) {
+                    this.attributeOptions[opt] = [];
+                }
+                this.attributeOptions[opt] = Array.from(new Set([... this.attributeOptions[opt], ...definition.attributeOptions[opt]]));
+            }
+        }
+
         this.inlets.forEach(x => x.hidden = false);
 
         if (!definition) {
@@ -175,7 +192,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         this.text = originalText;
 
-        let numberOfInlets = typeof definition.numberOfInlets === "function" ?
+        let _numberOfOutlets = typeof definition.numberOfOutlets === "function" ?
+            definition.numberOfOutlets(tokens.length) :
+            typeof definition.numberOfOutlets === "string" ? this.attributes[definition.numberOfOutlets] as number :
+                definition.numberOfOutlets;
+
+        let numberOfInlets = definition.numberOfInlets === NumberOfInlets.Outlets ? _numberOfOutlets : typeof definition.numberOfInlets === "function" ?
             definition.numberOfInlets(tokens.length) :
             typeof definition.numberOfInlets === "string" ? this.attributes[definition.numberOfInlets] as number :
                 definition.numberOfInlets;
@@ -246,14 +268,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     generateIO(definition: Definition, parsedArguments: (Message | undefined)[], numberOfParsedArguments: number): Lazy[] {
         let { numberOfInlets, numberOfOutlets, outletNames, inletNames } = definition;
-        let _numberOfInlets = typeof numberOfInlets === "function" ?
-            numberOfInlets(numberOfParsedArguments + 1) :
-            typeof numberOfInlets === "string" ? this.attributes[numberOfInlets] as number :
-                numberOfInlets;
         let _numberOfOutlets = typeof numberOfOutlets === "function" ?
             numberOfOutlets(numberOfParsedArguments + 1) :
             typeof numberOfOutlets === "string" ? this.attributes[numberOfOutlets] as number :
                 numberOfOutlets;
+        let _numberOfInlets = numberOfInlets === NumberOfInlets.Outlets ? _numberOfOutlets : typeof numberOfInlets === "function" ?
+            numberOfInlets(numberOfParsedArguments + 1) :
+            typeof numberOfInlets === "string" ? this.attributes[numberOfInlets] as number :
+                numberOfInlets;
+
         let lazyArgs: Lazy[] = [];
         for (let i = 0; i < _numberOfInlets; i++) {
             if (!this.inlets[i]) {
@@ -425,7 +448,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (typeof message === "string") {
             return message;
         }
-        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun") {
+        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
             return message;
         }
         let lastMessage: Message | undefined = inlet.lastMessage;
@@ -483,7 +506,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if (this.processMessageForAttributes(message)) {
+        if (this.processMessageForAttributes(message) && (!inlet.node || inlet.node.attributes["type"] !== "core")) {
             return;
         }
         let ogMessage = message;
@@ -529,7 +552,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
             let _inlets = INLETS.filter(inlet => inlet.messagesReceived! < inlet.connections.filter(x => x.source && (!(x.source as ObjectNode).name || (x.source as ObjectNode).name !== "attrui")).length);
             if (typeof message !== "string" && _inlets.length > 0) {
-                if ((this.name === "accum" && indexOf >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "canvas") {
+                if ((this.name === "accum" && indexOf >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "polycall" || this.name === "defun" || this.name === "canvas") {
                 } else {
                     //console.log("FAILED TO PASS", INLETS, _inlets, this.text, this);
                     return;
@@ -608,8 +631,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             presentationPosition: this.presentationPosition,
             outlets: this.getConnectionsJSON(),
             size: this.size,
-            operatorContextType: this.operatorContextType
+            operatorContextType: this.operatorContextType,
         };
+
+        if (this.custom) {
+            json.custom = this.custom.getJSON();
+        }
 
         if (this.buffer && this.name !== "buffer") {
             json.buffer = Array.from(this.buffer);
@@ -652,8 +679,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     fromJSON(json: SerializedObjectNode, isPreset?: boolean) {
         if (json.buffer) {
-            this.buffer = new Float32Array(json.buffer);
+            this.buffer = json.attributes && json.attributes["type"] === "uint8" ? new Uint8Array(json.buffer) : new Float32Array(json.buffer);
         }
+
 
         if (json.saveData) {
             this.storedMessage = json.saveData;
@@ -708,6 +736,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 ... this.attributes,
                 ...json.attributes
             }
+        }
+        if (json.custom && this.custom) {
+            this.custom.fromJSON(json.custom);
         }
     }
 

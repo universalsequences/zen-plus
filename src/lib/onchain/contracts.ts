@@ -1,3 +1,4 @@
+
 type ContractsByChain = {
     [x: number]: Contracts;
 }
@@ -7,9 +8,9 @@ type Contracts = {
 }
 
 const goerliContracts: Contracts = {
-    DropCreator: "0xdf5760ACd3e4Cc50eC9f43D7a39abaF38a570742",
-    MetadataRenderer: "0x4201b293a49615d8f6aA8fE34aD6791a2C371Ff7",
-    ZenModule: "0x5412f942505925199517a4d77612e1356ca1cb0e"
+    DropCreator: "0x991C1AA4d3309F26849257F9FBCc5f6a82aBc6Dc",
+    MetadataRenderer: "0xf8C21e072432205f6D02a1f2F5BFc6e6Ed90Ef84",
+    ZenModule: "0xcBe2142a8E578Fbc3c82E130d73b0C13D23E42f6"
 };
 
 const zoraContracts: Contracts = {

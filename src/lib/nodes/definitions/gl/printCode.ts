@@ -113,7 +113,18 @@ export const _printStatement = (
         let compoundOperator = operator as CompoundOperator;
         output = `gl.argument(${_printStatement(statements[0] as Statement, variables, uniforms, deep + 1)}, ${compoundOperator.value as number}, gl.${stringToTypeString(statements[1] as string)})`;
     } else if (_name === "uniform") {
-        output = `gl.uniform(gl.GLType.Float, ${zobject.storedMessage || 0})`;
+        if (zobject.attributes["type"] === "Sampler2D") {
+            if (zobject.attributes["feedback"]) {
+                output = `gl.uniform(gl.GLType.Sampler2D, [0], 1,1,true)`;
+            } else {
+                // not feedback so lets pass the 
+                let width = zobject.arguments[1] as number;
+                let height = zobject.arguments[2] as number;
+                output = `gl.uniform(gl.GLType.Sampler2D, new Array(width).fill(0), ${width}, ${height})`;
+            }
+        } else {
+            output = `gl.uniform(gl.GLType.Float, ${zobject.storedMessage || 0})`;
+        }
         uniformName = zobject.arguments[0] as string; // store the name so we may emit it
     } else if (statements.length === 0) {
         output = `${op} (${opArgs})`;

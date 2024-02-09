@@ -24,6 +24,10 @@ export interface DataParams {
 
 export type CustomParams = AccumParams | RoundMode | DataParams | BlockGen | Clicker | Component | SpiderWeb | string;
 
+export interface Range {
+    min: number;
+    max: number;
+}
 export interface CompoundOperator {
     name: string;
     history?: History;

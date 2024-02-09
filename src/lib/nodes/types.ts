@@ -1,4 +1,5 @@
 import { BlockGen } from '../zen';
+import { StateChange } from '@/lib/nodes/definitions/core/preset';
 import Assistant from '@/lib/openai/assistant';
 import { TypeSuccess, TypeError } from './typechecker';
 import { RenderJob } from '@/lib/gl/zen';
@@ -33,7 +34,7 @@ export interface Coordinate {
 
 // for the most part, nodes will deal with statements
 
-export type Message = string | number | string[] | number[] | Statement | Float32Array | SVGObject | RenderJob | TypeError | TypeSuccess;
+export type Message = string | number | string[] | number[] | Statement | Float32Array | Uint8Array | SVGObject | RenderJob | TypeError | TypeSuccess | StateChange;
 export type Lazy = () => Message;
 
 /**
@@ -74,6 +75,7 @@ export type IOlet = Identifiable & {
     connectionType?: ConnectionType; // default = ZEN
     messagesReceived?: number;
     markedMessages?: MarkedMessage[]
+    node?: ObjectNode;
 }
 
 export type MarkedMessage = {
@@ -90,16 +92,18 @@ export type Attributes = {
 }
 
 export type AttributeCallbacks = {
-    [x: string]: (x: string | number | boolean) => void;
+    [x: string]: (x: string | number | boolean | number[]) => void;
 }
+
+export type AttributeValue = string | number | boolean | number[];
 
 export type Attributed = {
     attributes: Attributes;
     attributeCallbacks: AttributeCallbacks;
     attributeOptions: AttributeOptions;
     attributeDefaults: Attributes;
-    setAttribute: (name: string, value: string | number | boolean) => void;
-    newAttribute: (name: string, defaultValue: string | number | boolean, callback?: (x: string | number | boolean) => void) => void;
+    setAttribute: (name: string, value: AttributeValue) => void;
+    newAttribute: (name: string, defaultValue: AttributeValue, callback?: (x: AttributeValue) => void) => void;
 }
 
 export type Node = Identifiable & Attributed & {
@@ -122,7 +126,7 @@ export type ObjectNode = Positioned & Node & {
     fn?: InstanceFunction; // the function associated with the object name (to be run on message receive)
     parse: (x: string, operatorContextType?: OperatorContextType, compile?: boolean, patch?: SerializedPatch) => boolean; // function to parse text -> fn
     arguments: Message[]; // stored messages from inlets #1,2,3,etc (to be used by fn)
-    buffer?: Float32Array; // optional buffer (used in matrix objects)
+    buffer?: Uint8Array | Float32Array; // optional buffer (used in matrix objects)
     subpatch?: SubPatch;
     getJSON: () => SerializedObjectNode;
     fromJSON: (x: SerializedObjectNode) => void;
@@ -131,6 +135,7 @@ export type ObjectNode = Positioned & Node & {
     useAudioNode: (x: AudioNode) => void;
     operatorContextType: OperatorContextType;
     needsLoad?: boolean;
+    isResizable?: boolean;
     storedLazyMessage?: Lazy;
     param?: ParamGen;
     isCycle?: boolean;
@@ -139,6 +144,12 @@ export type ObjectNode = Positioned & Node & {
     storedParameterValue?: number;
     merger?: ChannelMergerNode;
     saveData?: any;
+    custom?: SerializableCustom;
+}
+
+export interface SerializableCustom {
+    getJSON: () => any;
+    fromJSON: (x: any) => void;
 }
 
 export type MessageNode = Positioned & Node & {
@@ -219,6 +230,7 @@ export type SerializedObjectNode = Identifiable & {
     operatorContextType: OperatorContextType;
     numberOfOutlets?: number;
     saveData?: any;
+    custom?: any;
 };
 
 export type SerializedPatch = Identifiable & {

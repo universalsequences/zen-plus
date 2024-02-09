@@ -19,7 +19,12 @@ export const { abi } = {
                 },
                 {
                     "internalType": "address",
-                    "name": "glLib",
+                    "name": "glLib1",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "glLib2",
                     "type": "address"
                 }
             ],
@@ -189,7 +194,20 @@ export const { abi } = {
         },
         {
             "inputs": [],
-            "name": "glLibrary",
+            "name": "glLibrary1",
+            "outputs": [
+                {
+                    "internalType": "contract IData",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "glLibrary2",
             "outputs": [
                 {
                     "internalType": "contract IData",
@@ -410,7 +428,20 @@ export const { abi } = {
                     "type": "address"
                 }
             ],
-            "name": "upgradeZenGLLibrary",
+            "name": "upgradeZenGLLibrary1",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "chunk",
+                    "type": "address"
+                }
+            ],
+            "name": "upgradeZenGLLibrary2",
             "outputs": [],
             "stateMutability": "nonpayable",
             "type": "function"
@@ -449,6 +480,11 @@ export const { abi } = {
                     "internalType": "string",
                     "name": "visuals",
                     "type": "string"
+                },
+                {
+                    "internalType": "uint8",
+                    "name": "fps",
+                    "type": "uint8"
                 },
                 {
                     "internalType": "bool",
@@ -493,5 +529,4 @@ export const { abi } = {
             "type": "function"
         }
     ]
-}
-
+};

@@ -1,5 +1,6 @@
 import { ObjectNode, Message } from '../../types';
 import { doc } from './doc';
+import { MutableValue } from './MutableValue';
 
 doc(
     'slider',
@@ -10,12 +11,29 @@ doc(
         description: "slider ui element"
     });
 
-export const slider = (_node: ObjectNode) => {
-    _node.needsLoad = true;
+export const slider = (node: ObjectNode) => {
+    node.needsLoad = true;
+    node.isResizable = true;
+
+    if (!node.size) {
+        node.size = {
+            width: 20,
+            height: 80
+        };
+    }
+    let custom: MutableValue;
+    if (!node.custom) {
+        custom = new MutableValue(node, 0);
+        node.custom = custom;
+    } else {
+        custom = node.custom as MutableValue;
+    }
+
     return (msg: Message) => {
         if (msg === "bang") {
-            if (_node.arguments[0] !== undefined) {
-                return [_node.arguments[0]];
+            if (node.arguments[0] !== undefined) {
+                custom.value = node.arguments[0];
+                return [node.arguments[0]];
             }
         }
         return [msg];
@@ -31,13 +49,30 @@ doc(
         description: "knob ui element"
     });
 
-export const knob = (_node: ObjectNode) => {
-    _node.needsLoad = true;
+export const knob = (node: ObjectNode) => {
+    node.needsLoad = true;
+    node.isResizable = true;
+
+    if (!node.size) {
+        node.size = {
+            width: 20,
+            height: 80
+        };
+    }
+    let custom: MutableValue;
+    if (!node.custom) {
+        custom = new MutableValue(node, 0);
+        node.custom = custom;
+    } else {
+        custom = node.custom as MutableValue;
+    }
+
+
     return (msg: Message) => {
         if (msg === "bang") {
-            if (_node.arguments[0] !== undefined) {
-                console.log('sending arguments[0]', _node.arguments[0]);
-                return [_node.arguments[0]];
+            if (node.arguments[0] !== undefined) {
+                custom.value = node.arguments[0];
+                return [node.arguments[0]];
             }
         }
         return [msg];

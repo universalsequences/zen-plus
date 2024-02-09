@@ -87,7 +87,8 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
             } catch (e) {
             }
         }
-        this.receive(this.inlets[1], text);
+        let parsed = parseFloat(text);
+        this.receive(this.inlets[1], !isNaN(parsed) ? parsed : text);
     }
 
     pipeIfApplicable(incomingMessage: Message): Message {

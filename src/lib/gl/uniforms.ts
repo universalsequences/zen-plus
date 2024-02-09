@@ -16,13 +16,15 @@ import { memo } from './memo';
  * 
  */
 
-export type Data = number | number[];
+export type Data = number | number[] | Float32Array;
 export type Uniform = (() => UGen) & {
     set?: (v?: Data) => void,
     isTexture?: () => boolean
+    getWidth?: () => number | undefined;
+    getHeight?: () => number | undefined;
 }
 
-export const uniform = (type: GLType, val: Data, size?: number, isFeedback?: boolean): Uniform => {
+export const uniform = (type: GLType, val: Data, width?: number, height?: number, isFeedback?: boolean): Uniform => {
     let contexts: Context[] = [];
     let uniformDefinition: UniformDefinition;
     let lastValue: Data = val;
@@ -61,8 +63,8 @@ export const uniform = (type: GLType, val: Data, size?: number, isFeedback?: boo
                 // then we have a texture so lets create one
                 texture = {
                     initialized: false,
-                    width: size || 1,
-                    height: 1,
+                    width: width || 1,
+                    height: height || 1,
                     initialData: Array.isArray(val) ? new Uint8Array(val) : null,
                     feedback: isFeedback,
                     uniformName: isFeedback ? uniformName : undefined
@@ -85,8 +87,7 @@ export const uniform = (type: GLType, val: Data, size?: number, isFeedback?: boo
         lastValue = v;
 
         if (texture && uniformDefinition) {
-            if (!Array.isArray(v)) {
-                console.log("array required for textures...");
+            if (!Array.isArray(v) && !ArrayBuffer.isView(v)) {
                 return;
             }
             for (let context of contexts) {
@@ -100,14 +101,15 @@ export const uniform = (type: GLType, val: Data, size?: number, isFeedback?: boo
                     let format = texture.format || gl.RGBA;
                     let type = texture.type || gl.UNSIGNED_BYTE;
 
+                    gl.useProgram(program);
+
                     // activate & bind the texture
                     gl.activeTexture(gl.TEXTURE0 + texture.unit);
                     gl.bindTexture(gl.TEXTURE_2D, _texture);
 
-                    console.log('binding texture =', texture, _texture);
-
                     // pass the data to the texture
-                    gl.texImage2D(gl.TEXTURE_2D, 0, format, texture.width, texture.height, 0, format, type, new Uint8Array(v));
+                    let buf = ArrayBuffer.isView(v) ? v : new Uint8Array(v);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, format, texture.width, texture.height, 0, format, type, buf);
 
                     let uLocation = gl.getUniformLocation(program, uniformDefinition.name);
                     gl.uniform1i(uLocation, texture.unit);
@@ -131,6 +133,16 @@ export const uniform = (type: GLType, val: Data, size?: number, isFeedback?: boo
     _uniform.isTexture = () => {
         return texture !== undefined;
     };
+
+    _uniform.getWidth = () => {
+        return width;
+    };
+
+    _uniform.getHeight = () => {
+        return height;
+    };
+
+
 
     return _uniform;
 }

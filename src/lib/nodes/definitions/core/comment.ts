@@ -11,12 +11,7 @@ doc(
     });
 
 export const comment = (_node: ObjectNode) => {
-    if (_node && _node.size) {
-        _node.size.width = 120;
-    }
-    if (_node.attributes.fontSize === undefined) {
-        _node.attributes.fontSize = 12;
-    }
+    _node.isResizable = true;
     return (x: Message) => [];
 }
 

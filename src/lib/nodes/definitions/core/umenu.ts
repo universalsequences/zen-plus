@@ -66,7 +66,7 @@ export const umenu = (node: ObjectNode) => {
         if (message === "bang") {
             if (!node.storedMessage) {
                 if (node.attributes["options"]) {
-                    let options = (node.attributes["options"] as string).split(",")
+                    let options = Array.isArray(node.attributes["options"]) ? node.attributes["options"] : (node.attributes["options"] as string).split(",")
                     if (!options[0]) {
                         return [];
                     }
@@ -79,8 +79,15 @@ export const umenu = (node: ObjectNode) => {
         }
         node.storedMessage = message;
         node.saveData = message;
-        let options = (node.attributes["options"] as string).split(",")
-        let index = options.indexOf(message as string);
-        return [message, index];
+        let options = Array.isArray(node.attributes["options"]) ? node.attributes["options"] as number[] : (node.attributes["options"] as string).split(",") as string[];
+        let indexOf = -1;
+        let i = 0;
+        for (let option of options) {
+            if (message === option) {
+                indexOf = i;
+            }
+            i++;
+        }
+        return [message, indexOf];
     };
 };

@@ -2,6 +2,8 @@ import { createContext, useEffect, useCallback, useState, useContext } from 'rea
 
 export enum NavOption {
     Home,
+    Files,
+    Editor,
     Docs,
     Works
 }

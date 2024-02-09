@@ -45,6 +45,8 @@ export const func = (
     }
 };
 
+export const and = op("&&", "and", GLType.Bool);
+export const or = op("||", "or", GLType.Bool);
 export const add = op("+", "add");
 export const sub = op("-", "sub");
 export const mult = op("*", "mult");
@@ -75,6 +77,7 @@ export const cross = func("cross");
 export const exp2 = func("exp2");
 export const length = func("length", "length", undefined, GLType.Float);
 export const abs = func("abs", "abs");
+export const fract = func("fract", "fract");
 
 
 // dot product takes 2 vectors and returns a float

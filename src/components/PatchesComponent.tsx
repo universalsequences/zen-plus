@@ -10,14 +10,13 @@ import SearchWindow from './SearchWindow';
 import { useSettings } from '@/contexts/SettingsContext';
 import React, { useEffect, useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
-import ZenCodeSidebar from './ZenCodeSidebar';
 import { usePatches } from '@/contexts/PatchesContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import PatchTile from './PatchTile';
 import { useTilesContext } from '@/contexts/TilesContext';
 
 
-export default function PatchesComponent() {
+const PatchesComponent: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | null) => void }> = ({ fileToOpen, setFileToOpen }) => {
     let { rootTile, selectedPatch, patches } = usePatches();
     let { gridTemplate } = useTilesContext();
 
@@ -69,6 +68,14 @@ export default function PatchesComponent() {
         setSelection(null);
     }, [setSelection, selection]);
 
+    useEffect(() => {
+        if (lightMode) {
+            document.body.className = "light-mode";
+        } else {
+            document.body.className = "dark-mode";
+        }
+    }, [lightMode]);
+
     return React.useMemo(() => {
         return <>
             <div
@@ -78,7 +85,7 @@ export default function PatchesComponent() {
                     <div
                         //style={patches.length > 1 ? { gridTemplateColumns: gridTemplate } : {}}
                         className={"m-1 mt-4 flex-1 patches h-full flex-1 " + ("patches-" + patches.length)}>
-                        {rootTile ? <PatchTile gridTemplate={gridTemplate} tile={rootTile} /> : ""}
+                        {rootTile ? <PatchTile fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} gridTemplate={gridTemplate} tile={rootTile} /> : ""}
                     </div>
                 </div>
                 <Sidebar />
@@ -88,3 +95,5 @@ export default function PatchesComponent() {
     }, [patches, user, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode]);
 
 }
+
+export default PatchesComponent;

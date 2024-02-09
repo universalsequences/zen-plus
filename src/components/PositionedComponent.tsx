@@ -9,6 +9,7 @@ import { usePositionStyle } from '@/hooks/usePositionStyle';
 import { OperatorContextType } from '@/lib/nodes/context';
 
 const PositionedComponent: React.FC<{
+    isHydrated?: boolean;
     isCustomView?: boolean,
     isError?: boolean,
     text?: string,
@@ -16,7 +17,7 @@ const PositionedComponent: React.FC<{
     skipOverflow?: boolean,
     children: React.ReactNode,
     node: ObjectNode | MessageNode
-}> = ({ text, node, isCustomView, children, isError, skipOverflow, lockedModeRef }) => {
+}> = ({ text, node, isCustomView, children, isError, skipOverflow, lockedModeRef, isHydrated }) => {
 
     const { setSelectedNodes, selectedNodes } = useSelection();
     const { nearestInlet, sizeIndex, setDraggingNode, setResizingNode, updateSize, updateZIndex, maxZIndex } = usePosition();
@@ -38,15 +39,27 @@ const PositionedComponent: React.FC<{
             return;
         }
         if (!isCustomView && ref.current && !(node as ObjectNode).attributes["Custom Presentation"]) {
-            let size = {
-                width: ref.current.offsetWidth,
-                height: ref.current.offsetHeight
+            if ((
+                (node as ObjectNode).isResizable ||
+                (node as ObjectNode).name === "scope~" ||
+                (node as ObjectNode).name === "umenu" ||
+                (node as ObjectNode).name === "matrix" || ((node as ObjectNode).name === "button")) && node.size) {
+                if (node.size) {
+                    updateSize(node.id, {
+                        ...node.size
+                    });
+                }
+            } else {
+                let size = {
+                    width: ref.current.offsetWidth,
+                    height: ref.current.offsetHeight
+                }
+                node.size = size;
+                updateSize(node.id, {
+                    width: ref.current.offsetWidth,
+                    height: ref.current.offsetHeight
+                });
             }
-            node.size = size;
-            updateSize(node.id, {
-                width: ref.current.offsetWidth,
-                height: ref.current.offsetHeight
-            });
         } else if (node.size) {
             /*
             updateSize(node.id, {
@@ -140,6 +153,9 @@ const PositionedComponent: React.FC<{
             className += " message-node";
         }
         let isSelected = selectedNodes.includes(node);
+        if ((node as ObjectNode).name === "button") {
+            minWidth = 5;
+        }
         if ((node as ObjectNode).name === "divider") {
             minWidth = 1;
             if (!isSelected) {
@@ -182,12 +198,15 @@ const PositionedComponent: React.FC<{
             _style.width = _size.width;
             _style.height = _size.height;
             allowSize = true;
+        } else if ((node as ObjectNode).name === "zen" && _size) {
+            allowSize = true;
+            _style.width = _size.width;
+            _style.height = _size.height;
         }
 
         if ((node as ObjectNode).name === "divider" && _size) {
             _style.width = _size.width;
             _style.height = _size.height;
-            console.log("size=", _size);
             allowSize = true;
         }
 
@@ -199,6 +218,9 @@ const PositionedComponent: React.FC<{
             className = className.replaceAll("overflow-hidden", "");
         }
 
+        if (isHydrated) {
+            className += " hydrated";
+        }
         return (
             <div
                 ref={ref}

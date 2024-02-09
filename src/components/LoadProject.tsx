@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { usePatchLoader } from '@/hooks/usePatchLoader';
 import { useAuth } from '@/contexts/AuthContext';
 import { mergeDiffs } from '@/lib/onchain/merge';
 import pako from 'pako';
@@ -62,31 +63,9 @@ const LoadProject = (props: Props) => {
         props.hide();
     }, [patch]);
 
+    const loadPatch = usePatchLoader(patch);
     const loadPatchToken = useCallback(async (saved: any) => {
-        let serialized = await fetchPatch(saved);
-        loadProjectPatch(serialized);
-        /*
-        let item = window.localStorage.getItem("patch.beat-fusion relative");
-        if (!item) {
-            return;
-        }
-        */
-        //let serialized = JSON.parse(item) as SerializedPatch;
-        //loadProjectPatch(serialized);
-
-        // patch.name = saved.name;
-        let updates: Coordinates = {};
-        let sizes = { ...sizeIndexRef.current }
-        for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
-            updates[node.id] = node.position;
-            if (node.size) {
-                sizes[node.id] = node.size;
-            }
-        }
-        setSizeIndex(sizes);
-        updatePositions(updates);
-        patch.previousDocId = saved.id;
-        patch.previousSerializedPatch = serialized;
+        loadPatch(saved);
         props.hide();
     }, [patch]);
 

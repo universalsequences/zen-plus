@@ -1,3 +1,4 @@
+
 "use client"
 import { Arg, UGen } from '@/lib/gl/types';
 import '@/styles/styles.scss';
@@ -12,7 +13,341 @@ import * as gl from '@/lib/gl/index';
 import { Context } from '@/lib/gl/types';
 import useShaderDisplay from '@/hooks/gl/useShaderDisplay';
 
+const visuals = () => {
+    let uniform0 = gl.uniform(gl.GLType.Sampler2D, [0], 1, 1, true);
+    let uniform1 = uniform0();
+    let uniform2 = gl.uniform(gl.GLType.Float, 0.3223855589286069);
+    let uniform3 = uniform2();
+    let uniform4 = gl.uniform(gl.GLType.Float, 0.2796332136774874);
+    let uniform5 = uniform4();
 
+    let x = 0;
+    setInterval(() => {
+        x += .01;
+        uniform4.set!(Math.sin(x));
+    }, 1000 / 40)
+    let vec26 = gl.vec2(
+        uniform3,
+        uniform5);
+    let uv7 = gl.uv();
+    let dot8 = gl.dot(
+        vec26,
+        uv7);
+    let nuv9 = gl.nuv();
+    let unpackxy10 = gl.unpack("xy")(
+        nuv9);
+    let mult11 = gl.mult(
+        unpackxy10,
+        8);
+    let floor12 = gl.floor(
+        mult11);
+    let unpackx13 = gl.unpack("x")(
+        floor12);
+    let unpacky14 = gl.unpack("y")(
+        floor12);
+    let mult15 = gl.mult(
+        unpacky14,
+        6);
+    let add16 = gl.add(
+        unpackx13,
+        mult15);
+    let mod17 = gl.mod(
+        uniform3,
+        4);
+    let mod18 = gl.mod(
+        add16,
+        mod17);
+    let mult19 = gl.mult(
+        mod18,
+        0.001);
+    let add20 = gl.add(
+        dot8,
+        mult19);
+    let mult21 = gl.mult(
+        mod18,
+        1);
+    let lt22 = gl.lt(
+        mult21,
+        2);
+    let zswitch23 = gl.zswitch(
+        lt22,
+        1,
+        0);
+    let mod24 = gl.mod(
+        uv7,
+        0.3);
+    let abs25 = gl.abs(
+        mod24);
+    let add26 = gl.add(
+        mod17,
+        uv7);
+    let add27 = gl.add(
+        add26,
+        mod17);
+    let mod28 = gl.mod(
+        add27,
+        0.0001);
+    let sub29 = gl.sub(
+        abs25,
+        mod28);
+    let add30 = gl.add(
+        sub29,
+        0);
+    let unpackx31 = gl.unpack("x")(
+        add30);
+    let unpacky32 = gl.unpack("y")(
+        add30);
+    let max33 = gl.max(
+        unpackx31,
+        unpacky32);
+    let min34 = gl.min(
+        max33,
+        0);
+    let max35 = gl.max(
+        add30,
+        0);
+    let length36 = gl.length(
+        max35);
+    let add37 = gl.add(
+        min34,
+        length36);
+    let sub38 = gl.sub(
+        add37,
+        0);
+    let add39 = gl.add(
+        zswitch23,
+        sub38);
+    let mult40 = gl.mult(
+        add39,
+        0.5);
+    let resolution41 = gl.resolution();
+    let div42 = gl.div(
+        resolution41,
+        2);
+    let unpackx43 = gl.unpack("x")(
+        div42);
+    let sub44 = gl.sub(
+        unpackx13,
+        mult15);
+    let mod45 = gl.mod(
+        add16,
+        8);
+    let abs46 = gl.abs(
+        mod17);
+    let add47 = gl.add(
+        abs46,
+        1);
+    let add48 = gl.add(
+        mod45,
+        add47);
+    let mult49 = gl.mult(
+        add48,
+        1);
+    let add50 = gl.add(
+        sub44,
+        mult49);
+    let div51 = gl.div(
+        1,
+        add50);
+    let mult52 = gl.mult(
+        unpackx43,
+        div51);
+    let div53 = gl.div(
+        mult40,
+        mult52);
+    let div54 = gl.div(
+        add16,
+        4);
+    let floor55 = gl.floor(
+        div54);
+    let eq56 = gl.eq(
+        mod45,
+        floor55);
+    let zswitch57 = gl.zswitch(
+        eq56,
+        1,
+        0);
+    let add58 = gl.add(
+        mult15,
+        uniform3);
+    let mult59 = gl.mult(
+        add58,
+        1);
+    let div60 = gl.div(
+        1,
+        mult59);
+    let add61 = gl.add(
+        div60,
+        1);
+    let mult62 = gl.mult(
+        add61,
+        0.001);
+    let add63 = gl.add(
+        mult62,
+        dot8);
+    let unpacky64 = gl.unpack("y")(
+        div42);
+    let add65 = gl.add(
+        add63,
+        unpacky64);
+    let div66 = gl.div(
+        zswitch57,
+        add65);
+    let vec267 = gl.vec2(
+        div53,
+        div66);
+    let add68 = gl.add(
+        add20,
+        vec267);
+    let mult69 = gl.mult(
+        add68,
+        0.01);
+    let nuv70 = gl.nuv();
+    let add71 = gl.add(
+        mult69,
+        nuv70);
+    let mod72 = gl.mod(
+        add71,
+        1);
+    let texture2D73 = gl.texture2D(
+        uniform1,
+        mod72);
+    let mult74 = gl.mult(
+        dot8,
+        0.1);
+    let add75 = gl.add(
+        mult74,
+        0.2);
+    let mult76 = gl.mult(
+        uv7,
+        1);
+    let mult77 = gl.mult(
+        mult76,
+        1);
+    let mult78 = gl.mult(
+        vec26,
+        0.1);
+    let add79 = gl.add(
+        mult77,
+        mult78);
+    let length80 = gl.length(
+        add79);
+    let mult81 = gl.mult(
+        dot8,
+        0.7);
+    let sub82 = gl.sub(
+        length80,
+        mult81);
+    let smoothstep83 = gl.smoothstep(
+        add75,
+        0,
+        sub82);
+    let unpackz84 = gl.unpack("z")(
+        gl.texture2D(
+            uniform1,
+            mod72));
+    let add85 = gl.add(
+        mult62,
+        unpackz84);
+    let mult86 = gl.mult(
+        add85,
+        0.001);
+    let add87 = gl.add(
+        mult86,
+        0.001);
+    let mult88 = gl.mult(
+        uv7,
+        8);
+    let fract89 = gl.fract(
+        mult88);
+    let mult90 = gl.mult(
+        fract89,
+        0.001);
+    let add91 = gl.add(
+        mult90,
+        uv7);
+    let add92 = gl.add(
+        add91,
+        dot8);
+    let mod93 = gl.mod(
+        add92,
+        0.03);
+    let abs94 = gl.abs(
+        mod93);
+    let add95 = gl.add(
+        mult90,
+        mod28);
+    let sub96 = gl.sub(
+        abs94,
+        add95);
+    let add97 = gl.add(
+        sub96,
+        0);
+    let unpackx98 = gl.unpack("x")(
+        add97);
+    let unpacky99 = gl.unpack("y")(
+        add97);
+    let max100 = gl.max(
+        unpackx98,
+        unpacky99);
+    let min101 = gl.min(
+        max100,
+        0);
+    let max102 = gl.max(
+        add97,
+        0);
+    let length103 = gl.length(
+        max102);
+    let add104 = gl.add(
+        min101,
+        length103);
+    let sub105 = gl.sub(
+        add104,
+        0);
+    let smoothstep106 = gl.smoothstep(
+        add87,
+        0,
+        sub105);
+    let add107 = gl.add(
+        smoothstep83,
+        smoothstep106);
+    let add108 = gl.add(
+        smoothstep83,
+        smoothstep106);
+    let sin109 = gl.sin(
+        uniform3);
+    let add110 = gl.add(
+        dot8,
+        sin109);
+    let uniform111 = gl.uniform(gl.GLType.Float, 1);
+    let uniform112 = uniform111();
+
+    setTimeout(() => {
+        uniform111.set!(0);
+    }, 1000);
+    let mix113 = gl.mix(
+        add110,
+        0,
+        uniform112);
+    let mult114 = gl.mult(
+        mix113,
+        0.4);
+    let add115 = gl.add(
+        sub105,
+        mult114);
+    let vec4116 = gl.vec4(
+        add107,
+        add108,
+        add115,
+        1);
+    let add117 = gl.add(
+        smoothstep83,
+        uniform112);
+    return gl.mix(
+        texture2D73,
+        vec4116,
+        add117);
+};
 const dsl = () => {
     // quad vertices
     const aVertexPosition = attribute(GLType.Vec3, [
@@ -72,6 +407,7 @@ const Home = () => {
     let ref = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         if (ref.current) {
+            /*
             const numSegments = 128 * 8; // Example segment count
             let height = .2;
             let r = .5
@@ -184,10 +520,11 @@ const Home = () => {
                 vec4(
                     vVec3.x, gl.add(gl.mult(.030, gl.sin(u())), vVec3.y), gl.sin(gl.mult(4, vVec3.z)), 1));
 
-            let zenGraph = gl.zen(frag, vert);
+                    */
+            let zenGraph = gl.zen(visuals()); //frag, vert);
 
-            zenGraph.indices = indices;
-            zenGraph.drawType = DrawType.TRIANGLE_STRIP;
+            //zenGraph.indices = indices;
+            //zenGraph.drawType = DrawType.TRIANGLE_STRIP;
             let render = gl.mount([zenGraph], ref.current);
 
             if (render) {

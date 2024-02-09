@@ -3,7 +3,7 @@ import { Tile } from '@/lib/tiling/types';
 import PatchWrapper from './PatchWrapper';
 import { usePatches } from '@/contexts/PatchesContext';
 
-const PatchTile: React.FC<{ gridTemplate?: string, tile: Tile }> = ({ tile, gridTemplate }) => {
+const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | null) => void, gridTemplate?: string, tile: Tile }> = ({ tile, setFileToOpen, fileToOpen }) => {
     let ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -30,6 +30,8 @@ const PatchTile: React.FC<{ gridTemplate?: string, tile: Tile }> = ({ tile, grid
             let maxHeight = _direction === "vertical" ? size : 100;
             mem = (
                 <PatchWrapper
+                    fileToOpen={fileToOpen}
+                    setFileToOpen={setFileToOpen}
                     key={0 + (_tile.patch ? _tile.patch.id : '')}
                     maxWidth={maxWidth} maxHeight={maxHeight} index={0} patch={_tile.patch} />
             );
@@ -110,7 +112,10 @@ const PatchTile: React.FC<{ gridTemplate?: string, tile: Tile }> = ({ tile, grid
                     maxWidth={_direction === "horizontal" ? size : 100} maxHeight={_direction === "vertical" ? size : 100} index={0} patch={_tile.patch} />
             );
         } else {
-            return <PatchTile tile={tile} key={i + (tile.patch ? (tile.patch as any).id : tile.getDepth() + '____')} />
+            return <PatchTile
+                fileToOpen={fileToOpen}
+                setFileToOpen={setFileToOpen}
+                tile={tile} key={i + (tile.patch ? (tile.patch as any).id : tile.getDepth() + '____')} />
         }
     })];
     /*

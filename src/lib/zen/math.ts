@@ -47,6 +47,7 @@ export const cKeywords: Keywords = {
     'Math.abs': 'fabs',
     'Math.random': "random_double",
     'Math.floor': 'floor',
+    'Math.trunc': 'trunc',
     'Math.round': 'round',
     'Math.ceil': 'ceil',
     'Math.sin': 'sin',
@@ -201,8 +202,7 @@ ${context.varKeyword} ${div} = ${num.variable} / ${multiple.variable};
                 rounder = context.target === Target.C ? cKeywords["Math.ceil"] : "Math.ceil";
                 break;
             case "trunc":
-                //rounder = "Math.trunc";
-                rounder = context.target === Target.C ? cKeywords["Math.floor"] : "Math.floor";
+                rounder = context.target === Target.C ? cKeywords["Math.trunc"] : "Math.trunc";
                 break;
             case "floor":
                 rounder = context.target === Target.C ? cKeywords["Math.floor"] : "Math.floor";
@@ -212,8 +212,8 @@ ${context.varKeyword} ${div} = ${num.variable} / ${multiple.variable};
         }
 
         out += `
-${context.varKeyword} ${roundVal} = ${multiple.variable} * ${rounder}(${div});
-`;
+${context.varKeyword} ${roundVal} = ${multiple.variable} * ${rounder} (${div});
+    `;
 
         return context.emit(out, roundVal, num, multiple);
     });

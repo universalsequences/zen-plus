@@ -70,7 +70,7 @@ const PatchInner: React.FC<{
         patch.onNewMessage = onNewMessage;
     }, [patch, onNewMessage]);
 
-    useKeyBindings(scrollRef);
+    // useKeyBindings(scrollRef);
 
     const lastClick = useRef(0);
 

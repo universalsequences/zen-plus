@@ -1,4 +1,6 @@
 import Shader from '@/components/shader/Shader';
+import { useSelection } from '@/contexts/SelectionContext';
+
 import { usePosition } from '@/contexts/PositionContext';
 import { RenderJob } from '@/lib/gl/zen';
 import { ObjectNode, Message } from '@/lib/nodes/types';
@@ -10,10 +12,11 @@ const GLCanvas: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const { sizeIndex } = usePosition();
 
     let message: Message | undefined = messages[objectNode.id];
+    let { attributesIndex, lockedMode } = useSelection();
 
     if (message && objectNode.size && (message as RenderJob).fragment && (message as RenderJob).fragmentContext) {
         let graph: RenderJob = message as RenderJob;
-        return <Shader width={objectNode.size.width} height={objectNode.size.height} zenGraph={graph} />
+        return <Shader fps={objectNode.attributes["fps"]} width={objectNode.size.width} height={objectNode.size.height} zenGraph={graph} />
     } else {
         return <div className="w-12 h-12" />
     }

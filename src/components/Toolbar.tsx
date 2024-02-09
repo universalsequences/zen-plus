@@ -118,16 +118,16 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         return <div
             style={{ height: 35 }}
             className="flex fixed top-0 left-0  full w-full">
-            <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-2  top-toolbar ">
+            <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-5  top-toolbar h-10 ">
                 <PatchDropdown patch={patch}>
-                    <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
+                    <GlobeIcon className="w-6 h-6 mt-1 mr-3 cursor-pointer" />
                 </PatchDropdown>
                 <div
                     style={{ borderLeft: "1px solid white" }}
-                    className="absolute top-0 h-full pt-0.5 right-0 px-5 flex  pr-20">
+                    className="ml-auto top-0 bottom my-auto pt-0.5 right-0 px-5 flex w-64">
                     <LockButton />
                     <PresentationMode />
-                    <div className="absolute right-5 top-1 text-xs">zen+</div>
+                    <div className="ml-auto mr-5 my-auto text-sm">zen+</div>
                 </div>
             </div>
         </div>;
@@ -138,11 +138,11 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         onClick={(e: any) => e.stopPropagation()}
         onMouseDown={(e: any) => e.stopPropagation()}
         className="flex fixed top-0 left-0  full w-full ">
-        <div className="flex-1 m-1 bg-toolbar relative flex px-2  rounded-full top-toolbar">
+        <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-5  top-toolbar h-10 ">
             <PatchDropdown patch={patch}>
-                <GlobeIcon className="w-5 h-5 mt-1 mr-3 cursor-pointer" />
+                <GlobeIcon className="w-6 h-6 mt-1 mr-3 cursor-pointer" />
             </PatchDropdown>
-            <div className="flex relative pr-8 mx-auto">
+            <div className="flex relative pr-8 my-auto mx-auto">
                 {breadcrumbs}
                 <Cross2Icon onClick={() => {
                     closePatch(patch);
@@ -150,10 +150,12 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             </div>
             <div
                 style={{ borderLeft: "1px solid white" }}
-                className="absolute top-0 h-full pt-0.5 right-0 px-5 flex pr-20">
-                <LockButton />
-                <PresentationMode />
-                <div className="absolute right-5 top-1 text-xs">zen+</div>
+                className="absolute right-0 bottom-0 top-0 table my-auto pt-0.5 right-0 px-5 flex w-64">
+                <div className="flex">
+                    <LockButton />
+                    <PresentationMode />
+                    <div className="ml-auto mr-5 my-auto text-sm">zen+</div>
+                </div>
             </div>
         </div>
     </div>;

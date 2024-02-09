@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { getUpdatedSize } from '@/lib/utils';
 import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts/PositionContext';
 import { usePatch } from '@/contexts/PatchContext';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
@@ -24,10 +25,6 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
 
         let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
         let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current;
-        console.log('scroll ref handlecontextmenu x/y', x, y);
-        console.log('rect.left=%s rect.top=%s', rect.left, rect.top);
-
-        console.log('setting menu positionref=', x, y);
         menuPositionRef.current = { x, y }
     }, []);
 
@@ -41,6 +38,8 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
 
     let {
         updatePosition,
+        size,
+        setSize,
     } = usePosition();
 
     const {
@@ -53,11 +52,11 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
 
     const createObjectNode = useCallback(() => {
         let objectNode = new ObjectNodeImpl(patch);
-        console.log('create object node with =', { ...menuPositionRef.current });
         newObjectNode(objectNode, { ...menuPositionRef.current });
         updatePosition(objectNode.id, { ...menuPositionRef.current });
+        setSize(getUpdatedSize(objectNode, size));
         return objectNode;
-    }, [objectNodes]);
+    }, [objectNodes, size, setSize]);
 
     const createNumberBox = useCallback(() => {
         let messageNode = new MessageNodeImpl(patch, MessageType.Number);
@@ -109,7 +108,6 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
         });
         subpatch.messageNodes.forEach(x => x.outlets.forEach(y => y.connections = []));
         subpatch.objectNodes = subpatch.objectNodes.filter(x => x.name !== "+");
-        console.log([...subpatch.objectNodes]);
 
         let inputNodes: ObjectNode[] = [];
         let incomingNodes: IOlet[] = [];
@@ -123,7 +121,6 @@ export const useNodeOperations = ({ isCustomView, zoomRef, scrollRef }: Props) =
             connection.sourceOutlet.connections = connection.sourceOutlet.connections.filter(x => x !== connection);
 
             let existingIndex = incomingNodes.indexOf(connection.sourceOutlet);
-            console.log('existing index = ', existingIndex, connection.source, connection.sourceOutlet);
             let inputNode: ObjectNode = existingIndex >= 0 ? inputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
             if (i >= 2) {
                 let position = (node as ObjectNode).position;

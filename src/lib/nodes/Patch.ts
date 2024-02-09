@@ -1,4 +1,5 @@
 import { IOConnection, Patch, SubPatch, PatchType, SerializedPatch, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
+import { PresetManager } from '@/lib/nodes/definitions/core/preset';
 import Assistant from '@/lib/openai/assistant';
 import { containsSameHistory } from './definitions/zen/history';
 import { initMemory, ZenWorklet } from '@/lib/zen/worklet';
@@ -163,7 +164,9 @@ export class PatchImpl implements Patch {
                             n.markedMessages = [];
                         }
                     });
-                node.parse(node.text, node.operatorContextType, false);
+                if (node.name !== "in") {
+                    node.parse(node.text, node.operatorContextType, false);
+                }
             }
         }
 
@@ -176,6 +179,12 @@ export class PatchImpl implements Patch {
             }
         } else {
             // we are at the base patch so skip all subpatches...
+            // only compile gl subpatches
+            for (let node of objectNodes) {
+                if (node.subpatch && node.subpatch.patchType === OperatorContextType.GL) {
+                    node.subpatch.recompileGraph(true);
+                }
+            }
         }
 
 
@@ -199,6 +208,14 @@ export class PatchImpl implements Patch {
             let audioInputs = this.getAllNodes().filter(node => node.name === "in").filter(node => !(node.patch as SubPatch).parentPatch.isZen);
             audioInputs.forEach(
                 input => input.receive(input.inlets[0], "bang"));
+
+            let parent = (this as Patch as SubPatch).parentPatch;
+            if (parent) {
+                let functions = parent.getAllNodes().filter(x => x.name === "function");
+                functions.forEach(
+                    x => x.receive(x.inlets[0], "bang"));
+
+            }
         }
 
         // first do any entry-point components
@@ -536,7 +553,7 @@ export class PatchImpl implements Patch {
 
 
                             }
-                            publish(e.data.type, [e.data.subType, e.data.body]);
+                            publish(e.data.type, [e.data.subType, e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body, this]);
                         };
 
                         let merger = this.audioContext.createChannelMerger(zenGraph.numberOfInputs);
@@ -571,6 +588,8 @@ export class PatchImpl implements Patch {
                         }
 
                         this.setupAudioNode(this.audioNode);
+                        let gain = this.audioContext.createGain();
+                        ret.workletNode.connect(gain);
 
                         if (this.setAudioWorklet) {
                             this.setAudioWorklet(ret.workletNode);
@@ -807,7 +826,16 @@ export class PatchImpl implements Patch {
            */
         }
 
-        console.log("FROM JSON PATCH=", this, x);
+        // now hydrate all presets
+        let nodes = this.getAllNodes();
+        let presets = nodes.filter(x => x.name === "preset");
+        for (let preset of presets) {
+            let custom = preset.custom as PresetManager;
+            if (custom) {
+                custom.hydrateSerializedPresets(nodes);
+            }
+        }
+
         return _connections;
     }
 

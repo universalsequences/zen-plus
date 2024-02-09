@@ -123,7 +123,8 @@ const ObjectCables: React.FC<{
                     setDraggingSegmentation={setDraggingSegmentation}
                     deleteConnection={deleteConnection}
                     setDraggingCable={setDraggingCable}
-                    key={i++} outletNumber={outletNumber} node={node} connection={connection} />;
+                    key={outletNumber + connection.source.id + '_' + connection.destination.id + '_' + i + '_' + '_' + dest.inlets.indexOf(connection.destinationInlet)
+                    } outletNumber={outletNumber} node={node} connection={connection} />;
                 if (selectedConnection === connection) {
                     selected.push(edge);
                 } else {

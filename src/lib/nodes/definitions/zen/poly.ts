@@ -12,16 +12,25 @@ doc(
         description: "calls a function multiple times ",
         numberOfInlets: (x: number) => x,
         numberOfOutlets: 1,
-        inletNames: ["arg1", "arg2", "arg2"]
+        inletNames: ["arg1", "arg2", "arg2"],
+        attributeOptions: {
+            "mode": ["sum", "pipe"]
+        }
     });
+
+type Mode = "pipe" | "sum";
+
 export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
     if (!node.attributes.voices) {
         node.attributes.voices = 6;
     }
 
+    if (!node.attributes["mode"]) {
+        node.attributes["mode"] = "sum";
+    }
+
     return (message: Message) => {
         let name = node.attributes["name"];
-
         let upstream = getUpstreamNodes(node.patch);
         let defuns = upstream.filter(x => x.name === "defun" &&
             x.attributes["name"] === name);
@@ -31,7 +40,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             return [];
         }
 
-        // defun needs a 
         let body = defun.storedMessage;
         if (!body) {
             return [];
@@ -39,9 +47,20 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
 
         let _args = args.map(x => x()).filter(x => x !== undefined);
         let voices = node.attributes.voices as number;
+        console.log('voices=', voices);
 
         let numBodies = (body as Statement[]).length - 1;
-        let sums = new Array(numBodies).fill(0)
+
+        let mode = node.attributes["mode"];
+        let outputs = mode === "sum" ? new Array(numBodies).fill(0) :
+            new Array(numBodies * voices).fill(0);
+
+        console.log("num bodies = ", numBodies, voices);
+        if (outputs.length < node.outlets.length) {
+            node.outlets = node.outlets.slice(0, outputs.length);
+            console.log('setting outlets to be less', node.outlets);
+        }
+        console.log('outlets=', node.outlets);
 
         let connect: number[] | undefined = node.attributes["connect"] as number[] | undefined;
 
@@ -61,10 +80,24 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
         }
 
         for (let invocation = 0; invocation < voices; invocation++) {
-
             let __args = [message, ..._args];
             if (Array.isArray(connect) && invocation > 0) {
                 __args[connect[0]] = previous as any;
+            }
+            if (node.attributes["inputs"] !== undefined) {
+                console.log("inputs =", node.attributes["inputs"]);
+                let inputs = Array.isArray(node.attributes["inputs"]) ? node.attributes["inputs"] as number[] : [node.attributes["inputs"] as number];
+                if (!inputs.includes(invocation)) {
+                    __args = __args.fill(0);
+                }
+            }
+            for (let i = 0; i < __args.length; i++) {
+                if (node.attributes[`in${i + 1}`] !== undefined) {
+                    let inputs = Array.isArray(node.attributes[`in${i + 1}`]) ? node.attributes[`in${i + 1}`] as number[] : [node.attributes[`in${i + 1}`] as number];
+                    if (!inputs.includes(invocation)) {
+                        __args[i] = 0;
+                    }
+                }
             }
             let ret = [
                 { name: "call", value: invocation },
@@ -79,7 +112,8 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             let rets: Statement[] = [];
             for (let i = 0; i < numBodies; i++) {
                 let nth: Statement = ["nth" as Operator, ret as Statement, i];
-                if (!node.outlets[i]) {
+                let outletIndex = mode === "sum" ? i : invocation * numBodies + i;
+                if (!node.outlets[outletIndex]) {
                     node.newOutlet();
                 }
                 // nth.node = { ...node, id: node.id + '_' + invocation + '_nth' };
@@ -88,18 +122,25 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
 
             if (Array.isArray(connect)) {
                 previous = rets[connect[0]];
-
             }
 
-            // now go thru the rets and add to sums
-            for (let i = 0; i < rets.length; i++) {
-                let addition: Statement = ["add" as Operator, sums[i], rets[i]];
-                // addition.node = { ...node, id: node.id + '_addition_' + i };
-                sums[i] = addition;
+            // now go thru the rets and add to outputs
+            if (mode === "sum") {
+                for (let i = 0; i < rets.length; i++) {
+                    let addition: Statement = ["add" as Operator, outputs[i], rets[i]];
+                    // addition.node = { ...node, id: node.id + '_addition_' + i };
+                    outputs[i] = addition;
+                }
+            } else {
+                // otherwise we're just piping
+                for (let i = 0; i < rets.length; i++) {
+                    outputs[invocation * numBodies + i] = rets[i];
+                }
             }
         }
 
-        return sums;
+        console.log("poly=", outputs);
+        return outputs;
     }
 }
 

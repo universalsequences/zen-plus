@@ -67,6 +67,8 @@ conditional_op(">", gl.gt, "gt");
 conditional_op(">=", gl.gte, "gte");
 conditional_op("<=", gl.lte, "lte");
 
+flexible_op("&&", 2, gl.and, "and");
+flexible_op("||", 2, gl.or, "or");
 flexible_op("+", 2, gl.add, "add");
 flexible_op('-', 2, gl.sub, "sub");
 flexible_op('*', 2, gl.mult, "mult");
@@ -78,9 +80,15 @@ strict_vec_op('length', 1, gl.length, GLType.Float);
 strict_vec_op('uv', 0, gl.uv, GLType.Vec2);
 strict_vec_op('nuv', 0, gl.nuv, GLType.Vec2);
 strict_vec_op('resolution', 0, gl.resolution, GLType.Vec2);
+strict_vec_op('red', 0, gl.red, GLType.Vec4);
+strict_vec_op('blue', 0, gl.blue, GLType.Vec4);
+strict_vec_op('green', 0, gl.green, GLType.Vec4);
+strict_vec_op('black', 0, gl.black, GLType.Vec4);
+strict_vec_op('white', 0, gl.white, GLType.Vec4);
 strict_vec_op('x', 1, gl.unpack("x"), GLType.Float, `unpack("x")`);
 strict_vec_op('y', 1, gl.unpack("y"), GLType.Float, `unpack("y")`);
 strict_vec_op('z', 1, gl.unpack("z"), GLType.Float, `unpack("z")`);
+strict_vec_op('w', 1, gl.unpack("w"), GLType.Float, `unpack("w")`);
 strict_vec_op('xy', 1, gl.unpack("xy"), GLType.Vec2, `unpack("xy")`);
 strict_vec_op('xyz', 1, gl.unpack("xyz"), GLType.Vec3, `unpack("xyz")`);
 strict_vec_op('xyy', 1, gl.unpack("xyy"), GLType.Vec3, `unpack("xyy")`);
@@ -92,6 +100,7 @@ flexible_op('sin', 1, gl.sin);
 flexible_op('cos', 1, gl.cos);
 flexible_op('floor', 1, gl.floor);
 flexible_op('abs', 1, gl.abs);
+flexible_op('fract', 1, gl.fract);
 flexible_op('sqrt', 1, gl.sqrt);
 flexible_op('max', 2, gl.max);
 flexible_op('min', 2, gl.min);
@@ -130,19 +139,16 @@ export const texture2D = (node: ObjectNode, coord: Lazy) => {
 doc(
     "sumLoop",
     {
-        numberOfInlets: 3,
-        inletNames: ["body", "iterations", "initialVal"],
+        numberOfInlets: 2,
+        inletNames: ["body", "iterations"],
         numberOfOutlets: 1,
         description: "iterates on body summing the result",
         fn: gl.sumLoop,
     });
 
-export const sumLoop = (node: ObjectNode, iterations: Lazy, initialVal: Lazy) => {
+export const sumLoop = (node: ObjectNode, iterations: Lazy) => {
     return (body: Message) => {
-        if ((body as Statement).type !== (initialVal() as Statement).type) {
-            // type error
-        }
-        let statement: Statement = ["sumLoop" as Operator, body as Statement, iterations() as Statement, initialVal() as Statement];
+        let statement: Statement = ["sumLoop" as Operator, body as Statement, iterations() as Statement];
         statement.node = node;
         statement.type = (body as Statement).type;
         return [statement];
@@ -204,15 +210,15 @@ export const zswitch = (node: ObjectNode, thenStatement: Lazy, elseStatement: La
 doc(
     "uniform",
     {
-        numberOfInlets: 3,
+        numberOfInlets: 4,
         numberOfOutlets: 1,
-        inletNames: ["value", "name", "size"],
+        inletNames: ["value", "name", "width", "height"],
         description: "uniform",
-        defaultValue: 4
+        defaultValue: 1
     }
 )
 
-export const gl_uniform = (node: ObjectNode, name: Lazy, size: Lazy) => {
+export const gl_uniform = (node: ObjectNode, name: Lazy, width: Lazy, height: Lazy) => {
     node.needsLoad = true;
 
     node.attributeOptions["type"] = ["float", "Sampler2D"];
@@ -231,9 +237,10 @@ export const gl_uniform = (node: ObjectNode, name: Lazy, size: Lazy) => {
             if (_type === GLType.Float) {
                 uniform = gl.uniform(GLType.Float, defaultValue);
             } else {
-                let _size = size() as number;
-                let initialData = new Array(_size * 4).fill(0);
-                uniform = gl.uniform(GLType.Sampler2D, initialData, _size, node.attributes["feedback"] ? true : false);
+                let _width = width() as number;
+                let _height = height() as number;
+                let initialData = new Array(_width * _height).fill(0);
+                uniform = gl.uniform(GLType.Sampler2D, initialData, _width, _height, node.attributes["feedback"] ? true : false);
             }
         }
 
@@ -242,7 +249,7 @@ export const gl_uniform = (node: ObjectNode, name: Lazy, size: Lazy) => {
             message = parseFloat(split[1]);
         }
 
-        if (typeof message === "number" || Array.isArray(message)) {
+        if (typeof message === "number" || Array.isArray(message) || ArrayBuffer.isView(message)) {
             uniform.set!(message as (number | number[]));
             node.storedMessage = message;
             return [];
@@ -343,6 +350,29 @@ export const argument = (node: ObjectNode, name: Lazy, num: Lazy, type: Lazy) =>
         return [statement];
     };
 };
+
+doc(
+    'loopAccumulator',
+    {
+        inletNames: ["initialValue", "name"],
+        numberOfInlets: 2,
+        numberOfOutlets: 1,
+        description: "creates argument for function"
+    });
+
+export const loopAccumulator = (node: ObjectNode, name: Lazy) => {
+    return (message: Message) => {
+        let statement: Statement = [{ name: "loopAccumulator" } as CompoundOperator, name() as unknown as Statement, message as Statement];
+        statement.node = node;
+
+        // we have the type...
+        statement.type = (message as Statement).type;
+        console.log("loop accumulator type=", statement, message);
+        return [statement];
+    };
+};
+
+
 
 doc(
     'mat2',
@@ -504,6 +534,10 @@ export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: La
         objectNode.attributes["draw type"] = "TRIANGLE_STIP";
     }
 
+    if (!objectNode.attributes["fps"]) {
+        objectNode.attributes["fps"] = 40;
+    }
+
     objectNode.attributeOptions = {
         "draw type": ["TRIANGLE_STRIP", "LINE_STRIP"]
     };
@@ -575,7 +609,8 @@ export const api: API = {
     sumLoop,
     texture2D,
     switch: zswitch,
-    breakIf: breakIf
+    breakIf: breakIf,
+    loopAccumulator
 };
 
 

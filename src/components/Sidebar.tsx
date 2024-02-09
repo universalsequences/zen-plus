@@ -48,7 +48,7 @@ const Sidebar = () => {
         onMouseDown={(e: any) => e.stopPropagation()}
         onClick={(e: any) => e.stopPropagation()}
         className={
-            "bg-toolbar fixed top-12 right-0 flex sidebar " + (opened ? "opened-sidebar" : "")}
+            "transition-all duration-300 ease-in-out bg-toolbar fixed top-12 right-0 flex sidebar " + (opened ? "opened-sidebar" : "")}
     >
         <div
             onClick={() => {

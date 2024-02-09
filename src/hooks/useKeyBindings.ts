@@ -12,7 +12,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     let { setLockedMode, lockedMode, setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
     let { updatePosition, setPreparePresentationMode, deletePositions, sizeIndexRef, presentationMode, setPresentationMode } = usePosition();
     let { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } = usePatch();
-    let { switchTileDirection, expandPatch, liftPatchTile, setPatches, selectedPatch } = usePatches();
+    let { goToParentTile, goToPreviousPatch, resizeTile, switchTileDirection, expandPatch, liftPatchTile, setPatches, selectedPatch } = usePatches();
     const counter1 = useRef(0);
 
     const segmentSelectedCable = useCallback((cable: IOConnection) => {
@@ -60,7 +60,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     }, []);
 
     const onKeyDown = useCallback((e: any) => {
-        if (e.target && ((e.target as HTMLElement).tagName.toLowerCase() === "input" ||
+        if (!e.metaKey && e.target && ((e.target as HTMLElement).tagName.toLowerCase() === "input" ||
             (e.target as HTMLElement).tagName.toLowerCase() === "textarea")
         ) {
             return;
@@ -134,6 +134,27 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
             e.preventDefault();
             switchTileDirection();
         }
+
+        if (e.key === "ArrowUp" && e.metaKey) {
+            e.preventDefault();
+            goToParentTile();
+        }
+
+        if (e.key === "ArrowDown" && e.metaKey) {
+            e.preventDefault();
+            goToPreviousPatch();
+        }
+
+        if (e.key === "ArrowLeft" && e.metaKey) {
+            e.preventDefault();
+            resizeTile(1);
+        }
+
+        if (e.key === "ArrowRight" && e.metaKey) {
+            e.preventDefault();
+            resizeTile(-1);
+        }
+
         if (e.key === "y" && e.metaKey && selectedConnection) {
             e.preventDefault();
             segmentSelectedCable(selectedConnection);

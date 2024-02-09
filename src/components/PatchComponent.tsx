@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { usePatchLoader } from '@/hooks/usePatchLoader';
+import { getUpdatedSize } from '@/lib/utils';
 import AssistantSidebar from './AssistantSidebar';
 import { useTilesContext } from '@/contexts/TilesContext';
 import PatchInner from './PatchInner';
@@ -31,7 +33,7 @@ interface Selection {
     y2: number;
 }
 
-const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView, maxWidth, maxHeight }) => {
+const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToOpen: any | null, maxWidth: number, maxHeight: number, visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView, maxWidth, maxHeight, fileToOpen, setFileToOpen }) => {
     useThemeContext();
     const { rootTile, selectedPatch, setSelectedPatch, setGridTemplate } = usePatches();
     const { gridTemplate } = useTilesContext();
@@ -42,6 +44,23 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         lockedMode,
         selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
     const { onNewMessage } = useMessage();
+
+    const {
+        segmentCable,
+        updateConnections,
+        registerConnection,
+        patch, objectNodes, messageNodes, newObjectNode } = usePatch();
+
+    const { loadProjectPatch, loadProject } = usePatch();
+
+    const loadPatch = usePatchLoader(patch);
+
+    useEffect(() => {
+        if (fileToOpen) {
+            loadPatch(fileToOpen);
+            setFileToOpen(null);
+        }
+    }, [fileToOpen]);
 
 
     useEffect(() => {
@@ -69,6 +88,8 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
         nearestInlet,
         setNearestInlet,
         draggingSegmentation,
+        setSize,
+        size
     } = usePosition();
 
     let { zoom, zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
@@ -76,14 +97,6 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
     if (isCustomView) {
         presentationMode = true;
     }
-
-    const {
-        deleteNodes,
-        segmentCable,
-        segmentCables,
-        updateConnections,
-        registerConnection,
-        patch, objectNodes, messageNodes, newObjectNode, newMessageNode } = usePatch();
 
     useEffect(() => {
         patch.onNewMessage = onNewMessage;
@@ -445,10 +458,12 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             newObjectNode(objectNode, position);
             updatePosition(objectNode.id, position);
             setSelection(null);
+            console.log('setting size...');
+            setSize(getUpdatedSize(objectNode, size));
         } else {
         }
         lastClick.current = now;
-    }, [setSelectedNodes, selection, setSelectedConnection, setSelection, patch]);
+    }, [setSelectedNodes, size, setSize, selection, setSelectedConnection, setSelection, patch]);
 
     useEffect(() => {
         let positions: Coordinates = {};
@@ -563,7 +578,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             _maxHeight = 100;
         }
 
-        let animation = `${_direction}-slide-${patch.id} 0.5s ease`;
+        let animation = `${_direction}-slide-${patch.id} 0.2s ease`;
 
         let style: any = isCustomView ? {} : { animation, maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%' };
         let isFloatingCustom = false;
@@ -572,18 +587,19 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
             if (node.attributes["Custom Presentation"] && node.size && presentationMode) {
                 let parent = (patch as SubPatch).parentPatch;
                 let parentNode = (parent as SubPatch).parentNode;
-                if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
-                    isFloatingCustom = lockedMode;
-                    style = {
-                        width: node.size.width + 'px',
-                        height: node.size.height + 'px',
-                        maxWidth: node.size.width + 'px',
-                        maxHeight: node.size.height + 'px',
-                        margin: "auto",
-                    };
-                }
+                //if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
+                isFloatingCustom = lockedMode;
+                style = {
+                    width: node.size.width + 'px',
+                    height: node.size.height + 'px',
+                    maxWidth: node.size.width + 'px',
+                    maxHeight: node.size.height + 'px',
+                    margin: "auto",
+                };
+                // }
             }
         }
+
         return (<>
             <style dangerouslySetInnerHTML={{ __html: keyframe }} />
             <div
@@ -592,7 +608,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                 onMouseUp={isCustomView ? undefined : onMouseUp}
                 onMouseMove={onSelectionMove}
                 onMouseDown={onMouseDown}
-                className={cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-100 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
+                className={(tile && tile.parent && tile.parent.children.length === 1 ? "transition-all " : "") + "transition-colors duration-300 ease-in-out " + cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-100 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
 
                 }>
                 {!isCustomView && <>
@@ -649,7 +665,7 @@ const PatchComponent: React.FC<{ maxWidth: number, maxHeight: number, visibleObj
                         {selectedPatch === patch ? <Toolbar patch={patch} /> : ''}
                     </>
                 }
-            </div>
+            </div >
         </>);
     }, [draggingCable, nearestInlet, setNearestInlet, maxWidth, setDraggingCable, gridTemplate, maxHeight, selectedPatch, visibleObjectNodes, index, isCustomView, selection, rootTile, lockedMode, presentationMode, lockedMode]);
 
