@@ -10,8 +10,8 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
     return (
         <div>
             <div
-                style={{ top: (height + 20) - Math.min(height + 20, scrollTop) }}
-                className="fixed h-full min-h-screen w-10 md:w-16 border-r border-r-zinc-700 bg-black z-30 flex flex-col">
+                style={{ top: scrollTop < height + 20 ? height + 20 : 0 }} //scrollTop < height: height(height + 20) - Math.min(height + 20, scrollTop) }}
+                className={(scrollTop < height ? "absolute" : "fixed") + " h-full min-h-screen w-10 md:w-16 border-r border-r-zinc-700 bg-black z-30 flex flex-col"}>
                 <img src="dotdash7.svg" className="absolute top-0 h-16 mx-auto mt-5 left-0 right-0" />
                 <div style={{ transform: "rotate(-90deg) translate(0px,0px)" }} className="my-auto ">
                     zen+
