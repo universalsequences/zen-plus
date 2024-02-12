@@ -50,12 +50,12 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             <div><span className="text-white">+</span> share your work to the world </div>
                         </div>
                     </div>
-                    <div style={{ opacity: ratio3, transform: `translate(0px, ${500 - 500 * ratio}px)` }} className="mx-2 md:mx-auto md:w-full w-80 md:my-auto mt-10 md:mt-20 flex p-4 bg-zinc-800 rounded-xl  flex">
-                        <img className="h-full w-full object-contain" src="patching-heaven.png" />
+                    <div style={{ opacity: ratio3, transform: `translate(0px, ${500 - 500 * ratio}px)` }} className="mx-2 md:mx-auto md:w-full w-80 md:my-auto mt-10 md:mt-20 flex p-1 bg-zinc-800 rounded-xl  flex">
+                        <img className="h-full w-full object-contain rounded-lg" src="patching-heaven.png" />
                     </div>
                 </div>
             </Detail>
-            <Detail textClassName="text-zen-blue" header="FLEXIBLE MODULAR SYNTHESIS" isMax={true}>
+            <Detail backgroundColor="#050513" textClassName="text-zen-blue" header="FLEXIBLE MODULAR SYNTHESIS" isMax={true}>
                 <div >
                     <div className="flex md:flex-row flex-col">
                         <div>
@@ -79,11 +79,11 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                         </div>
                         <div
                             style={{ transform: `translate(0px, ${500 - 500 * ratio2}px)` }}
-                            className="md:w-96 w-72 mx-4 md:mx-auto md:mt-0 mt-10 md:mt-20 flex p-4 bg-zinc-800 rounded-xl ">
-                            <img className="object-contain" src="sound-lab.png" />
+                            className="md:w-96 w-72 mx-4 md:mx-auto md:mt-0 mt-10 md:mt-20 flex p-1 bg-zinc-800 rounded-xl ">
+                            <img className="object-contain rounded-lg" src="sound-lab.png" />
                         </div>
                     </div>
-                    <img src="curve2.svg" className="mx-auto w-3/4 my-20" />
+                    <img src="curve2.svg" className="mx-auto w-3/4 mt-20 pb-20" />
                 </div>
             </Detail >
 
@@ -106,8 +106,8 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             </div>
                         </div>
                     </div>
-                    <div className="mx-2 md:mx-auto  flex p-4 bg-zinc-900 rounded-xl h-28 md:h-72 items-start">
-                        <img className="w-full h-full  object-contain" src="revision-history.png" />
+                    <div className="mx-2 md:mx-auto  flex p-1 bg-zinc-900 rounded-xl h-28 md:h-72 items-start">
+                        <img className="w-full h-full  rounded-lg object-contain" src="revision-history.png" />
                     </div>
                 </div>
             </Detail >
@@ -139,8 +139,8 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             <div><span className="text-white">+</span> Mint on the Zora Network (a low-cost Ethereum L2)</div>
                         </div>
                     </div>
-                    <div className="mx-4 md:mx-auto  flex p-4 md:mt-0 mt-10 md:mt-20 bg-zinc-800 rounded-xl w-80 md:w-96 ">
-                        <img className="object-contain" src="onchain-export.png" />
+                    <div className="mx-4 md:mx-auto  flex p-1 md:mt-0 mt-10 md:mt-20 bg-zinc-800 rounded-xl w-80 md:w-96 ">
+                        <img className="object-contain rounded-lg" src="onchain-export.png" />
                     </div>
                 </div>
             </Detail >
@@ -160,8 +160,8 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
     );
 };
 
-const Detail: React.FC<{ opacity?: number, isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true, opacity }) => {
-    return <div style={isMax ? { opacity: opacity, minHeight: "100vh" } : {}} className=" ml-10 md:ml-10 pt-10 md:pt-20 border-t border-t-zinc-800 px-5 md:px-20 font-semibold text-zinc-500 ">
+const Detail: React.FC<{ backgroundColor?: string, opacity?: number, isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true, opacity, backgroundColor }) => {
+    return <div style={isMax ? { backgroundColor, opacity: opacity, minHeight: "100vh" } : { backgroundColor }} className=" ml-10 md:ml-10 pt-10 md:pt-20 border-t border-t-zinc-800 px-5 md:px-20 font-semibold text-zinc-500 ">
         <div className={"mb-10 " + textClassName}>
             {header}
         </div>
