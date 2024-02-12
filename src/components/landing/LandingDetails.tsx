@@ -147,8 +147,10 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
 
             <Detail header="" textClassName="text-white" isMax={false}>
                 <div className="flex text-white text-center flex-col">
-                    <img className="w-3/4 mx-auto my-20" src="dotdash.svg" />
-                    <img className="spin w-1/4 mx-auto my-20" src="dotdashcircle.svg" />
+                    <div className="flex">
+                        <img className="w-1/2 mx-auto my-auto" src="dotdash.svg" />
+                        <img className="spin w-1/4 mx-auto my-auto" src="dotdashcircle.svg" />
+                    </div>
                     <img src="rainbow-logo.png" className="w-52 mx-auto my-40" />
                 </div>
             </Detail>
