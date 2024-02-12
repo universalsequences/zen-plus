@@ -115,7 +115,9 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 <svg
                     ref={ref}
                     className="my-auto bg-black" width={width} height={height}>
-                    {paths.map((d, i) => <g className="transitioncolors active:stroke-red-500 hover:stroke-red-500">
+                    {paths.map((d, i) => <g
+                        key={i}
+                        className="transitioncolors active:stroke-red-500 hover:stroke-red-500">
                         <path
                             onMouseDown={(e: any) => {
                                 if (lockedMode) {
@@ -135,8 +137,10 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                     </g>
                     )}
                     {points.map(
-                        point =>
-                            <g className="hover:fill-red-500 transition-colors">
+                        (point, i) =>
+                            <g
+                                key={i}
+                                className="hover:fill-red-500 transition-colors">
                                 <circle
                                     onMouseDown={(e: any) => {
                                         e.stopPropagation();

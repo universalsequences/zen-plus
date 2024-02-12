@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import ShaderBackground from './ShaderBackground';
 import LandingDetails from './LandingDetails';
 import ShaderLanding from './ShaderLanding';
 import LoginButton from './LoginButton';
@@ -9,19 +10,52 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNav, NavOption } from '@/contexts/NavContext';
 
 export const Landing = () => {
+    const scrollRef = useRef<HTMLDivElement>(null);
     const { navOption, setNavOption } = useNav();
     const { user, googleSignIn } = useAuth();
     const [showNav, setShowNav] = useState(true);
 
+    let [scrollTop, setScrollTop] = useState(0);
+    let [height, setHeight] = useState(1000);
+
+    useEffect(() => {
+        window.addEventListener("resize", onResize);
+        return () => {
+            window.removeEventListener("resize", onResize);
+        };
+    }, [setHeight]);
+
+    const onResize = useCallback(() => {
+        setHeight(window.innerHeight);
+    }, [setHeight]);
+
+    useEffect(() => {
+        setHeight(window.innerHeight);
+    }, []);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.addEventListener("scroll", onScroll);
+        }
+        return () => {
+            if (scrollRef.current) {
+                scrollRef.current.removeEventListener("scroll", onScroll);
+            }
+        };
+    }, [setScrollTop]);
+    const onScroll = useCallback(() => {
+        if (scrollRef.current) {
+            let scrollTop = scrollRef.current.scrollTop
+            setScrollTop(scrollTop);
+        }
+    }, [setScrollTop]);
+
     React.useEffect(() => {
-        console.log('user navoption', user, navOption);
         if (user && navOption === NavOption.Home) {
-            console.log('setting to files');
             setNavOption(NavOption.Files);
         }
     }, [setShowNav, user, navOption]);
 
-    console.log("navOption=", navOption);
     return <div
         className={"overflow-scroll flex bg-black w-full h-full min-h-screen " + (false ? "light-mode" : "")}>
 
@@ -30,25 +64,26 @@ export const Landing = () => {
 
         {
             navOption === NavOption.Home ? <>
-                <div className="flex flex-col w-full min-h-screen overflow-y-scroll overflow-x-hidden max-h-screen relative">
-                    {showNav && <div className="absolute top-10 left-20 h-16 z-30 "><Nav /></div>
+                <div ref={scrollRef} className="flex flex-col w-full min-h-screen overflow-y-scroll overflow-x-hidden max-h-screen relative">
+                    {showNav && <div className="absolute top-10 left-10  h-16 z-30 "><Nav /></div>
                     }
-                    <div style={{ minHeight: "100vh" }} className="flex flex-col w-full mt-5 patches justify-center relative h-full">
-                        <div className="text-6xl text-center w-64 h-64 m-auto flex">
-                            <span className="m-auto tracking-tight bg-zinc-400 p-5 rounded-3xl">
-                                <img src="zendotdash.svg" />
-                            </span>
+                    <div style={{ minHeight: "100vh" }} className="flex flex-col w-full mt-5  justify-center relative h-full">
+                        <div style={{ transform: "translate(0, 100px)" }} className="text-6xl text-center w-64 h-64  m-auto flex">
+                            <div className="m-auto w-64 h-30  tracking-tight p-5 rounded-3xl overflow-hidden relative flex">
+                                <ShaderBackground scrollTop={scrollTop} height={height} />
+                                <img className="m-auto z-30" src="zendotdash.svg" />
+                            </div>
 
                         </div>
                         <LoginButton />
-                        <div className="absolute bottom-5 left-10 p-10 w-96 text-zinc-600">
+                        <div className="absolute bottom-5 left-0 p-10 w-96 text-zinc-600">
                             <span className="text-white">zen+</span> is a visual programming environment for creating <span className="text-white">AV</span> works
                         </div>
                         <div className="absolute bottom-5 right-5 p-10 w-40  text-zinc-600">
                             based on the open-source <span className="text-white">zen</span> programming toolkit
                         </div>
                     </div>
-                    <LandingDetails />
+                    <LandingDetails scrollRef={scrollRef} scrollTop={scrollTop} height={height} />
                 </div>
             </> :
                 navOption === NavOption.Docs ? < Documentation /> :

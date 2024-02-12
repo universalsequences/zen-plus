@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 
-const LandingDetails = () => {
+const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: React.MutableRefObject<HTMLDivElement | null> }> = ({ scrollRef, scrollTop, height }) => {
+
+    let ratio = Math.min(1, Math.pow(scrollTop / height, .5));
+    let ratio4 = Math.min(1, Math.pow(scrollTop / height, .25));
+    let ratio3 = Math.min(1, Math.pow(scrollTop / height, 2));
+    let ratio2 = Math.min(1, Math.pow((scrollTop - 0.8 * height) / (0.8 * height), .5));
+
     return (
         <div>
-            <div className="fixed h-full min-h-screen w-16 border-r border-r-zinc-700 bg-black z-30 top-0 flex flex-col">
+            <div
+                style={{ top: (height + 20) - Math.min(height + 20, scrollTop) }}
+                className="fixed h-full min-h-screen w-16 border-r border-r-zinc-700 bg-black z-30 flex flex-col">
                 <img src="dotdash7.svg" className="absolute top-0 h-16 mx-auto mt-5 left-0 right-0" />
                 <div style={{ transform: "rotate(-90deg) translate(0px,0px)" }} className="my-auto ">
                     zen+
@@ -11,8 +19,9 @@ const LandingDetails = () => {
                 <img src="dotdash7.svg" className="h-16 absolute bottom-0 left-0 right-0 mx-auto mt-auto mb-5" />
             </div>
 
-            <Detail header="PATCHING HEAVEN" textClassName="text-zen-violet" isMax={true}>
-                <div className="flex md:flex-row flex-col content-start object-fit items-start">
+            <Detail opacity={ratio4} header="PATCHING HEAVEN" textClassName="text-zen-violet" isMax={true}>
+                <div
+                    className="flex md:flex-row flex-col content-start object-fit items-start mb-20">
                     <div className="mr-40">
                         <div className="text-3xl w-80">
                             A sandbox for <span className="text-white">audio visual</span> exploration.
@@ -41,13 +50,13 @@ const LandingDetails = () => {
                             <div><span className="text-white">+</span> share your work to the world </div>
                         </div>
                     </div>
-                    <div className="mx-auto md:my-auto mt-20 flex p-4 bg-zinc-800 rounded-xl  flex">
+                    <div style={{ opacity: ratio3, transform: `translate(0px, ${500 - 500 * ratio}px)` }} className="mx-auto md:my-auto mt-20 flex p-4 bg-zinc-800 rounded-xl  flex">
                         <img className="h-full w-full object-contain" src="patching-heaven.png" />
                     </div>
                 </div>
             </Detail>
             <Detail textClassName="text-zen-blue" header="FLEXIBLE MODULAR SYNTHESIS" isMax={true}>
-                <div>
+                <div >
                     <div className="flex md:flex-row flex-col">
                         <div>
                             <div style={{ width: 450 }} className="text-3xl">
@@ -68,7 +77,9 @@ const LandingDetails = () => {
                                 <div><span className="text-white">+</span> learn new sound design techniques in realtime.</div>
                             </div>
                         </div>
-                        <div className="md:w-96 w-72 mx-auto md:mt-0 mt-20 mx-auto flex p-4 bg-zinc-800 rounded-xl ">
+                        <div
+                            style={{ transform: `translate(0px, ${500 - 500 * ratio2}px)` }}
+                            className="md:w-96 w-72 mx-auto md:mt-0 mt-20 mx-auto flex p-4 bg-zinc-800 rounded-xl ">
                             <img className="object-contain" src="sound-lab.png" />
                         </div>
                     </div>
@@ -137,7 +148,7 @@ const LandingDetails = () => {
             <Detail header="" textClassName="text-white" isMax={false}>
                 <div className="flex text-white text-center flex-col">
                     <img className="w-3/4 mx-auto my-20" src="dotdash.svg" />
-                    <img className="w-1/4 mx-auto my-20" src="dotdashcircle.svg" />
+                    <img className="spin w-1/4 mx-auto my-20" src="dotdashcircle.svg" />
                     <img src="rainbow-logo.png" className="w-52 mx-auto my-40" />
                 </div>
             </Detail>
@@ -147,8 +158,8 @@ const LandingDetails = () => {
     );
 };
 
-const Detail: React.FC<{ isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true }) => {
-    return <div style={isMax ? { minHeight: "100vh" } : {}} className="w-full ml-10 mt-10 pt-20 border-t border-t-zinc-800 px-20 font-semibold text-zinc-500 ">
+const Detail: React.FC<{ opacity?: number, isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true, opacity }) => {
+    return <div style={isMax ? { opacity: opacity, minHeight: "100vh" } : {}} className="w-full ml-10 pt-20 border-t border-t-zinc-800 px-20 font-semibold text-zinc-500 ">
         <div className={"mb-10 " + textClassName}>
             {header}
         </div>

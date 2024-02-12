@@ -97,7 +97,7 @@ const SavePatch: React.FC<{ patch: Patch, hide: () => void }> = ({ hide, patch }
                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126 96"
                 ref={ref} width={126} height={96} className="bg-zinc-900 rounded-lg mx-auto my-10">
                 {patch.objectNodes.map(
-                    x => <rect x={126 * x.position.x / maxX} y={96 * x.position.y / maxY} fill={x.operatorContextType === OperatorContextType.CORE ? "blue" : x.operatorContextType === OperatorContextType.AUDIO ? "yellow" : x.operatorContextType === OperatorContextType.GL ? "violet" : "gray"} width={6} height={2} />)}
+                    (x, i) => <rect key={i} x={126 * x.position.x / maxX} y={96 * x.position.y / maxY} fill={x.operatorContextType === OperatorContextType.CORE ? "blue" : x.operatorContextType === OperatorContextType.AUDIO ? "yellow" : x.operatorContextType === OperatorContextType.GL ? "violet" : "gray"} width={6} height={2} />)}
             </svg>
             <div className="save-connect" style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
                 <Dialog.Close asChild>
