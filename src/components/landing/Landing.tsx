@@ -38,12 +38,13 @@ export const Landing = () => {
         return () => {
             window.removeEventListener("scroll", onScroll);
         };
-    }, [setScrollTop]);
+    }, [setScrollTop, setHeight]);
 
     const onScroll = useCallback(() => {
         let scrollTop = window.scrollY;
         setScrollTop(scrollTop);
-    }, [setScrollTop]);
+        setHeight(window.innerHeight);
+    }, [setScrollTop, setHeight]);
 
     React.useEffect(() => {
         if (user && navOption === NavOption.Home) {
