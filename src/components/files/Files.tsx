@@ -69,21 +69,21 @@ const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void 
 
     return <Skeleton>
         <div className="w-full h-32 border-b border-b-zinc-700 flex flex-col">
-            <div className="flex pl-5 pt-10 pr-10 pb-5">
+            <div className="flex pl-5 pr-10 content-start my-auto">
 
-                <div className="ml-5 relative">
+                <div className="ml-5 relative my-auto">
                     <input value={searchText} onChange={(e: any) => setSearchText(e.target.value)} className="pl-10 rounded-lg bg-zinc-800 border border-zinc-700 outline-none py-2 w-64" type="text" />
                     <MagnifyingGlassIcon className="absolute left-2 top-0 bottom-0 my-auto w-6 h-6" />
                 </div>
-                <button onClick={goToEditor} className="ml-10 active:scale-105 bg-violet-700 text-xs rounded-md px-3 py-3 flex cursor-pointer transition-colors hover:bg-violet-500">
+                <button onClick={goToEditor} className="ml-10 active:scale-105 bg-violet-700 text-xs rounded-md px-3 py-1 flex cursor-pointer transition-colors hover:bg-violet-500">
 
                     <PlusCircledIcon className="w-5 h-5 mr-3 my-auto" />
                     <div className="my-auto">
                         New Project
                     </div>
                 </button>
-                <div className="text-base ml-auto mr-8 my-auto text-zinc-400">
-                    zen+
+                <div className="text-base ml-auto mr-8 my-auto text-zinc-400 bg-zinc-400 rounded-xl p-2">
+                    <img src="/zendotdash.svg" className="h-8" />
                 </div>
             </div>
         </div>
@@ -158,7 +158,8 @@ const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void 
                         }
                     }} className={(x === fileExpanded ? "bg-zinc-700 rounded-lg " : "") + "flex flex-col m-3 text-sm border-zinc-800 border hover:border-zinc-200 transition-all p-5 cursor-pointer"}>
                     <div className="w-72 h-40  mb-5 hover:bg-zinc-700 transition-colors bg-zinc-800 rounded-lg relative overflow-hidden">
-                        {x.screenshot && <Image alt="test" width={126} height={70} src={x.screenshot} className="w-full h-full object-cover" />}
+                        {/*x.screenshot && <Image alt="test" width={126} height={70} src={x.screenshot} className="w-full h-full object-cover" />*/}
+                        {x.screenshot && <img src={x.screenshot} className="w-full h-full object-cover" />}
                         {x.commits && <div
                             onClick={(e: any) => { e.stopPropagation(); setRevisions([]); setFileExpanded(x) }}
                             style={x.screenshot ? { backgroundColor: "#ffffffa3", backdropFilter: "blur(9px)", color: "#3d3d3d" } : {}}

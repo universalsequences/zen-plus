@@ -21,6 +21,10 @@ export const slider = (node: ObjectNode) => {
             height: 80
         };
     }
+
+    if (!node.attributes["fillColor"]) {
+        node.attributes["fillColor"] = "#ff0000";
+    }
     let custom: MutableValue;
     if (!node.custom) {
         custom = new MutableValue(node, 0);

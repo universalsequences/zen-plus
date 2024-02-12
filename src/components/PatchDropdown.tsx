@@ -7,6 +7,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import LoadProject from './LoadProject';
 import * as Dialog from '@radix-ui/react-dialog';
+import SavePatch from './storage/SavePatch';
 import { useStorage } from '@/contexts/StorageContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { DropdownMenu } from '@radix-ui/themes';
@@ -130,8 +131,11 @@ const PatchDropdown = React.memo((props: Props) => {
                                             o.subpatch.disconnectGraph();
                                         }
                                     }
+                                    p.previousDocId = undefined;
+                                    p.previousSerializedPatch = undefined;
                                     p.objectNodes = [];
                                     p.messageNodes = [];
+                                    window.history.pushState(null, '', `/`);
                                     setNavOption(NavOption.Files);
                                 }}
                                 className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
@@ -179,8 +183,19 @@ const PatchDropdown = React.memo((props: Props) => {
                             </DropdownMenu.Item>}
                             <DropdownMenu.Item
                                 onClick={() => {
-                                    setNavOption(NavOption.Home);
-                                    logout();
+                                    let p = patch as SubPatch;
+                                    while (p.parentPatch) {
+                                        p = p.parentPatch as SubPatch;
+                                    }
+                                    for (let x of p.objectNodes) {
+                                        if (x.subpatch) {
+                                            x.subpatch.disconnectGraph();
+                                        }
+                                    }
+                                    logout().then(
+                                        () => {
+                                            setNavOption(NavOption.Home);
+                                        });
                                 }}
                                 className="DropdownMenuItem flex cursor-pointer pointer-events-auto">
                                 Logout
@@ -231,27 +246,7 @@ const PatchDropdown = React.memo((props: Props) => {
                                         </Dialog.Close>
                                     </div>
                                 </> :
-                                    option === Option.Save ? <>
-                                        <fieldset className="Fieldset">
-                                            <label className="Label mr-4" htmlFor="name">
-                                                Name
-                                            </label>
-                                            <input
-                                                style={{ borderBottom: "1px solid #4f4f4f" }}
-                                                className="Input px-2 bg-black-clear text-white outline-none"
-                                                placeholder="Enter name to save"
-                                                value={name}
-                                                onChange={
-                                                    (e: any) => setName(e.target.value)} defaultValue="" />
-                                        </fieldset>
-                                        <div className="save-connect" style={{ display: 'flex', marginTop: 25, justifyContent: 'flex-end' }}>
-                                            <Dialog.Close asChild>
-                                                <button
-                                                    onClick={save}
-                                                    className="bg-black px-2 py-1 text-white rounded-full">Save changes</button>
-                                            </Dialog.Close>
-                                        </div>
-                                    </> :
+                                    option === Option.Save ? <SavePatch patch={patch} hide={() => setOption(null)} /> :
                                         <>
                                             <LoadProject hide={() => setOption(null)} isSubPatch={isSubPatch} patch={patch} />
                                         </>}

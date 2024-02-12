@@ -11,7 +11,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { NavProvider } from '@/contexts/NavContext';;
 import { TilesProvider } from '@/contexts/TilesContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
-import { StorageProvider } from '@/contexts/StorageContext';
+import { useStorage } from '@/contexts/StorageContext';
 import { PatchesProvider } from '@/contexts/PatchesContext';
 import { SelectionProvider } from '@/contexts/SelectionContext';
 import PatchesComponent from '@/components/PatchesComponent';
@@ -56,23 +56,41 @@ const wagmiConfig = createConfig({
     publicClient
 })
 
-export default function App() {
+interface Props {
+    projectId?: string;
+}
+
+export default function App(props: Props) {
     let [basePatch, setBasePatch] = useState<Patch | null>(null);
     let [fileToOpen, setFileToOpen] = useState<any | null>(null);
     let [fileOpened, setFileOpened] = useState<any | null>(null);
+    const { fetchProject } = useStorage();
     useEffect(() => {
         setBasePatch(new PatchImpl(new AudioContext({ sampleRate: 44100 })));
     }, [setBasePatch]);
+
     useEffect(() => {
         if (fileToOpen) {
             setFileOpened(fileToOpen);
         }
     }, [fileToOpen, setFileOpened]);
 
-    useEffect(() => {
-    }, []);
     const { user } = useAuth();
-    const { navOption } = useNav();
+    const { setNavOption, navOption } = useNav();
+
+    useEffect(() => {
+        if (user && props.projectId) {
+            setNavOption(NavOption.Editor);
+            fetchProject(props.projectId, user.email).then(
+                file => {
+                    if (file) {
+                        setFileToOpen(file);
+                    }
+                });
+
+        }
+    }, [setFileToOpen, user]);
+
     if (navOption === NavOption.Home || navOption === NavOption.Works ||
         navOption === NavOption.Docs) {
         return <Landing />;
@@ -81,24 +99,22 @@ export default function App() {
         return <></>;
     }
     if (navOption === NavOption.Files && user) {
-        return <StorageProvider>
-            <Files fileOpened={fileOpened} setFileToOpen={setFileToOpen} />
-        </StorageProvider>
+        return <Files fileOpened={fileOpened} setFileToOpen={setFileToOpen} />
+
     }
     return (
         <SettingsProvider>
             <MessageProvider>
-                <StorageProvider>
-                    <SelectionProvider>
-                        <PatchesProvider basePatch={basePatch}>
-                            <TilesProvider>
-                                <main className="flex min-h-screen flex-col h-full w-full">
-                                    <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
-                                </main>
-                            </TilesProvider>
-                        </PatchesProvider>
-                    </SelectionProvider>
-                </StorageProvider>
+                <SelectionProvider>
+                    <PatchesProvider basePatch={basePatch}>
+                        <TilesProvider>
+                            <main className="flex min-h-screen flex-col h-full w-full">
+                                <PatchesComponent
+                                    fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
+                            </main>
+                        </TilesProvider>
+                    </PatchesProvider>
+                </SelectionProvider>
             </MessageProvider>
         </SettingsProvider>
     )

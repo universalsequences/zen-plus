@@ -92,7 +92,7 @@ const PatchesComponent: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: an
                 {showSearch && <SearchWindow hide={() => setShowSearch(false)} />}
             </div >
         </>
-    }, [patches, user, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode]);
+    }, [patches, user, rootTile, selectedPatch, selection, setSelection, gridTemplate, showSearch, setShowSearch, lightMode, fileToOpen, setFileToOpen]);
 
 }
 

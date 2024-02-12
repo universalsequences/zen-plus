@@ -5,7 +5,7 @@ import { auth } from '@/lib/db/firebase';
 interface IAuthContext {
     user: any;
     googleSignIn: () => void;
-    logout: () => void;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<IAuthContext | undefined>(undefined);
@@ -29,7 +29,8 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     };
 
     const logout = () => {
-        signOut(auth);
+        console.log('signing out!');
+        return signOut(auth);
     };
 
     useEffect(() => {

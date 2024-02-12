@@ -237,36 +237,40 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
             lastResizingTime.current = new Date().getTime();
             if (resizingNodeRef.current.orientation === Orientation.X) {
                 let { node, offset } = resizingNodeRef.current;
+                let position = presentationMode ? node.presentationPosition || node.position : node.position;
                 let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;// - offset.x;
                 let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
                 if (!node.size) {
                     node.size = sizeIndexRef.current[node.id];
                     // position`
+                } else {
                 }
-                let width = x - node.position.x;
+                let width = x - position.x;
                 node.size.width = width;
                 updateSize(node.id, { ...node.size });
             } else if (resizingNodeRef.current.orientation === Orientation.Y) {
                 let { node, offset } = resizingNodeRef.current;
+                let position = presentationMode ? node.presentationPosition || node.position : node.position;
                 let x = scrollRef.current.scrollLeft + client.x;// - offset.x;
                 let y = scrollRef.current.scrollTop + client.y; //- offset.y;
                 if (!node.size) {
                     node.size = sizeIndexRef.current[node.id];
                     // position`
                 }
-                let height = y - node.position.y;
+                let height = y - position.y;
                 node.size.height = height;
                 updateSize(node.id, { ...node.size });
             } else {
                 let { node, offset } = resizingNodeRef.current;
+                let position = presentationMode ? node.presentationPosition || node.position : node.position;
                 let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;// - offset.x;
                 let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
                 if (!node.size) {
                     node.size = sizeIndexRef.current[node.id];
                     // position`
                 }
-                let height = y - node.position.y;
-                let width = x - node.position.x;
+                let height = y - position.y;
+                let width = x - position.x;
                 node.size.height = height;
                 node.size.width = width;
                 updateSize(node.id, { ...node.size });
@@ -458,7 +462,6 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
             newObjectNode(objectNode, position);
             updatePosition(objectNode.id, position);
             setSelection(null);
-            console.log('setting size...');
             setSize(getUpdatedSize(objectNode, size));
         } else {
         }

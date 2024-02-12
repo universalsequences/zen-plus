@@ -6,9 +6,13 @@ import { ObjectNode } from '@/lib/nodes/types';
 
 const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let ref = useRef<HTMLDivElement | null>(null);
-    const { lockedMode } = useSelection();
     let [height, setHeight] = useState((objectNode.arguments[0] !== undefined ? (objectNode.arguments[0] as number) * 100 : .5));
     let [editing, setEditing] = useState(false);
+
+    let attributes = objectNode.attributes;
+    let { attributesIndex, lockedMode } = useSelection();
+
+    let { fillColor } = attributes;
 
 
     let { messages } = useMessage();
@@ -68,12 +72,14 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const { sizeIndex } = usePosition();
     let size = sizeIndex[objectNode.id] || { width: 100, height: 100 };
 
-    return (<div ref={ref} style={{ backgroundColor: "#1b1a1a", width: size.width, height: size.height }} className="w-full relative flex" onMouseDown={handleMouseDown}>
-        <div style={{ backgroundColor: "red", height: height + '%' }} className="w-full  absolute bottom-0">
+    return React.useMemo(() => {
+        return (<div ref={ref} style={{ backgroundColor: "#1b1a1a", width: size.width, height: size.height }} className="w-full relative flex" onMouseDown={handleMouseDown}>
+            <div style={{ backgroundColor: fillColor as string, height: height + '%' }} className="w-full  absolute bottom-0">
 
+            </div>
         </div>
-    </div>
-    );
+        );
+    }, [height, fillColor, editing, setEditing, lockedMode]);
 };
 
 export default Slider;

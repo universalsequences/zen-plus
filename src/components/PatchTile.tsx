@@ -5,7 +5,6 @@ import { usePatches } from '@/contexts/PatchesContext';
 
 const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | null) => void, gridTemplate?: string, tile: Tile }> = ({ tile, setFileToOpen, fileToOpen }) => {
     let ref = useRef<HTMLDivElement>(null);
-
     useEffect(() => {
         tile.ref = ref;
     }, [tile]);
@@ -108,6 +107,8 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
             }
             return (
                 <PatchWrapper
+                    fileToOpen={fileToOpen}
+                    setFileToOpen={setFileToOpen}
                     key={i + (_tile.patch ? _tile.patch.id : '')}
                     maxWidth={_direction === "horizontal" ? size : 100} maxHeight={_direction === "vertical" ? size : 100} index={0} patch={_tile.patch} />
             );

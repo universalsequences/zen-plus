@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useRouter } from 'next/router';
 import { usePatch, Coordinates } from '@/contexts/PatchContext';
 import { Project, useStorage } from '@/contexts/StorageContext';
 import { SerializedPatch, Patch } from '@/lib/nodes/types';
@@ -8,8 +9,11 @@ export const usePatchLoader = (patch: Patch) => {
     const { loadProjectPatch, loadProject } = usePatch();
     const { updatePositions, sizeIndexRef, setSizeIndex } = usePosition();
     const { fetchPatch, fetchPatchesForEmail } = useStorage();
+    const router = useRouter();
+
 
     const loadPatch = useCallback(async (saved: any) => {
+        let id = saved.id;
         let serialized = await fetchPatch(saved);
         loadProjectPatch(serialized);
         let updates: Coordinates = {};
@@ -24,6 +28,9 @@ export const usePatchLoader = (patch: Patch) => {
         updatePositions(updates);
         patch.previousDocId = saved.id;
         patch.previousSerializedPatch = serialized;
+        // router.replace(`/editor/${id}`, undefined, { shallow: true }); // Update the URL path
+        window.history.pushState(null, '', `/editor/${id}`);
+
     }, [patch]);
 
     return loadPatch;

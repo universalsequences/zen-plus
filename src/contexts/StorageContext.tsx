@@ -27,6 +27,7 @@ interface IStorageContext {
     onchainSubPatches: OnchainSubPatch[];
     storePatch: (name: string, patch: Patch, isSubPatch: boolean, email: string, screenshot?: string) => Promise<void>;
     fetchPatchesForEmail: (email: string) => Promise<any[]>;
+    fetchProject: (id: string, email: string) => Promise<any | null>;
     fetchPatch: (x: any) => Promise<SerializedPatch>;
     fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
     fetchRevisions: (head: any) => Promise<any[]>;
@@ -183,9 +184,47 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
                 let docId = doc.id
                 patch.previousDocId = docId;
                 patch.previousSerializedPatch = patch.getJSON();
+                window.history.pushState(null, '', `/editor/${docId}`);
             });
 
     };
+
+    const fetchProject = async (projectId: string, email: string): Promise<any | null> => {
+        const docRef = doc(db, 'patches', projectId);
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                let document = docSnap.data();
+                document.id = projectId;
+                return document;
+            }
+        } catch (error) {
+        }
+        return null;
+
+        /*
+        const collectionRef = collection(db, 'patches');
+        const q = query(collectionRef, where('id', '==', projectId));
+        console.log('fetch project id=', projectId, email);
+ 
+        try {
+            const querySnapshot = await getDocs(q);
+            const documents: any = [];
+            querySnapshot.forEach(doc => {
+                //if (!doc.data().hasNewVersion) {
+                documents.push({ id: doc.id, ...doc.data() });
+                // }
+            });
+            let date = new Date();
+            console.log('documents=', documents, querySnapshot);
+            documents.sort((a: any, b: any) => a.createdAt.seconds - b.createdAt.seconds);
+            return documents[0] || null;
+        } catch (error) {
+            throw error;
+            return null;
+        }
+        */
+    }
 
     const fetchPatchesForEmail = async (email: string, isSubPatch = false): Promise<any[]> => {
         const collectionRef = collection(db, 'patches');
@@ -209,7 +248,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
 
     /*
     const fetchCommitDocs = async (ids: string[]): Promise<any[]> => {
-
+ 
     };
     */
 
@@ -310,6 +349,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             fetchPatch,
             fetchRevisions,
             fetchSubPatchForDoc,
+            fetchProject,
             onchainSubPatches: (subpatches || []) as OnchainSubPatch[]
         }}>
         {children}

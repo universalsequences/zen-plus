@@ -81,7 +81,7 @@ const NumberBox: React.FC<{
         return (
             <div ref={ref}>
                 <div
-                    className={(className ? className : "m-y") + " bg-zinc-900 flex flex-1"}>
+                    className={(className ? className : "m-y") + " bg-zinc-900 flex flex-1 active:bg-zinc-700 cursor-ns-resize"}>
                     <TriangleRightIcon
                         onMouseDown={(e: any) => {
                             if (!lockedModeRef.current) {
@@ -111,7 +111,7 @@ const NumberBox: React.FC<{
                             initValue.current = value;
                         }}
 
-                        className="flex-1 active:text-zinc-300 text-white mt-0.5 w-10 flex">
+                        className="flex-1 active:text-green-200 text-white mt-0.5 w-10 flex">
                         <div
                             onMouseDown={() => rounding.current = true}
                             className="">

@@ -14,7 +14,6 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
     let first = useRef(true);
     const adjustHeight = () => {
-        console.log('adjust height with size', objectNode.size);
         const textarea = textareaRef.current;
         if (textarea) {
             textarea.style.height = 'auto'; // Reset height
@@ -34,7 +33,6 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 textarea.style.height = '17';
                 first.current = false;
             } else {
-                console.log("setting height to zero");
                 textarea.style.height = "0";
                 textarea.style.height = `${Math.max(10, textarea.scrollHeight + 0 * totalVerticalPaddingAndBorder)}px`;
             }

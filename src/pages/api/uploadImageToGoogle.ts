@@ -39,26 +39,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             try {
                 let privateKey = (process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "").replace(/\\n/g, '\n');
                 const [imageFile] = files.file; // Adjust based on your input field
+                console.log(files);
+                let og = imageFile.originalFilename;
                 const bucket = admin.storage().bucket();
-                console.log('admin storage...', bucket);
 
                 // Uploads a file to the bucket
                 const filePath = imageFile.filepath;
-                const destFileName = new Date().getTime() + '_' + Math.floor(Math.random() * 100000);
+                const destFileName = new Date().getTime() + '_' + Math.floor(Math.random() * 100000) + og;
                 const [file] = await bucket.upload(filePath, {
                     destination: destFileName,
                 });
 
                 await file.makePublic();
-                console.log('making public...');
                 const publicUrl = `https://storage.googleapis.com/${bucket.name}/${destFileName}`;
 
-
-                console.log("uploaded to Firebase Storage");
                 res.status(200).json({ message: 'Image uploaded successfully', url: publicUrl });
 
             } catch (error) {
-                console.error('Error uploading the file:', error);
                 res.status(500).json({ message: 'Error uploading file' });
             }
         });

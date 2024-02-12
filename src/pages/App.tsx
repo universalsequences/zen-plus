@@ -1,6 +1,7 @@
 "use client"
 import Home from '@/components/Home';
 import '@/styles/styles.scss';
+import './globals.css';
 import Image from 'next/image'
 import React, { useState, useEffect } from 'react';
 import PatchComponent from '@/components/PatchComponent';
@@ -54,7 +55,11 @@ const wagmiConfig = createConfig({
     publicClient
 })
 
-export default function App() {
+interface Props {
+    projectId?: string;
+}
+
+export default function App(props: Props) {
     return (
         <Theme appearance="dark" >
             <WagmiConfig config={wagmiConfig}>
@@ -66,9 +71,11 @@ export default function App() {
                     })}
                     chains={chains}>
                     <AuthProvider>
-                        <NavProvider>
-                            <Home />
-                        </NavProvider>
+                        <StorageProvider>
+                            <NavProvider>
+                                <Home projectId={props.projectId} />
+                            </NavProvider>
+                        </StorageProvider>
                     </AuthProvider>
                 </RainbowKitProvider>
             </WagmiConfig>

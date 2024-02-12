@@ -250,7 +250,22 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         let minDistanceX = Infinity;
         let minDistanceY = Infinity;
         for (let id in updates) {
-            for (let _id in positions) {
+            let _ids = Object.keys(positions);
+            _ids.sort((a, b) => {
+                let coord1 = updates[id];
+                let coord2 = positions[a];
+                let diffX = Math.abs(coord1.x - coord2.x);
+                let diffY = Math.abs(coord1.y - coord2.y);
+                let distance = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
+
+                let coord3 = positions[a];
+                let diffX1 = Math.abs(coord1.x - coord3.x);
+                let diffY1 = Math.abs(coord1.y - coord3.y);
+                let distance2 = Math.sqrt(Math.pow(diffX1, 2) + Math.pow(diffY1, 2));
+                return distance - distance2;
+            });
+
+            for (let _id of _ids) {
                 if (id === _id) {
                     continue;
                 }
