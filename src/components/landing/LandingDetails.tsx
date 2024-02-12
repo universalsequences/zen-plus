@@ -33,13 +33,13 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                         </div>
 
                         <div className="text-base  md:text-xl ">
-                            <div className="p-0 py-10 md:p-10 w-88 md:w-full">
+                            <div className="p-0 py-10 md:p-10 w-80 md:w-96">
                                 <span className="text-white">zen+</span> offers hundreds
                                 of core operators for both <span className="text-white">audio</span> and <span className="text-white">graphics</span>.
 
 
                             </div>
-                            <div className="pb-10 pt-0 p-0 md:px-10 pt-0 w-full">
+                            <div className="pb-10 pt-0 p-0 md:px-10 pt-0 w-80 md:w-96">
                                 built on the foundation of <span className="text-white">AudioWorklets</span> and <span className="text-white">WebGL</span> for blazing performance
                             </div>
                         </div>
@@ -140,17 +140,17 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                 </div>
             </Detail >
 
-            <Detail header="" textClassName="text-white" isMax={false}>
+            <Detail maxWidth="89vw" header="" textClassName="text-white" isMax={false}>
                 <div className="flex text-white text-center flex-col">
                     <div className="flex">
                         <img className="w-1/2 mx-auto my-auto" src="dotdash.svg" />
                         <img className="spin w-1/4 mx-auto my-auto" src="dotdashcircle.svg" />
                     </div>
                     <div className="flex mx-auto my-10 mb-20">
-                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
-                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
-                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
-                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-5 md:mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-5 md:mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-5 md:mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-5 md:mx-20" />
                     </div>
                     <img src="rainbow-logo.png" className="w-52 mx-auto mt-5 mb-10" />
                 </div>
@@ -161,8 +161,8 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
     );
 };
 
-const Detail: React.FC<{ backgroundColor?: string, opacity?: number, isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true, opacity, backgroundColor }) => {
-    return <div style={isMax ? { backgroundColor, opacity: opacity, minHeight: "100vh" } : { backgroundColor }} className=" ml-10 md:ml-10 pt-10 md:pt-20 border-t border-t-zinc-800 px-5 md:px-20 font-semibold text-zinc-500 ">
+const Detail: React.FC<{ maxWidth?: string, backgroundColor?: string, opacity?: number, isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true, opacity, backgroundColor, maxWidth }) => {
+    return <div style={isMax ? { backgroundColor, opacity: opacity, maxWidth, minHeight: "100vh" } : { maxWidth, backgroundColor }} className=" ml-10 md:ml-10 pt-10 md:pt-20 border-t border-t-zinc-800 px-5 md:px-20 font-semibold text-zinc-500 ">
         <div className={"mb-10 " + textClassName}>
             {header}
         </div>
