@@ -159,7 +159,7 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
 };
 
 const Detail: React.FC<{ opacity?: number, isMax: boolean, textClassName: string, header: string, children: React.ReactNode }> = ({ textClassName, header, children, isMax = true, opacity }) => {
-    return <div style={isMax ? { opacity: opacity, minHeight: "100vh" } : {}} className="w-full ml-10 md:ml-10 pt-10 md:pt-20 border-t border-t-zinc-800 px-5 md:px-20 font-semibold text-zinc-500 ">
+    return <div style={isMax ? { opacity: opacity, minHeight: "100vh" } : {}} className=" ml-10 md:ml-10 pt-10 md:pt-20 border-t border-t-zinc-800 px-5 md:px-20 font-semibold text-zinc-500 ">
         <div className={"mb-10 " + textClassName}>
             {header}
         </div>

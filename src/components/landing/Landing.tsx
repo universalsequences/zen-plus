@@ -34,20 +34,15 @@ export const Landing = () => {
     }, []);
 
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.addEventListener("scroll", onScroll);
-        }
+        window.addEventListener("scroll", onScroll);
         return () => {
-            if (scrollRef.current) {
-                scrollRef.current.removeEventListener("scroll", onScroll);
-            }
+            window.removeEventListener("scroll", onScroll);
         };
     }, [setScrollTop]);
+
     const onScroll = useCallback(() => {
-        if (scrollRef.current) {
-            let scrollTop = scrollRef.current.scrollTop
-            setScrollTop(scrollTop);
-        }
+        let scrollTop = window.scrollY;
+        setScrollTop(scrollTop);
     }, [setScrollTop]);
 
     React.useEffect(() => {
@@ -57,17 +52,17 @@ export const Landing = () => {
     }, [setShowNav, user, navOption]);
 
     return <div
-        className={"overflow-scroll flex bg-black w-full h-full min-h-screen " + (false ? "light-mode" : "")}>
+        className={"max-w-screen flex bg-black  min-h-screen " + (false ? "light-mode" : "")}>
 
         {showNav && navOption === NavOption.Docs && <div className="absolute top-10 left-20 h-16 z-30 "><Nav /></div>
         }
 
         {
             navOption === NavOption.Home ? <>
-                <div ref={scrollRef} className="flex flex-col w-full min-h-screen overflow-y-scroll overflow-x-hidden max-h-screen relative">
+                <div ref={scrollRef} className="flex flex-col min-h-screen  relative">
                     {showNav && <div className="absolute top-10 left-10  h-16 z-30 "><Nav /></div>
                     }
-                    <div style={{ minHeight: "100vh" }} className="flex flex-col w-full mt-5  justify-center relative h-full">
+                    <div style={{ minHeight: "100vh" }} className="flex flex-col  mt-5  justify-center relative h-full">
                         <div style={{ transform: "translate(0, 100px)" }} className="text-6xl text-center w-64 h-64  m-auto flex">
                             <div className="m-auto w-64 h-30  tracking-tight p-5 rounded-3xl overflow-hidden relative flex">
                                 <ShaderBackground scrollTop={scrollTop} height={height} />

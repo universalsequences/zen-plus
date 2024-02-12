@@ -30,8 +30,8 @@ body, html {
   background-color: #575757 !important;
   background-color: #323030 !important;
   background-color: #1b1d1f !important;
+  background-color: black !important;
   background-size: cover;
-  overflow: hidden;
   /*
   background: linear-gradient(
       to bottom,
