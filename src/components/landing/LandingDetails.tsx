@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useState } from 'react';
 
 const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: React.MutableRefObject<HTMLDivElement | null> }> = ({ scrollRef, scrollTop, height }) => {
@@ -11,7 +12,7 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
         <div>
             <div
                 style={{ top: scrollTop < height ? height : 0 }} //scrollTop < height: height(height + 20) - Math.min(height + 20, scrollTop) }}
-                className={(scrollTop < height ? "absolute" : "fixed") + " h-full min-h-screen w-10 md:w-16 border-r border-r-zinc-700 bg-black z-30 flex flex-col"}>
+                className={(scrollTop < height ? "absolute" : "fixed") + " h-full max-h-screen min-h-screen w-10 md:w-16 border-r border-r-zinc-700 bg-black z-30 flex flex-col"}>
                 <img src="dotdash7.svg" className="absolute top-0 h-16 mx-auto mt-5 left-0 right-0" />
                 <div style={{ transform: "rotate(-90deg) translate(0px,0px)" }} className="my-auto ">
                     zen+
@@ -97,7 +98,7 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             <div className="p-0 py-10 md:p-10 w-96">
                                 Constantly remix and tweak your work knowing that every change is saved <span className="text-white">automatically</span>.
                             </div>
-                            <div className="p-0 py-10 md:p-10 pt-0 w-96">
+                            <div className="pb-10 pt-0 p-0 md:px-10 pt-0 w-96">
 
                                 <div>Proud of particular patch?</div>
                                 <div>
@@ -122,21 +123,15 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             <div className="p-0 py-10 md:p-10 w-80 md:w-96">
                                 Minting your work as a fully onchain<span className="text-zen-pink">*</span> NFT establishes strong <span className="text-white">provenance</span> and ensures it’ll live on <span className="text-white">forever.</span>
                             </div>
-                            <div className="p-0 py-10 md:p-10 pt-0 w-80 md:w-96">
-
-                                <div>Proud of particular patch?</div>
-                                <div>
-                                    <span className="text-white">Share</span> your work with one-click.
-                                </div>
-                            </div>
-                            <div className="p-0 py-10 md:p-10 pt-0 w-96 italic">
+                            <div className="pb-10 pt-0 p-0 md:px-10 pt-0 w-96 italic">
                                 No files needed.
                             </div>
                         </div>
 
                         <div className="text-sm md:text-base text-zen-pink ml-0 md:ml-10 font-normal">
                             <div><span className="text-white">+</span> An HTML NFT containing no outside dependencies</div>
-                            <div><span className="text-white">+</span> Mint on the Zora Network (a low-cost Ethereum L2)</div>
+                            <div><span className="text-white">+</span> Deploys your art on the Zora Network (a low-cost Ethereum L2)</div>
+                            <div><span className="text-white">+</span> Generative parameters randomize per token.</div>
                         </div>
                     </div>
                     <div className="mx-4 md:mx-auto  flex p-1 md:mt-0 mt-10 md:mt-5 bg-zinc-800 rounded-xl w-80 md:w-96 ">
