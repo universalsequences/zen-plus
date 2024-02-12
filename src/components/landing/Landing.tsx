@@ -76,10 +76,10 @@ export const Landing = () => {
 
                         </div>
                         <LoginButton />
-                        <div className="absolute bottom-5 left-0 p-10 w-96 text-zinc-600">
+                        <div className="absolute bottom-14 md:bottom-5 left-2 md:left-0 p-2 md:p-10 w-80 md:w-96 text-zinc-600">
                             <span className="text-white">zen+</span> is a visual programming environment for creating <span className="text-white">AV</span> works
                         </div>
-                        <div className="absolute bottom-5 right-5 p-10 w-40  text-zinc-600">
+                        <div className="absolute bottom-5 right-0 md:right-5 p-10 w-40  text-zinc-600">
                             based on the open-source <span className="text-white">zen</span> programming toolkit
                         </div>
                     </div>
