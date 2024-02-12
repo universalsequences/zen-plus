@@ -10,7 +10,7 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
     return (
         <div>
             <div
-                style={{ top: scrollTop < height ? height + 20 : 0 }} //scrollTop < height: height(height + 20) - Math.min(height + 20, scrollTop) }}
+                style={{ top: scrollTop < height ? height : 0 }} //scrollTop < height: height(height + 20) - Math.min(height + 20, scrollTop) }}
                 className={(scrollTop < height ? "absolute" : "fixed") + " h-full min-h-screen w-10 md:w-16 border-r border-r-zinc-700 bg-black z-30 flex flex-col"}>
                 <img src="dotdash7.svg" className="absolute top-0 h-16 mx-auto mt-5 left-0 right-0" />
                 <div style={{ transform: "rotate(-90deg) translate(0px,0px)" }} className="my-auto ">
@@ -32,13 +32,13 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                         </div>
 
                         <div className="text-base  md:text-xl ">
-                            <div className="p-0 py-10 md:p-10 w-88 md:w-96">
+                            <div className="p-0 py-10 md:p-10 w-88 md:w-full">
                                 <span className="text-white">zen+</span> offers hundreds
                                 of core operators for both <span className="text-white">audio</span> and <span className="text-white">graphics</span>.
 
 
                             </div>
-                            <div className="p-0 py-10 md:p-10 pt-0 w-80 md:w-96">
+                            <div className="pb-10 pt-0 p-0 md:px-10 pt-0 w-full">
                                 built on the foundation of <span className="text-white">AudioWorklets</span> and <span className="text-white">WebGL</span> for blazing performance
                             </div>
                         </div>
@@ -67,7 +67,7 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                                     generate and process <span className="text-white">audio</span> intuitively with powerful <span className="text-white">abstractions</span>.
 
                                 </div>
-                                <div className="py-10 p-0 md:p-10 pt-0 w-96">
+                                <div className="pb-10 pt-0 p-0 md:px-10 pt-0 w-96">
                                     morph sound into any <span className="text-white">shape</span> you can imagine with sample-accurate <span className="text-white">modulation</span>.
                                 </div>
                             </div>
@@ -78,8 +78,8 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             </div>
                         </div>
                         <div
-                            style={{ transform: `translate(0px, ${500 - 500 * ratio2}px)` }}
-                            className="md:w-96 w-72 mx-4 md:mx-auto md:mt-0 mt-10 md:mt-20 flex p-1 bg-zinc-800 rounded-xl ">
+                            style={{ opacity: ratio2, transform: `translate(0px, ${500 - 500 * ratio2}px)` }}
+                            className="md:w-96 w-72 mx-4 md:mx-auto md:mt-0 mt-0  flex p-1 bg-zinc-800 rounded-xl ">
                             <img className="object-contain rounded-lg" src="sound-lab.png" />
                         </div>
                     </div>
@@ -139,7 +139,7 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                             <div><span className="text-white">+</span> Mint on the Zora Network (a low-cost Ethereum L2)</div>
                         </div>
                     </div>
-                    <div className="mx-4 md:mx-auto  flex p-1 md:mt-0 mt-10 md:mt-20 bg-zinc-800 rounded-xl w-80 md:w-96 ">
+                    <div className="mx-4 md:mx-auto  flex p-1 md:mt-0 mt-10 md:mt-5 bg-zinc-800 rounded-xl w-80 md:w-96 ">
                         <img className="object-contain rounded-lg" src="onchain-export.png" />
                     </div>
                 </div>
@@ -151,7 +151,13 @@ const LandingDetails: React.FC<{ scrollTop: number, height: number, scrollRef: R
                         <img className="w-1/2 mx-auto my-auto" src="dotdash.svg" />
                         <img className="spin w-1/4 mx-auto my-auto" src="dotdashcircle.svg" />
                     </div>
-                    <img src="rainbow-logo.png" className="w-52 mx-auto my-40" />
+                    <div className="flex mx-auto my-10 mb-20">
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
+                        <img src="dotsquare.svg" className="w-8 h-8 my-10 mx-20" />
+                    </div>
+                    <img src="rainbow-logo.png" className="w-52 mx-auto mt-5 mb-10" />
                 </div>
             </Detail>
 

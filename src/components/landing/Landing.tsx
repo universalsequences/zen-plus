@@ -62,7 +62,7 @@ export const Landing = () => {
                 <div ref={scrollRef} className="flex flex-col min-h-screen  relative">
                     {showNav && <div className="absolute top-10 left-10  h-16 z-30 "><Nav /></div>
                     }
-                    <div style={{ minHeight: "100vh" }} className="flex flex-col  mt-5  justify-center relative h-full">
+                    <div style={{ minHeight: "100vh" }} className="flex flex-col  justify-center relative h-full">
                         <div style={{ transform: "translate(0, 100px)" }} className="text-6xl text-center w-64 h-64  m-auto flex">
                             <div className="m-auto w-64 h-30  tracking-tight p-5 rounded-3xl overflow-hidden relative flex">
                                 <ShaderBackground scrollTop={scrollTop} height={height} />
