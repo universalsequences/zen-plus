@@ -20,7 +20,7 @@ export const buffer = (node: ObjectNode) => {
         node.attributes["external-URL"] = "";
     }
 
-    node.attributeCallbacks["external-URL"] = (message: string | number | boolean) => {
+    node.attributeCallbacks["external-URL"] = (message: string | number | boolean | number[]) => {
         if (lastDownload !== message) {
             console.log('last download didnt equal', lastDownload, message);
             node.buffer = undefined;

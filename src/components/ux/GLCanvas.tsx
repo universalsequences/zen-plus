@@ -16,7 +16,7 @@ const GLCanvas: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
     if (message && objectNode.size && (message as RenderJob).fragment && (message as RenderJob).fragmentContext) {
         let graph: RenderJob = message as RenderJob;
-        return <Shader fps={objectNode.attributes["fps"]} width={objectNode.size.width} height={objectNode.size.height} zenGraph={graph} />
+        return <Shader fps={objectNode.attributes["fps"] as number} width={objectNode.size.width} height={objectNode.size.height} zenGraph={graph} />
     } else {
         return <div className="w-12 h-12" />
     }

@@ -14,7 +14,7 @@ export const divider = (node: ObjectNode) => {
         node.attributes["orientation"] = "horizontal";
     }
     node.attributeOptions["orientation"] = ["horizontal", "vertical"];
-    node.attributeCallbacks["orientation"] = (orientation: string | number | boolean): void => {
+    node.attributeCallbacks["orientation"] = (orientation: string | number | boolean | number[]): void => {
         if (orientation === "vertical") {
             console.log('updating orientation v');
             node.size = {

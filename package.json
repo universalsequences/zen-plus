@@ -17,6 +17,7 @@
     "@types/node": "20.8.10",
     "@types/pako": "^2.0.3",
     "@types/react": "18.2.36",
+    "@types/react-color": "^3.0.11",
     "@types/react-dom": "18.2.14",
     "@types/three": "^0.158.3",
     "@types/uuid": "^9.0.7",

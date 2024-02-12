@@ -34,7 +34,10 @@ const Inner = () => {
         setVisibleObjectNodes(nodes);
     }, [objectNodes, setVisibleObjectNodes]);
 
-    return (<PatchComponent maxWidth={100} maxHeight={100} visibleObjectNodes={visibleObjectNodes} isCustomView={true} index={0} />
+    return (<PatchComponent
+        fileToOpen={null}
+        setFileToOpen={(x: any) => 0}
+        maxWidth={100} maxHeight={100} visibleObjectNodes={visibleObjectNodes} isCustomView={true} index={0} />
     );
 };
 export default CustomSubPatchView;

@@ -21,7 +21,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     return (<div style={{ width, height }} className="flex flex-wrap overflow-hidden content-start">
         {mgmt.presets.map(
             (preset, i) =>
-                <div onClick={() => switchToPreset(i)} className={"w-3 h-3 m-0.5 cursor-pointer transition-colors " + (current === i ? "bg-zinc-100 " : Object.keys(mgmt.presets[i]).length === 0 ? "bg-zinc-900" : "bg-zinc-400")}>
+                <div key={i} onClick={() => switchToPreset(i)} className={"w-3 h-3 m-0.5 cursor-pointer transition-colors " + (current === i ? "bg-zinc-100 " : Object.keys(mgmt.presets[i]).length === 0 ? "bg-zinc-900" : "bg-zinc-400")}>
                 </div>)
         }
     </div>);

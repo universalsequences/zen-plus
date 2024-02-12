@@ -14,14 +14,14 @@ export const loop = (object: ObjectNode, variableName: Lazy, min: Lazy, max: Laz
 
     return (body: Message) => {
         if (typeof body === "string") {
-            return;
+            return [];
         }
         let l = [[
             { name: "rawSumLoop", range: { min: (min() as number) || 0, max: (max() as number) || 4 }, variableName: variableName() },
             body,
         ]];
         (l[0] as Statement).node = object;
-        return l;
+        return l as Statement[];
     };
 };
 
@@ -38,8 +38,9 @@ export const loopVariable = (object: ObjectNode, name: Lazy) => {
     object.needsLoad = true;
     return (x: Message) => {
         if (name()) {
-            return [[{ name: "variable", variableName: name() }]];
+            return [[{ name: "variable", variableName: name() }]] as Statement[];
         }
+        return [];
     };
 };
 

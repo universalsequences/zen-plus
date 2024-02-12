@@ -78,7 +78,7 @@ export default function ExamplePatch() {
                         <PatchesProvider basePatch={basePatch}>
                             <TilesProvider>
                                 <main className="flex w-full h-full example-patch">
-                                    <PatchesComponent />
+                                    <PatchesComponent fileToOpen={null} setFileToOpen={(x: any) => { }} />
                                 </main>
                             </TilesProvider>
                         </PatchesProvider>
