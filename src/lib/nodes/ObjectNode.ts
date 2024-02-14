@@ -340,7 +340,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             this.outlets = this.outlets.slice(0, _numberOfOutlets);
         }
 
-        if (!this.audioNode && this.name !== "zen" && this.inlets.length > _numberOfInlets) {
+        if (!this.audioNode && this.name !== "zen" && this.inlets.length > _numberOfInlets && this.name !== "polycall") {
             this.inlets = this.inlets.slice(0, _numberOfInlets);
         }
 

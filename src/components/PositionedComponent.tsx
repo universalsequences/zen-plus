@@ -105,6 +105,7 @@ const PositionedComponent: React.FC<{
             let y = e.clientY - divRect.top
 
             if (!selectedNodes.includes(node)) {
+                console.log('set selected node =', node);
                 setSelectedNodes([node]);
             }
 

@@ -893,7 +893,7 @@ const replaceAll = (target: string, search: string, repl: string) => {
     return target.split(search).join(repl);
 };
 
-const getFunctionNames = (dslCode: string) => {
+const getFunctionNames = (dslCode: string, ultraMinify = true) => {
     const funcRegex = /\b(\w+)\(/g;
 
     // Object to store unique function names
@@ -949,17 +949,22 @@ const getFunctionNames = (dslCode: string) => {
     // Generate the shorthand definitions
     let shorthandDefinitions = 'let ';
     let outDSL = dslCode;
-    Object.entries(shorthands).forEach(([original, shorthand], i) => {
-        if (!original.includes("hist")) {
-            shorthandDefinitions += `${shorthand}=${original}`;
-            if (i < Object.values(shorthands).length - 1) {
-                shorthandDefinitions += ',';
+    if (ultraMinify) {
+        Object.entries(shorthands).forEach(([original, shorthand], i) => {
+            if (!original.includes("hist")) {
+                shorthandDefinitions += `${shorthand}=${original}`;
+                if (i < Object.values(shorthands).length - 1) {
+                    shorthandDefinitions += ',';
+                }
+                outDSL = outDSL.replaceAll('= ' + original + '(', '=' + shorthand + '(');
             }
-            outDSL = outDSL.replaceAll('=' + original + '(', '=' + shorthand + '(');
-        }
-    });
-    shorthandDefinitions = replaceAll(shorthandDefinitions, "\n", "");
+        });
+        shorthandDefinitions = replaceAll(shorthandDefinitions, "\n", "");
+    }
 
+    if (!ultraMinify) {
+        shorthandDefinitions = "";
+    }
     outDSL = shorthandDefinitions + ';\n' + "let " + outDSL.replaceAll("let ", ",").replaceAll(";", "").replaceAll("\n", "").slice(1);
     let retIndex = outDSL.indexOf("return");
     outDSL = outDSL.slice(0, retIndex) + ';\n' + outDSL.slice(retIndex);
@@ -975,4 +980,50 @@ const sleep = (time: number): Promise<void> => {
             resolve();
         }, time);
     });
+};
+
+export const minify = (inputFile: string, ultraMinify = true): string => {
+    inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
+    inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
+    inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
+    inputFile = inputFile.replace(/mult(\d+)/g, (_, number) => `m${number}`);
+    inputFile = inputFile.replace(/div(\d+)/g, (_, number) => `d${number}`);
+    //inputFile = inputFile.replace(/history(\d+)/g, (_, number) => `h${number}`);
+    inputFile = inputFile.replace(/rampToTrig(\d+)/g, (_, number) => `r${number}`);
+    inputFile = inputFile.replace(/phasor(\d+)/g, (_, number) => `p${number}`);
+    inputFile = inputFile.replace(/cycle(\d+)/g, (_, number) => `c${number}`);
+    inputFile = inputFile.replace(/floor(\d+)/g, (_, number) => `f${number}`);
+    inputFile = inputFile.replace(/and(\d+)/g, (_, number) => `an${number}`);
+    inputFile = inputFile.replace(/accum(\d+)/g, (_, number) => `ac${number}`);
+    inputFile = inputFile.replace(/mod(\d+)/g, (_, number) => `mo${number}`);
+    inputFile = inputFile.replace(/clamp(\d+)/g, (_, number) => `cl${number}`);
+    inputFile = inputFile.replace(/eq(\d+)/g, (_, number) => `E${number}`);
+    inputFile = inputFile.replace(/selector(\d+)/g, (_, number) => `S${number}`);
+    inputFile = inputFile.replace(/triangle(\d+)/g, (_, number) => `T${number}`);
+    inputFile = inputFile.replace(/mstosamps(\d+)/g, (_, number) => `ms${number}`);
+    inputFile = inputFile.replace(/round(\d+)/g, (_, number) => `ro${number}`);
+    inputFile = inputFile.replace(/compressor(\d+)/g, (_, number) => `co${number}`);
+    inputFile = inputFile.replace(/wrap(\d+)/g, (_, number) => `w${number}`);
+    inputFile = inputFile.replace(/argument(\d+)/g, (_, number) => `A${number}`);
+    inputFile = inputFile.replace(/onepole(\d+)/g, (_, number) => `o${number}`);
+    inputFile = inputFile.replace(/scale(\d+)/g, (_, number) => `sc${number}`);
+    inputFile = inputFile.replace(/vactrol(\d+)/g, (_, number) => `V${number}`);
+    inputFile = inputFile.replace(/param(\d+)/g, 'p$1');
+    inputFile = inputFile.replace(/latch(\d+)/g, 'L$1');
+    inputFile = inputFile.replace(/mix(\d+)/g, 'M$1');
+    inputFile = inputFile.replace(/delay(\d+)/g, 'D$1');
+    inputFile = inputFile.replace(/biquad(\d+)/g, 'B$1');
+    inputFile = replaceAll(inputFile, "  ", "");
+    inputFile = replaceAll(inputFile, "(\n", "(");
+    inputFile = replaceAll(inputFile, "( ", "(");
+    inputFile = replaceAll(inputFile, ",\n", ",");
+    inputFile = replaceAll(inputFile, " (", "(");
+    inputFile = replaceAll(inputFile, " )", ")");
+    inputFile = replaceAll(inputFile, ") ", ")");
+    inputFile = replaceAll(inputFile, " = ", "=");
+
+    inputFile = getFunctionNames(inputFile, ultraMinify);
+
+    return inputFile;
+
 };

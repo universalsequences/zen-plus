@@ -210,6 +210,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setAlignmentLines([]);
         }
 
+        console.log('updating positions =', updates);
         let _coordinates = replace ? {} : coordinatesRef.current;
         let _size = size;
         let sizeChanged = false;
@@ -239,6 +240,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setSize(_size);
         }
         coordinatesRef.current = _coordinates;
+        console.log('setting __cordinates=', _coordinates);
         setCoordinates({ ..._coordinates });
         return updates;
     }, [coordinates, setCoordinates, setSize, size, setAlignmentLines]);

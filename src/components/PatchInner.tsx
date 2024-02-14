@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNodeOperations } from '@/hooks/useEncapsulation';
+import { usePatchOrganizer } from '@/hooks/usePatchOrganizer';
 import { useZoom } from '@/hooks/useZoom';
 import LockButton from './LockButton';
 import { useMessage } from '@/contexts/MessageContext';
@@ -35,6 +36,8 @@ const PatchInner: React.FC<{
     zoomableRef,
     visibleObjectNodes, index, isCustomView }) => {
     useThemeContext();
+
+    const { organize } = usePatchOrganizer();
     const {
         lastResizingTime,
         setSelection,
@@ -192,6 +195,15 @@ const PatchInner: React.FC<{
 
                             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
                             Segment All Cables
+                        </ContextMenu.Item>
+                        <ContextMenu.Item
+                            onClick={() => {
+                                //organize(patch);
+                                updatePositions(organize(patch));
+                            }}
+
+                            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer">
+                            Organize Patch
                         </ContextMenu.Item>
                         {selectedNodes.length > 0 &&
                             <ContextMenu.Item

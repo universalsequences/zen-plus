@@ -14,7 +14,7 @@ doc(
         numberOfOutlets: 1,
         inletNames: ["arg1", "arg2", "arg2"],
         attributeOptions: {
-            "mode": ["sum", "pipe"]
+            "mode": ["sum", "pipe", "inputs"]
         }
     });
 
@@ -30,6 +30,7 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
     }
 
     return (message: Message) => {
+        console.log("poly");
         let name = node.attributes["name"];
         let upstream = getUpstreamNodes(node.patch);
         let defuns = upstream.filter(x => x.name === "defun" &&
@@ -52,7 +53,7 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
         let numBodies = (body as Statement[]).length - 1;
 
         let mode = node.attributes["mode"];
-        let outputs = mode === "sum" ? new Array(numBodies).fill(0) :
+        let outputs = mode !== "pipe" ? new Array(numBodies).fill(0) :
             new Array(numBodies * voices).fill(0);
 
         console.log("num bodies = ", numBodies, voices);
@@ -66,16 +67,53 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
 
         let previous = Array.isArray(connect) ? _args[connect[1]] : null;
 
-        for (let _body of body as Statement[]) {
-            let a = parseArguments(_body);
-            for (let arg of a) {
-                let op = (arg as Statement[])[0] as CompoundOperator;
-                let num = op.value as number;
-                let name = op.variableName;
-                let inlet = node.inlets[num - 1];
-                if (inlet) {
-                    inlet.name = name;
+        let indexCounter = 0;
+        let _voices = mode === "inputs" ? voices : 1;
+        let numArgs = 0;
+        console.log("_voices =", _voices);
+        for (let i = 0; i < _voices; i++) {
+            let ARGS: number[] = [];
+            for (let _body of body as Statement[]) {
+                let a = parseArguments(_body);
+                let _numArgs = Array.from(new Set(a.map(b => ((b as Statement[])[0] as CompoundOperator).value))).length;
+                for (let arg of a) {
+                    let op = (arg as Statement[])[0] as CompoundOperator;
+                    let num = op.value as number;
+                    let argumentNumber = num;
+                    console.log("OP=", op);
+                    console.log("arg = ", a);
+                    let name = op.variableName;
+                    let ii = i * _numArgs;
+                    if (mode !== "inputs") {
+                        ii = 0;
+                    }
+                    if (!ARGS.includes(argumentNumber)) {
+                        if (!node.inlets[ii + num - 1]) {
+                            console.log("creating inlet...", ii + num - 1);
+                            node.newInlet();
+                        }
+                    }
+
+                    //if (ARGS.includes(argumentNumber)) {
+                    //    continue;
+                    // }
+                    if (!ARGS.includes(argumentNumber) && i === 0) {
+                        numArgs++;
+                    }
+                    ARGS.push(argumentNumber);
+                    console.log("ARGS list =", ARGS);
+
+                    console.log("ii =", ii);
+                    let inlet = node.inlets[ii + num - 1];
+                    if (inlet) {
+                        if (mode === "inputs") {
+                            inlet.name = name + ' (voice ' + (i + 1) + ')';
+                        } else {
+                            inlet.name = name;
+                        }
+                    }
                 }
+                indexCounter++;
             }
         }
 
@@ -99,6 +137,10 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
                     }
                 }
             }
+            if (node.attributes["mode"] === "inputs") {
+                __args = __args.slice(invocation * numArgs, (invocation + 1) * numArgs);
+            }
+            console.log("args =  numARgs=", __args, numArgs);
             let ret = [
                 { name: "call", value: invocation },
                 body,
@@ -112,7 +154,7 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             let rets: Statement[] = [];
             for (let i = 0; i < numBodies; i++) {
                 let nth: Statement = ["nth" as Operator, ret as Statement, i];
-                let outletIndex = mode === "sum" ? i : invocation * numBodies + i;
+                let outletIndex = mode !== "pipe" ? i : invocation * numBodies + i;
                 if (!node.outlets[outletIndex]) {
                     node.newOutlet();
                 }
@@ -125,7 +167,7 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             }
 
             // now go thru the rets and add to outputs
-            if (mode === "sum") {
+            if (mode !== "pipe") {
                 for (let i = 0; i < rets.length; i++) {
                     let addition: Statement = ["add" as Operator, outputs[i], rets[i]];
                     // addition.node = { ...node, id: node.id + '_addition_' + i };

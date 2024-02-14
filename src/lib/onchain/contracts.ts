@@ -8,9 +8,9 @@ type Contracts = {
 }
 
 const goerliContracts: Contracts = {
-    DropCreator: "0x991C1AA4d3309F26849257F9FBCc5f6a82aBc6Dc",
-    MetadataRenderer: "0xf8C21e072432205f6D02a1f2F5BFc6e6Ed90Ef84",
-    ZenModule: "0xcBe2142a8E578Fbc3c82E130d73b0C13D23E42f6"
+    DropCreator: "0xefA027cECE583d0B47D193dEB3Bb64A3063d6369",
+    MetadataRenderer: "0x5caa28319dffA552C6E33c74aD21B816fEB30825",
+    ZenModule: "0x5dfecc96D149b682e6289ED4Daf5694CD564Ff5F"
 };
 
 const zoraContracts: Contracts = {

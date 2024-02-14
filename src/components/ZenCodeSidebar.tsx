@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNetwork } from 'wagmi';
 import { parseEther } from 'viem'
+import { minify } from '@/lib/nodes/Patch';
 import { db } from '@/lib/db/firebase';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import {
@@ -148,7 +149,7 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 }
                 {
                     screenshot && minting && parameters && visualsCode && zenCode && chain ?
-                        <MintSound chainId={chain.id} fps={fps} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={visualsCode} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''
+                        <MintSound chainId={chain.id} fps={fps} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={minify(visualsCode, false)} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''
                 }
                 {
                     !account ? <div>

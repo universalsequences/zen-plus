@@ -106,7 +106,7 @@ export type Attributed = {
     newAttribute: (name: string, defaultValue: AttributeValue, callback?: (x: AttributeValue) => void) => void;
 }
 
-export type Node = Identifiable & Attributed & {
+export type Node = Identifiable & Attributed & Positioned & {
     patch: Patch;
     inlets: IOlet[];
     outlets: IOlet[];

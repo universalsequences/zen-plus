@@ -15,7 +15,6 @@ export const selector = (cond: Arg, ...inputs: Arg[]): UGen => {
 
         // Output code
         let out = `${context.varKeyword} ${varName} = ${_cond.variable} <= 0 ? 0.0 : (${_cond.variable} <= 1 ? ${_inputs[0].variable} : (${_cond.variable} >= ${_inputs.length} ? ${_inputs[_inputs.length - 1].variable} : ${_inputs.map((input, i) => `${_cond.variable} == ${i + 1} ? ${input.variable} : `).join('')} 0.0));`;
-        console.log("selector=", out);
         return context.emit(out, varName, _cond, ..._inputs);
     });
 };

@@ -10,6 +10,9 @@ const MintSound: React.FC<{ fps: number, chainId: number, screenshot: string, nu
     let account = useAccount();
     const publicClient = usePublicClient();
 
+    console.log(visuals);
+    console.log("MINTING WITH FPS=", fps);
+
     let args = [
         {
             name,
