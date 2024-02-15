@@ -175,7 +175,7 @@ const MintBlock = (props: Props) => {
     }
     if (Step.Confirmed === step) {
         return (
-            <div className={className + ' w-full py-4 my-4'}>
+            <div style={{ backgroundColor: "#0b0a0a66" }} className={className + ' w-full py-4 my-4'}>
                 You successfully minted {work.name} #{mintedToken}
                 <div
                     onClick={() => setStep(Step.None)}
@@ -253,7 +253,7 @@ const MintBlock = (props: Props) => {
                     {checked && address.address === undefined ?
                         <div className="mx-auto items-start">
                             <ConnectButton label={`Mint ${TOKEN_PRICE} ETH`} /></div> : <div onClick={balance && totalPrice && balance < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-300 text-zinc-500 text-black " : " bg-zinc-300 text-zinc-500") + " mint-button select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-500 bg-zinc-300 cursor-pointer object-start w-40 mx-auto  items-start z-10 left-0 right-0 relative "} >
-                            <div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />
+                            {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
                             {balance && totalPrice && balance < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
                                 step === Step.OpenWallet ? "Confirm in Wallet" :
                                     step === Step.Waiting ? <div className="flex w-44 mx-auto "><span className="mr-2">Processing</span> <svg className="mt-2" width={150} height="15">{rectangles}</svg></div> :

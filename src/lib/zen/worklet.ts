@@ -21,10 +21,8 @@ export const createWorklet = (
 
     return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
         let { code, wasm } = createWorkletCode(name, graph);
-        console.log(wasm);
         let workletCode = code;
         const workletBase64 = btoa(workletCode);
-        console.log(code);
         const url = `data:application/javascript;base64,${workletBase64}`;
 
         const onCompilation = (): AudioWorkletNode => {
@@ -39,7 +37,6 @@ export const createWorklet = (
                     outputChannelCount: [graph.numberOfOutputs]
                 })
 
-            console.log("output channel count=", graph.numberOfOutputs, graph);
 
             workletNode.port.onmessage = (e: MessageEvent) => {
                 let type = e.data.type

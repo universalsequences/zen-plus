@@ -46,32 +46,40 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
     let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}`;
 
-    return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen">
-        <ArrowLeftIcon onClick={() => close()} className="w-8 h-8 cursor-pointer absolute bottom-2 left-5" />
-        <div className="w-full flex">
+    return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-700">
+        <ArrowLeftIcon onClick={() => close()} className="w-8 h-8 cursor-pointer absolute bottom-5 left-5" />
+        <div className="w-full flex m-auto">
             <iframe
-                style={{ width: "100vw", height: "100vh" }}
-                src={url} className="w-full mx-auto" />
+                style={{
+                    transform: "translate(0px, -50px)",
+                    boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px", width: "106vh", height: "80vh"
+                }}
+                src={url} className="w-full mx-auto border border-zinc-800 rounded-md" />
         </div>
         {/*
         */}
 
-        {activeAnimation ? <WorkEditor tokenId={activeAnimation} contractAddress={work.dropAddress} /> : ''}
+        {/* activeAnimation ? <WorkEditor tokenId={activeAnimation} contractAddress={work.dropAddress} /> : ''*/}
         <div
             style={{
-                backgroundColor: "#0b0a0a66",
-                border: "1px solid #343232",
+                backgroundColor: "#0b0a0a06",
+                border: "1px solid #3432328f",
                 width: 500,
-                borderTopRightRadius: 20,
-                borderTopLeftRadius: 20,
+                borderRadius: 20,
+                boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"
             }}
-            className=" fixed left-0 right-0 mx-auto bottom-0  h-10 bg-zinc-950 pl-10 flex text-sm  ">
+            className=" fixed left-0 right-0 mx-auto bottom-5  h-10 bg-zinc-950 pl-10 flex text-xs  ">
             <div className="w-48 my-auto">
                 {work.name}
             </div>
             <div
-                className="text-zinc-300 ml-10 w-50 my-auto text-center">
-                {trunc(work.ownerAddress)}
+                className="text-zinc-300 ml-10 w-50 my-auto text-center flex">
+                <div className="text-white mr-5">
+                    {trunc(work.ownerAddress)}
+                </div>
+                <div>
+                    author
+                </div>
             </div>
             <div
                 onClick={() => setOpened(!opened)}
@@ -97,7 +105,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 </div>}
 
                 <div
-                    className="my-auto pl-4 w-full flex">
+                    className="my-auto w-32 pl-4 flex">
                     <div>Work #{activeAnimation}</div>
                     <CaretSortIcon className="ml-auto mr-4" />
                 </div>

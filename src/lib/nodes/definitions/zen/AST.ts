@@ -101,7 +101,6 @@ export const printStatement = (statement: Statement): string => {
         let block = blocks[i].data;
         let interpolation = block.interpolation === "none" ? "none" : "linear";
         let functions = blocks[i].node ? traverseBackwards(blocks[i].node).filter(x => (x as ObjectNode).name === "function") : [];
-        console.log("functions for blocks node=", blocks[i].node, functions);
         let initData = block.getInitData!();
         let needsInterpolation = false;
         if (functions.length > 0) {
@@ -118,7 +117,6 @@ export const printStatement = (statement: Statement): string => {
                         pts.push(0);
                     }
                 }
-                console.log("editor points=", editor.points, pts);
                 initData = new Float32Array(pts);
                 needsInterpolation = true;
             }
@@ -134,7 +132,6 @@ export const printStatement = (statement: Statement): string => {
                 varOut += `let data${i} = data(${size}, ${channels}, new Float32Array(${str}), true, "${interpolation}");
             `;
             }
-            console.log("var out =", varOut);
         } else {
             let size = block.getSize!();
             let channels = block.getChannels!();
