@@ -1,6 +1,7 @@
 import {
     SerializedOutlet,
     AttributeCallbacks,
+    Coordinate,
     AttributeOptions,
     AttributeValue,
     Patch, IOConnection, ConnectionType, SerializedConnection, IOlet, Message, ObjectNode, MessageNode, Node, Attributes
@@ -21,10 +22,14 @@ export class BaseNode implements Node {
     attributeOptions: AttributeOptions;
     attributeDefaults: Attributes;;
     id: string;
+    position: Coordinate;
+    zIndex: number;
 
     constructor(patch: Patch) {
         this.id = uuid();
         this.patch = patch;
+        this.zIndex = 0;
+        this.position = { x: 0, y: 0 };
         this.inlets = [];
         this.outlets = [];
         this.attributes = {};
