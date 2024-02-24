@@ -1,6 +1,6 @@
 import { doc } from './doc';
 import { subscribe } from '@/lib/messaging/queue';
-import { Node, ObjectNode, Message } from '../../types';
+import { Node, ObjectNode, Message, Patch, SubPatch } from '../../types';
 
 doc(
     'preset',
@@ -57,7 +57,7 @@ export class PresetManager {
         let old = this.presets[this.currentPreset];
         let preset = this.presets[presetNumber];
         if (Object.keys(old).length > 0 && Object.keys(preset).length === 0) {
-            // old preste had a preset & new one is empty so lets copy it over
+            // old preset had a preset & new one is empty so lets copy it over
             this.presets[presetNumber] = {
                 ...old
             };
@@ -72,7 +72,6 @@ export class PresetManager {
                 // except messages...
                 if ((node as ObjectNode).custom) {
                     (node as ObjectNode).custom!.fromJSON(state);
-                } else {
                 }
             }
         }
@@ -81,7 +80,15 @@ export class PresetManager {
     listen() {
         subscribe("statechanged", (stateChange: Message) => {
             let _stateChange = stateChange as StateChange;
-            this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
+
+            // ensure that the preset is "above" the object emitting the message
+            // in the patch hierarchy
+            let stateChangePatch = _stateChange.node.patch;
+            let presetPatch = this.objectNode.patch;
+            if (isPatchBelow(presetPatch, stateChangePatch)) {
+                this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
+            }
+
         });
     }
 
@@ -142,3 +149,18 @@ export const preset = (object: ObjectNode) => {
 };
 
 
+
+const isPatchBelow = (a: Patch, b: Patch): boolean => {
+    if (b === a) {
+        return true;
+    }
+
+    while ((b as SubPatch).parentPatch) {
+        if (b === a) {
+            return true;
+        }
+        b = (b as SubPatch).parentPatch;
+    }
+
+    return false;
+};

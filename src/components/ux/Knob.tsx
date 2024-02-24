@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useValue } from '@/contexts/ValueContext';
+import { useLocked } from '@/contexts/LockedContext';
 import { usePosition } from '@/contexts/PositionContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import { ObjectNode } from '@/lib/nodes/types';
@@ -6,12 +8,18 @@ import { useMouseEditValue } from '@/hooks/useMouseEditValue';
 
 const Knob: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let ref = useRef<HTMLDivElement | null>(null);
-    const { lockedMode } = useSelection();
+    let { lockedMode } = useLocked();
     let [value, setValue] = useState((objectNode.arguments[0] !== undefined ? (objectNode.arguments[0] as number) : 0.5));
     let [editing, setEditing] = useState(false);
 
-
+    let { value: message } = useValue();
     const { onMouseDown } = useMouseEditValue(ref, value, setValue, 0, 1);
+
+    useEffect(() => {
+        if (message !== null) {
+            setValue(message as number);
+        }
+    }, [message, setValue]);
 
     const handleMouseDown = (e: any) => {
         if (lockedMode) {

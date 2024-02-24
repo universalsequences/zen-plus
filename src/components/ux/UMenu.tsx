@@ -1,13 +1,13 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { useSelection } from '@/contexts/SelectionContext';
+import { useLocked } from '@/contexts/LockedContext';
 import { ObjectNode } from '@/lib/nodes/types';
 import { usePosition } from '@/contexts/PositionContext';
 
 const UMenu: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
     const { sizeIndex } = usePosition();
-    let { width, height } = sizeIndex[objectNode.id] || { width: 72, height: 18 };
-    const { lockedMode } = useSelection();
+    let { width, height } = objectNode.size || { width: 72, height: 18 };
+    const { lockedMode } = useLocked();
     let [selectedOption, setSelectedOption] = useState(objectNode.storedMessage as string || "");
     let options = Array.isArray(objectNode.attributes["options"]) ? objectNode.attributes["options"] as number[] : (objectNode.attributes["options"] as string).split(",");
     if (options.map(x => parseFloat(x as string)).every(x => !isNaN(x))) {

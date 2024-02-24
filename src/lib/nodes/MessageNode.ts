@@ -8,6 +8,7 @@ const REPLACE = 'replace';
 
 export default class MessageNodeImpl extends BaseNode implements MessageNode {
     id: string;
+    onNewValue?: (x: Message) => void;
     message?: Message;
     position: Coordinate;
     presentationPosition?: Coordinate;
@@ -72,8 +73,8 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
                 break;
         }
         if (this.message !== undefined) {
-            if (this.patch.onNewMessage) {
-                this.patch.onNewMessage(this.id, this.message);
+            if (this.onNewValue) {
+                this.onNewValue(this.message);
             }
         }
     }

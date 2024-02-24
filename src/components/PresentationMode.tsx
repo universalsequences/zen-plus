@@ -7,7 +7,6 @@ import { DesktopIcon } from '@radix-ui/react-icons'
 const PresentationMode = () => {
     const { setPreparePresentationMode, setPresentationMode, presentationMode } = usePosition();
     const { patch } = usePatch();
-    const { setLockedMode, lockedMode } = useSelection();
 
     return <div
         onClick={() => {
@@ -20,8 +19,8 @@ const PresentationMode = () => {
                 }, 1000);
             }, 50);
         }}
-        className={(presentationMode ? "bg-white" : "") + " cursor-pointer p-0.5 rounded-full h-7 w-7"}>
-        <DesktopIcon className={(presentationMode ? "invert" : "") + " w-6 h-6"} />
+        className={(presentationMode ? "bg-white" : "") + " cursor-pointer p-0.5 rounded-full h-7 w-7 flex"}>
+        <DesktopIcon className={(presentationMode ? "invert w-4 h-4" : "w-6 h-6") + " m-auto transition-all"} />
     </div>
 }
 

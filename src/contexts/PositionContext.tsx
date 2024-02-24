@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { Patch, IOlet, Attributes, IOConnection, MessageNode, Orientation, ObjectNode, Coordinate } from '@/lib/nodes/types';
 
-const ALIGNMENT_GRID = 6;
+const ALIGNMENT_GRID = 3;
 export interface ResizingNode {
     node: ObjectNode | MessageNode;
     offset: Coordinate;
@@ -126,9 +126,20 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         if (maxY > 0 || maxX > 0) {
             setSize({ width: maxX + 300, height: maxY + 300 });
         }
+        //console.log('setting size index of patch=', patch.name, _size);
         setSizeIndex(_size);
         sizeIndexRef.current = _size;
     }, [patch.objectNodes, setSizeIndex]);
+
+    useEffect(() => {
+        if (patch.objectNodes.some(x => x.attributes["Include in Presentation"]) && patch.justExpanded) {
+            setPresentationMode(true);
+            setTimeout(() => {
+                patch.justExpanded = false;
+            }, 100);
+        } else {
+        }
+    }, [patch]);
 
     const sizeIndexRef = useRef<SizeIndex>(sizeIndex);
     useEffect(() => {
@@ -155,6 +166,10 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     let [presentationMode, setPresentationMode] = useState(patch.presentationMode);
     const [nearestInlet, setNearestInlet] = useState<NearestInlet | null>(null);
 
+    useEffect(() => {
+        patch.presentationMode = presentationMode;
+    }, [patch, presentationMode]);
+
     const checkNearInlets = useCallback((x: number, y: number) => {
         if (!draggingCable) {
             return;
@@ -169,6 +184,12 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             }
             let position = node.position;
             let size = sizeIndexRef.current[node.id] || { width: 30, height: 10 };
+
+            if (node.attributes.slotview) {
+                size = { ...size };
+                size.width = 180;
+                size.height = 24;
+            }
             let width = size.width;
 
             let iolets = draggingCable.destNode ? node.outlets : node.inlets;
@@ -210,7 +231,6 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setAlignmentLines([]);
         }
 
-        console.log('updating positions =', updates);
         let _coordinates = replace ? {} : coordinatesRef.current;
         let _size = size;
         let sizeChanged = false;
@@ -240,7 +260,6 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
             setSize(_size);
         }
         coordinatesRef.current = _coordinates;
-        console.log('setting __cordinates=', _coordinates);
         setCoordinates({ ..._coordinates });
         return updates;
     }, [coordinates, setCoordinates, setSize, size, setAlignmentLines]);
@@ -292,6 +311,10 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                 let midPointX = size2 ? (coord2.x + size2.width / 2) : coord2.x;
                 let midPointX1 = size1 ? (coord1.x + size1.width / 2) : coord1.x;
                 let diffX3 = Math.abs(midPointX1 - midPointX);
+
+                if (distance > 500 || !coord1 || !coord2) {
+                    continue;
+                }
 
                 if (distance < minDistanceX && diffX < ALIGNMENT_GRID) {
                     // then we need vertical alignment

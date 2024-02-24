@@ -5,6 +5,7 @@ import { minify } from '@/lib/nodes/Patch';
 import { db } from '@/lib/db/firebase';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import {
+    zoraTestnet,
     goerli,
     zora
 } from 'wagmi/chains';
@@ -83,7 +84,7 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
 
     useEffect(() => {
         if (opened && switchNetwork) {
-            switchNetwork(goerli.id);
+            switchNetwork(zoraTestnet.id);
         }
     }, [opened, switchNetwork]);
 
@@ -141,7 +142,10 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                     switchNetwork && chain && <div className="flex mb-1">
                         <div
                             onClick={() => switchNetwork(goerli.id)}
-                            className={"cursor-pointer " + (chain.id === goerli.id ? "border-bottom text-white " : " text-zinc-400")}>testnet</div>
+                            className={"cursor-pointer " + (chain.id === goerli.id ? "border-bottom text-white " : " text-zinc-400")}>goerli</div>
+                        <div
+                            onClick={() => switchNetwork(zoraTestnet.id)}
+                            className={"cursor-pointer " + (chain.id === zoraTestnet.id ? "border-bottom text-white " : " text-zinc-400")}>zora testnet</div>
                         <div
                             onClick={() => switchNetwork(zora.id)}
                             className={"cursor-pointer ml-5 " + (chain.id === zora.id ? "border-bottom text-white " : " text-zinc-400")}>zora network</div>

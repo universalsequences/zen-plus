@@ -17,14 +17,14 @@
 }
 
 body.light-mode {
-    background-image: none;
+    background-image: url(https://unsplash.com/photos/Iusv5XwHpME/download?ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTIzfHxnbGFjaWVyfGVufDB8MHx8fDE3MDg1MjkyODh8Mg&force=true);
  /*url(https://unsplash.com/photos/17_NbEXmW8s/download?ixid=M3wxMjA3fDB8MXx0b3BpY3x8Ym84alFLVGFFMFl8fHx8fDJ8fDE3MDcyMjY3MDN8&force=true);*/
 }
 body, html {
   color: rgb(var(--foreground-rgb));
   /* credit: https://unsplash.com/@flyd2069 https://unsplash.com/photos/green-and-blue-abstract-painting-zkIXgYpiHq8 */
-  background-image: url(/ron-whitaker.jpg);
-  background-image: url(/purple-back.png);
+  background-image: url(https://unsplash.com/photos/J9eE9nWEOEc/download?ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTc4fHxpY2UlMjBpbmslMjBhYnN0cmFjdHxlbnwwfDB8fHwxNzA4NzIzNTQ3fDI&force=true);
+  /*background-image: url(/purple-back.png);*/
   
   background-color: #111010 !important;
   background-color: #575757 !important;

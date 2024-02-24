@@ -98,8 +98,14 @@ export class BaseNode implements Node {
             destinationInlet: inlet
         };
 
-        outlet.connections.push(connection);
-        inlet.connections.push(connection);
+
+        if (!outlet.connections.some(x => x.destination === destination && x.destinationInlet === inlet && x.sourceOutlet === outlet)) {
+            outlet.connections.push(connection);
+        }
+
+        if (!inlet.connections.some(x => x.source === this && x.destinationInlet === inlet && x.sourceOutlet === outlet)) {
+            inlet.connections.push(connection);
+        }
 
         if (inlet.connectionType === ConnectionType.AUDIO &&
             outlet.connectionType === ConnectionType.AUDIO) {

@@ -1,6 +1,9 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import SlotView from './SlotView';
+import { File } from '@/lib/files/types';
 import { TypeError, TypeSuccess } from '@/lib/nodes/typechecker';
 import { fetchOnchainSubPatch } from '@/lib/onchain/fetch';
+import { useValue } from '@/contexts/ValueContext';
 import { usePublicClient } from 'wagmi';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import { OperatorContext, OperatorContextType, getAllContexts, getOperatorContext } from '@/lib/nodes/context';
@@ -11,6 +14,8 @@ import Attributes from './Attributes';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
 import { SizeIndex, usePosition, DraggingNode } from '@/contexts/PositionContext';
 import { usePatches } from '@/contexts/PatchesContext';
+import { useLocked } from '@/contexts/LockedContext';
+import { useSubPatchLoader } from '@/hooks/useSubPatchLoader';
 import PositionedComponent from './PositionedComponent';
 import { ObjectNode, Patch, Coordinate, Size, MessageNode } from '@/lib/nodes/types';
 import { useSelection } from '@/contexts/SelectionContext';
@@ -21,12 +26,13 @@ import { useMessage } from '@/contexts/MessageContext';
 import { useStorage } from '@/contexts/StorageContext';
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-    const { setSelection, lockedMode, selectedNodes, setSelectedNodes } = useSelection();
+    const { setSelection, selectedNodes, setSelectedNodes } = useSelection();
     const { updatePosition, sizeIndexRef } = usePosition();
 
-    let { messages } = useMessage();
-    let errorMessage = objectNode.operatorContextType === OperatorContextType.CORE ? undefined : messages[objectNode.id];
-    let lockedModeRef = useRef(lockedMode);
+    let { value } = useValue();
+    const { lockedMode } = useLocked();
+    const lockedModeRef = useRef(lockedMode);
+    let errorMessage = objectNode.operatorContextType === OperatorContextType.CORE ? undefined : value;
     useEffect(() => {
         lockedModeRef.current = lockedMode;
     }, [lockedMode]);
@@ -85,6 +91,8 @@ const InnerObjectNodeComponent: React.FC<{
         const { setSelectedPatch, expandPatch, patches, setPatches } = usePatches();
         const [includeInPresentation, setIncludeInPresentation] = useState(objectNode.attributes["Include in Presentation"]);
 
+        const { loadSubPatch } = useSubPatchLoader(objectNode);
+
         const _expandPatch = useCallback(() => {
             if (objectNode.subpatch) {
                 expandPatch(objectNode);
@@ -93,27 +101,35 @@ const InnerObjectNodeComponent: React.FC<{
 
         const { setAutoCompletes, autoCompletes } = useAutoComplete(text, objectNode, editing);
 
-        let objectNodes = objectNode.subpatch ? objectNode.subpatch.objectNodes : undefined;
-        let messageNodes = objectNode.subpatch ? objectNode.subpatch.messageNodes : undefined;
-
-
         const onChange = useCallback((value: string) => {
             setText(value);
             setSelected(0);
         }, [setText, setSelected, objectNode]);
 
-        const enterText = useCallback(async (text: string, context?: OperatorContext, id?: string) => {
+        const enterText = useCallback(async (text: string, context?: OperatorContext, file?: File) => {
             if (!context) {
                 context = getOperatorContext(OperatorContextType.ZEN);
             }
             let success = true
-            if (id) {
-                let serializedSubPatch = await fetchSubPatchForDoc(id);
-                if (serializedSubPatch) {
+            if (file) {
+                //let serializedSubPatch = await fetchSubPatchForDoc(id);
+                if (file) {
+                    await loadSubPatch(file);
+                    /*
                     if (serializedSubPatch.attributes && serializedSubPatch.attributes["type"]) {
                         objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
                     }
+                    if (serializedSubPatch.attributes && serializedSubPatch.attributes["moduleType"]) {
+                        objectNode.attributes["moduleType"] = serializedSubPatch.attributes["moduleType"];
+                    }
+                    if (serializedSubPatch.attributes && serializedSubPatch.attributes["slotview"]) {
+                        objectNode.attributes["slotview"] = serializedSubPatch.attributes["slotview"];
+                    }
                     success = objectNode.parse(text, context.type, true, serializedSubPatch);
+                    if (objectNode.subpatch) {
+                        objectNode.subpatch.recompileGraph();
+                    }
+                    */
                 } else {
                     success = false;
                 }
@@ -155,7 +171,7 @@ const InnerObjectNodeComponent: React.FC<{
                     if (objectNode.text.split(" ")[0] === name) {
                         name = objectNode.text;
                     }
-                    enterText(name, autoCompletes[selected].context, autoCompletes[selected].definition.id);
+                    enterText(name, autoCompletes[selected].context, autoCompletes[selected].definition.file);
                 } else {
                     enterText(text);
                 }
@@ -220,12 +236,15 @@ const InnerObjectNodeComponent: React.FC<{
 
         }, [objectNode, newObjectNode]);
 
+        let clicked = useRef(false);
         useEffect(() => {
             // TODO: dont set timeout... this is a hack
             setTimeout(() => {
-                if (inputRef.current && editing) {
+                if (inputRef.current && editing && (clicked.current || objectNode.created)) {
+                    console.log('focus...');
                     inputRef.current.focus();
                     inputRef.current.select();
+                    objectNode.created = false;
                 }
             }, 10)
         }, [editing]);
@@ -233,6 +252,8 @@ const InnerObjectNodeComponent: React.FC<{
         const initialPosition = useRef<Coordinate | null>(null);
 
         const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+            let last = lastSubPatchClick.current;
+            lastSubPatchClick.current = new Date().getTime();
             setSelection(null);
             if (isCustomView) {
                 // e.stopPropagation();
@@ -255,15 +276,18 @@ const InnerObjectNodeComponent: React.FC<{
                         e.stopPropagation();
                     }
                     if (objectNode.name === "zen" && objectNode.subpatch) {
-                        let diff = new Date().getTime() - lastSubPatchClick.current;
-                        lastSubPatchClick.current = new Date().getTime();
-                        expandPatch(objectNode);
+                        if (objectNode.attributes.slotview) {
+                            return;
+                        }
+                        let diff = new Date().getTime() - last;
                         if (diff > 250) {
                             return;
                         }
+                        expandPatch(objectNode);
                         return;
                     }
                     if (!objectNode.name || !index[objectNode.name]) {
+                        clicked.current = true;
                         setEditing(true);
                     }
                     setSelectedNodes([]);
@@ -288,6 +312,8 @@ const InnerObjectNodeComponent: React.FC<{
 
         let CustomComponent = (objectNode.name ? index[objectNode.name] : undefined) as unknown as React.ComponentType<NodeProps>;
         let isCustomSubPatchView = objectNode.attributes["Custom Presentation"];
+
+        let { slotview } = objectNode.attributes;
 
         return (
             <PositionedComponent
@@ -327,7 +353,7 @@ const InnerObjectNodeComponent: React.FC<{
                             ref={ref}
                             onMouseDown={onMouseDown}
                             className="flex h-full w-full flex-1 whitespace-nowrap">
-                            <>
+                            {slotview ? <SlotView objectNode={objectNode} /> : <>
 
                                 {isCustomSubPatchView ? <CustomSubPatchView
                                     objectNode={objectNode} /> : CustomComponent ? <CustomComponent objectNode={objectNode} />
@@ -360,7 +386,7 @@ const InnerObjectNodeComponent: React.FC<{
                                             name = text;
                                         }
                                         setText(name);
-                                        enterText(name, x.context, x.definition.id);
+                                        enterText(name, x.context, x.definition.file);
                                         setAutoCompletes([]);
                                     }} />}
                                 {((typeError && !(typeError as TypeSuccess).success) || editing && (error)) &&
@@ -369,7 +395,7 @@ const InnerObjectNodeComponent: React.FC<{
                                         className="absolute bg-red-500 text-white rounded-lg px-2">
                                         {typeError ? (typeError as TypeError).error : error}
                                     </div>}
-                            </>
+                            </>}
                         </div>
                     </ContextMenu.Trigger>
                 </ContextMenu.Root>

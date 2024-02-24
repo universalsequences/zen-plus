@@ -20,9 +20,8 @@ export class MutableValue {
             state: x
         });
         this._value = x;
-        if (this.objectNode.patch.onNewMessage) {
-            this.objectNode.patch.onNewMessage(
-                this.objectNode.id,
+        if (this.objectNode.onNewValue) {
+            this.objectNode.onNewValue(
                 x);
         }
     }
@@ -35,9 +34,8 @@ export class MutableValue {
         this._value = x;
         this.objectNode.arguments[this.index] = x;
         this.objectNode.receive(this.objectNode.inlets[0], x);
-        if (this.objectNode.patch.onNewMessage) {
-            this.objectNode.patch.onNewMessage(
-                this.objectNode.id,
+        if (this.objectNode.onNewValue) {
+            this.objectNode.onNewValue(
                 x);
         }
     }

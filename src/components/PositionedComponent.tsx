@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useMessage } from '@/contexts/MessageContext';
 import { index } from './ux/index';
 import IOletsComponent from './IOletsComponent';
+import { SLOT_VIEW_WIDTH } from './SlotView';
 import { Definition } from '@/lib/docs/docs';
 import { MessageType, ObjectNode, MessageNode, Orientation, Patch, Coordinate, Positioned, Identifiable } from '@/lib/nodes/types';
 import { useSelection } from '@/contexts/SelectionContext';
@@ -27,6 +29,8 @@ const PositionedComponent: React.FC<{
     const style = usePositionStyle(node, isCustomView);
 
     const initialPosition = useRef<Coordinate | null>(null);
+
+    useMessage();
 
     const maxZIndexRef = useRef(maxZIndex);
     useEffect(() => {
@@ -105,7 +109,6 @@ const PositionedComponent: React.FC<{
             let y = e.clientY - divRect.top
 
             if (!selectedNodes.includes(node)) {
-                console.log('set selected node =', node);
                 setSelectedNodes([node]);
             }
 
@@ -222,6 +225,14 @@ const PositionedComponent: React.FC<{
         if (isHydrated) {
             className += " hydrated";
         }
+
+        if (node.attributes.slotview) {
+            _style.width = SLOT_VIEW_WIDTH;
+            _style.minWidth = SLOT_VIEW_WIDTH + 'px';
+            _style.maxWidth = SLOT_VIEW_WIDTH + 'px';
+            _style.height = 24;
+        }
+
         return (
             <div
                 ref={ref}
@@ -264,9 +275,10 @@ const PositionedComponent: React.FC<{
                     className="absolute flex -bottom-1"
                     node={node} iolets={node.outlets} />
                 {children}
-            </div>);
+            </div>
+        );
 
-    }, [node, isError, size, children, style, text, nearestInlet]);
+    }, [node, isError, size, children, style, text, nearestInlet, node.attributes.slotview]);
     return out;
 };
 

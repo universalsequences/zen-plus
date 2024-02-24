@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useLocked } from '@/contexts/LockedContext';
+import { ValueProvider } from '@/contexts/ValueContext';
 import * as mat from '@/lib/nodes/definitions/core/matrix';
 import MatrixCell from './MatrixCell';
 import { useMessage } from '@/contexts/MessageContext';
@@ -14,7 +16,7 @@ export interface Position {
 }
 const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let attributes = objectNode.attributes;
-    let { attributesIndex, lockedMode } = useSelection();
+    let { attributesIndex } = useSelection();
     let editing = useRef<Position | null>(null);
     let ref = useRef<HTMLDivElement>(null);
     let { unit, showValue, min, max, fillColor, cornerRadius, type, rows, columns } = attributes;
@@ -28,10 +30,15 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
 
     const { sizeIndex } = usePosition();
-    let { width, height } = sizeIndex[objectNode.id] || { width: 100, height: 100 };
-    let size = sizeIndex[objectNode.id] || { width: 100, height: 100 };
+    const { lockedMode } = useLocked();
+    let { width, height } = objectNode.size || { width: 100, height: 100 };
+    let size = objectNode.size || { width: 100, height: 100 };
     let size_x = (width - (columns as number) * 4) / (columns as number);
     let size_y = (height - (rows as number) * 4) / (rows as number);
+
+    //   useEffect(() => {
+    //        console.log('size index of matrix=', sizeIndex[objectNode.id], sizeIndex);
+    //  }, [sizeIndex[objectNode.id]]);
 
     useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
@@ -54,18 +61,33 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             return;
         }
         let rect = ref.current.getBoundingClientRect();
-        let height = size.height / (rows as number);
+        let height = 0 + (size.height / (rows as number));
         let client = {
             x: e.clientX - rect.left,
-            y: e.clientY - rect.top - editing.current.y * height - (editing.current.startY)
+            y: e.clientY - rect.top - editing.current.y * height // - (editing.current.startY)
         };
+        let DIFF = (editing.current.startY - client.y);
+        let v = editing.current.value + (max as number) * DIFF / (editing.current.startY);
+        if (DIFF < 0) {
+            v = editing.current.value + (max as number) * (DIFF) / ((height) - editing.current.startY);
 
-        let _value = -1 * (((client.y) / height)) * (max as number);
+        }
+        let value = Math.min(max as number, v);
+        if (value < (min as number)) {
+            value = min as number;
+        }
+        if (isNaN(value)) {
+            value = 0;
+        }
+
+        /*
+        let _value = -1 * (((client.y) / (height))) * (max as number);
         let diff = (_value - editing.current.value) * Math.min(3, 1 / editing.current.startY);
         let value = Math.min(max as number, editing.current.value + _value);
         if (value < (min as number)) {
             value = min as number;
         }
+        */
         toggle(editing.current.y, editing.current.x, value);
         if (objectNode.custom) {
             (objectNode.custom as mat.Matrix).update();
@@ -100,7 +122,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                                     fillColor={fillColor as string}
                                     row={rowIndex}
                                     col={index}
-                                    idx={(index + rowIndex * (objectNode.attributes["rows"] as number))}
+                                    idx={(index + rowIndex * (columns as number))}
                                     toggle={toggle}
                                     width={size_x}
                                     height={size_y}
@@ -115,7 +137,8 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                                     key={index} />
                         )}
                     </div>)}
-        </div >);
+        </div >
+        );
 
     }, [unit, rows, columns, width, height, type, fillColor, editing, lockedMode, max, toggle, ux, showValue, cornerRadius]);
     return memo;

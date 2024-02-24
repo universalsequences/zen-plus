@@ -61,7 +61,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
                     (e: any) => {
                         setPatchName(e.target.value);
                         patch.name = e.target.value;
-                    }} className="text-white bg-black-clear outline-none px-1" /> : patch.name || "current patch"}
+                    }} className="text-white bg-black-clear outline-none px-1" /> : (patch.name || "current patch") + " " + patch.id}
     </div >);
 
     const selectPatch = useCallback((_patch: Patch) => {

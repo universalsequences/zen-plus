@@ -24,7 +24,6 @@ export class FunctionEditor {
     }
 
     fromJSON(x: any) {
-        console.log('function editor from json=', x);
         if (x) {
             this.points = x;
             this.objectNode.receive(this.objectNode.inlets[0], "bang");

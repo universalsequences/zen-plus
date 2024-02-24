@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { usePatchLoader } from '@/hooks/usePatchLoader';
+import { useLocked } from '@/contexts/LockedContext';
 import { getUpdatedSize } from '@/lib/utils';
 import AssistantSidebar from './AssistantSidebar';
 import { useTilesContext } from '@/contexts/TilesContext';
@@ -41,7 +42,6 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
         lastResizingTime,
         setSelection,
         selection,
-        lockedMode,
         selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
     const { onNewMessage } = useMessage();
 
@@ -57,15 +57,23 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
 
     useEffect(() => {
         if (fileToOpen) {
+            console.log('file to open patch comp = ', fileToOpen);
             loadPatch(fileToOpen);
             setFileToOpen(null);
         }
     }, [fileToOpen]);
 
 
+    let IS_SELECTED = useRef(selectedPatch);
+    useEffect(() => {
+        IS_SELECTED.current = selectedPatch;
+    }, [selectedPatch]);
+
     useEffect(() => {
         if (!isCustomView) {
-            setSelectedPatch(patch);
+            if (!IS_SELECTED.current) {
+                setSelectedPatch(patch);
+            }
             patch.onNewMessage = onNewMessage;
         }
     }, [onNewMessage]);
@@ -89,8 +97,10 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
         setNearestInlet,
         draggingSegmentation,
         setSize,
-        size
+        size,
     } = usePosition();
+
+    const { lockedMode } = useLocked();
 
     let { zoom, zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
 
@@ -170,6 +180,10 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                     let size = sizeIndexRef.current[node.id];
                     let w = size ? size.width || 100 : 100;
                     let h = size ? size.height || 7 : 7;
+                    if (node.attributes.slotview) {
+                        w = 180;
+                        h = 24;
+                    }
                     let position = presentationMode ? node.presentationPosition || node.position : node.position;
                     return position.x + w >= selection.x1 && position.x <= selection.x2 &&
                         position.y + h >= selection.y1 && position.y <= selection.y2;
@@ -459,6 +473,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                 x, y
             };
 
+            objectNode.created = true;
             newObjectNode(objectNode, position);
             updatePosition(objectNode.id, position);
             setSelection(null);
@@ -583,7 +598,12 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
 
         let animation = `${_direction}-slide-${patch.id} 0.2s ease`;
 
-        let style: any = isCustomView ? {} : { animation, maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%' };
+        let style: any = isCustomView ? {} : { animation, minWidth: _maxWidth + '%', minHeight: _maxHeight + '%', maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%' };
+
+        if (tile && tile.parent && tile.parent.children[1] === tile && tile.children.length === 0) {
+            style = {};
+        }
+
         let isFloatingCustom = false;
         if (!isCustomView && (patch as SubPatch).parentNode && lockedMode) {
             let node = (patch as SubPatch).parentNode;
@@ -597,21 +617,22 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                     height: node.size.height + 'px',
                     maxWidth: node.size.width + 'px',
                     maxHeight: node.size.height + 'px',
-                    margin: "auto",
+                    overflow: "hidden"
+                    //margin: "auto",
                 };
                 // }
             }
         }
 
+        //<style dangerouslySetInnerHTML={{ __html: keyframe }} />
         return (<>
-            <style dangerouslySetInnerHTML={{ __html: keyframe }} />
             <div
                 style={style}
                 onClick={onClick}
                 onMouseUp={isCustomView ? undefined : onMouseUp}
                 onMouseMove={onSelectionMove}
                 onMouseDown={onMouseDown}
-                className={(tile && tile.parent && tile.parent.children.length === 1 ? "transition-all " : "") + "transition-colors duration-300 ease-in-out " + cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-100 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
+                className={(isFloatingCustom ? " dark-background " : "") + (tile && tile.parent && tile.parent.children.length === 1 ? "transition-all " : "") + "transition-colors duration-300 ease-in-out " + cl + " " + (!isCustomView && patch === selectedPatch ? "selected-patch " : "") + (isCustomView ? "" : " border border-zinc-100 ") + (" flex flex-col relative w-full ") + (presentationMode ? " presentation " : "") + (lockedMode ? "locked" : "") + (isCustomView ? "" : " tile") + (isCustomView ? " custom-view" : "")
 
                 }>
                 {!isCustomView && <>
@@ -662,6 +683,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                 </>}
 
 
+                <AssistantSidebar />
                 <PatchInner visibleObjectNodes={visibleObjectNodes} index={index} isCustomView={isCustomView} zoomRef={zoomRef} zoomableRef={zoomableRef} />
                 {
                     !isCustomView && <>

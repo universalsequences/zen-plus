@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useCallback, useState } from 'react';;
+import { useLocked } from '@/contexts/LockedContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import AlignmentHelper from './AlignmentHelper';
 import { useConnections } from '@/hooks/useConnections';
@@ -11,10 +12,11 @@ import { DraggingCable, usePosition } from '@/contexts/PositionContext';
 const strokeColor = "#2ad4bf";
 const Cables = () => {
     let { objectNodes, messageNodes, deleteConnection } = usePatch();
-    let { lockedMode, selectedNodes } = useSelection();
+    let { selectedNodes } = useSelection();
 
     let { size } = usePosition();
     let { presentationMode, draggingNode, scrollRef, setDraggingCable, draggingCable, setDraggingSegmentation } = usePosition();
+    let { lockedMode } = useLocked();
 
     const { selectedConnection } = useSelection();
     let memoed = React.useMemo(() => {

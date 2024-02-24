@@ -20,15 +20,19 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     patchType: OperatorContextType;
 
     constructor(parentPatch: Patch, parentNode: ObjectNode) {
-        super(parentPatch.audioContext, true);
+        let parentNodeType = parentNode.attributes["type"];
+        super(parentPatch.audioContext, parentNodeType === "zen");
         this.parentPatch = parentPatch;
         this.parentNode = parentNode;
-        this._setupInitialNodes();
         this.parentNode.newAttribute("Custom Presentation", false);
 
         this.patchType = OperatorContextType.ZEN;
-        if ((this.parentPatch as SubPatch).parentPatch) {
-            this.patchType = (this.parentPatch as SubPatch).patchType;
+        let _parentPatch = (this.parentPatch as SubPatch);
+        if (_parentPatch.parentPatch && (_parentPatch.patchType === OperatorContextType.ZEN || _parentPatch.patchType === OperatorContextType.GL)) {
+            if (parentNodeType === "zen") {
+            } else {
+                this.patchType = (_parentPatch).patchType;
+            }
         } else {
             if (typeof this.parentNode.attributes["type"] === "string") {
                 let types: any = {
@@ -44,7 +48,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
             }
         }
         if (this.patchType !== OperatorContextType.ZEN) {
-            console.log("patch type is not zen", this.patchType);
             this.parentNode.operatorContextType = this.patchType;
             for (let inlet of this.parentNode.inlets) {
                 inlet.connectionType = toConnectionType(this.patchType);;
@@ -53,7 +56,11 @@ export default class Subpatch extends PatchImpl implements SubPatch {
                 outlet.connectionType = toConnectionType(this.patchType);;
             }
         }
-        console.log("subpatch=", this);
+        let isAudio = this.patchType === OperatorContextType.AUDIO;
+        if (isAudio) {
+            this.setupAudioPatch();
+        }
+        this._setupInitialNodes();
     }
 
     _setupInitialNodes() {
@@ -144,5 +151,21 @@ export default class Subpatch extends PatchImpl implements SubPatch {
             return;
         }
         this.parentPatch.newHistoryDependency(newHistory, object);
+    }
+
+    setupAudioPatch() {
+        let inputMerger = this.audioContext.createChannelMerger(16);
+        let outputMerger = this.audioContext.createChannelMerger(16);
+        let parentNode = (this as SubPatch).parentNode;
+        if (parentNode) {
+            parentNode.merger = inputMerger;
+            //merger.connect(ret.workletNode);
+        }
+
+        this.audioNode = outputMerger;
+        if (parentNode) {
+            parentNode.useAudioNode(this.audioNode);
+            //this.audioNode.connect(this.audioContext.destination);
+        }
     }
 }

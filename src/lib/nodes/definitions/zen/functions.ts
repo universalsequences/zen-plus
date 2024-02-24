@@ -31,6 +31,7 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
                 deps.push(dep);
             }
         }
+
         _bodies = [_message, ..._bodies];
         if (_bodies.length === 0) {
             return [];

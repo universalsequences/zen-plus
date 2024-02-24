@@ -30,14 +30,47 @@ doc(
 const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
 
     let parentNode = (_node.patch as SubPatch).parentNode;
+    let patchType = (_node.patch as SubPatch).patchType;
+    let isAudio = patchType === OperatorContextType.AUDIO;
     if (parentNode) {
         let outputNumber = args[0]() as number;
         let name: string | undefined = args[1] ? args[1]() as string : undefined;
 
         while (parentNode && parentNode.outlets.length < outputNumber) {
-            parentNode.newOutlet();
+            parentNode.newOutlet(undefined, isAudio || parentNode.audioNode ? ConnectionType.AUDIO : undefined);
+        }
+        if (isAudio) {
+            for (let i = 0; i < parentNode.outlets.length; i++) {
+                parentNode.outlets[i].connectionType = ConnectionType.AUDIO;
+            }
         }
         parentNode.outlets[outputNumber - 1].name = name;
+    }
+    _node.attributeOptions["io"] = ["trig", "velocity", "duration", "gate", "control", "audio", "ramp", "other"];
+    if (!_node.attributes.io) {
+        _node.attributes.io = isAudio ? "audio" : "other";
+    }
+
+    if (isAudio && !_node.audioNode) {
+        // need to create an audio node that connects to speakers
+        let ctxt = _node.patch.audioContext;
+        let gain = ctxt.createGain();
+        gain.gain.value = 1;
+        _node.audioNode = gain;
+
+        //gain.connect(ctxt.destination);
+
+        let patchAudio = (_node.patch as SubPatch).parentNode.audioNode;
+        if (patchAudio) {
+            let outputNumber = args[0]() as number;
+            gain.connect(patchAudio, 0, outputNumber - 1);
+        }
+
+        // connect this out of the patch... 
+    }
+
+    if (isAudio) {
+        _node.inlets[0].connectionType = ConnectionType.AUDIO;
     }
 
     return (message: Message) => {
@@ -77,30 +110,62 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     let subpatch = (node.patch as SubPatch);
     let parentNode = (node.patch as SubPatch).parentNode;
     let isCore = node.attributes["type"] === "core";
+    let patchType = (node.patch as SubPatch).patchType;
+    let isAudio = patchType === OperatorContextType.AUDIO;
+
     while (parentNode && parentNode.inlets.length < inputNumber) {
-        console.log('doin');
         parentNode.newInlet();
     }
     if (isCore) {
-        console.log("Is core");
         parentNode.inlets[inputNumber - 1].connectionType = ConnectionType.CORE;
-        console.log("CORE = ", parentNode.inlets[inputNumber - 1].connectionType);
+    }
+    if (isAudio) {
+        for (let i = 0; i < parentNode.inlets.length; i++) {
+            parentNode.inlets[i].connectionType = ConnectionType.AUDIO;
+        }
     }
     node.attributeOptions["type"] = ["core", "audio", "zen", "gl"];
+    node.attributeOptions["io"] = ["trig", "velocity", "duration", "gate", "control", "audio", "ramp", "other"];
+
+    if (!node.attributes.io) {
+        node.attributes.io = "other";
+    }
+
     let name: string | undefined = args[1] ? args[1]() as string : undefined;
     parentNode.inlets[inputNumber - 1].name = name;
     if (!subpatch.parentPatch.isZen) {
         node.needsLoad = true;
     }
-    console.log('inputNumber=%s', inputNumber - 1, parentNode.inlets[inputNumber - 1].connectionType, parentNode.inlets);
     parentNode.inlets[inputNumber - 1].node = node;
+
+    if (isAudio && !node.audioNode) {
+        // need to create an audio node that connects to speakers
+        let ctxt = node.patch.audioContext;
+        let gain = ctxt.createGain();
+        gain.gain.value = 1;
+        node.audioNode = gain;
+
+        //gain.connect(ctxt.destination);
+
+        let patchAudio = (node.patch as SubPatch).parentNode.merger;
+        if (patchAudio) {
+            let outputNumber = args[0]() as number;
+            let splitter = ctxt.createChannelSplitter(16);
+            patchAudio.connect(splitter);
+            splitter.connect(gain, inputNumber - 1, 0);
+        }
+        // connect this out of the patch... 
+    }
+
+    if (isAudio) {
+        node.outlets[0].connectionType = ConnectionType.AUDIO;
+    }
 
     return (message: Message) => {
         if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
             if (node.attributes["type"] === "core") {
                 return [];
             }
-            console.log("patch type was zen...");
             let statement: Statement = [{ name: "input", value: (args[0]() as number) - 1 } as CompoundOperator];
             let ogType = statement.type;
             if (node.attributes["min"] !== undefined) {
@@ -124,17 +189,22 @@ doc(
         description: "subpatch of patch",
         numberOfInlets: 1,
         numberOfOutlets: 1,
-        attributeOptions: { type: ["zen", "gl"] }
+        attributeOptions: { type: ["zen", "gl"], moduleType: ["sequencer", "generator", "effect", "other"] }
     });
 
 const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     let subpatch = node.subpatch || (new SubpatchImpl(node.patch, node));
     node.subpatch = subpatch;
     subpatch.clearState();
+    if (!node.attributes["moduleType"]) {
+        node.attributes["moduleType"] = "other";
+    }
+    if (!node.attributes["slotview"]) {
+        node.attributes["slotview"] = false;
+    }
     if (!node.attributes["type"]) {
         node.attributes["type"] = "zen";
         node.attributeCallbacks["type"] = (type) => {
-            console.log('type changed =', type);
             if (type === "gl") {
                 node.operatorContextType = OperatorContextType.GL;
                 subpatch.patchType = OperatorContextType.GL;
@@ -159,6 +229,7 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     }
 
     node.attributeOptions = {
+        "moduleType": ["sequencer", "generator", "effect", "other"],
         "type": ["zen", "gl", "core", "audio"]
     };
 

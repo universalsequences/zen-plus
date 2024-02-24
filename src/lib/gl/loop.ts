@@ -34,7 +34,7 @@ export const sumLoop = (body: Arg, iterations: Arg): UGen => {
         let _type = emitType([_body, _initialVal]);
         let type = context.printType(_type);
         let code = `
-${_initialVal.code}
+${_initialVal.type === GLType.Float ? "" : _initialVal.code}
 ${type} ${loopVar} = ${_initialVal.variable};
 for (float i=0.0; i < ${_iterations.variable}; i++) {
 ${_body.code.split("\n").map(x => "    " + x).join("\n")}

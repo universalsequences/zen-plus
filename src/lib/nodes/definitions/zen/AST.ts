@@ -297,12 +297,13 @@ export const _printStatement = (
         if (zobject.attributes["onchain"]) {
             output = `param(${zobject.arguments[0]})`;
         } else {
-            output = `param(${zobject.storedParameterValue})`;
+            let compoundOperator = operator as CompoundOperator;
+            output = `${zobject.storedParameterValue || 0}`;
         }
-    } else if (_name === "message") {
+    } else if (_name === "message" || _name === "condMessage") {
         let comp = operator as CompoundOperator;
         let name = comp.params;
-        output = `message("${name}", ${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
+        output = `${_name} ("${name}", ${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
     } else if (_name === "call") {
         let _statements = [statements[0], (operator as CompoundOperator).value, ...statements.slice(1)];
         output = `call(${firstArg ? firstArg + ", " : ""}
@@ -316,7 +317,7 @@ ${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStat
         let custom = (operator as CompoundOperator);
 
         output = `defun("${custom.variableName}", ${custom.value},
-            ${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
+                ${printDeep(deep)}${_statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, deep + 1, histories, blocks)).join(',\n' + printDeep(deep))}${finalArgs})`;
     } else if (statements.length === 0) {
         output = `${op} (${opArgs})`;
     } else {
@@ -335,10 +336,12 @@ ${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printState
                 printed: output
             };
         }
+
         if (variables[zobject.id] !== undefined) {
             output = variables[zobject.id].name
         }
     }
+
 
     return output;
 }
@@ -349,6 +352,8 @@ const printDeep = (deep: number) => {
     for (let i = 0; i < deep; i++) {
         out += "  ";
     }
+
+
     return out;
 };
 
@@ -697,17 +702,17 @@ const printPhysicalModel = (
 ): string => {
     let { web, material } = c;
     let web_string = `
-{
-    data: ${dataFromArray(web.coeffs!, web.size, web.size)},
-    dampeningData: ${dataFromArray(web.dampening!)},
-    pointsData: ${dataFromArray(web.points!)},
-    maxNeighbors: ${web.maxNeighbors},
-    neighborsMatrix: ${JSON.stringify(web.neighborsMatrix)},
-    neighbors: ${floatArr(web.neighbors)},
-    size: ${web.size},
-    radius: ${web.radius}
-}
-`;
+    {
+        data: ${dataFromArray(web.coeffs!, web.size, web.size)},
+        dampeningData: ${dataFromArray(web.dampening!)},
+        pointsData: ${dataFromArray(web.points!)},
+        maxNeighbors: ${web.maxNeighbors},
+        neighborsMatrix: ${JSON.stringify(web.neighborsMatrix)},
+        neighbors: ${floatArr(web.neighbors)},
+        size: ${web.size},
+        radius: ${web.radius}
+    }
+    `;
     let couplingCoefficient = _printStatement(
         material.couplingCoefficient,
         variables,
@@ -747,15 +752,15 @@ const printPhysicalModel = (
 
 
     let material_string = `
-{
-    noise: ${noise},
-    couplingCoefficient: ${couplingCoefficient},
-    x: ${x || 0},
-    y: ${y || 0},
-    pitch: ${pitch},
-    release: ${release}
-}
-`;
+    {
+        noise: ${noise},
+        couplingCoefficient: ${couplingCoefficient},
+        x: ${x || 0},
+        y: ${y || 0},
+        pitch: ${pitch},
+        release: ${release}
+    }
+    `;
     let component_string = `new Component(${material_string}, ${web_string}, ${isEntryPoint})`;
     return component_string;
 };
@@ -812,10 +817,10 @@ const printModelConnect = (
     }
 
     let output = `s(
-    ${trigger},
-    ${names.map(name => name + '.currentChannel, ' + name + '.prevChannel')},
-    ${names[modelIndex]}.gen(${trigger})
-)`;
+        ${trigger},
+        ${names.map(name => name + '.currentChannel, ' + name + '.prevChannel')},
+        ${names[modelIndex]}.gen(${trigger})
+    )`;
 
     /*
     let nameD = `model${ idx + 3 } `;

@@ -1,12 +1,15 @@
 import React, { useEffect } from 'react';
+import { usePatch } from '@/contexts/PatchContext';
+import { useLocked } from '@/contexts/LockedContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import { usePosition } from '@/contexts/PositionContext';
 
 import { LockClosedIcon, LockOpen2Icon } from '@radix-ui/react-icons'
 
 const LockButton = () => {
-    const { setLockedMode, lockedMode } = useSelection();
     const { presentationMode } = usePosition();
+    const { patch } = usePatch();
+    const { setLockedMode, lockedMode } = useLocked();
 
     return <div
         onClick={() => {

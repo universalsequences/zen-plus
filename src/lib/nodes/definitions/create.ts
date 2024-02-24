@@ -17,8 +17,8 @@ export const createGLFunction = (objectNode: ObjectNode, definition: Definition)
                 let inputTypes: MessageType[] = statements.map(
                     x => typeof x === "number" ? DataType.Number() : x.type as MessageType);
                 if (inputTypes.some(x => x === undefined || x === null)) {
-                    if (objectNode.patch.onNewMessage) {
-                        objectNode.patch.onNewMessage(objectNode.id, { error: "type check failed" } as TypeError);
+                    if (objectNode.onNewValue) {
+                        objectNode.onNewValue({ error: "type check failed" } as TypeError);
                     }
                     return [];
                 }
@@ -27,14 +27,14 @@ export const createGLFunction = (objectNode: ObjectNode, definition: Definition)
                 if (outputType === null) {
                     // error
                     // we have an error...
-                    if (objectNode.patch.onNewMessage) {
-                        objectNode.patch.onNewMessage(objectNode.id, { error: "type check failed" } as TypeError);
+                    if (objectNode.onNewValue) {
+                        objectNode.onNewValue({ error: "type check failed" } as TypeError);
                     }
                     return [];
                 } else {
                     statement.type = outputType;
-                    if (objectNode.patch.onNewMessage) {
-                        objectNode.patch.onNewMessage(objectNode.id, { success: true } as TypeSuccess);
+                    if (objectNode.onNewValue) {
+                        objectNode.onNewValue({ success: true } as TypeSuccess);
                     }
                 }
             }

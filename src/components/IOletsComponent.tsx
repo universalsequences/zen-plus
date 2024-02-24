@@ -67,11 +67,22 @@ const IOletsComponent = (props: Props) => {
         if (isCustomView) {
             return <></>;
         }
+
+        let subpatch = (props.node as ObjectNode).subpatch;
         return (
             <div className={props.className + ' w-full justify-between iolets'}>
                 {props.iolets.map(
-                    (iolet, i) =>
-                        <Tooltip.Provider
+                    (iolet, i) => {
+
+                        let name = props.isOutlet ? "out" : "in";
+                        let ioType: string | undefined = undefined;
+                        if (subpatch) {
+                            let ioNode = subpatch!.objectNodes.find(x => x.name === name && x.arguments[0] === i + 1);
+                            if (ioNode) {
+                                ioType = ioNode.attributes.io as string;
+                            }
+                        }
+                        return (<Tooltip.Provider
                             disableHoverableContent={true}
                             key={i}
                             delayDuration={200}>
@@ -97,14 +108,13 @@ const IOletsComponent = (props: Props) => {
                                     <Tooltip.Content
                                         style={{ zIndex: 100000000000, fontSize: 10 }}
                                         side={props.isOutlet ? "bottom" : "top"} className="pointer-events-none  bg-zinc-100 px-1 py-0.5 text-black rounded-lg " sideOffset={5}>
-                                        {iolet.name || ((props.isOutlet ? "outlet " : "inlet ") + (props.iolets.indexOf(iolet) + 1))}
-                                        <Tooltip.Arrow fill="white" className="TooltipArrow" />
+                                        {iolet.name || ((props.isOutlet ? "outlet " : "inlet ") + (props.iolets.indexOf(iolet) + 1))} {ioType ? <span className="bg-zinc-500 text-zinc-100 px-2">{ioType}</span> : ''}
+                                        < Tooltip.Arrow fill="white" className="TooltipArrow" />
                                     </Tooltip.Content>
                                 </Tooltip.Portal>
                             </Tooltip.Root>
-                        </Tooltip.Provider>
-                )
-                }
+                        </Tooltip.Provider>)
+                    })}
             </div >);
     }, [props.iolets, nearestInlet, numIOlets, draggingCable, props.text, opened, hover, setHover, isCustomView]);
     return memoed;

@@ -6,15 +6,16 @@ import LockButton from './LockButton';
 import { useMessage } from '@/contexts/MessageContext';
 import { traverseBackwards } from '@/lib/nodes/traverse';
 import { useSelection } from '@/contexts/SelectionContext';
+import { useLocked } from '@/contexts/LockedContext';
 import Toolbar from './Toolbar'
 import Cables from './Cables';
 import { ContextMenu, useThemeContext } from '@radix-ui/themes';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
-import ObjectNodeComponent from './ObjectNodeComponent';
+import ObjectNodeWrapper from './ObjectNodeWrapper';
 import { MessageNode, ObjectNode, Node, MessageType, SubPatch, Orientation, Coordinate, IOConnection } from '@/lib/nodes/types';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
-import MessageNodeComponent from './MessageNodeComponent';
+import MessageNodeWrapper from './MessageNodeWrapper';
 import { Connections, usePatch } from '@/contexts/PatchContext';
 import { usePosition, ResizingNode, DraggingNode, Coordinates } from '@/contexts/PositionContext';
 import PresentationMode from './PresentationMode';
@@ -42,7 +43,6 @@ const PatchInner: React.FC<{
         lastResizingTime,
         setSelection,
         selection,
-        lockedMode,
         selectedNodes, setSelectedNodes, setSelectedConnection } = useSelection();
     const { onNewMessage } = useMessage();
 
@@ -57,6 +57,8 @@ const PatchInner: React.FC<{
         updatePositions,
         draggingCable,
     } = usePosition();
+
+    const { lockedMode } = useLocked();
 
     //let { zoom, zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
 
@@ -143,13 +145,13 @@ const PatchInner: React.FC<{
                         className="bg-red-500 absolute pointer-events-none z-1 opacity-50 border-zinc-100 border" />}
                 {objectNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
                     (objectNode, index) =>
-                        objectNode.name === "outputs" ? '' : <ObjectNodeComponent
+                        objectNode.name === "outputs" ? '' : <ObjectNodeWrapper
                             key={objectNode.id}
                             objectNode={objectNode} />
                 )}
                 {messageNodes.filter(x => presentationMode ? x.attributes["Include in Presentation"] : true).map(
                     (messageNode, index) =>
-                        <MessageNodeComponent
+                        <MessageNodeWrapper
                             key={messageNode.id}
                             messageNode={messageNode} />
                 )}
@@ -164,6 +166,7 @@ const PatchInner: React.FC<{
                 let parentNode = (parent as SubPatch).parentNode;
                 if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
                     isFloatingCustom = lockedMode;
+                } else {
                 }
             }
         }
@@ -219,7 +222,7 @@ const PatchInner: React.FC<{
                             </ContextMenu.Item>}
                     </ContextMenu.Content>
                     <ContextMenu.Trigger
-                        className={(isFloatingCustom ? "" : "overflow-scroll") + (isCustomView ? "" : "") + " ContextMenuTrigger relative w-full h-full flex" + " w-full h-full flex flex-col "}
+                        className={(isFloatingCustom ? "overflow-hidden" : "overflow-scroll") + (isCustomView ? "" : "") + " ContextMenuTrigger relative w-full h-full flex" + " w-full h-full flex flex-col "}
                         ref={scrollRef}>
                         {inner}
                     </ContextMenu.Trigger>

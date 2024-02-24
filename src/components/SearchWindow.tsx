@@ -90,6 +90,7 @@ const Tree: React.FC<{ patch: Patch, cursor: number, searchTerm: string, hide: (
                 return;
             }
             console.log('exppanding patch=', patch);
+            patch.justExpanded = true;
             expandPatch((patch as SubPatch).parentNode);
             hide();
         }

@@ -24,10 +24,11 @@ export const op = (operator: string, name: string, evaluator?: (x: number, y: nu
                 code = `${context.varKeyword} ${opVar} = ${_ins[1].variable} == 0.0 ? 0.0 : ${_ins.map(x => x.variable).join(" " + operator + " ")};`
             }
             if (ins.every(x => typeof x === "number") && evaluator !== undefined) {
-                let total = ins.map(x => x as number).reduce(evaluator,
+                let total = first === undefined ? ins.map(x => x as number).reduce(evaluator) :
+                    ins.map(x => x as number).reduce(evaluator, first);
 
-                    first === undefined ? ins[0] as number : first);
                 code = `${context.varKeyword} ${opVar} = ${total};`;
+                console.log("calling evaluator", ins, total, name, operator, first === undefined ? ins[0] as number : first, evaluator);
                 return context.emit(code, opVar);
             }
             return context.emit(code, opVar, ..._ins);

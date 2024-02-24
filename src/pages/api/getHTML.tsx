@@ -34,9 +34,11 @@ function runMiddleware(req: any, res: any, fn: any) {
 
 async function getHTML(contractAddress: string, tokenId: string, chainId: number): Promise<string | null> {
 
-    const web3 = chainId === 5 ? new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/v3/${process.env.INFURA_ID}`))
-        : new Web3(new Web3.providers.HttpProvider('https://rpc.zora.energy/'));
+    const web3 = chainId === 5 ? new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/v3/${process.env.INFURA_ID}`)) :
+        chainId === 999 ? new Web3(new Web3.providers.HttpProvider('https://testnet.rpc.zora.energy/'))
+            : new Web3(new Web3.providers.HttpProvider('https://rpc.zora.energy/'));
 
+    console.log("contracts[chainId].metadataRenderer=", contracts[chainId].MetadataRenderer);
     const contract = new web3.eth.Contract(abi as any, contracts[chainId].MetadataRenderer);
     try {
         const tokenURI: string = await contract.methods.onchainTokenURI(contractAddress, tokenId).call() as string;

@@ -586,9 +586,11 @@ export const prettyPrint = (prefix: string, code: string): string => {
 
 
 export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
+    let initializes: any = [];
     for (let block of context.memory.blocksInUse) {
         if (block.initData !== undefined) {
             let idx = block._idx === undefined ? block.idx : block._idx;
+            initializes[idx] = block.initData;
             workletNode.port.postMessage({
                 type: "init-memory",
                 body: {

@@ -3,6 +3,7 @@ import { history, History } from './history'
 
 export type ParamGen = UGen & {
     set?: (val: number, time?: number) => void,
+    getInitData?: () => number,
 };
 
 export const param = (val: number, name: string = "hello"): ParamGen => {
@@ -11,6 +12,10 @@ export const param = (val: number, name: string = "hello"): ParamGen => {
     let p: ParamGen = ssd();
     p.set = (val: number, time?: number) => {
         ssd.value!(val, time!);
+    };
+
+    p.getInitData = () => {
+        return ssd.getInitData!();
     };
 
     return p;

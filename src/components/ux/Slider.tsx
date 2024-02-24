@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useMessage } from '@/contexts/MessageContext';
+import { useValue } from '@/contexts/ValueContext';
+import { useLocked } from '@/contexts/LockedContext';
 import { usePosition } from '@/contexts/PositionContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import { ObjectNode } from '@/lib/nodes/types';
@@ -10,15 +11,15 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let [editing, setEditing] = useState(false);
 
     let attributes = objectNode.attributes;
-    let { attributesIndex, lockedMode } = useSelection();
+    let { attributesIndex } = useSelection();
+    let { lockedMode } = useLocked();
 
     let { fillColor } = attributes;
 
 
-    let { messages } = useMessage();
-    let message = messages[objectNode.id];
+    let { value: message } = useValue();
     useEffect(() => {
-        if (message !== undefined) {
+        if (message !== null) {
             setHeight((message as number) * 100);
         }
     }, [message, setHeight]);
@@ -70,7 +71,7 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }, [editing]);
 
     const { sizeIndex } = usePosition();
-    let size = sizeIndex[objectNode.id] || { width: 100, height: 100 };
+    let size = objectNode.size || { width: 100, height: 100 };
 
     return React.useMemo(() => {
         return (<div ref={ref} style={{ backgroundColor: "#1b1a1a", width: size.width, height: size.height }} className="w-full relative flex" onMouseDown={handleMouseDown}>
@@ -79,7 +80,7 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             </div>
         </div>
         );
-    }, [height, fillColor, editing, setEditing, lockedMode]);
+    }, [height, fillColor, editing, setEditing, lockedMode, size]);
 };
 
 export default Slider;

@@ -108,6 +108,8 @@ flexible_op('exp', 1, gl.exp);
 flexible_op('exp2', 1, gl.exp2);
 flexible_op('sign', 1, gl.sign);
 flexible_op('tan', 1, gl.tan);
+flexible_op('atan', 2, gl.atan);
+flexible_op('log', 1, gl.log);
 flexible_op('ceil', 1, gl.ceil);
 strict_float_op('vec4', 4, gl.vec4, GLType.Vec4);
 strict_float_op('vec3', 3, gl.vec3, GLType.Vec3);
@@ -341,6 +343,7 @@ doc(
 export const argument = (node: ObjectNode, name: Lazy, num: Lazy, type: Lazy) => {
     node.needsLoad = true;
     return (message: Message) => {
+        console.log('argument called');
         let statement: Statement = [{ name: "argument", value: num() as number } as CompoundOperator, name() as Statement, type() as Statement];
         statement.node = node;
 
@@ -366,7 +369,11 @@ export const loopAccumulator = (node: ObjectNode, name: Lazy) => {
         statement.node = node;
 
         // we have the type...
-        statement.type = (message as Statement).type;
+        if (typeof message === "number") {
+            statement.type = DataType.GL(GLType.Float);
+        } else {
+            statement.type = (message as Statement).type;
+        }
         console.log("loop accumulator type=", statement, message);
         return [statement];
     };

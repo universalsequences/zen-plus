@@ -115,7 +115,9 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
                             let tokens = Array.isArray(op) ? op : op.split(" ");
                             console.log(tokens);
                             let [operationType, operatorName, id, x, y] = tokens;
+
                             operatorName = operatorName.replaceAll("$1", "");
+                            operatorName = operatorName.replaceAll("~", "");
 
                             let position = {
                                 x: parseInt(x),

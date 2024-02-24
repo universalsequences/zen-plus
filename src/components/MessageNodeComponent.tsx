@@ -1,4 +1,6 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
+import { useLocked } from '@/contexts/LockedContext';
+import { useValue } from '@/contexts/ValueContext';
 import MessageBox from './MessageBox';
 import { useSelection } from '@/contexts/SelectionContext';
 import Attributes from './Attributes';
@@ -10,17 +12,18 @@ import NumberBox from './ux/NumberBox';
 
 const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageNode }) => {
     const ref = useRef<HTMLDivElement | null>(null);
-    const { lockedMode, setSelectedNodes, selectedNodes } = useSelection();
+    const { lockedMode } = useLocked();
+    const { setSelectedNodes, selectedNodes } = useSelection();
     const [value, setValue] = useState<number>(messageNode.message as number || 0);
-    const { messages } = useMessage();
+    let { value: message } = useValue();
     let lockedModeRef = useRef(lockedMode);
     useEffect(() => {
         lockedModeRef.current = lockedMode;
     }, [lockedMode]);
 
-    let message = messages[messageNode.id];
+    //let message = messages[messageNode.id];
     if (ArrayBuffer.isView(message)) {
-        message = Array.from(message);
+        message = Array.from(message as Float32Array | Uint8Array | Int8Array);
     }
 
     let valueRef = useRef<number>();
@@ -84,12 +87,12 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageN
                                     min={messageNode.attributes.min as number}
                                     isParameter={messageNode.attributes["is parameter"] as boolean}
                                     max={messageNode.attributes.max as number}
-                                    value={value} setValue={(x: number) => {
+                                    value={value as number} setValue={(x: number) => {
                                         setValue(x);
                                         onValueChange(x);
                                     }} round={false} /> :
                                     <MessageBox
-                                        message={message}
+                                        message={message === null ? "" : message}
                                         isSelected={isSelected}
                                         lockedModeRef={lockedModeRef}
                                         messageNode={messageNode} />}

@@ -58,7 +58,7 @@ export const useZoom = (ref: React.MutableRefObject<HTMLDivElement | null>, isCu
 
             // Apply zoom
             let newZoom = event.deltaY < 0 ? Math.min(zoom + zoomFactor, 5) :
-                Math.max(zoom - zoomFactor, 0.5);
+                Math.max(zoom - zoomFactor, 0.3);
 
             if (newZoom > 0.6 && newZoom < 1) {
                 newZoom = 1;

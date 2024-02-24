@@ -1,4 +1,4 @@
-import { IOConnection, Patch, SubPatch, PatchType, SerializedPatch, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
+import { IOConnection, Patch, SubPatch, PatchType, SerializedPatch, ConnectionType, ObjectNode, MessageType, MessageNode, Message, SerializedConnection } from './types';
 import { PresetManager } from '@/lib/nodes/definitions/core/preset';
 import Assistant from '@/lib/openai/assistant';
 import { containsSameHistory } from './definitions/zen/history';
@@ -36,6 +36,7 @@ export class PatchImpl implements Patch {
     waiting: boolean;
     storedStatement?: Statement;
     name?: string;
+    isCompiling: boolean;
     missedConnections: [SerializedConnection, ObjectNode, ObjectNode, number][];
     historyNodes: Set<ObjectNode>;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void;
@@ -72,6 +73,7 @@ export class PatchImpl implements Patch {
         this.waiting = false;
         this.storedStatement = undefined;
         this.missedConnections = [];
+        this.isCompiling = false;
         this.outputStatements = [];
     }
 
@@ -101,9 +103,25 @@ export class PatchImpl implements Patch {
         return false;
     }
 
+    getZenBase() {
+        if (this.isZenBase()) {
+            return this;
+        }
+
+        let parentPatch = (this as Patch as SubPatch).parentPatch
+        if (!parentPatch) {
+            return null;
+        }
+
+        return parentPatch.getZenBase();
+    }
+
     recompileGraph() {
         if (this.skipRecompile || this.skipRecompile2) {
             return;
+        }
+        if (this.isZenBase()) {
+            this.isCompiling = true;
         }
         this.skipRecompile2 = true;
         this.disconnectGraph();
@@ -118,6 +136,11 @@ export class PatchImpl implements Patch {
         let _objectNodes = this.name === undefined ? this.getAllNodes() : objectNodes; //objectNodes;
         if (this.name === undefined || this.isZenBase()) {
             let __o = this.getAllNodes();
+            if (!(this as Patch as SubPatch).parentPatch) {
+                // skip all zen nodes... (cuz we're compiling from base patch)
+                __o = __o.filter(x => x.operatorContextType !== OperatorContextType.ZEN);
+            }
+
             for (let node of __o) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
@@ -173,7 +196,7 @@ export class PatchImpl implements Patch {
         if ((this as Patch as SubPatch).parentPatch) {
             // we are in a zen node so we proceed as usual
             for (let node of objectNodes) {
-                if (node.subpatch) {
+                if (node.subpatch && node.subpatch.patchType !== OperatorContextType.AUDIO) {
                     node.subpatch.recompileGraph(true);
                 }
             }
@@ -244,6 +267,7 @@ export class PatchImpl implements Patch {
                         sourceNode.receive(sourceNode.inlets[0], "bang");
                     }
                 });
+
         }
 
         sourceNodes = objectNodes.filter(node => node.name === "data" && node.inlets[0].connections.length === 0);
@@ -280,14 +304,6 @@ export class PatchImpl implements Patch {
             sourceNode => {
                 if (sourceNode.fn) {
                     sourceNode.receive(sourceNode.inlets[0], "bang");
-                    /*
-                    let ret: Message[] = sourceNode.fn("bang");
-                    for (let i = 0; i < ret.length; i++) {
-                        if (sourceNode.outlets[i]) {
-                            sourceNode.send(sourceNode.outlets[i], ret[i]);
-                        }
-                    }
-                    */
                 }
             });
 
@@ -303,7 +319,6 @@ export class PatchImpl implements Patch {
                     }
                 }
             });
-
 
         if (this.isZenBase()) {
             let inputs = this.getAllNodes().filter(node => node.name === "in").filter(node => node.patch !== this);
@@ -325,6 +340,7 @@ export class PatchImpl implements Patch {
                     }
                 });
 
+
             let calls = this.getAllNodes().filter(node => node.name === "call" || node.name === "latchcall" || node.name === "polycall");
             calls.forEach(
                 call => {
@@ -333,38 +349,19 @@ export class PatchImpl implements Patch {
                     }
                     return;
                 });
-
-
         }
 
-
-        let d = new Date().getTime();
-        if (d - c > 10) {
-        }
-
-        //this.startParameterNumberMessages()
-        //this.sendAttributeMessages()
 
         if (this.storedStatement) {
             this.compile(this.storedStatement);
         }
-
-        /*
-        let matricesAndBuffers = this.objectNodes.filter(x => x.name === "matrix" || x.name === "buffer");
-        matricesAndBuffers.forEach(
-            matrix => matrix.receive(matrix.inlets[0], "bang"));
-            */
-
         this.skipRecompile2 = false;
     }
-
     disconnectGraph() {
-        //console.log('disconnect graph called...');
         this.worklets.forEach(({ workletNode, splitter, graph, merger }) => {
             workletNode.port.postMessage({
                 type: "dispose"
             });
-            //console.log('disconnect audio graph called');
             for (let connection of this.getAudioConnections()) {
                 connection.source.disconnectAudioNode(connection);
             }
@@ -445,6 +442,10 @@ export class PatchImpl implements Patch {
             if (id !== this.counter) {
                 return
             }
+
+            if (this.isZenBase()) {
+                this.isCompiling = false;
+            }
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
                 let _statement = ["s" as Operator];
@@ -460,77 +461,23 @@ export class PatchImpl implements Patch {
                     } else {
                         let param = ((dependency as Statement[])[0] as any).param;
                         _statement.push(dependency as any);
-                        /*
-                        // make sure the hist is somewhere in the statement
-                        if (param) {
-                            if (containsSameHistory(hist, statement, false)) {
-                                console.log("hist contained in statement", dependency);
-                                _statement.push(dependency as any);
-                            } else {
-                                console.log("hist not contained in statement", dependency);
-                            }
-                        }
-                        */
                     }
                 }
                 _statement.push(statement as any);
-                //statement = _statement as Statement;
                 statement = ["s" as Operator, _statement as Statement];
             }
             let ast = compileStatement(statement);
-            let inputFile = printStatement(statement);
-            inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
-            inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
-            inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
-            inputFile = inputFile.replace(/mult(\d+)/g, (_, number) => `m${number}`);
-            inputFile = inputFile.replace(/div(\d+)/g, (_, number) => `d${number}`);
-            //inputFile = inputFile.replace(/history(\d+)/g, (_, number) => `h${number}`);
-            inputFile = inputFile.replace(/rampToTrig(\d+)/g, (_, number) => `r${number}`);
-            inputFile = inputFile.replace(/phasor(\d+)/g, (_, number) => `p${number}`);
-            inputFile = inputFile.replace(/cycle(\d+)/g, (_, number) => `c${number}`);
-            inputFile = inputFile.replace(/floor(\d+)/g, (_, number) => `f${number}`);
-            inputFile = inputFile.replace(/and(\d+)/g, (_, number) => `an${number}`);
-            inputFile = inputFile.replace(/accum(\d+)/g, (_, number) => `ac${number}`);
-            inputFile = inputFile.replace(/mod(\d+)/g, (_, number) => `mo${number}`);
-            inputFile = inputFile.replace(/clamp(\d+)/g, (_, number) => `cl${number}`);
-            inputFile = inputFile.replace(/eq(\d+)/g, (_, number) => `E${number}`);
-            inputFile = inputFile.replace(/selector(\d+)/g, (_, number) => `S${number}`);
-            inputFile = inputFile.replace(/triangle(\d+)/g, (_, number) => `T${number}`);
-            inputFile = inputFile.replace(/mstosamps(\d+)/g, (_, number) => `ms${number}`);
-            inputFile = inputFile.replace(/round(\d+)/g, (_, number) => `ro${number}`);
-            inputFile = inputFile.replace(/compressor(\d+)/g, (_, number) => `co${number}`);
-            inputFile = inputFile.replace(/wrap(\d+)/g, (_, number) => `w${number}`);
-            inputFile = inputFile.replace(/argument(\d+)/g, (_, number) => `A${number}`);
-            inputFile = inputFile.replace(/onepole(\d+)/g, (_, number) => `o${number}`);
-            inputFile = inputFile.replace(/scale(\d+)/g, (_, number) => `sc${number}`);
-            inputFile = inputFile.replace(/vactrol(\d+)/g, (_, number) => `V${number}`);
-            inputFile = inputFile.replace(/param(\d+)/g, 'p$1');
-            inputFile = inputFile.replace(/latch(\d+)/g, 'L$1');
-            inputFile = inputFile.replace(/mix(\d+)/g, 'M$1');
-            inputFile = inputFile.replace(/delay(\d+)/g, 'D$1');
-            inputFile = inputFile.replace(/biquad(\d+)/g, 'B$1');
-            inputFile = replaceAll(inputFile, "  ", "");
-            inputFile = replaceAll(inputFile, "(\n", "(");
-            inputFile = replaceAll(inputFile, "( ", "(");
-            inputFile = replaceAll(inputFile, ",\n", ",");
-            inputFile = replaceAll(inputFile, " (", "(");
-            inputFile = replaceAll(inputFile, " )", ")");
-            inputFile = replaceAll(inputFile, ") ", ")");
-            inputFile = replaceAll(inputFile, " = ", "=");
-            inputFile = getFunctionNames(inputFile);
-
-            this.zenCode = inputFile;
-            if (this.setZenCode) {
-                this.setZenCode(inputFile);
-            }
-
             this.disconnectGraph();
 
             let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
+            let parentNode = (this as Patch as SubPatch).parentNode;
+            let parentId = parentNode ? parentNode.id : this.id;
+            let workletId = 'zen' + parentId + '_' + id + new Date().getTime();
+            console.log('creating worklet id=', workletId);
             createWorklet(
                 this.audioContext,
                 zenGraph,
-                'zen' + this.id + '_' + id + new Date().getTime())
+                workletId)
                 .then(
                     (ret) => {
 
@@ -556,11 +503,20 @@ export class PatchImpl implements Patch {
                             publish(e.data.type, [e.data.subType, e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body, this]);
                         };
 
+                        console.log("ZEN GRAPH =", zenGraph, zenGraph.numberOfInputs);
+
                         let merger = this.audioContext.createChannelMerger(zenGraph.numberOfInputs);
                         let parentNode = (this as Patch as SubPatch).parentNode;
                         if (parentNode) {
                             parentNode.merger = merger;
                             merger.connect(ret.workletNode);
+
+                            console.log("SETTING PARENT NODE OUTLETS TO AUDIO!");
+                            for (let i = 0; i < parentNode.outlets.length; i++) {
+                                console.log('name=%s setting outlet[%s] = ', this.name, i, parentNode.outlets[i]);
+                                parentNode.outlets[i].connectionType = ConnectionType.AUDIO;
+                            }
+
                         }
                         this.worklets.push({ workletNode: ret.workletNode, graph: zenGraph, merger: merger });
 
@@ -608,6 +564,55 @@ export class PatchImpl implements Patch {
                             matrix => matrix.receive(matrix.inlets[0], "bang"));
 
                         this.skipRecompile = false;
+
+                        let inputFile = printStatement(statement);
+                        inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
+                        inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
+                        inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
+                        inputFile = inputFile.replace(/mult(\d+)/g, (_, number) => `m${number}`);
+                        inputFile = inputFile.replace(/div(\d+)/g, (_, number) => `d${number}`);
+                        //inputFile = inputFile.replace(/history(\d+)/g, (_, number) => `h${number}`);
+                        inputFile = inputFile.replace(/rampToTrig(\d+)/g, (_, number) => `r${number}`);
+                        inputFile = inputFile.replace(/phasor(\d+)/g, (_, number) => `p${number}`);
+                        inputFile = inputFile.replace(/cycle(\d+)/g, (_, number) => `c${number}`);
+                        inputFile = inputFile.replace(/floor(\d+)/g, (_, number) => `f${number}`);
+                        inputFile = inputFile.replace(/and(\d+)/g, (_, number) => `an${number}`);
+                        inputFile = inputFile.replace(/accum(\d+)/g, (_, number) => `ac${number}`);
+                        inputFile = inputFile.replace(/mod(\d+)/g, (_, number) => `mo${number}`);
+                        inputFile = inputFile.replace(/clamp(\d+)/g, (_, number) => `cl${number}`);
+                        inputFile = inputFile.replace(/eq(\d+)/g, (_, number) => `E${number}`);
+                        inputFile = inputFile.replace(/selector(\d+)/g, (_, number) => `S${number}`);
+                        inputFile = inputFile.replace(/triangle(\d+)/g, (_, number) => `T${number}`);
+                        inputFile = inputFile.replace(/mstosamps(\d+)/g, (_, number) => `ms${number}`);
+                        inputFile = inputFile.replace(/round(\d+)/g, (_, number) => `ro${number}`);
+                        inputFile = inputFile.replace(/compressor(\d+)/g, (_, number) => `co${number}`);
+                        inputFile = inputFile.replace(/wrap(\d+)/g, (_, number) => `w${number}`);
+                        inputFile = inputFile.replace(/argument(\d+)/g, (_, number) => `A${number}`);
+                        inputFile = inputFile.replace(/onepole(\d+)/g, (_, number) => `o${number}`);
+                        inputFile = inputFile.replace(/scale(\d+)/g, (_, number) => `sc${number}`);
+                        inputFile = inputFile.replace(/vactrol(\d+)/g, (_, number) => `V${number}`);
+                        inputFile = inputFile.replace(/param(\d+)/g, 'p$1');
+                        inputFile = inputFile.replace(/latch(\d+)/g, 'L$1');
+                        inputFile = inputFile.replace(/mix(\d+)/g, 'M$1');
+                        inputFile = inputFile.replace(/delay(\d+)/g, 'D$1');
+                        inputFile = inputFile.replace(/biquad(\d+)/g, 'B$1');
+                        inputFile = replaceAll(inputFile, "  ", "");
+                        inputFile = replaceAll(inputFile, "(\n", "(");
+                        inputFile = replaceAll(inputFile, "( ", "(");
+                        inputFile = replaceAll(inputFile, ",\n", ",");
+                        inputFile = replaceAll(inputFile, " (", "(");
+                        inputFile = replaceAll(inputFile, " )", ")");
+                        inputFile = replaceAll(inputFile, ") ", ")");
+                        inputFile = replaceAll(inputFile, " = ", "=");
+                        inputFile = getFunctionNames(inputFile);
+                        inputFile = replaceAll(inputFile, ", ", ",");
+                        inputFile = replaceAll(inputFile, " ,", ",");
+
+                        this.zenCode = inputFile;
+                        if (this.setZenCode) {
+                            this.setZenCode(inputFile);
+                        }
+
 
                     })
                 .catch(e => {
@@ -842,8 +847,11 @@ export class PatchImpl implements Patch {
     async initialLoadCompile() {
         this.recompileGraph()
 
+        console.log("INITIAL LOAD COMPILE CALLED", this.name);
+        let compiled: Patch[] = [];
         for (let node of this.objectNodes) {
-            if (node.subpatch && node.subpatch.isZenBase()) {
+            if (node.subpatch && node.subpatch.isZenBase() && node.subpatch.patchType !== OperatorContextType.AUDIO) {
+                console.log("initial compile of subpatch=", node.subpatch.name);
                 node.subpatch.recompileGraph();
                 let i = 0;
                 while (!node.audioNode) {
@@ -854,7 +862,15 @@ export class PatchImpl implements Patch {
                         break;
                     }
                 }
+                compiled.push(node.subpatch);
+            } else if (node.subpatch && node.subpatch.patchType === OperatorContextType.AUDIO) {
+                console.log("need to check this one...", node.subpatchk);
+                await node.subpatch.initialLoadCompile();
             }
+        }
+
+        for (let c of compiled) {
+            console.log("COMPILED=", c);
         }
         this.sendAttributeMessages();
     }
@@ -894,7 +910,8 @@ const replaceAll = (target: string, search: string, repl: string) => {
 };
 
 const getFunctionNames = (dslCode: string, ultraMinify = true) => {
-    const funcRegex = /\b(\w+)\(/g;
+    const funcRegex = /\b(\w+\.)?(\w+)\(/g;
+
 
     // Object to store unique function names
     const functions: any = {};
@@ -902,7 +919,13 @@ const getFunctionNames = (dslCode: string, ultraMinify = true) => {
     // Find all matches
     let match;
     while ((match = funcRegex.exec(dslCode)) !== null) {
-        functions[match[1]] = true; // Store the function name
+        if (match[1] && match[2]) {
+            functions[match[1] + match[2]] = true; // Store the function name
+        } else {
+            if (ultraMinify) {
+                functions[match[2]] = true; // Store the function name
+            }
+        }
     }
 
     const shorthands: any = {};
@@ -949,6 +972,8 @@ const getFunctionNames = (dslCode: string, ultraMinify = true) => {
     // Generate the shorthand definitions
     let shorthandDefinitions = 'let ';
     let outDSL = dslCode;
+
+    ultraMinify = true;
     if (ultraMinify) {
         Object.entries(shorthands).forEach(([original, shorthand], i) => {
             if (!original.includes("hist")) {
@@ -1008,6 +1033,7 @@ export const minify = (inputFile: string, ultraMinify = true): string => {
     inputFile = inputFile.replace(/onepole(\d+)/g, (_, number) => `o${number}`);
     inputFile = inputFile.replace(/scale(\d+)/g, (_, number) => `sc${number}`);
     inputFile = inputFile.replace(/vactrol(\d+)/g, (_, number) => `V${number}`);
+    inputFile = replaceAll(inputFile, " ,", ",");
     inputFile = inputFile.replace(/param(\d+)/g, 'p$1');
     inputFile = inputFile.replace(/latch(\d+)/g, 'L$1');
     inputFile = inputFile.replace(/mix(\d+)/g, 'M$1');

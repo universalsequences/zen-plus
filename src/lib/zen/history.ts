@@ -25,6 +25,7 @@ interface HistoryParams {
 export type History = ((input?: UGen, reset?: UGen) => UGen) & {
     value?: (v: number, time?: number) => void,
     paramName?: string,
+    getInitData?: () => number
 }
 
 export type ContextualBlock = {
@@ -125,8 +126,6 @@ memory[${IDX}] = ${_input.variable};
                 functionArguments: args
             };
 
-            //console.log("outputting history=", out);
-
             return out;
         }
     };
@@ -141,6 +140,17 @@ memory[${IDX}] = ${_input.variable};
         allows to set history directly, via message passing 
         when time is given, we schedule that
      */
+
+    _history.getInitData = () => {
+        if (block && block.initData && block.initData[0] !== undefined) {
+            console.log("getting init data =", block.initData);
+            console.log("cached value =", cachedValue);
+            return block.initData[0];
+        }
+        console.log('returning val');
+        console.log("cached value =", cachedValue);
+        return val || 0;
+    };
 
     _history.value = (val: number, time?: Samples) => {
         if (context === undefined) {

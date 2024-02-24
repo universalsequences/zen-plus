@@ -1,19 +1,23 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { getSegmentation } from "@/lib/cables/getSegmentation";
 import { IOConnection, ObjectNode, Coordinate, MessageType, MessageNode } from '@/lib/nodes/types';
 import MessageNodeImpl from '@/lib/nodes/MessageNode';
 import { usePosition } from '@/contexts/PositionContext';
+import { useLocked } from '@/contexts/LockedContext';
 import { usePatch } from '@/contexts/PatchContext';
 import { usePatches } from '@/contexts/PatchesContext';
 import { useSelection } from '@/contexts/SelectionContext';
 
 export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement | null>) => {
 
-    let { setLockedMode, lockedMode, setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
+    let { setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
+    const { lockedMode, setLockedMode } = useLocked();
     let { updatePosition, setPreparePresentationMode, deletePositions, sizeIndexRef, presentationMode, setPresentationMode } = usePosition();
     let { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } = usePatch();
-    let { goToParentTile, goToPreviousPatch, resizeTile, switchTileDirection, expandPatch, liftPatchTile, setPatches, selectedPatch } = usePatches();
+    let { closePatch, goToParentTile, splitTile, patches, goToPreviousPatch, resizeTile, switchTileDirection, expandPatch, liftPatchTile, setPatches, selectedPatch, setSelectedPatch } = usePatches();
     const counter1 = useRef(0);
+
+    const [command, setCommand] = useState(false);
 
     const segmentSelectedCable = useCallback((cable: IOConnection) => {
         if (sizeIndexRef.current[cable.source.id]) {
@@ -34,7 +38,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     useEffect(() => {
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [selectedConnection, selectedPatch, setPatches, lockedMode, setLockedMode, setSelectedConnection, selectedNodes, deleteNodes]);
+    }, [selectedConnection, patches, setSelectedPatch, selectedPatch, setCommand, command, setPatches, lockedMode, setLockedMode, setSelectedConnection, selectedNodes, deleteNodes]);
 
     const getXY = (): Coordinate | null => {
         if (!scrollRef.current || !currentMousePosition.current) return null;
@@ -66,7 +70,13 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
             return;
         }
 
-        if (selectedPatch !== patch && (e.key !== "e")) {
+        if (selectedPatch !== patch) {
+            return;
+        }
+
+        if (e.key === "x" && e.ctrlKey) {
+            console.log('setting command');
+            setCommand(true);
             return;
         }
 
@@ -76,6 +86,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         }
 
         if (e.key === "Enter" && selectedNodes[0]) {
+            console.log('enter called.');
             let node = selectedNodes[0];
             if ((node as ObjectNode).name === "zen") {
                 expandPatch(node as ObjectNode, e.metaKey);
@@ -118,10 +129,30 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         if (e.key === "r" && e.metaKey && selectedConnection) {
             e.preventDefault();
         }
-        if (e.key === "l" && e.metaKey) {
+        if (e.key === "1" && command) {
             e.preventDefault();
             if (selectedPatch) {
-                setPatches([selectedPatch]);
+                liftPatchTile(selectedPatch);
+            }
+            //if (selectedPatch) {
+            //    setPatches([selectedPatch]);
+            // }
+        }
+
+        if (e.key === "k" && command) {
+            e.preventDefault();
+            if (selectedPatch) {
+                closePatch(selectedPatch);
+            }
+            //if (selectedPatch) {
+            //    setPatches([selectedPatch]);
+            // }
+        }
+
+        if (e.key === "2" && command) {
+            e.preventDefault();
+            if (selectedPatch) {
+                splitTile();
             }
         }
         if (e.key === "u" && e.metaKey) {
@@ -169,5 +200,14 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
                 deletePositions(selectedNodes as ObjectNode[]);
             }
         }
-    }, [selectedConnection, selectedNodes, setPatches, selectedPatch, selectedPatch, patch, setLockedMode, lockedMode, deletePositions, setSelectedConnection, deleteNodes, deleteConnection]);
+
+        if (e.key === "o" && command && selectedPatch) {
+            console.log('select other patch...', patches);
+            let i = patches.indexOf(selectedPatch);
+            console.log("i=%s", i);
+            setSelectedPatch(patches[(i + 1) % patches.length]);
+        }
+
+        setCommand(false);
+    }, [patches, setSelectedPatch, command, selectedConnection, setCommand, selectedNodes, setPatches, selectedPatch, selectedPatch, patch, setLockedMode, lockedMode, deletePositions, setSelectedConnection, deleteNodes, deleteConnection]);
 };

@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useLocked } from '@/contexts/LockedContext';
 import { useMessage } from '@/contexts/MessageContext';
 import { useSelection } from '@/contexts/SelectionContext';
+import { useValue } from '@/contexts/ValueContext';
 import { usePosition } from '@/contexts/PositionContext';
 import { ObjectNode } from '@/lib/nodes/types';
 
 const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let ref = useRef<HTMLDivElement>(null);
-    let { messages } = useMessage();
-    let { attributesIndex, lockedMode } = useSelection();
-    let message = messages[objectNode.id];
+    let { value: message } = useValue();
+    let { attributesIndex } = useSelection();
+    let { lockedMode } = useLocked();
     let current = useRef(0);
     let [animate, setAnimate] = useState(false);
 
@@ -34,7 +36,7 @@ const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }, [message, setAnimate]);
 
     const { sizeIndex } = usePosition();
-    let { width, height } = sizeIndex[objectNode.id] || { width: 50, height: 50 };
+    let { width, height } = objectNode.size || { width: 50, height: 50 };
 
     return <div
         onClick={() => {

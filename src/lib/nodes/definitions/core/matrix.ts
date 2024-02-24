@@ -39,8 +39,9 @@ export class Matrix {
 
         let _node = this.objectNode;
         _node.buffer = this.buffer;
-        if (_node.patch.onNewMessage) {
-            _node.patch.onNewMessage(_node.id, this.counter++);
+        _node.send(_node.outlets[0], _node.buffer);
+        if (_node.onNewValue) {
+            _node.onNewValue(this.counter++);
         }
     }
 }
@@ -146,8 +147,8 @@ export const matrix = (_node: ObjectNode) => {
             _node.buffer[idx] = value;
         }
         (_node.custom as Matrix).buffer = _node.buffer;
-        if (_node.patch.onNewMessage) {
-            _node.patch.onNewMessage(_node.id, counter++);
+        if (_node.onNewValue) {
+            _node.onNewValue(counter++);
         }
         return [_node.buffer];
     };
@@ -169,8 +170,8 @@ export const button = (node: ObjectNode) => {
     }
     const bang = "bang";
     return (message: Message) => {
-        if (node.patch.onNewMessage) {
-            node.patch.onNewMessage(node.id, counter++);
+        if (node.onNewValue) {
+            node.onNewValue(counter++);
         }
         return [bang];
     };

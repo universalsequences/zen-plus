@@ -1,4 +1,5 @@
 import { ConnectionType, Attributes, AttributeOptions } from '../nodes/types';
+import { File } from '@/lib/files/types';
 import { GLTypeCheck } from '@/lib/nodes/typechecker';
 import { UGen, Arg } from '@/lib/gl/types';
 
@@ -22,6 +23,7 @@ export interface Definition {
     fn?: (...args: Arg[]) => UGen,
     fnString?: string;
     glTypeChecker?: GLTypeCheck
+    file?: File;
 }
 
 export type API = {

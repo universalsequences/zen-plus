@@ -16,7 +16,7 @@ export interface IContext {
     disposed: boolean;
 }
 
-const HEAP_SIZE = 512 * 512 * 16;
+const HEAP_SIZE = 512 * 512 * 128;
 
 type EmittedVariables = {
     [key: string]: boolean;

@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
+import { useLocked } from '@/contexts/LockedContext';
 import { useMessage } from '@/contexts/MessageContext';
 import { useSelection } from '@/contexts/SelectionContext';
 import { usePosition } from '@/contexts/PositionContext';
@@ -11,7 +12,8 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let { width, height } = sizeIndex[objectNode.id] || { width: 300, height: 80 };
     let editor: FunctionEditor = objectNode.custom as FunctionEditor;
     let [points, setPoints] = useState(editor.points);
-    let { attributesIndex, lockedMode } = useSelection();
+    let { attributesIndex } = useSelection();
+    let { lockedMode } = useLocked();
 
     let { messages } = useMessage();
     let message = messages[objectNode.id];
@@ -114,7 +116,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
                 <svg
                     ref={ref}
-                    className="my-auto bg-black" width={width} height={height}>
+                    className="my-auto " width={width} height={height}>
                     {paths.map((d, i) => <g
                         key={i}
                         className="transitioncolors active:stroke-red-500 hover:stroke-red-500">
@@ -125,6 +127,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                                     setCurveEdit(sortedPoints[i]);
                                 }
                             }}
+                            fill="transparent"
                             className="cursor-ns-resize hover:stroke-red stroke-blue" d={d} stroke="transparent" strokeWidth={8} />
                         <path
                             onMouseDown={(e: any) => {
@@ -133,6 +136,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                                     setCurveEdit(sortedPoints[i]);
                                 }
                             }}
+                            fill="transparent"
                             className="transition-colors active:stroke-red-500 hover:stroke-red-500 stroke-zinc-400 cursor-ns-resize" d={d} strokeWidth={2} />
                     </g>
                     )}

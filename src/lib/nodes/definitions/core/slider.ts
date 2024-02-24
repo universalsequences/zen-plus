@@ -40,6 +40,10 @@ export const slider = (node: ObjectNode) => {
                 return [node.arguments[0]];
             }
         }
+        if (typeof msg === "number") {
+            custom.value = msg;
+            return [msg];
+        }
         return [msg];
     };
 }

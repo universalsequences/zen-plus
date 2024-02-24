@@ -134,6 +134,7 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
                     definition: {
                         description: "user generated supatch #" + elem.id,
                         name: elem.name as string,
+                        file: elem,
                         numberOfInlets: 0,
                         numberOfOutlets: 0,
                         id: elem.id
@@ -150,3 +151,4 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
 
     return { autoCompletes, setAutoCompletes };
 };
+

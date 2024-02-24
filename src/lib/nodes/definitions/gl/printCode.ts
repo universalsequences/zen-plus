@@ -44,7 +44,7 @@ interface Variable {
 }
 
 export const getVariableName = (op: string, idx: number, zobject_id: string): string => {
-    return `${op}${idx} `;
+    return `${op[0]}${idx} `;
 };
 
 export const _printStatement = (
@@ -120,17 +120,16 @@ export const _printStatement = (
                 // not feedback so lets pass the 
                 let width = zobject.arguments[1] as number;
                 let height = zobject.arguments[2] as number;
-                output = `gl.uniform(gl.GLType.Sampler2D, new Array(width).fill(0), ${width}, ${height})`;
+                output = `gl.uniform(gl.GLType.Sampler2D, new Array(${width}*${height}*4).fill(0), ${width}, ${height})`;
             }
         } else {
             output = `gl.uniform(gl.GLType.Float, ${zobject.storedMessage || 0})`;
         }
         uniformName = zobject.arguments[0] as string; // store the name so we may emit it
     } else if (statements.length === 0) {
-        output = `${op} (${opArgs})`;
+        output = `${op}(${opArgs})`;
     } else {
-        output = `${op} (${firstArg ? firstArg + ", " : ""}
-${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, uniforms, deep + 1)).join(',\n' + printDeep(deep))}${finalArgs})`;
+        output = `${op}(${firstArg ? firstArg + "," : ""}${statements.filter(x => x !== undefined).map(x => _printStatement(x as Statement, variables, uniforms, deep + 1)).join(',' + printDeep(deep))}${finalArgs})`;
     }
 
     if (zobject) {
@@ -173,10 +172,11 @@ ${printDeep(deep)}${statements.filter(x => x !== undefined).map(x => _printState
 }
 
 const printDeep = (deep: number) => {
-    let out = '    ';
+    return '';
+    let out = '';
     return out;
     for (let i = 0; i < deep; i++) {
-        out += "  ";
+        out += "";
     }
     return out;
 };

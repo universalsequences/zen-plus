@@ -2,6 +2,8 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { SketchPicker } from 'react-color'
 import { useSelection } from '@/contexts/SelectionContext';
 import { MessageNode, ObjectNode, Message } from "@/lib/nodes/types";
+import * as Checkbox from '@radix-ui/react-checkbox';
+import { CheckIcon } from '@radix-ui/react-icons';
 
 interface Props {
     attribute: string;
@@ -66,10 +68,14 @@ const Attribute = (props: Props) => {
                         onChange={onChangeOption}>
                         {options.map(x => <option key={x} value={x as string}>{x}</option>)}
                     </select>
-                    : <input
-                        value={value === true ? 1 : value === false ? 0 : value as string}
-                        onChange={onChange}
-                        className="outline-none text-white  flex-1 text-center w-20 bg-black rounded-full px-1"></input>}
+                    : typeof value === "boolean" ?
+                        <button onClick={() => updateValue(!value)} className="w-4 h-4 rounded-md border-2 bg-zinc-500">
+                            {value && <CheckIcon />}
+                        </button>
+                        : <input
+                            value={value as string}
+                            onChange={onChange}
+                            className="outline-none text-white  flex-1 text-center w-20 bg-black rounded-full px-1"></input>}
         </div>);
 }
 

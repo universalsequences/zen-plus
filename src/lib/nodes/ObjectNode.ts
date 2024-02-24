@@ -40,6 +40,9 @@ const CONSTANTS: Constants = {
 
 export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     id: Identifier;
+    isSpecialCase?: boolean;
+    created?: boolean;
+    isInletSumSpecialCase?: boolean;
     needsLoad?: boolean;
     inlets: IOlet[];
     outlets: IOlet[];
@@ -241,6 +244,18 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             }
 
         }
+        if (this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
+            this.isSpecialCase = false;
+        } else {
+            this.isSpecialCase = true;
+        }
+
+        if ((this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
+            this.isInletSumSpecialCase = true;
+        } else {
+            this.isInletSumSpecialCase = false;
+        }
+
         return true;
     }
 
@@ -448,7 +463,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (typeof message === "string") {
             return message;
         }
-        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
+        if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || this.isInletSumSpecialCase) { //(this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
             return message;
         }
         let lastMessage: Message | undefined = inlet.lastMessage;
@@ -502,8 +517,18 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     receive(inlet: IOlet, message: Message, fromNode?: Node) {
+        let startTime = new Date().getTime();
         if (!this.fn) {
             return;
+        }
+
+        if (this.operatorContextType === OperatorContextType.CORE && this.name !== "attrui") {
+            let zenBase = this.patch.getZenBase();
+            if (zenBase && zenBase.isCompiling) {
+                if (this.name === "*" || this.name === "+" || this.name === "/" || this.name === "-") {
+                    return;
+                }
+            }
         }
 
         if (this.processMessageForAttributes(message) && (!inlet.node || inlet.node.attributes["type"] !== "core")) {
@@ -529,7 +554,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
         inlet.messagesReceived++;
 
-
         if (this.operatorContextType === OperatorContextType.ZEN ||
             this.operatorContextType === OperatorContextType.GL) {
             let INLETS = [];
@@ -552,7 +576,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
             let _inlets = INLETS.filter(inlet => inlet.messagesReceived! < inlet.connections.filter(x => x.source && (!(x.source as ObjectNode).name || (x.source as ObjectNode).name !== "attrui")).length);
             if (typeof message !== "string" && _inlets.length > 0) {
-                if ((this.name === "accum" && indexOf >= 2) || (this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "polycall" || this.name === "defun" || this.name === "canvas") {
+                if ((this.name === "accum" && indexOf >= 2) || this.isInletSumSpecialCase) { //(this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "polycall" || this.name === "defun" || this.name === "canvas") {
                 } else {
                     //console.log("FAILED TO PASS", INLETS, _inlets, this.text, this);
                     return;
@@ -566,7 +590,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if (this.operatorContextType === OperatorContextType.ZEN && this.lastSentMessage !== undefined && this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
+        if ((this.operatorContextType === OperatorContextType.ZEN || this.operatorContextType === OperatorContextType.GL) && this.lastSentMessage !== undefined && !this.isSpecialCase) { //this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
 
             return;
         } else {
@@ -579,9 +603,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 return;
             }
             let a = new Date().getTime();
+            if (this.name === "*") {
+                //console.log("function starting", this.name, this.id, a, this);
+            }
             let ret: Message[] = this.fn(message);
             let b = new Date().getTime();
-            if (b - a > 5) {
+            if (b - a > 25) {
+                console.log("function %s id=%s took %s ms", this.name, this.id, b - a, a, b, this);
             }
 
             for (let i = 0; i < ret.length; i++) {
@@ -608,9 +636,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 let a = new Date().getTime();
                 let ret: Message[] = this.fn(lastMessage);
                 let b = new Date().getTime();
-                if (b - a > 5) {
-                }
 
+                if (b - a > 5) {
+                    console.log("function %s took %s ms", this.name, b - a, a, b, this);
+                }
                 for (let i = 0; i < ret.length; i++) {
                     if (this.outlets[i]) {
                         this.send(this.outlets[i], ret[i]);
@@ -620,6 +649,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                     this.lastSentMessage = ret[0];
                 }
             }
+        }
+        let endTime = new Date().getTime();
+        if ((endTime - startTime) > 500) {
+            //console.log("object.receive %s took %s ms", this.name, endTime - startTime, this);
         }
     }
 

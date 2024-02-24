@@ -31,6 +31,8 @@ export const memoZen = (
     ...args: Lazy[]
 ) => {
     return (x: Message): Statement[] => {
+        let a = new Date().getTime();
+        //console.log("memozen reached", object.id, a);
         let _args: Message[] = args.map(x => x());
         if (typeof x === "string") {
             return [[operator]];
@@ -41,6 +43,11 @@ export const memoZen = (
         if (operator as string === "zswitch") {
             // console.log(xyz);
         }
+        let b = new Date().getTime();
+        if (b - a > 5) {
+            //console.log("memozen took %s ms", b - a, object.name);
+        }
+        //console.log("memozen %s complted", object.id, b);
         return [xyz];
     };
 };

@@ -24,6 +24,10 @@ export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
 
     // node.inlets.forEach(x => x.hidden = true);
     return (_message: Message) => {
+        if (typeof _message === "number" && name()) {
+            let msg = `${name()} ${value()}`;
+            return [msg];
+        }
         if (name() && value() !== undefined) {
             let msg = `${name()} ${value()}`;
             custom.value = value() as Message;

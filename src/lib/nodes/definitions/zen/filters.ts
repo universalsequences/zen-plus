@@ -4,6 +4,18 @@ import { doc } from './doc';
 import { Operator, Statement } from './types';
 
 doc(
+    'dcblock',
+    {
+        description: "cuts low frequency dc",
+        numberOfInlets: 1,
+        numberOfOutlets: 1,
+        inletNames: ["audio"]
+    });
+export const zen_dcblock = (object: ObjectNode) => {
+    return memoZen(object, "dcblock" as Operator);
+};
+
+doc(
     'biquad',
     {
         description: "biquad filter with multiple modes",
@@ -70,4 +82,5 @@ export const filters = {
     'onepole': zen_onepole,
     'biquad': zen_biquad,
     'biquadI': zen_biquadI,
+    "dcblock": zen_dcblock
 };

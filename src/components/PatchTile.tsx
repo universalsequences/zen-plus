@@ -3,16 +3,20 @@ import { Tile } from '@/lib/tiling/types';
 import PatchWrapper from './PatchWrapper';
 import { usePatches } from '@/contexts/PatchesContext';
 
-const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | null) => void, gridTemplate?: string, tile: Tile }> = ({ tile, setFileToOpen, fileToOpen }) => {
+const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | null) => void, gridTemplate?: string, tile: Tile | null }> = ({ tile, setFileToOpen, fileToOpen }) => {
+
     let ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        tile.ref = ref;
+        if (tile) {
+            tile.ref = ref;
+        }
     }, [tile]);
 
     let direction = tile && tile.parent ? tile.parent.splitDirection : null;
     let mem;
-    let _tile: Tile | null = tile.children.length === 0 && tile.patch ?
-        tile : tile.children[0].patch ? tile.children[0] : null;
+    let _tile: Tile | null = tile && tile.children.length === 0 && tile.patch ?
+        tile : tile && tile.children[0] && tile.children[0].patch ? tile.children[0] : null;
+    let PRE_INDEX = 0;
     if (_tile) {
         if (_tile && _tile.patch) {
             let _direction = _tile.parent ? _tile.parent.splitDirection : null;
@@ -31,12 +35,16 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
                 <PatchWrapper
                     fileToOpen={fileToOpen}
                     setFileToOpen={setFileToOpen}
-                    key={0 + (_tile.patch ? _tile.patch.id : '')}
+                    key={0}// + (_tile.patch ? _tile.patch.id : '')}
                     maxWidth={maxWidth} maxHeight={maxHeight} index={0} patch={_tile.patch} />
             );
+            PRE_INDEX = 1;
         }
     }
 
+    if (!tile) {
+        return <></>;
+    }
     let cl = "flex-1 h-full w-full";
     let size = tile.size;
     if (tile.parent) {
@@ -85,16 +93,29 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
 
     // console.log("tile container maxWidth=%s maxHeight=%s", _maxWidth, _maxHeight, tile);
 
+    if (tile.patch && tile.parent) {
+        /*
+        let _direction = tile.parent ? tile.parent.splitDirection : null;
+        return (<PatchWrapper
+            fileToOpen={fileToOpen}
+            setFileToOpen={setFileToOpen}
+            //key={i + (_tile.patch ? _tile.patch.id : '')}
+            maxWidth={_direction === "horizontal" ? size : 100} maxHeight={_direction === "vertical" ? size : 100} index={0} patch={tile.patch} />
+        );
+        */
+    }
+
     let remainder = tile.children[0] && tile.children[0].patch;
     let children = tile.children.length === 0 && tile.patch ? [mem] : [...(remainder ? [mem] : []), ...tile.children.slice(remainder ? 1 : 0).map((tile: Tile, i: number) => {
-        if (remainder) {
-            i += 1;
-        }
+        //if (remainder) {
+        //    i += 1;
+        //}
 
         let _tile: Tile = tile; //Tile | null = tile.children.length === 0 && tile.patch ?
         // tile : tile.children[0].patch ? tile.children[0] : null;
 
-        if (_tile && _tile.patch) {
+        if (_tile && _tile.patch && false) {
+            /*
             let _direction = _tile.parent ? _tile.parent.splitDirection : null;
             let cl = _direction === "vertical" ? "mx-2" : "my-2";
             let size = _tile.parent ? _tile.parent.size : 0;
@@ -112,11 +133,12 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
                     key={i + (_tile.patch ? _tile.patch.id : '')}
                     maxWidth={_direction === "horizontal" ? size : 100} maxHeight={_direction === "vertical" ? size : 100} index={0} patch={_tile.patch} />
             );
+            */
         } else {
             return <PatchTile
                 fileToOpen={fileToOpen}
                 setFileToOpen={setFileToOpen}
-                tile={tile} key={i + (tile.patch ? (tile.patch as any).id : tile.getDepth() + '____')} />
+                tile={tile} key={tile.id} />
         }
     })];
     /*
@@ -148,8 +170,8 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
         <>
             <div
                 ref={ref}
-                style={{ maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%' }}
-                className={cl + "  flex tile-container flex-1 " + (tile.splitDirection === "vertical" ? "flex-col" : "flex-row")}>
+                style={true ? {} : { minWidth: _maxWidth + '%', maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%', minHeight: _maxHeight + '%' }}
+                className={children.length === 1 ? "w-full h-full flex-1" : (cl + "  flex tile-container flex-1 " + (tile.splitDirection === "vertical" ? "flex-col" : "flex-row"))}>
                 {children}
             </div>
         </>

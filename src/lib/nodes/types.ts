@@ -118,6 +118,7 @@ export type Node = Identifiable & Attributed & Positioned & {
     disconnectAudioNode: (connection: IOConnection) => void;
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message, fromNode?: Node) => void;
+    onNewValue?: (value: Message) => void;
 }
 
 export type ObjectNode = Positioned & Node & {
@@ -145,6 +146,7 @@ export type ObjectNode = Positioned & Node & {
     merger?: ChannelMergerNode;
     saveData?: any;
     custom?: SerializableCustom;
+    created?: boolean;
 }
 
 export interface SerializableCustom {
@@ -166,6 +168,9 @@ export enum PatchType {
 }
 
 export type Patch = Identifiable & {
+    justExpanded?: boolean;
+    isCompiling: boolean;
+    initialLoadCompile: () => Promise<void>;
     objectNodes: ObjectNode[];
     messageNodes: MessageNode[];
     presentationMode: boolean;
@@ -185,6 +190,7 @@ export type Patch = Identifiable & {
     name?: string;
     skipRecompile: boolean;
     skipRecompile2: boolean;
+    getZenBase: () => Patch | null;
     setZenCode?: (x: string | null) => void;
     zenCode?: string;
     setVisualsCode?: (x: string | null) => void;

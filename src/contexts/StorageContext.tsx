@@ -1,13 +1,15 @@
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { applyDiffs } from '@/lib/onchain/merge';
+import { File } from '@/lib/files/types';
 import { decompress } from '@/lib/onchain/fetch';
-import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
+import { documentId, addDoc, doc, DocumentData, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 
 import { db } from '@/lib/db/firebase';
 import { v4 as uuidv4 } from 'uuid';
 import {
-    Patch, SubPatch, SerializedPatch
+    Patch, SubPatch, IOlet, SerializedPatch
 } from '@/lib/nodes/types';
 import { storage } from "@/lib/db/firebase";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
@@ -24,13 +26,13 @@ export interface Project {
 
 interface IStorageContext {
     getPatches: (key: string) => Project[];
-    onchainSubPatches: OnchainSubPatch[];
+    onchainSubPatches: File[];
     storePatch: (name: string, patch: Patch, isSubPatch: boolean, email: string, screenshot?: string) => Promise<void>;
-    fetchPatchesForEmail: (email: string) => Promise<any[]>;
-    fetchProject: (id: string, email: string) => Promise<any | null>;
+    fetchPatchesForEmail: (email: string, isSubPatch?: boolean, isFavorited?: boolean) => Promise<File[]>;
+    fetchProject: (id: string, email: string) => Promise<File | null>;
     fetchPatch: (x: any) => Promise<SerializedPatch>;
     fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
-    fetchRevisions: (head: any) => Promise<any[]>;
+    fetchRevisions: (head: any) => Promise<File[]>;
 }
 
 interface Props {
@@ -58,16 +60,14 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     })
     */
 
-    let [subpatches, setSubPatches] = useState<OnchainSubPatch[]>([]);
+    let [subpatches, setSubPatches] = useState<File[]>([]);
 
     const { user } = useAuth();
     useEffect(() => {
         if (user) {
             fetchPatchesForEmail(user.email, true).then(
                 docs => {
-                    if (docs) {
-                        setSubPatches(docs.map((x: any) => ({ name: x.name, id: x.id } as OnchainSubPatch)));
-                    }
+                    setSubPatches(docs);
                 });
         }
     }, [user, setSubPatches]);
@@ -152,6 +152,9 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         }
 
         let compressed = await compress(json);
+
+        // we have the patch so we need to genearte the data
+        let auxData: any = {};
         let document: any = {
             createdAt: new Date(),
             name,
@@ -160,9 +163,34 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             user: email,
             isSubPatch,
         };
+        let parentNode = (patch as SubPatch).parentNode;
+        if (parentNode) {
+            let moduleType = parentNode.attributes.moduleType;
+            let getIO = (iolets: IOlet[], name: string) => {
+                let ios: any[] = [];
+                iolets.forEach(
+                    (inlet, inletNumber) => {
+                        let inletObject = patch.objectNodes.find(x => x.name === name && x.arguments[0] === inletNumber + 1);
+                        if (inletObject) {
+                            ios[inletNumber] = inletObject.attributes.io;
+                        } else {
+                            ios[inletNumber] = "other";
+                        }
+                    });
+                return ios;
+            }
+            let inputs = getIO(parentNode.inlets, "in");
+            let outputs = getIO(parentNode.outlets, "out");
+            document.inputs = inputs;
+            document.outputs = outputs;
+            document.moduleType = moduleType;
+        }
+
+
         if (screenshot) {
             document.screenshot = screenshot;
         }
+        console.log('document to store=', document);
         if (patch.previousDocId) {
             const docRef = doc(db, 'patches', patch.previousDocId);
             try {
@@ -189,61 +217,79 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
 
     };
 
-    const fetchProject = async (projectId: string, email: string): Promise<any | null> => {
-        const docRef = doc(db, 'patches', projectId);
-        try {
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                let document = docSnap.data();
-                document.id = projectId;
-                return document;
-            }
-        } catch (error) {
-        }
-        return null;
-
-        /*
-        const collectionRef = collection(db, 'patches');
-        const q = query(collectionRef, where('id', '==', projectId));
-        console.log('fetch project id=', projectId, email);
- 
-        try {
-            const querySnapshot = await getDocs(q);
-            const documents: any = [];
-            querySnapshot.forEach(doc => {
-                //if (!doc.data().hasNewVersion) {
-                documents.push({ id: doc.id, ...doc.data() });
-                // }
-            });
-            let date = new Date();
-            console.log('documents=', documents, querySnapshot);
-            documents.sort((a: any, b: any) => a.createdAt.seconds - b.createdAt.seconds);
-            return documents[0] || null;
-        } catch (error) {
-            throw error;
-            return null;
-        }
-        */
+    const fetchProject = async (projectId: string, email: string): Promise<File | null> => {
+        console.log('fetchProject', projectId);
+        return new Promise((resolve) => {
+            user.getIdToken().then(
+                (token: string) => {
+                    fetch('/api/files/fetch', {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            projectId
+                        })
+                    }).then(
+                        async resp => {
+                            let json = await resp.json();
+                            console.log("fetched=", json);
+                            resolve({
+                                ...json,
+                                createdAt: Timestamp.fromMillis(json.seconds * 1000 + json.nanoseconds / 1000000)
+                            });
+                        });
+                });
+        });
     }
 
-    const fetchPatchesForEmail = async (email: string, isSubPatch = false): Promise<any[]> => {
+
+    const fetchPatchesForEmail = (email: string, isSubPatch = false, filterFavorites?: boolean): Promise<File[]> => {
+        return new Promise((resolve) => {
+            user.getIdToken().then(
+                (token: string) => {
+                    fetch('/api/files/query', {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            isSubPatch,
+                            filterFavorites
+                        })
+                    }).then(
+                        async resp => {
+                            let json = await resp.json();
+                            resolve(json.projects.map(
+                                (x: any) => ({
+                                    ...x,
+                                    createdAt: Timestamp.fromMillis(x.createdAt.seconds * 1000 + x.createdAt.nanoseconds / 1000000)
+                                })));
+                        });
+                });
+        });
+
+        /*
         const collectionRef = collection(db, 'patches');
         const q = query(collectionRef, where('user', '==', email), where('isSubPatch', '==', isSubPatch));
 
         try {
             const querySnapshot = await getDocs(q);
-            const documents: any = [];
+            const documents: File[] = [];
             querySnapshot.forEach(doc => {
                 if (!doc.data().hasNewVersion) {
-                    documents.push({ id: doc.id, ...doc.data() });
+                    let data = doc.data();
+                    documents.push(docToFile(doc.id, data));
                 }
             });
-            let date = new Date();
             documents.sort((a: any, b: any) => a.createdAt.seconds - b.createdAt.seconds);
             return documents;
         } catch (error) {
             throw error;
         }
+        */
     }
 
     /*
@@ -306,9 +352,12 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             let text = await r.text();
             let decompressed: SerializedPatch = decompress(text);
 
+            console.log('fetching with commits=', x.commits);
+
             if (commits.length === 0) {
                 return decompressed;
             } else {
+                console.log('applying diffs.');
                 let _commits = [decompressed];
                 let a = new Date().getTime();
                 for (let c of commits) {
@@ -324,15 +373,29 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         }
     };
 
-    const fetchRevisions = async (head: any): Promise<any[]> => {
-        let list = [];
+    const docToFile = (id: string, x: DocumentData): File => {
+        return {
+            id,
+            name: x.name,
+            patch: x.patch,
+            commit: x.commit,
+            commits: x.commits,
+            createdAt: x.createdAt,
+            user: x.user,
+            screenshot: x.screenshot,
+            favorited: x.favorited
+        };
+    };
+
+    const fetchRevisions = async (head: any): Promise<File[]> => {
+        let list: File[] = [];
         for (let commit of head.commits) {
             const docRef = doc(db, 'patches', commit);
             try {
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     let document = docSnap.data();
-                    list.push(document);
+                    list.push(docToFile(docRef.id, document));
                 }
             } catch (e) {
             }
@@ -350,7 +413,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             fetchRevisions,
             fetchSubPatchForDoc,
             fetchProject,
-            onchainSubPatches: (subpatches || []) as OnchainSubPatch[]
+            onchainSubPatches: (subpatches || []) as File[]
         }}>
         {children}
     </StorageContext.Provider>;

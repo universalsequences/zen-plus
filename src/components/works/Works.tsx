@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import { db } from '@/lib/db/firebase';
 import {
+    zoraTestnet,
     goerli,
     zora
 } from 'wagmi/chains';
@@ -65,6 +66,9 @@ const Works: React.FC<{ setShowNav: (x: boolean) => void }> = ({ setShowNav }) =
                 {user && <div onClick={() => setChain(goerli.id)} className={(chain === goerli.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     testnet
                 </div>}
+                <div onClick={() => setChain(zoraTestnet.id)} className={(chain === zoraTestnet.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
+                    zora testnet
+                </div>
                 <div onClick={() => setChain(zora.id)} className={(chain === zora.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     zora
                 </div>

@@ -12,6 +12,55 @@ export const { abi } = {
             "type": "constructor"
         },
         {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "user",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "contractAddress",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "tokenId",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "inputNumber",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "source",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "sourceToken",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint8",
+                    "name": "outputNumber",
+                    "type": "uint8"
+                }
+            ],
+            "name": "ModuleConfigured",
+            "type": "event"
+        },
+        {
             "inputs": [
                 {
                     "internalType": "address",
@@ -83,6 +132,11 @@ export const { abi } = {
                 {
                     "internalType": "uint256",
                     "name": "tokenId",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "seed",
                     "type": "uint256"
                 }
             ],
@@ -164,6 +218,11 @@ export const { abi } = {
                     "internalType": "uint8",
                     "name": "index",
                     "type": "uint8"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "seed",
+                    "type": "uint256"
                 }
             ],
             "name": "generateAudioWorklets",
@@ -209,6 +268,19 @@ export const { abi } = {
                 }
             ],
             "name": "generateConnections",
+            "outputs": [
+                {
+                    "internalType": "bytes",
+                    "name": "",
+                    "type": "bytes"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "generateInterpolateFunction",
             "outputs": [
                 {
                     "internalType": "bytes",
@@ -283,9 +355,9 @@ export const { abi } = {
                                     "type": "bool"
                                 }
                             ],
-                            "internalType": "struct ZenModule.ConfiguredInput[4]",
+                            "internalType": "struct ZenModule.ConfiguredInput[8]",
                             "name": "inputs",
-                            "type": "tuple[4]"
+                            "type": "tuple[8]"
                         }
                     ],
                     "internalType": "struct ZenModule.WorkToken",
@@ -298,3 +370,5 @@ export const { abi } = {
         }
     ]
 }
+
+

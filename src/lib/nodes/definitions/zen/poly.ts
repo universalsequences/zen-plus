@@ -30,7 +30,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
     }
 
     return (message: Message) => {
-        console.log("poly");
         let name = node.attributes["name"];
         let upstream = getUpstreamNodes(node.patch);
         let defuns = upstream.filter(x => x.name === "defun" &&
@@ -48,7 +47,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
 
         let _args = args.map(x => x()).filter(x => x !== undefined);
         let voices = node.attributes.voices as number;
-        console.log('voices=', voices);
 
         let numBodies = (body as Statement[]).length - 1;
 
@@ -56,12 +54,9 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
         let outputs = mode !== "pipe" ? new Array(numBodies).fill(0) :
             new Array(numBodies * voices).fill(0);
 
-        console.log("num bodies = ", numBodies, voices);
         if (outputs.length < node.outlets.length) {
             node.outlets = node.outlets.slice(0, outputs.length);
-            console.log('setting outlets to be less', node.outlets);
         }
-        console.log('outlets=', node.outlets);
 
         let connect: number[] | undefined = node.attributes["connect"] as number[] | undefined;
 
@@ -70,7 +65,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
         let indexCounter = 0;
         let _voices = mode === "inputs" ? voices : 1;
         let numArgs = 0;
-        console.log("_voices =", _voices);
         for (let i = 0; i < _voices; i++) {
             let ARGS: number[] = [];
             for (let _body of body as Statement[]) {
@@ -80,8 +74,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
                     let op = (arg as Statement[])[0] as CompoundOperator;
                     let num = op.value as number;
                     let argumentNumber = num;
-                    console.log("OP=", op);
-                    console.log("arg = ", a);
                     let name = op.variableName;
                     let ii = i * _numArgs;
                     if (mode !== "inputs") {
@@ -89,7 +81,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
                     }
                     if (!ARGS.includes(argumentNumber)) {
                         if (!node.inlets[ii + num - 1]) {
-                            console.log("creating inlet...", ii + num - 1);
                             node.newInlet();
                         }
                     }
@@ -101,9 +92,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
                         numArgs++;
                     }
                     ARGS.push(argumentNumber);
-                    console.log("ARGS list =", ARGS);
-
-                    console.log("ii =", ii);
                     let inlet = node.inlets[ii + num - 1];
                     if (inlet) {
                         if (mode === "inputs") {
@@ -123,7 +111,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
                 __args[connect[0]] = previous as any;
             }
             if (node.attributes["inputs"] !== undefined) {
-                console.log("inputs =", node.attributes["inputs"]);
                 let inputs = Array.isArray(node.attributes["inputs"]) ? node.attributes["inputs"] as number[] : [node.attributes["inputs"] as number];
                 if (!inputs.includes(invocation)) {
                     __args = __args.fill(0);
@@ -140,7 +127,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             if (node.attributes["mode"] === "inputs") {
                 __args = __args.slice(invocation * numArgs, (invocation + 1) * numArgs);
             }
-            console.log("args =  numARgs=", __args, numArgs);
             let ret = [
                 { name: "call", value: invocation },
                 body,
@@ -181,7 +167,8 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             }
         }
 
-        console.log("poly=", outputs);
+        console.log("poly call computed and returning", new Date().getTime());
+
         return outputs;
     }
 }

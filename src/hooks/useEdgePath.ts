@@ -1,4 +1,5 @@
 import React from 'react';
+import { SLOT_VIEW_WIDTH } from '@/components/SlotView';
 import { usePosition } from '@/contexts/PositionContext';
 import { Coordinate, ObjectNode, IOConnection } from '@/lib/nodes/types';
 
@@ -14,6 +15,16 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
     let source_h = sourceSize ? sourceSize.height : 20;
     let dest_w = destSize ? destSize.width : 30;
     let dest_h = destSize ? destSize.height : 20;
+    let slotview_source = node.attributes.slotview;
+    let slotview_dest = connection.destination.attributes.slotview;
+    if (slotview_source) {
+        source_w = SLOT_VIEW_WIDTH;
+        source_h = 24;
+    }
+    if (slotview_dest) {
+        dest_w = SLOT_VIEW_WIDTH;
+        dest_h = 24;
+    }
     return React.useMemo(() => {
         if (sourceCoordinate && destCoordinate) {
             // we calculate the position of the inlet/outlets for this cable
@@ -24,11 +35,26 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
             let sourceCoordinate = coordinates[node.id];
             let destCoordinate = coordinates[(connection.destination as any).id];
             let inletNumber = connection.destination.inlets.indexOf(destInlet);
+            let slotview_source = node.attributes.slotview;
+            let slotview_dest = connection.destination.attributes.slotview;
             let numInlets = connection.destination.inlets.length;
             let numOutlets = node.outlets.length;
+
+            let source_height = connection.source.size ? connection.source.size.height : 24;
             let width = (connection.source as ObjectNode).size ? (connection.source as ObjectNode).size!.width! : source_w
+            if (slotview_source) {
+                width = SLOT_VIEW_WIDTH;
+                source_height = 24;
+            }
+
             let sourceBetween = ((width) - 10) / Math.max(1, numOutlets - 1);
             let dest_width = (connection.destination as ObjectNode).size ? (connection.destination as ObjectNode).size!.width : source_w
+
+            let dest_height = node.size ? node.size.height : 24;
+            if (slotview_dest) {
+                dest_width = SLOT_VIEW_WIDTH;
+                dest_height = 24;
+            }
             let destBetween = ((dest_width) - 10) / Math.max(1, numInlets - 1)
             let offset = inletNumber * destBetween
             let destX = destCoordinate.x;
@@ -37,7 +63,7 @@ export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection:
                 ...destCoordinate,
                 x: destX + offset
             };
-            let height = (connection.source as ObjectNode).size ? (connection.source as ObjectNode).size!.height : source_h
+            let height = (connection.source as ObjectNode).size ? source_height : source_h
             sourceCoordinate = {
                 x: sourceCoordinate.x + outletNumber * sourceBetween,
                 y: sourceCoordinate.y + height

@@ -19,7 +19,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
     useEffect(() => {
         if (switchNetwork) {
-            let chainId = work.chainId || 5;
+            let chainId = work.chain || 5;
+            console.log('switch to chain=', chainId);
             switchNetwork(chainId);
         }
     }, [work, switchNetwork]);
@@ -29,6 +30,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         address: work.dropAddress as `0x${string}`,
         abi: abi,
         functionName: 'totalSupply',
+        chainId: work.chain || 5
     })
 
     let _totalSupply = totalSupply ? parseInt(totalSupply.toString()) : 0;
@@ -44,7 +46,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         }
     }, [mintedToken, setActiveAnimation]);
 
-    let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}`;
+    console.log("chain =", work.chain, work);
+    let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}`;
 
     return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-700">
         <ArrowLeftIcon onClick={() => close()} className="w-8 h-8 cursor-pointer absolute bottom-5 left-5" />

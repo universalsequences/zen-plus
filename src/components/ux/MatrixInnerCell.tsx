@@ -1,60 +1,45 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { ObjectNode } from '@/lib/nodes/types';
-import { useMessage } from '@/contexts/MessageContext';
+import { useValue } from '@/contexts/ValueContext';
 
-const MatrixInnerCell: React.FC<{ fillColor: string, max: number, cornerRadius: string, isFullRadius: boolean, showValue: boolean, unit: string, valueRef: React.MutableRefObject<number>, idx: number, objectNode: ObjectNode, isLine: boolean }> = ({ objectNode, isLine, idx, valueRef, unit, isFullRadius, cornerRadius, max, showValue, fillColor }) => {
+const MatrixInnerCell: React.FC<{ ref1: React.RefObject<HTMLDivElement>, fillColor: string, max: number, cornerRadius: string, isFullRadius: boolean, showValue: boolean, unit: string, valueRef: React.MutableRefObject<number>, idx: number, objectNode: ObjectNode, isLine: boolean }> = ({ objectNode, isLine, idx, valueRef, unit, isFullRadius, cornerRadius, max, showValue, fillColor, ref1 }) => {
     let [value, setValue] = useState(0);
-    let { messages } = useMessage();
+    let { value: counter } = useValue();
+    let ref2 = useRef<HTMLDivElement | null>(null);
+
     useEffect(() => {
-        if (objectNode.buffer) {
+        if (objectNode.buffer && valueRef.current !== objectNode.buffer[idx]) {
             setValue(objectNode.buffer[idx]);
             valueRef.current = objectNode.buffer[idx];
         }
     }, [setValue, (objectNode.buffer as Float32Array | Uint8Array)[idx]]);
 
-
-    let [text, setText] = useState(`${showValue ? (max > 1 ? Math.round(value) : Math.round(100 * value) / 100) : ''} ${showValue ? unit : ""}`);
-    let [style, setStyle] = useState({
-        width: !isLine && isFullRadius ? (value / (max as number)) * 100 + "%" : " ",
-        height: isLine ? "2px" : (value / (max as number)) * 100 + '%',
-        bottom: isLine ? (value / (max as number)) * 100 + '%' : 0,
-        backgroundColor: fillColor
-    });
-    let [className, setClassName] = useState(`${isLine ? "absolute w-full" : isFullRadius ? "m-auto" : "absolute bottom-0 w-full"} rounded-${cornerRadius}`);
-
-
     useEffect(() => {
-        if (showValue) {
-            setText(`${showValue ? (max > 1 ? Math.round(value) : Math.round(100 * value) / 100) : ''} ${showValue ? unit : ""}`);
+        if (showValue && ref2.current) {
+            ref2.current.innerText = `${showValue ? (max > 1 ? Math.round(value) : Math.round(100 * value) / 100) : ''} ${showValue ? unit : ""}`;
         }
-    }, [setText, showValue, max, value]);
+    }, [showValue, max, value]);
 
     useEffect(() => {
         let _value = (value / (max as number)) * 100 + "%";
-        let style = {
-
-            width: !isLine && isFullRadius ? _value : " ",
-            height: isLine ? "2px" : _value,
-            bottom: isLine ? _value : 0,
-            backgroundColor: fillColor
-        };
-        setStyle(style);
-    }, [isLine, max, isFullRadius, value, fillColor, setStyle]);
-
-    useEffect(() => {
-        setClassName(`${isLine ? "absolute w-full" : isFullRadius ? "m-auto" : "absolute bottom-0 w-full"} rounded-${cornerRadius}`);
-    }, [setClassName, isLine, isFullRadius, cornerRadius]);
+        if (ref1.current) {
+            ref1.current.style.width = !isLine && isFullRadius ? _value : " ";
+            ref1.current.style.height = isLine ? "2px" : _value;
+            ref1.current.style.bottom = isLine ? _value : "0";
+            ref1.current.style.backgroundColor = fillColor;
+        }
+        //setStyle(style);
+    }, [isLine, max, isFullRadius, value, fillColor]);
 
     return React.useMemo(() => {
         return (<>
-            <div style={style}
-                className={className}>
+            <div ref={ref1}>
             </div >
-            <div className="table absolute top-0 left-0 right-0 bottom-0 m-auto text-white">
-                {showValue ? text : ''}
+            <div ref={ref2} className="table absolute top-0 left-0 right-0 bottom-0 m-auto text-white">
+                {/*showValue ? text : ''*/}
             </div>
         </>);
-    }, [isLine, style, showValue, className, text]);
+    }, []);
 };
 
 export default MatrixInnerCell;

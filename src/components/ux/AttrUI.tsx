@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { useMessage } from '@/contexts/MessageContext';
+import { useLocked } from '@/contexts/LockedContext';
+import AttrUIValue from './AttrUIValue';
 import { useSelection } from "@/contexts/SelectionContext";
-import NumberBox from './NumberBox';
 import { SubPatch, ObjectNode, Message } from '@/lib/nodes/types';
 
 interface Option {
@@ -11,11 +11,14 @@ interface Option {
 
 const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let [options, setOptions] = useState<Option[]>([]);
-    const { lockedMode } = useSelection();
+    let { lockedMode } = useLocked();
     const lockedModeRef = useRef<boolean>(true);
+
+    useEffect(() => {
+        lockedModeRef.current = lockedMode;
+    }, [lockedMode]);
     let [selectedOption, setSelectedOption] = useState<string | null>((objectNode.text.split(" ")[1] as string) || null);
     let parsed = parseFloat((objectNode.text.split(" ")[2]))
-    let [value, setValue] = useState(!isNaN(parsed) ? parsed : 0);
 
     useEffect(() => {
         loadOptions();
@@ -59,30 +62,8 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         objectNode.text = (text.join(" "));
     }, [setSelectedOption, options]);
 
-    const onChangeValue = useCallback((num: number) => {
-        setValue(num);
-        let text = objectNode.text.split(" ");
-        text[2] = num.toString();
-        objectNode.text = text.join(" ");
-        objectNode.arguments[1] = num;
-        let node = objectNode;
-        if (node && node.custom) {
-            (node.custom as any).value = num;
-        }
-        let message: Message = text.slice(1).join(" ");
-        objectNode.send(objectNode.outlets[0], message);
-    }, [setValue]);
-
     let found = (options.find(x => x.label === selectedOption)) as (Option | undefined);
     let node: ObjectNode | null = found ? (found.value) : null;
-
-    let { messages } = useMessage();
-    let message = messages[objectNode.id];
-    useEffect(() => {
-        if (message !== undefined) {
-            setValue(message as number);
-        }
-    }, [message, setValue]);
 
     return React.useMemo(() => {
         return (
@@ -111,18 +92,16 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                     style={{ borderLeft: "1px solid #8d8787" }}
                     className={(!selectedOption ? "pointer-events-none opacity-20" : "") + " h-full flex flex-col flex-1"}>
                     <div className="my-auto w-full">
-                        <NumberBox
-                            className="bg-zinc-900"
-                            round={false}
-                            isSelected={true}
-                            value={value}
-                            setValue={onChangeValue}
-                            min={node ? (node.attributes.min as number) || 0 : 0} max={node ? (node.attributes.max as number) || 1 : 1} lockedModeRef={lockedModeRef} />
+                        <AttrUIValue max={(node && node.attributes ? ((node.attributes.max as number) || 1) : 1)}
+                            node={objectNode}
+                            lockedModeRef={lockedModeRef}
+                            min={node && node.attributes ? ((node.attributes.min as number) || 0) : 0}
+                        />
                     </div>
                 </div>
             </div >
         );
-    }, [objectNode.attributes.min, lockedMode, selectedOption, objectNode.attributes.max, value, onChangeValue, options]);
+    }, [objectNode.attributes.min, lockedMode, selectedOption, objectNode.attributes.max, options]);
 }
 
 export default AttrUI;

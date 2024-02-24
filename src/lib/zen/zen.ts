@@ -60,7 +60,6 @@ export const float = (x: number): UGen => {
 export const input = (inputNumber: number = 0): UGen => {
     return (context: Context) => {
         let name = context.input(inputNumber);
-        console.log("input zen called with inputNumber=", name);
         return {
             code: name,
             functions: [],
