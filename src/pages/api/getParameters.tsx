@@ -57,6 +57,37 @@ async function getHTML(contractAddress: string, tokenId: string, chainId: number
     }
 }
 
+function extractParametersToObject(inputString: string) {
+    // Regular expression to find the function declaration and its parameters
+    const functionDeclRegex = /function\s+module_0\s*\(([^)]+)\)/;
+    // Regular expression to find the function call and its values
+    const functionCallRegex = /module_0\s*\(\s*\d+[\d\s,]*\)/;
+
+
+
+    // Extracting the matching groups
+    const functionDeclMatch = inputString.match(functionDeclRegex);
+    const functionCallMatch = inputString.match(functionCallRegex);
+
+    if (!functionDeclMatch || !functionCallMatch) {
+        console.error('Could not find the function declaration or call in the given string.');
+        return {};
+    }
+
+    // Splitting the parameters and values by commas
+    const paramNames = functionDeclMatch[1].split(',').map(name => name.trim());
+    const paramValues = functionCallMatch[0].replace(')', '').replace('module_0(', '').split(',').slice(0).map(value => value.trim());
+
+    // Constructing the object
+    const result: any = {};
+    paramNames.forEach((name, index) => {
+        result[name] = parseFloat(paramValues[index]);
+    });
+
+    return result;
+}
+
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     await runMiddleware(req, res, cors);
 
@@ -78,7 +109,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         let html = await getHTML(contractAddress, tokenId, _chainId);
 
         if (html) {
-            res.send(html);
+            let extracted = extractParametersToObject(html);
+            console.log(extracted);
+            res.json(extracted);
         } else {
             res.status(404).send('HTML content not found');
         }

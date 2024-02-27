@@ -3,19 +3,26 @@ import { OperatorContext, OperatorContextType, getAllContexts, getOperatorContex
 import { File } from '@/lib/files/types';
 import { useStorage } from '@/contexts/StorageContext';
 import { usePatch } from '@/contexts/PatchContext';
-import { Node, ObjectNode, IOlet } from '@/lib/nodes/types';
+import { Node, SerializedPatch, ObjectNode, IOlet } from '@/lib/nodes/types';
 
 export const useSubPatchLoader = (objectNode: ObjectNode) => {
     const { registerConnection } = usePatch();
     let { fetchSubPatchForDoc, onchainSubPatches } = useStorage();
-    const loadSubPatch = useCallback(async (x: File) => {
-        let serializedSubPatch = await fetchSubPatchForDoc(x.id);
+    const loadSubPatch = useCallback(async (serializedSubPatch: SerializedPatch, name: string) => {
+        //let serializedSubPatch = await fetchSubPatchForDoc(id);
         if (serializedSubPatch) {
-            if (serializedSubPatch.attributes && serializedSubPatch.attributes["type"]) {
-                objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
-            }
-            if (serializedSubPatch.attributes && serializedSubPatch.attributes["moduleType"]) {
-                objectNode.attributes["moduleType"] = serializedSubPatch.attributes["moduleType"];
+            if (serializedSubPatch.attributes) {
+                if (serializedSubPatch.attributes["type"]) {
+                    objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
+                } else {
+                    objectNode.attributes["type"] = "zen";
+                }
+                if (serializedSubPatch.attributes["moduleType"]) {
+                    objectNode.attributes["moduleType"] = serializedSubPatch.attributes["moduleType"];
+                }
+                if (serializedSubPatch.attributes["slotview"]) {
+                    objectNode.attributes["slotview"] = serializedSubPatch.attributes["slotview"];
+                }
             }
 
             // goal: we want to maintain the "types" of the modules connected into and out this modules
@@ -80,13 +87,8 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
             objectNode.inlets = [];
             objectNode.outlets = [];
 
-            objectNode.parse(x.name, OperatorContextType.ZEN, true, serializedSubPatch);
+            objectNode.parse(name, OperatorContextType.ZEN, true, serializedSubPatch);
 
-
-            console.log("adjacent inputs=", inputNodes);
-            console.log("adjacent outputs=", outputNodes);
-            console.log(inletConnections);
-            console.log(outletConnections);
 
             const getMatchingIO = (ioType: string, node: ObjectNode, name: string): ObjectNode[] => {
                 if (!node.subpatch) return [];
@@ -94,14 +96,11 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
             };
 
             const reconnectIO = (x: ConnectionSignature[], isInput: boolean) => {
-                console.log("******** RECONNECT IO =", isInput ? "IN" : "OUT");
                 let ioletsMatched: IOlet[] = [];
                 for (let connection of x) {
                     let alreadyMatched: ObjectNode[] = [];
-                    console.log("CONNECTION=", x);
                     let { io, node, inletNumber, outletNumber } = connection;
                     let nodes = isInput ? [connection.node as ObjectNode, ...inputNodes] : [connection.node as ObjectNode, ...outputNodes];
-                    console.log('nodes=', io, nodes);
 
                     let foundMatch = false;
                     for (let node of nodes) {
@@ -120,7 +119,6 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
 
                                 // this is the inlet we want to match 
                                 let inlet = node.inlets[inletNumber]; // it has a type IO
-                                console.log("OUTPUT CASE");
 
                                 // so we need to see if theres anything in this node we're reloading (i.e. objectNode) that
                                 // matches ioType = IO
@@ -131,9 +129,6 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                                     return !ioletsMatched.includes(objectNode.outlets[ionumber])
                                 });
 
-
-                                console.log('secondary matches outputs', secondaryMatches);
-                                console.log('matching outputs=', matchingIONodes);
                                 for (let match of [...exactMatches, ...matchingIONodes]) {
                                     // possible match: "out 5 @io goal_type"
                                     let outletNumber = (match.arguments[0] as number) - 1;
@@ -141,12 +136,9 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                                     let outlet = objectNode.outlets[outletNumber];
 
                                     if (ioletsMatched.includes(outlet)) {
-                                        console.log("SKIPPING OUTLET=", outlet);
                                         //  continue;
                                     }
-                                    console.log('match=', match, outlet, inlet);
                                     if (outlet && inlet) {
-                                        console.log("connecting output", node, objectNode, inlet, outlet);
                                         let c1 = objectNode.connect(node, inlet, outlet, false);
                                         registerConnection(objectNode.id, c1);
                                         registerConnection(node.id, c1);
@@ -171,7 +163,6 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                                     return !ioletsMatched.includes(node.inlets[ionumber])
                                 });
 
-                                console.log('secondary matches inputs', secondaryMatches);
                                 for (let match of [...exactMatches, ...matchingIONodes]) {
                                     // possible match: "in 5 @io goal_type"
                                     let inletNumber = (match.arguments[0] as number) - 1;
@@ -179,11 +170,9 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                                     let inlet = objectNode.inlets[inletNumber];
 
                                     if (ioletsMatched.includes(inlet)) {
-                                        console.log('skipping lnet', inlet);
                                         continue;
                                     }
                                     if (outlet && inlet) {
-                                        console.log("connecting output", node, objectNode, inlet, outlet);
                                         let c1 = node.connect(objectNode, inlet, outlet, false);
                                         registerConnection(node.id, c1);
                                         registerConnection(objectNode.id, c1);
@@ -259,7 +248,6 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                         continue;
                     }
                     let io = ioNode.attributes.io as string;
-                    console.log("searching %s =%s io=%s", isInput ? "inlet" : "outlet", i, io, ioNode, iolet); x
                     // find a matching connection for this inlet/outlet that has been taken yet...
 
                     let adjacent = isInput ? inputNodes : outputNodes;

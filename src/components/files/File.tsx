@@ -43,13 +43,13 @@ const FileComponent: React.FC<{ isRevision: boolean, className: string, openFile
                     className="hover:scale-105 transition-all absolute bottom-5 right-5 text-zinc-400 text-xs flex w-12 rounded-full px-1"><CommitIcon className="my-auto ml-1 w-5 mr-2" color="gray" /> {file.commits.length}</div>}
             </div>
             <div>{file.name}</div>
-            {(favorited || isRevision) && <div className="flex">
+            {<div className="flex">
                 <div className="text-zinc-500">{getTime(file.createdAt.toDate())}</div>
-                <div
+                {(favorited || isRevision) && <div
                     onClick={toggleHeart}
                     className="ml-auto cursor-pointer">
                     {favorited ? <HeartFilledIcon color="red" className="w-5 h-5" /> : <HeartIcon className="w-5 h-5" />}
-                </div>
+                </div>}
             </div>}
         </div>)
 };

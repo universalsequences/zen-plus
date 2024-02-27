@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { useNetwork, useSwitchNetwork } from 'wagmi';
 import { DividerHorizontalIcon, DividerVerticalIcon } from '@radix-ui/react-icons';
 import { ethers } from 'ethers';
 import { usePublicClient, useWaitForTransaction } from 'wagmi'
@@ -22,6 +23,7 @@ interface Props {
     setStep: (x: Step) => void,
     totalSupply: number | null;
     tokenPrice: string;
+    chainId: number;
 }
 
 async function getBalance(provider: any, address: `0x${string}`) {
@@ -40,6 +42,9 @@ const MintBlock = (props: Props) => {
     const publicClient = usePublicClient();
 
     const { mintedToken, setMintedToken } = props;
+
+    const { switchNetwork } = useSwitchNetwork();
+    const network = useNetwork();
     let [totalPrice, setTotalPrice] = useState<string | null>(null);
     let { setStep, step } = props;
     let [seed, setSeed] = useState(1);
@@ -49,6 +54,12 @@ const MintBlock = (props: Props) => {
 
     const { data: signer } = useWalletClient();
     const address = useAccount();
+    let wrongNetwork = false;
+    console.log('network = ', network);
+    if (network && network.chain && network.chain.id !== props.chainId && address) {
+        wrongNetwork = true;
+    }
+
 
     useEffect(() => {
         if (address && address.address && publicClient) {
@@ -157,7 +168,7 @@ const MintBlock = (props: Props) => {
     quad = Math.floor(seed / 2);
 
     const [isCustom, setIsCustom] = useState(true);
-    let className = "p-2  text-white flex  flex-col mint-button-container select-none text-center w-50 text-center   z-10 bg-zinc-950  ";
+    let className = "p-2  text-white flex  flex-col mint-button-container select-none text-center w-50 text-center   z-10 bg-zinc-900 transition-all ";
     if (hide && totalPrice === null) {
         className += " disappear";
     }
@@ -190,15 +201,11 @@ const MintBlock = (props: Props) => {
         <>
             <div
                 style={{
-                    borderTop: "1px solid #343232",
-                    borderRight: "1px solid #343232",
-                    borderLeft: "1px solid #343232",
                     borderTopLeftRadius: "30px",
                     borderTopRightRadius: "10px",
-                    backgroundColor: "#0b0a0a66",
                 }}
-                className={className + ' mt-4 relative'}>
-                <div className={(minimized ? "top-3  " : " top-1 ") + "cursor-pointer absolute right-1 px-1 rounded-full border border-zinc-800"}>
+                className={className + ' mt-4 relative bg-zinc-900 pt-5 transition-all'}>
+                <div className={(minimized ? "top-3  " : " top-1 ") + "cursor-pointer absolute right-1 px-1 rounded-full border border-zinc-400 bg-zinc-900 transition-all duration-300 ease-in-out"}>
                     {minimized ?
                         <DividerVerticalIcon color="white" onClick={() => setMinimized(false)} className="w-3 h-3" /> :
                         <DividerHorizontalIcon
@@ -207,32 +214,32 @@ const MintBlock = (props: Props) => {
                             className="w-3 h-3" />}</div>
                 {minimized ? <div className="h-4 w-16 " /> : <>
                     <div className={(step !== Step.None ? "opacity-30 pointer-events-none " : "") + "mb-5 flex flex-col"} >
-                        <div className="flex border-b border-zinc-800 py-2 mb-1 text-sm md:text-xl text-zinc-500">
+                        <div className="flex border-b border-zinc-400 py-2 mb-1 text-sm md:text-xl text-zinc-500">
                             <div className="mx-auto flex items-start">
                                 <div
-                                    style={{ lineHeight: "15px" }}
-                                    onClick={() => setEditionSize(Math.max(1, editionSize - 1))} className={(editionSize === 1 ? "opacity-10 pointer-events-none " : "") + "p-2 md:p-2 w-8 h-8 my-auto bg-zinc-300 rounded-full cursor-pointer items-start"}>
+                                    style={{ lineHeight: "17px" }}
+                                    onClick={() => setEditionSize(Math.max(1, editionSize - 1))} className={(editionSize === 1 ? "opacity-10 pointer-events-none " : "") + "md:p-2 p-2 w-10 h-10 my-auto bg-zinc-300 text-zinc-500 border-2 border-zinc-400 rounded-full cursor-pointer active:scale-105 transition-all active:border-zinc-500"}>
                                     -
                                 </div>
                                 <div
-                                    style={{ lineHeight: "10px" }}
-                                    className=" bg-zinc-300 text-zinc-500   py-5 w-12 h-12 rounded-2xl mx-5 text-center">
+                                    style={{ lineHeight: "4px" }}
+                                    className=" bg-zinc-300 text-zinc-500   py-5 w-12 h-12 rounded-2xl mx-5 text-center border border-zinc-400 border-2">
                                     {editionSize}
                                 </div>
                                 <div
-                                    style={{ lineHeight: "15px" }}
-                                    onClick={() => setEditionSize(Math.min(1000, editionSize + 1))} className="md:p-2 p-2 w-8 h-8 my-auto bg-zinc-300 text-zinc-500 rounded-full cursor-pointer">
+                                    style={{ lineHeight: "17px" }}
+                                    onClick={() => setEditionSize(Math.min(1000, editionSize + 1))} className="md:p-2 p-2 w-10 h-10 my-auto bg-zinc-300 text-zinc-500 border-2 border-zinc-400 rounded-full cursor-pointer active:scale-105 transition-all active:border-zinc-500">
                                     +
                                 </div>
                             </div>
                         </div>
                         {totalPrice !== null && <textarea placeholder="add a comment" className="rounded-lg p-3 outline-none text-white bg-zinc-700" value={comment} onChange={e => setComment(e.target.value)} />}
                         {totalPrice !== null && <>
-                            <div className="flex border-b border-slate-700 py-1 mb-1 text-sm">
+                            <div className="flex border-b border-slate-900 py-1 mb-1 text-sm">
                                 <div className="">{editionSize} {editionSize === 1 ? "Edition" : "Editions"} {accessAllowed ? " (allowlist)" : ""}</div>
                                 <div className="ml-auto">{round(editionSize * price)} ETH</div>
                             </div>
-                            <div className="flex border-b border-slate-700 py-1 mb-1 text-sm">
+                            <div className="flex border-b border-slate-900 py-1 mb-1 text-sm">
                                 <div>
                                     Zora Mint Fee
                                 </div>
@@ -252,7 +259,9 @@ const MintBlock = (props: Props) => {
                     </div>
                     {checked && address.address === undefined ?
                         <div className="mx-auto items-start">
-                            <ConnectButton label={`Mint ${TOKEN_PRICE} ETH`} /></div> : <div onClick={balance && totalPrice && balance < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-300 text-zinc-500 text-black " : " bg-zinc-300 text-zinc-500") + " mint-button select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-500 bg-zinc-300 cursor-pointer object-start w-40 mx-auto  items-start z-10 left-0 right-0 relative "} >
+                            <ConnectButton /></div> : wrongNetwork ? <div
+                                onClick={() => switchNetwork ? switchNetwork(props.chainId) : 0}
+                                className="px-2 py-1 bg-zinc-300 text-zinc-500 cursor-pointer rounded-full active:scale-105 transition-all">Switch to Zora</div> : <div onClick={balance && totalPrice && balance < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-300 text-zinc-500 text-black " : " bg-zinc-300 text-zinc-500") + " mint-button select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-500 bg-zinc-300 cursor-pointer object-start w-40 mx-auto  items-start z-10 left-0 right-0 relative "} >
                             {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
                             {balance && totalPrice && balance < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
                                 step === Step.OpenWallet ? "Confirm in Wallet" :

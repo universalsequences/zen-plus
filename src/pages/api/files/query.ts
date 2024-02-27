@@ -24,9 +24,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 querySnapshot.forEach(doc => {
                     if (filterFavorites || !doc.data().hasNewVersion) {
                         let data = doc.data();
-                        if (data.moduleType) {
-                            console.log(data);
-                        }
                         documents.push(docToFile(doc.id, data));
                     }
                 });

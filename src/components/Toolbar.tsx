@@ -25,7 +25,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     // for now this will simply tell us what nested subpatches are
     const [option, setOption] = useState<Option | null>(null);
 
-    const { changeTileForPatch, closePatch, patches, setPatches } = usePatches();
+    const { changeTileForPatch, zenCode, closePatch, patches, setPatches } = usePatches();
     const { assist } = usePatch();
     let breadcrumbs: any[] = [];
     let _patch: Patch = patch;
@@ -114,6 +114,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     let [assistText, setAssistText] = useState("");
     let [loading, setLoading] = useState(false);
 
+    console.log('zen code=', patch.zenCode);
+
     if (breadcrumbs.length === 1) {
         return <div
             style={{ height: 35 }}
@@ -133,6 +135,13 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         </div>;
     }
 
+    let type = (patch as SubPatch).parentNode.attributes.type;
+
+    if (type === "zen") {
+        while (!(patch as SubPatch).isZenBase()) {
+            patch = (patch as SubPatch).parentPatch;
+        }
+    }
     return <div
         style={{ zIndex: 100000000000000, height: 35 }}
         onClick={(e: any) => e.stopPropagation()}
@@ -148,6 +157,13 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
                     closePatch(patch);
                 }} className="w-3 h-3 absolute top-0 bottom-0 my-auto right-2 cursor-pointer" />
             </div>
+            {<div className="absolute right-60 bottom-0 top-0  mr-3 my-auto pt-0.5 right-0 px-5 flex  flex w-28 text-right">
+                <div className="text-xs my-auto ml-auto text-zinc-400">
+                    {patch.zenCode ? "compiled" : type}
+                </div>
+                <div className={`w-2 h-2 rounded-full ${type === 'audio' ? "bg-yellow-300" : type === "gl" ? "bg-purple-500" : "bg-teal-200"} my-auto ml-2`}>
+                </div>
+            </div>}
             <div
                 style={{ borderLeft: "1px solid white" }}
                 className="absolute right-0 bottom-0 top-0 table my-auto pt-0.5 right-0 px-5 flex w-64">

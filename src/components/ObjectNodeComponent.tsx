@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import UXView from './ux/UXView';
 import SlotView from './SlotView';
 import { File } from '@/lib/files/types';
 import { TypeError, TypeSuccess } from '@/lib/nodes/typechecker';
@@ -113,8 +114,9 @@ const InnerObjectNodeComponent: React.FC<{
             let success = true
             if (file) {
                 //let serializedSubPatch = await fetchSubPatchForDoc(id);
-                if (file) {
-                    await loadSubPatch(file);
+                let serializedSubPatch = await fetchSubPatchForDoc(file.id);
+                if (serializedSubPatch) {
+                    await loadSubPatch(serializedSubPatch, file.name);
                     /*
                     if (serializedSubPatch.attributes && serializedSubPatch.attributes["type"]) {
                         objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
@@ -201,6 +203,10 @@ const InnerObjectNodeComponent: React.FC<{
             let copied = new ObjectNodeImpl(objectNode.patch);
             if (objectNode.name === "zen") {
                 let attr = "";
+
+                if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.ZEN) {
+                    attr = " @type zen";
+                }
                 if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.GL) {
                     attr = " @type gl";
                 }
@@ -216,6 +222,7 @@ const InnerObjectNodeComponent: React.FC<{
                     copied.subpatch.fromJSON(
                         json.subpatch,
                         true);
+                    loadSubPatch(json.subpatch, "zen");
                 }
                 copied.attributes = {
                     ...copied.attributes,
@@ -314,6 +321,10 @@ const InnerObjectNodeComponent: React.FC<{
         let isCustomSubPatchView = objectNode.attributes["Custom Presentation"];
 
         let { slotview } = objectNode.attributes;
+        let { ux } = objectNode.attributes;
+        if (objectNode.name === "matrix") {
+            ux = undefined as any;
+        }
 
         return (
             <PositionedComponent
@@ -322,7 +333,7 @@ const InnerObjectNodeComponent: React.FC<{
                 text={parsedText}
                 lockedModeRef={lockedModeRef}
                 isError={!CustomComponent && (typeError && !(typeError as TypeSuccess).success) || (error !== null)}
-                skipOverflow={(error !== null || (typeError && !(typeError as TypeSuccess).success)) || (editing && autoCompletes.length > 0)}
+                skipOverflow={ux !== undefined || ((error !== null || (typeError && !(typeError as TypeSuccess).success)) || (editing && autoCompletes.length > 0))}
                 node={objectNode}>
                 <ContextMenu.Root>
                     <ContextMenu.Content
@@ -353,12 +364,14 @@ const InnerObjectNodeComponent: React.FC<{
                             ref={ref}
                             onMouseDown={onMouseDown}
                             className="flex h-full w-full flex-1 whitespace-nowrap">
-                            {slotview ? <SlotView objectNode={objectNode} /> : <>
+                            {ux ? <UXView objectNode={objectNode} /> : slotview ? <SlotView objectNode={objectNode} /> : <>
 
                                 {isCustomSubPatchView ? <CustomSubPatchView
                                     objectNode={objectNode} /> : CustomComponent ? <CustomComponent objectNode={objectNode} />
                                     : editing ?
                                         <input
+                                            autoComplete={"off"}
+                                            autoCorrect={"off"}
                                             onClick={(e: any) => e.stopPropagation()}
                                             ref={inputRef}
                                             onKeyDown={onKeyDown}

@@ -25,9 +25,9 @@ export interface WorkOption {
     image?: string;
 };
 
-const Works: React.FC<{ setShowNav: (x: boolean) => void }> = ({ setShowNav }) => {
+const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => void }> = ({ setShowNav, defaultWork }) => {
     let [works, setWorks] = useState<WorkOption[]>([]);
-    let [selectedWork, setSelectedWork] = useState<WorkOption | null>(null);
+    let [selectedWork, setSelectedWork] = useState<WorkOption | null>(defaultWork || null);
     const { user } = useAuth();
 
     useEffect(() => {

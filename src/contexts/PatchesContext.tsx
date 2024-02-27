@@ -78,6 +78,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             _rootTile.children = rootTileRef.current.children;
             _rootTile.splitDirection = rootTileRef.current.splitDirection;
             _rootTile.id = rootTileRef.current.id;
+            console.log('setting root tile=', _rootTile);
             setRootTile(_rootTile);
             rootTileRef.current = _rootTile;
         }
@@ -108,6 +109,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
                 setSelectedPatch(popped);
                 resetRoot();
+
+                patchesRef.current = Array.from(new Set(_patches));
                 setPatches(Array.from(new Set(_patches)));
                 liftPatchTile(popped);
             }
@@ -132,6 +135,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
                 setSelectedPatch((selectedPatch as SubPatch).parentPatch);
                 resetRoot();
+                patchesRef.current = (Array.from(new Set(patches)));
                 setPatches(Array.from(new Set(patches)));
                 patchHistory.current.push(selectedPatch);
             }
@@ -176,6 +180,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                         rootTileRef.current = existingTile.parent;
                     }
                     resetRoot();
+                    patchesRef.current = [...patches];
                     setPatches([...patches]);
                     return;
                 }
@@ -190,16 +195,15 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             return;
         }
         let includes = rootTileRef.current.findPatch(objectNode.subpatch as Patch);
-        console.log("includes=", includes);
         if (objectNode.subpatch && !includes) {
-            //if (patches.length === 2) {
-            //    setPatches([patches[0], objectNode.subpatch]);
-            //} else {
-            //updateGridLayout([...patches, objectNode.subpatch]);
             patches.forEach(p => p.viewed = true);
             let rootTile = rootTileRef.current;
             if (rootTile) {
+                let allTiles: Tile[] = patchesRef.current.map((x: Patch) => rootTile.findPatch(x)).filter(x => x) as Tile[];
+                allTiles.sort((a: Tile, b: Tile) => a.getDepth() - b.getDepth());
                 let existingTile = rootTile.findPatch(objectNode.subpatch);
+                console.log('allTiles=', allTiles);
+                console.log("existing tile =", existingTile);
                 if (existingTile) {
                     setSelectedPatch(objectNode.subpatch);
                     return;
@@ -214,14 +218,20 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                     let tile = rootTile.findPatch(objectNode.patch);
                     if (true) {// !tile) {
                         let leaves = rootTile.getLeaves();
-                        let _leaves = leaves.filter(a => a.patch && (a.patch as SubPatch).parentNode).sort((a, b) => {
+                        console.log("LEAVES =", leaves);
+                        // .filter(a => a.patch && (a.patch as SubPatch).parentNode)
+                        let _leaves = leaves.sort((a, b) => {
+                            return a.getDepth() - b.getDepth();
+                            /*
                             let _a = a.patch as SubPatch;
                             let _b = b.patch as SubPatch;
                             if (_a && _b && _a.parentNode.size && _b.parentNode.size) {
                                 return _a.parentNode.size.height - _b.parentNode.size.height;
                             }
                             return 0;
+                            */
                         });
+                        console.log("Leaves = ", _leaves);
                         if (_leaves[0]) {
                             tile = _leaves[0];
                         }
@@ -243,8 +253,11 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                 //objectNode.subpatch.presentationMode = true;
             }
             if (replace) {
+
+                patchesRef.current = [objectNode.subpatch];
                 setPatches([objectNode.subpatch]);
             } else {
+                patchesRef.current = [...patches, objectNode.subpatch];
                 setPatches([...patches, objectNode.subpatch]);
             }
             if (objectNode.subpatch) {
@@ -258,12 +271,19 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         if (rootTile) {
             let tile = rootTile.findPatch(patch);
             if (tile && tile.parent) {
-                if (tile.children.length === 0) {
+                if (tile.parent.parent === null) {
+
+                    if (patches.length === 1) {
+                        return;
+                    }
+                    rootTile.children = tile.parent.children.filter(x => x.patch !== patch);
+                    // tile.parent.children = tile.parent.children.filter(x => x.patch !== patch);
+                } else if (tile.children.length === 0) {
                     tile.parent.children = tile.parent.children.filter(x => x.patch !== patch);
-                    if (tile.parent.children.length === 1) {
+                    if (tile.parent.parent === null) {
                         tile.parent = tile.parent.children[0];
+                        tile.parent.patch = tile.parent.children[0].patch;
                         tile.parent.children = [];
-                        tile.parent.parent = null;
                     }
                 } else {
                     let child = tile.parent.children.find(x => x.patch !== patch);
@@ -275,14 +295,21 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             } else {
             }
         }
-        let _p = patches.filter(x => x !== patch);
+        let _p = patchesRef.current.filter(x => x !== patch);
         if (_p.length === 0) {
             _p = [(patch as any).parentPatch];
         }
+        patchesRef.current = _p;
         resetRoot();
+
         setPatches(_p);
         setSelectedPatch(_p[0]);
     }, [setPatches, patches, setSelectedPatch, setGridLayout, rootTile, setRootTile]);
+
+    let patchesRef = useRef<Patch[]>([]);
+    useEffect(() => {
+        patchesRef.current = [...patches];
+    }, [patches]);
 
     const changeTileForPatch = useCallback((a: Patch, b: Patch) => {
         if (patches.includes(b)) {
@@ -299,6 +326,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                 let index = patches.indexOf(a);
                 let _patches = [...patches];
                 _patches[index] = b;
+
+                patchesRef.current = _patches;
                 setPatches(_patches);
             }
         }
@@ -316,6 +345,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                     if (parentPatch && !patches.includes(parentPatch)) {
                         let parentTile = tile.parent;
                         tile.split(parentTile && parentTile.splitDirection === "horizontal" ? "vertical" : "horizontal", parentPatch);
+
+                        patchesRef.current = [...patches, parentPatch];
                         setPatches([...patches, parentPatch]);
                         resetRoot();
                     } else {
@@ -359,9 +390,15 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                 tile.parent.patch = patch;
                 let childToKill = tile.parent.children.find(x => x.patch !== patch);
                 tile.parent.children = [];
-                if (childToKill) {
-                    let newPatches = patches.filter(x => childToKill && x !== childToKill.patch);
-                    setPatches(newPatches);
+                if (tile.parent.parent === null) {
+                    patchesRef.current = [patch];
+                    setPatches([patch]);
+                } else {
+                    if (childToKill) {
+                        let newPatches = patches.filter(x => childToKill && x !== childToKill.patch);
+                        patchesRef.current = [...newPatches];
+                        setPatches(newPatches);
+                    }
                 }
                 resetRoot();
             } else {

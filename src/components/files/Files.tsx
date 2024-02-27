@@ -17,6 +17,7 @@ const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void 
     let [searchText, setSearchText] = useState("");
     const { navOption, setNavOption } = useNav();
 
+    console.log("projects=", projects);
     const { fetchPatch, fetchPatchesForEmail } = useStorage();
     let { user } = useAuth();
 

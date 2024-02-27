@@ -147,6 +147,7 @@ export type ObjectNode = Positioned & Node & {
     saveData?: any;
     custom?: SerializableCustom;
     created?: boolean;
+    signalOptions?: SignalOption[];
 }
 
 export interface SerializableCustom {
@@ -268,4 +269,17 @@ export enum Orientation {
     X,
     Y,
     XY
+}
+
+export type IO = "trig" | "velocity" | "control" | "ramp" | "duration";
+export type ModuleType = "sequencer" | "generator" | "effect";
+
+export interface SignalOption {
+    outlet?: IOlet;
+    node: ObjectNode;
+    io?: IO,
+    moduleType?: ModuleType
+    name?: string;
+    signalNumber?: number;
+    moduleName?: string;
 }

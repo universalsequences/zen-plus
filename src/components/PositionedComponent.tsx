@@ -233,6 +233,10 @@ const PositionedComponent: React.FC<{
             _style.height = 24;
         }
 
+        if (isSelected) {
+            _style.zIndex = 10000000000000;
+        }
+
         return (
             <div
                 ref={ref}

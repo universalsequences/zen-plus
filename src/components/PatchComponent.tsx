@@ -617,8 +617,8 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                     height: node.size.height + 'px',
                     maxWidth: node.size.width + 'px',
                     maxHeight: node.size.height + 'px',
-                    overflow: "hidden"
-                    //margin: "auto",
+                    overflow: "hidden",
+                    margin: "auto",
                 };
                 // }
             }

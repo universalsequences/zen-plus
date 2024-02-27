@@ -47,7 +47,19 @@ export default class Subpatch extends PatchImpl implements SubPatch {
                 }
             }
         }
-        if (this.patchType !== OperatorContextType.ZEN) {
+        if (this.patchType === OperatorContextType.ZEN) {
+            /*
+            console.log('setting all inlets/outlets to ZEN');
+            for (let inlet of this.parentNode.inlets) {
+                console.log('setting zen', inlet, ConnectionType.ZEN);
+                inlet.connectionType = ConnectionType.ZEN;
+            }
+            for (let outlet of this.parentNode.outlets) {
+                console.log('setting zen', outlet, ConnectionType.ZEN);
+                outlet.connectionType = ConnectionType.ZEN;
+            }
+            */
+        } else {
             this.parentNode.operatorContextType = this.patchType;
             for (let inlet of this.parentNode.inlets) {
                 inlet.connectionType = toConnectionType(this.patchType);;
@@ -60,7 +72,8 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         if (isAudio) {
             this.setupAudioPatch();
         }
-        this._setupInitialNodes();
+        //this._setupInitialNodes();
+        console.log("initialized subpatch isZen=%s isZenBase=%s", this.isZen, this.isZenBase(), this);
     }
 
     _setupInitialNodes() {

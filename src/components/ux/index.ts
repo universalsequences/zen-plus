@@ -1,4 +1,5 @@
 import Matrix from './Matrix';
+import SignalReceive from './SignalReceive';
 import Button from './Button';
 import Preset from './Preset';
 import FunctionUX from './FunctionUX';
@@ -42,3 +43,8 @@ export const index: ComponentIndex = {
     "button": Button,
     "preset": Preset
 };
+
+export const optionalIndex: ComponentIndex = {
+    'receive~': SignalReceive
+};
+

@@ -1,4 +1,5 @@
 import { doc } from './doc';
+import { receive, publishPatchSignals, send } from './pubsub';
 import { API } from '@/lib/nodes/context';
 import { ObjectNode, Message, ConnectionType } from '../../types';
 
@@ -91,4 +92,7 @@ export const api: API = {
     "speakers~": speakers,
     "number~": number_tilde,
     "scope~": scope_tilde,
+    "send~": send,
+    "receive~": receive,
+    "publishPatchSignals": publishPatchSignals
 };

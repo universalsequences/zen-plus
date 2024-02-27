@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { getTime } from '@/components/ProjectOption';
 import { File } from '@/lib/files/types';
 import { OperatorContext, OperatorContextType, getAllContexts, getOperatorContext } from '@/lib/nodes/context';
 import { useSubPatchLoader } from '@/hooks/useSubPatchLoader';
@@ -9,7 +10,7 @@ import { useStorage } from '@/contexts/StorageContext';
 import { usePatches } from '@/contexts/PatchesContext';
 import { usePatch } from '@/contexts/PatchContext';
 import { ObjectNode } from '@/lib/nodes/types';
-import { DividerHorizontalIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { Cross2Icon, DividerHorizontalIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 
 export const SLOT_VIEW_WIDTH = 180;
@@ -26,26 +27,32 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let [subpatches, setSubPatches] = useState([...onchainSubPatches].sort((a, b) => a.name.localeCompare(b.name)));
 
     useEffect(() => {
-        let _sorted = [...onchainSubPatches].sort((a, b) => a.name.localeCompare(b.name));
+        let _sorted = [...onchainSubPatches].sort((a, b) => searchText !== "" ? b.createdAt.seconds - a.createdAt.seconds : a.name.localeCompare(b.name));
         setSubPatches(_sorted.filter(x => searchText === "" || (x.moduleType && x.moduleType.includes(searchText.toLowerCase())) || x.name.toLowerCase().includes(searchText.toLowerCase())));
     }, [searchText, setSubPatches]);
 
     const load = useCallback(async (x: File) => {
-        await loadSubPatch(x);
-        setName(x.name);
+        let serializedSubPatch = await fetchSubPatchForDoc(x.id);
+        if (serializedSubPatch) {
+            await loadSubPatch(serializedSubPatch, x.name);
+            setName(x.name);
+        }
     }, [setName]);
 
     let patchMemo = React.useMemo(() => {
         return (<div className="h-64 overflow-scroll">
             {subpatches.map(
                 x =>
-                    <ContextMenu.Item
+                    <div
                         key={x.id}
                         onClick={() => load(x)}
                         className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer text-xs flex">
                         <div className="">{x.name.slice(0, 20)}</div>
-                        {x.moduleType && x.moduleType !== "other" && <div className="ml-auto text-zinc-400">{x.moduleType}</div>}
-                    </ContextMenu.Item>)}
+                        <div className="ml-auto flex">
+                            {x.moduleType && x.moduleType !== "other" && <div className="text-zinc-200">{x.moduleType}</div>}
+                            <div className="w-20  text-right ml-1 text-zinc-500">{getTime(x.createdAt.toDate())}</div>
+                        </div>
+                    </div>)}
         </div>);
     }, [subpatches]);
 
@@ -53,7 +60,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         <ContextMenu.Content
             onMouseDown={(e: any) => e.stopPropagation()}
             style={{ zIndex: 10000000000000 }}
-            color="indigo" className="object-context rounded-lg p-2 text-xsflex flex-col overflow-hidden text-sm w-64">
+            color="indigo" className="object-context rounded-lg p-2 text-xsflex flex-col overflow-hidden text-sm w-96">
             <div className="flex text-zinc-300 pb-2 mb-2 flex flex-col">
                 <SearchBox searchText={searchText} setSearchText={setSearchText} />
             </div>

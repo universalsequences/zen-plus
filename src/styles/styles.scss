@@ -192,10 +192,10 @@ body {
 }
 
 .slot-view.sequencer {
-    background-color: #252a2f;
+    background-color: #191c1e;
 }
 .slot-view.generator {
-    background-color: #2a302e;
+    background-color: #242627;
 }
 
 .slot-view.effect {
@@ -348,12 +348,12 @@ svg {
 
 .tile {
     flex-grow: 1;
+    border-width: 3px !important;
     flex-shrink: 1;
     flex-basis: 0;
     margin: 1px;
     border-radius: 12px;
     overflow: hidden;
-    //border-width: 3px !important;
     border-color: #1b1b1b !important;
 
 }
@@ -522,6 +522,7 @@ svg {
     display: flex;
 }
 
+/*
 button.ju367v1s {
     display: flex;
 }
@@ -554,6 +555,7 @@ button.iekbcc0 {
                  
     }
 }
+*/
 [data-rk] ._9pm4ki3 {
     z-index: 10000000000 !important;
     pointer-events: auto;
@@ -611,7 +613,7 @@ div:active {
 .locked {
 .patcher-background {
     background-color: #3b3b3b4a;
-    background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf5,#0b0b0bf5);
+    background-image: radial-gradient(circle at center center, rgb(41 41 41 / 44%) 0%, rgb(28 27 27 / 8%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
     background-size: 14px 14px;
 }
 
@@ -619,7 +621,7 @@ div:active {
 .patcher-background {
     background-color: #3b3b3b4a;
     //background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf0,#0b0b0bf2);
-    background-image: radial-gradient(circle at center center, rgb(41 41 41) 0%, rgb(28, 27, 27) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(11 11 11 / 91%), rgb(11 11 11 / 91%));
+    background-image: radial-gradient(circle at center center, rgb(68 67 67 / 51%) 0%, rgb(61 58 58 / 5%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
     background-size: 14px 14px;
 }
 
@@ -634,4 +636,16 @@ div:active {
 }
 .text-zen-pink {
     color: #FF11CB;
+}
+
+.iekbcc0.iekbcc9.ju367v76.ju367v7r.ju367v8b.ju367v6k.ju367v4.ju367va2.ju367vn.ju367veh.ju367vft.ju367vb.ju367va.ju367v16.ju367v1h.ju367v1p.ju367v8t._12cbo8i3.ju367v8r._12cbo8i4._12cbo8i6 {
+    display:  none;
+}
+
+.mint-button-container {
+    button {
+        padding: 10px !important;
+        background-color: white !important;
+        color: black !important;
+    }
 }

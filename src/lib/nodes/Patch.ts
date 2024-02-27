@@ -93,6 +93,8 @@ export class PatchImpl implements Patch {
         return this.objectNodes.filter(node => node.inlets.length === 0 && node.name !== "history");
     }
 
+    // isZenBase tells us whether we are at the "base" of a "zen patch", i.e. the node that is considered
+    // the "audio worklet"
     isZenBase() {
         if (!(this as Patch as SubPatch).parentPatch) {
             return false;
@@ -366,6 +368,7 @@ export class PatchImpl implements Patch {
                 connection.source.disconnectAudioNode(connection);
             }
 
+            let subpatch = (this as Patch as SubPatch);
             workletNode.disconnect();
             graph.context.disposed = true;
             workletNode.port.onmessage = null;
@@ -473,7 +476,6 @@ export class PatchImpl implements Patch {
             let parentNode = (this as Patch as SubPatch).parentNode;
             let parentId = parentNode ? parentNode.id : this.id;
             let workletId = 'zen' + parentId + '_' + id + new Date().getTime();
-            console.log('creating worklet id=', workletId);
             createWorklet(
                 this.audioContext,
                 zenGraph,
@@ -503,17 +505,13 @@ export class PatchImpl implements Patch {
                             publish(e.data.type, [e.data.subType, e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body, this]);
                         };
 
-                        console.log("ZEN GRAPH =", zenGraph, zenGraph.numberOfInputs);
-
                         let merger = this.audioContext.createChannelMerger(zenGraph.numberOfInputs);
                         let parentNode = (this as Patch as SubPatch).parentNode;
                         if (parentNode) {
                             parentNode.merger = merger;
                             merger.connect(ret.workletNode);
 
-                            console.log("SETTING PARENT NODE OUTLETS TO AUDIO!");
                             for (let i = 0; i < parentNode.outlets.length; i++) {
-                                console.log('name=%s setting outlet[%s] = ', this.name, i, parentNode.outlets[i]);
                                 parentNode.outlets[i].connectionType = ConnectionType.AUDIO;
                             }
 
@@ -564,6 +562,35 @@ export class PatchImpl implements Patch {
                             matrix => matrix.receive(matrix.inlets[0], "bang"));
 
                         this.skipRecompile = false;
+
+                        if (parentNode) {
+                            let moduleType = parentNode.attributes.moduleType;
+                            let publishers = parentNode.patch.objectNodes.filter(
+                                x => x.name === "publishPatchSignals" &&
+                                    x.arguments[0] === moduleType);
+
+                            let root = parentNode.patch;
+                            while ((root as SubPatch).parentPatch) {
+                                root = (root as SubPatch).parentPatch;
+                            }
+                            let allReceives = root.getAllNodes().filter(x => x.name === "receive~");
+                            publishers.forEach(
+                                x => {
+                                    let name = x.arguments[2] as string;
+                                    let matches = allReceives.filter(x => x.arguments[0] === name);
+                                    matches.forEach(x => {
+                                        if (x.fn) {
+                                            x.fn([]);
+                                        }
+                                    });
+
+                                    if (x.fn) {
+                                        x.fn([]);
+                                    }
+
+                                });
+
+                        }
 
                         let inputFile = printStatement(statement);
                         inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
@@ -847,11 +874,12 @@ export class PatchImpl implements Patch {
     async initialLoadCompile() {
         this.recompileGraph()
 
-        console.log("INITIAL LOAD COMPILE CALLED", this.name);
         let compiled: Patch[] = [];
         for (let node of this.objectNodes) {
             if (node.subpatch && node.subpatch.isZenBase() && node.subpatch.patchType !== OperatorContextType.AUDIO) {
-                console.log("initial compile of subpatch=", node.subpatch.name);
+                if (this.isZenBase() && (this as Patch as SubPatch).patchType === OperatorContextType.ZEN) {
+                    continue;
+                }
                 node.subpatch.recompileGraph();
                 let i = 0;
                 while (!node.audioNode) {
@@ -864,14 +892,26 @@ export class PatchImpl implements Patch {
                 }
                 compiled.push(node.subpatch);
             } else if (node.subpatch && node.subpatch.patchType === OperatorContextType.AUDIO) {
-                console.log("need to check this one...", node.subpatchk);
                 await node.subpatch.initialLoadCompile();
             }
         }
 
-        for (let c of compiled) {
-            console.log("COMPILED=", c);
+        for (let node of this.getAllNodes()) {
+            if (node.name === "send~" || node.name === "publishPatchSignals") {
+                node.parse(node.text);
+            }
+            for (let outlet of node.outlets) {
+                if (outlet.connectionType === ConnectionType.AUDIO) {
+                    // reconnect...
+                    for (let connection of outlet.connections) {
+                        node.disconnectAudioNode(connection);
+                        node.connectAudioNode(connection);
+                    }
+                }
+            }
         }
+
+
         this.sendAttributeMessages();
     }
 

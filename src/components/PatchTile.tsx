@@ -171,7 +171,7 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
             <div
                 ref={ref}
                 style={true ? {} : { minWidth: _maxWidth + '%', maxWidth: _maxWidth + '%', maxHeight: _maxHeight + '%', minHeight: _maxHeight + '%' }}
-                className={children.length === 1 ? "w-full h-full flex-1" : (cl + "  flex tile-container flex-1 " + (tile.splitDirection === "vertical" ? "flex-col" : "flex-row"))}>
+                className={children.length === 1 ? "flex w-full h-full flex-1" : (cl + "  flex tile-container flex-1 " + (tile.splitDirection === "vertical" ? "flex-col" : "flex-row"))}>
                 {children}
             </div>
         </>

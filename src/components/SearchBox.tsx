@@ -1,5 +1,5 @@
 import React, { useEffect, memo, useCallback, useRef } from 'react';
-import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { Cross2Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 
 const SearchBox: React.FC<{ searchText: string, setSearchText: (x: string) => void }> = memo(({ searchText, setSearchText }) => {
     let ref = useRef<HTMLInputElement>(null);
@@ -21,6 +21,7 @@ const SearchBox: React.FC<{ searchText: string, setSearchText: (x: string) => vo
     return <div className="relative w-full">
         <input ref={ref} value={searchText} onChange={onChange} type="text" className="w-full pl-8 py-1.5 outline-none" />
         <MagnifyingGlassIcon className="absolute z-30 top-2 left-2 w-4 h-4" />
+        <Cross2Icon onClick={() => setSearchText("")} className="absolute z-30 top-2 right-2 w-4 h-4 cursor-pointer" />
     </div>
 
 });

@@ -27,6 +27,7 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import {
+    mainnet,
     goerli,
     zora,
     zoraTestnet,
@@ -37,7 +38,7 @@ import { publicProvider } from 'wagmi/providers/public';
 
 
 const { chains, publicClient } = configureChains(
-    [zoraTestnet, zora, goerli],
+    [zoraTestnet, zora, goerli, mainnet],
     [
         infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
         publicProvider()
@@ -68,7 +69,7 @@ export default function App(props: Props) {
                     theme={darkTheme({
                         accentColor: 'black',
                         accentColorForeground: 'white',
-                        borderRadius: 'small',
+                        borderRadius: 'large',
                     })}
                     chains={chains}>
                     <AuthProvider>

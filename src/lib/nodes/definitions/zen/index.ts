@@ -193,6 +193,11 @@ doc(
     });
 
 const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
+    let noType = false;
+    if (!node.attributes["type"]) {
+        noType = true;
+        node.attributes["type"] = "zen";
+    }
     let subpatch = node.subpatch || (new SubpatchImpl(node.patch, node));
     node.subpatch = subpatch;
     subpatch.clearState();
@@ -202,8 +207,7 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     if (!node.attributes["slotview"]) {
         node.attributes["slotview"] = false;
     }
-    if (!node.attributes["type"]) {
-        node.attributes["type"] = "zen";
+    if (noType) {
         node.attributeCallbacks["type"] = (type) => {
             if (type === "gl") {
                 node.operatorContextType = OperatorContextType.GL;

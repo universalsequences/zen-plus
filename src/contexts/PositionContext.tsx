@@ -167,8 +167,14 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     const [nearestInlet, setNearestInlet] = useState<NearestInlet | null>(null);
 
     useEffect(() => {
-        patch.presentationMode = presentationMode;
+        setTimeout(() => {
+            patch.presentationMode = presentationMode;
+        }, 100);
     }, [patch, presentationMode]);
+
+    useEffect(() => {
+        setPresentationMode(patch.presentationMode);
+    }, [patch, setPresentationMode]);
 
     const checkNearInlets = useCallback((x: number, y: number) => {
         if (!draggingCable) {
@@ -318,16 +324,25 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
 
                 if (distance < minDistanceX && diffX < ALIGNMENT_GRID) {
                     // then we need vertical alignment
+                    if (!oldCoord) {
+                        continue;
+                    }
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord2.x, y2: oldCoord.y };
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
                     _updates[id].x = coord2.x;
                 } else if (distance < minDistanceX && diffX2 < ALIGNMENT_GRID) {
+                    if (!oldCoord) {
+                        continue;
+                    }
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: coord2.x, y2: oldCoord.y };
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
                     _updates[id].x = coord2.x - width1;
                 } else if (distance < minDistanceX && diffX3 < ALIGNMENT_GRID) {
+                    if (!oldCoord) {
+                        continue;
+                    }
                     let alignmentLine = { x1: midPointX, y1: coord2.y, x2: midPointX, y2: oldCoord.y };
                     minDistanceX = distance;
                     xAlignmentLines = [alignmentLine];
@@ -349,6 +364,9 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
                     _updates[id].y = coord2.y - height2;
                     yAlignmentLines = [alignmentLine];
                 } else if (distance < minDistanceY && diffY < ALIGNMENT_GRID) {
+                    if (!oldCoord) {
+                        continue;
+                    }
                     let alignmentLine = { x1: coord2.x, y1: coord2.y, x2: oldCoord.x, y2: coord2.y };
                     yAlignmentLines = [alignmentLine];
                     minDistanceY = distance;

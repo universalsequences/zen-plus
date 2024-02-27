@@ -81,7 +81,7 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
         let startsWithMatches = match(_text, contexts, (a: string, b: string) => a.startsWith(b));;
         let perfectMatches = match(_text, contexts, (a: string, b: string) => b === a);;
 
-        if ("zen".includes(text)) {
+        if (text.includes("zen")) {
             // need to add this one
             let allContexts = getAllContexts();
             let context = allContexts.find(x => x.type === OperatorContextType.ZEN);

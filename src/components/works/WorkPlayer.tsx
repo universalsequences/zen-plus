@@ -1,22 +1,40 @@
 import React, { useEffect, useState } from 'react';
+import OwnerOf from './OwnerOf';
+import {
+    mainnet
+} from 'wagmi/chains';
+import { useEnsName } from 'wagmi';
 import { abi } from '@/lib/abi/erc721-abi';
+import { ConnectButton, lightTheme } from '@rainbow-me/rainbowkit';
 import { usePublicClient, useContractRead, useSwitchNetwork } from 'wagmi'
 import { ethers } from 'ethers';
 import WorkEditor from './WorkEditor';
-import { ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
+import { EnterFullScreenIcon, ExitFullScreenIcon, Cross2Icon, InfoCircledIcon, DashboardIcon, ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
 import MintButton from './MintButton';
 import { WorkOption } from './Works';
 import { Step } from './enum';
 
 const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, close }) => {
-    console.log(work);
+    const [fullscreen, setFullScreen] = useState(false);
     const [opened, setOpened] = useState(false);
     const [step, setStep] = useState(Step.None);
     const [mintedToken, setMintedToken] = useState<number | null>(null);
     const [activeAnimation, setActiveAnimation] = useState<number | null>(null);
+    const [parameters, setParameters] = useState<any | null>(null);
     //const publicClient = usePublicClient();
     const { switchNetwork } = useSwitchNetwork();
 
+    useEffect(() => {
+        let url = `/api/getParameters?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}`;
+        fetch(url).then(
+            async r => {
+                let json = await r.json();
+                setParameters(json);
+            });
+    }, [activeAnimation]);
+    console.log("PARAMETERS =", parameters);
+
+    /*
     useEffect(() => {
         if (switchNetwork) {
             let chainId = work.chain || 5;
@@ -24,8 +42,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             switchNetwork(chainId);
         }
     }, [work, switchNetwork]);
+    */
 
-    console.log('work drop address=', work.dropAddress);
     const { data: totalSupply, isError, isLoading } = useContractRead({
         address: work.dropAddress as `0x${string}`,
         abi: abi,
@@ -46,76 +64,129 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         }
     }, [mintedToken, setActiveAnimation]);
 
-    console.log("chain =", work.chain, work);
+    const [showInfo, setShowInfo] = useState(false);
+
     let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}`;
 
-    return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-700">
-        <ArrowLeftIcon onClick={() => close()} className="w-8 h-8 cursor-pointer absolute bottom-5 left-5" />
+    return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-950">
+        <div className="absolute top-5 right-5">
+            {!fullscreen && <ConnectButton accountStatus="avatar" showBalance={false} />}
+        </div>
+        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className="w-8 h-8 cursor-pointer absolute bottom-5 left-5" />}
+        <div className="absolute z-30 top-5 left-5 cursor-pointer">
+
+            {fullscreen ? <ExitFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(false)} /> :
+                <EnterFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(true)} />}
+        </div>
         <div className="w-full flex m-auto">
             <iframe
                 style={{
-                    transform: "translate(0px, -50px)",
-                    boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px", width: "106vh", height: "80vh"
+                    transform: fullscreen ? undefined : "translate(0px, -50px)",
+                    boxShadow: fullscreen ? "" : "rgba(0, 0, 0, 0.35) 0px 5px 15px",
+                    width: fullscreen ? "100vw" : "106vh", height: fullscreen ? "100vh" : "80vh"
                 }}
-                src={url} className="w-full mx-auto border border-zinc-800 rounded-md" />
+                src={url} className={(fullscreen ? "" : "border-zinc-800 rounded-md border ") + "w-full mx-auto transition-all duration-300 ease-in-out"} />
         </div>
         {/*
         */}
 
+        {!fullscreen && parameters && <div className="left-40 bottom-5 flex w-64 py-1 absolute flex-wrap">
+            {Object.keys(parameters).map(
+                (name) => <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
+                    <div>
+                        {parameters[name]}
+                    </div>
+                    <div className="text-zinc-500">
+                        {name}
+                    </div>
+                </div>)}
+        </div>}
+
+
         {/* activeAnimation ? <WorkEditor tokenId={activeAnimation} contractAddress={work.dropAddress} /> : ''*/}
         <div
             style={{
-                backgroundColor: "#0b0a0a06",
-                border: "1px solid #3432328f",
-                width: 500,
+                overflow: "hidden",
+                width: fullscreen ? ((showInfo || opened) ? 500 : "") : showInfo ? 400 : 500,
                 borderRadius: 20,
-                boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"
+                boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px",
+                background: fullscreen || opened || showInfo ? "#00000074" : undefined,
+                backdropFilter: fullscreen || opened || showInfo ? "blur(8px)" : "",
+                border: opened ? "1px solid #ffffff3f" : ""
             }}
-            className=" fixed left-0 right-0 mx-auto bottom-5  h-10 bg-zinc-950 pl-10 flex text-xs  ">
-            <div className="w-48 my-auto">
-                {work.name}
-            </div>
-            <div
-                className="text-zinc-300 ml-10 w-50 my-auto text-center flex">
-                <div className="text-white mr-5">
-                    {trunc(work.ownerAddress)}
+            className={(fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-32 pr-5 " : "h-10") + " fixed bottom-5  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
+            {opened ? <div className="flex flex-col mt-5 items-start">
+                <Cross2Icon onClick={() => setOpened(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
+                <div className="text-zinc-500">
+                    gallery
                 </div>
+                <div className="flex flex-wrap text-base mt-2">
+                    {totalSupply ? new Array(mintedToken ? mintedToken : _totalSupply).fill(0).map((a, i) => <span key={i} onClick={() => setActiveAnimation(i + 1)} className={activeAnimation === i + 1 ? " w-6 bg-white text-black mr-3 text-center " : " text-center w-6 mr-2 cursor-pointer"}>{i + 1}</span>) : ""}
+                </div>
+
+            </div> : showInfo ? <div className="flex my-auto pr-5">
+                <Cross2Icon onClick={() => setShowInfo(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                 <div>
-                    author
+                    {work.description}
                 </div>
-            </div>
-            <div
-                onClick={() => setOpened(!opened)}
-                style={{
-                    borderTopRightRadius: 20,
-                    borderLeft: "1px solid #ffffff1f",
-                }}
-                className={(opened ? "bg-zinc-900 " : "") + " ml-10 w-32 my-auto h-full flex text-center cursor-pointer relative"}>
-                {opened && <div
+                <div className="text-zinc-400 ml-5">
+                    created with <span className="text-white">zen+</span>. all sounds and visuals stored directly onchain.
+
+                </div>
+            </div> : <>
+                <div className="w-48 my-auto text-base flex">
+                    {work.name}
+                    <InfoCircledIcon onClick={() => setShowInfo(!showInfo)} className="w-4 h-4 ml-4 my-auto cursor-pointer  transition-all hover:stroke-zinc-100" />
+                </div>
+                {showInfo && <div
                     style={{
                         borderRadius: "10px",
                         backgroundColor: "#0b0a0a66",
                         backdropFilter: "blur(16px)",
                         border: "1px solid #ffffff1f",
                     }}
-                    className="absolute bottom-10 -left-10 p-3 flex flex-col w-56 h-64 bg-zinc-950 border border-zinc-600">
-                    <div className="text-zinc-300">
-                        {_totalSupply} minted tokens
-                    </div>
-                    <div className="flex flex-wrap text-base">
-                        {totalSupply ? new Array(mintedToken ? mintedToken : _totalSupply).fill(0).map((a, i) => <span key={i} onClick={() => setActiveAnimation(i + 1)} className={activeAnimation === i + 1 ? " w-6 bg-white text-black mr-3 " : " text-center w-6 mr-2 cursor-pointer"}>{i + 1}</span>) : ""}
-                    </div>
+                    className="absolute bottom-20 w-64 text-sm p-5">
+                    {work.description}
                 </div>}
 
+
+                {!fullscreen && <div
+                    className="text-zinc-300 ml-10 w-50 my-auto text-center flex">
+                    <div className="text-zinc-400 mr-5">
+                        {activeAnimation ? <OwnerOf dropAddress={work.dropAddress} chainId={work.chain || 5} tokenId={activeAnimation} /> :
+                            trunc(work.ownerAddress)}
+                    </div>
+                </div>}
                 <div
-                    className="my-auto w-32 pl-4 flex">
-                    <div>Work #{activeAnimation}</div>
-                    <CaretSortIcon className="ml-auto mr-4" />
+                    onClick={() => setOpened(!opened)}
+                    style={{
+                        borderTopRightRadius: 20,
+                        borderBottomRightRadius: 20,
+                        borderLeft: "1px solid #ffffff1f",
+                    }}
+                    className={(opened ? "bg-zinc-700 " : "") + " ml-10 w-32 my-auto h-full flex text-center cursor-pointer relative hover:bg-zinc-700 transition-colors "}>
+                    {opened && <div
+                        style={{
+                            borderRadius: "10px",
+                            backgroundColor: "#0b0a0a66",
+                            backdropFilter: "blur(16px)",
+                            border: "1px solid #ffffff1f",
+                        }}
+                        className="absolute bottom-10 -left-10 p-3 flex flex-col w-56 h-64 bg-zinc-950 border border-zinc-600 hover:bg-zinc-200 transition-colors">
+                    </div>}
+
+                    <div
+                        className="my-auto w-32 pl-4 flex">
+                        <DashboardIcon className="w-4 h-4 my-auto mr-2" />
+                        <div>Work #{activeAnimation}</div>
+                        <CaretSortIcon className="ml-auto mr-4" />
+                    </div>
                 </div>
-            </div>
+            </>}
         </div>
-        <div className="mx-auto fixed bottom-0 right-10 table">
+        {!fullscreen && <div className="mx-auto fixed bottom-0 right-10 table">
             <MintButton
+                chainId={work.chain || 5}
                 work={work}
                 tokenPrice={work.price}
                 mintedToken={mintedToken}
@@ -126,10 +197,10 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 setStep={setStep}
                 contractAddress={work.dropAddress as `0x{string}`}
                 hide={false} />
-        </div>
+        </div>}
     </div >);
 };
 
 export default WorkPlayer;
 
-const trunc = (x: string) => x.slice(0, 5) + '...' + x.slice(x.length - 4);
+export const trunc = (x: string) => x.slice(0, 5) + '...' + x.slice(x.length - 4);
