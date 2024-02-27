@@ -1,7 +1,7 @@
 import React, { useEffect, memo, useCallback, useRef } from 'react';
 import { Cross2Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 
-const SearchBox: React.FC<{ searchText: string, setSearchText: (x: string) => void }> = memo(({ searchText, setSearchText }) => {
+const SearchBox: React.FC<{ searchText: string, setSearchText: (x: string) => void }> = ({ searchText, setSearchText }) => {
     let ref = useRef<HTMLInputElement>(null);
     const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         e.stopPropagation();
@@ -24,6 +24,6 @@ const SearchBox: React.FC<{ searchText: string, setSearchText: (x: string) => vo
         <Cross2Icon onClick={() => setSearchText("")} className="absolute z-30 top-2 right-2 w-4 h-4 cursor-pointer" />
     </div>
 
-});
+};
 
 export default SearchBox;

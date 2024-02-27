@@ -7,7 +7,7 @@ import { abi } from '@/lib/abi/erc721-abi';
 import { usePublicClient, useContractRead, useSwitchNetwork } from 'wagmi'
 import { useEnsName } from 'wagmi';
 
-const OwnerOf: React.FC<{ chainId: number, dropAddress: string, tokenId: number }> = memo(({ tokenId, dropAddress, chainId }) => {
+const OwnerOf: React.FC<{ chainId: number, dropAddress: string, tokenId: number }> = ({ tokenId, dropAddress, chainId }) => {
     const { data: ownerOf, isError: _isError, isLoading: _isLoading } = useContractRead({
         address: dropAddress as `0x${string}`,
         abi: abi,
@@ -27,6 +27,6 @@ const OwnerOf: React.FC<{ chainId: number, dropAddress: string, tokenId: number 
         return <div className="text-white flex">{data ? data : trunc(ownerOf as string) as string} <span className="ml-2 text-zinc-400">owner</span> </div>;
     }
     return <></>;
-});
+};
 
 export default OwnerOf;
