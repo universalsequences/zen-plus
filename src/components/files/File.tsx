@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from '@/lib/db/firebase'; // Ensure you have a firebase config file where 'db' is your Firestore instance
@@ -7,6 +8,7 @@ import { File } from '@/lib/files/types';
 
 const FileComponent: React.FC<{ isRevision: boolean, className: string, openFile: (x: File | null) => void, fileExpanded: File | null, setFileExpanded: (x: File | null) => void, file: File, setFileToOpen: (x: any | null) => void, setRevisions: (x: File[]) => void }> = ({ file, setFileToOpen, setRevisions, fileExpanded, setFileExpanded, openFile, className, isRevision }) => {
 
+    console.log("FILE=", file, file.screenshot);
     const [favorited, setFavorited] = useState(file.favorited);
     const toggleHeart = useCallback(async (e: any) => {
         console.log('toggle heart...');

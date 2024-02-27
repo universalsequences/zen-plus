@@ -27,6 +27,7 @@ const SavePatch: React.FC<{ patch: Patch, hide: () => void }> = ({ hide, patch }
                 captureAndSendCanvas(canvas as HTMLCanvasElement, true).then(
                     (screenshot: any) => {
                         if (name) {
+                            console.log('storing patch with screenshot=', screenshot);
                             storePatch(name, patch, isSubPatch, user.email, screenshot).then(() => {
                                 setLoading(false)
                                 hide();

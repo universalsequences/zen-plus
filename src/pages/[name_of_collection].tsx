@@ -116,8 +116,6 @@ export async function getServerSideProps(context: any) {
 
     // Fetch your collection from the database
     const collection = await fetchCollection(name_of_collection);
-    console.log('collection = ', collection);
-
     // If the collection does not exist, return an empty props (or handle as needed)
     if (!collection) {
         return {
