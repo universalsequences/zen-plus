@@ -26,7 +26,7 @@ const OwnerOf: React.FC<{ chainId: number, dropAddress: string, tokenId: number 
     if (ownerOf) {
         return <div className="text-white flex">{data ? data : trunc(ownerOf as string) as string} <span className="ml-2 text-zinc-400">owner</span> </div>;
     }
-    return <></>;
+    return <div className="w-24 h-4">...</div>;
 };
 
 export default OwnerOf;

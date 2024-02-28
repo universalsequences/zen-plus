@@ -28,11 +28,12 @@ interface IStorageContext {
     getPatches: (key: string) => Project[];
     onchainSubPatches: File[];
     storePatch: (name: string, patch: Patch, isSubPatch: boolean, email: string, screenshot?: string) => Promise<void>;
-    fetchPatchesForEmail: (email: string, isSubPatch?: boolean, isFavorited?: boolean) => Promise<File[]>;
+    fetchPatchesForEmail: (email: string, isSubPatch?: boolean, isFavorited?: boolean, cursor?: Timestamp) => Promise<FilesQueryResult>;
     fetchProject: (id: string, email: string) => Promise<File | null>;
     fetchPatch: (x: any) => Promise<SerializedPatch>;
     fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
     fetchRevisions: (head: any) => Promise<File[]>;
+    loadSubPatches: () => void;
 }
 
 interface Props {
@@ -47,6 +48,11 @@ export const useStorage = (): IStorageContext => {
     return context;
 };
 
+
+export interface FilesQueryResult {
+    cursor: Timestamp;
+    files: File[];
+}
 
 export const StorageProvider: React.FC<Props> = ({ children }) => {
 
@@ -63,14 +69,17 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     let [subpatches, setSubPatches] = useState<File[]>([]);
 
     const { user } = useAuth();
-    useEffect(() => {
+    const loadSubPatches = useCallback(() => {
         if (user) {
-            fetchPatchesForEmail(user.email, true).then(
-                docs => {
-                    setSubPatches(docs);
-                });
+            if (subpatches.length === 0) {
+                console.log("LOADING SUB PATCHES");
+                fetchPatchesForEmail(user.email, true).then(
+                    docs => {
+                        setSubPatches(docs.files);
+                    });
+            }
         }
-    }, [user, setSubPatches]);
+    }, [user, subpatches, setSubPatches]);
 
     /*
     useEffect(() => {
@@ -113,6 +122,8 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
         }
         return _projects;
     };
+
+    console.log("STORAGE CONTEXT");
 
 
     const compress = async (json: any): Promise<string> => {
@@ -162,6 +173,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             commit: await uploadCompressedData(compressed),
             user: email,
             isSubPatch,
+            hasNewVersion: false
         };
         let parentNode = (patch as SubPatch).parentNode;
         if (parentNode) {
@@ -245,7 +257,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     }
 
 
-    const fetchPatchesForEmail = (email: string, isSubPatch = false, filterFavorites?: boolean): Promise<File[]> => {
+    const fetchPatchesForEmail = (email: string, isSubPatch = false, filterFavorites?: boolean, cursor?: Timestamp): Promise<FilesQueryResult> => {
         return new Promise((resolve) => {
             user.getIdToken().then(
                 (token: string) => {
@@ -257,39 +269,24 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
                         },
                         body: JSON.stringify({
                             isSubPatch,
-                            filterFavorites
+                            filterFavorites,
+                            cursor
                         })
                     }).then(
                         async resp => {
                             let json = await resp.json();
-                            resolve(json.projects.map(
+                            let files: File[] = json.projects.map(
                                 (x: any) => ({
                                     ...x,
                                     createdAt: Timestamp.fromMillis(x.createdAt.seconds * 1000 + x.createdAt.nanoseconds / 1000000)
-                                })));
+                                }));
+                            resolve({
+                                files,
+                                cursor: Timestamp.fromMillis(json.cursor.seconds * 1000 + json.cursor.nanoseconds / 1000000)
+                            });
                         });
                 });
         });
-
-        /*
-        const collectionRef = collection(db, 'patches');
-        const q = query(collectionRef, where('user', '==', email), where('isSubPatch', '==', isSubPatch));
-
-        try {
-            const querySnapshot = await getDocs(q);
-            const documents: File[] = [];
-            querySnapshot.forEach(doc => {
-                if (!doc.data().hasNewVersion) {
-                    let data = doc.data();
-                    documents.push(docToFile(doc.id, data));
-                }
-            });
-            documents.sort((a: any, b: any) => a.createdAt.seconds - b.createdAt.seconds);
-            return documents;
-        } catch (error) {
-            throw error;
-        }
-        */
     }
 
     /*
@@ -413,6 +410,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             fetchRevisions,
             fetchSubPatchForDoc,
             fetchProject,
+            loadSubPatches,
             onchainSubPatches: (subpatches || []) as File[]
         }}>
         {children}

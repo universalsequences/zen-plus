@@ -21,6 +21,7 @@ export const createWorklet = (
 
     return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
         let { code, wasm } = createWorkletCode(name, graph);
+        console.log(code);
         let workletCode = code;
         const workletBase64 = btoa(workletCode);
         const url = `data:application/javascript;base64,${workletBase64}`;

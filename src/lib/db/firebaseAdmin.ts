@@ -8,6 +8,7 @@ if (!admin.apps.length) {
             privateKey: (process.env.GOOGLE_PRIVATE_KEY as string).replace(/\\n/g, '\n')
         }),
         // ...other configuration
+        storageBucket: "zen-plus-eaed2.appspot.com",
     });
 }
 

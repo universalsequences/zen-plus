@@ -75,7 +75,7 @@ export const input = (inputNumber: number = 0): UGen => {
 
 
 export const zen = (...inputs: UGen[]): ZenGraph => {
-    return zenWithTarget(Target.C, ...inputs);
+    return zenWithTarget(Target.Javascript, ...inputs);
 }
 
 export const zenJavascript = (...inputs: UGen[]): ZenGraph => {

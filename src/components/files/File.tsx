@@ -8,22 +8,17 @@ import { File } from '@/lib/files/types';
 
 const FileComponent: React.FC<{ isRevision: boolean, className: string, openFile: (x: File | null) => void, fileExpanded: File | null, setFileExpanded: (x: File | null) => void, file: File, setFileToOpen: (x: any | null) => void, setRevisions: (x: File[]) => void }> = ({ file, setFileToOpen, setRevisions, fileExpanded, setFileExpanded, openFile, className, isRevision }) => {
 
-    console.log("FILE=", file, file.screenshot);
     const [favorited, setFavorited] = useState(file.favorited);
     const toggleHeart = useCallback(async (e: any) => {
-        console.log('toggle heart...');
         e.stopPropagation();
         const documentRef = doc(db, "patches", file.id);
 
         try {
-            console.log("updating doc for =", documentRef, !favorited);
             await updateDoc(documentRef, {
                 favorited: !favorited
             });
             setFavorited(!favorited);
-            console.log("Document successfully updated!");
         } catch (error) {
-            console.error("Error updating document: ", error);
         }
     }, [file, favorited, setFavorited]);
 

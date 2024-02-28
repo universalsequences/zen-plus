@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useCallback, useState } from 'react';;
+import React, { memo, useRef, useEffect, useCallback, useState } from 'react';;
 import LockButton from './LockButton';
 import PresentationMode from './PresentationMode';
 import PatchDropdown from './PatchDropdown';
@@ -43,6 +43,17 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         setEditing(false);
     }, [setEditing]);
 
+    const onChange = useCallback((e: any) => {
+        setPatchName(e.target.value);
+        patchRef.current.name = e.target.value;
+    }, [setPatchName, patch]);
+
+
+    const patchRef = useRef<Patch>(patch);
+
+    useEffect(() => {
+        patchRef.current = patch;
+    }, [patch]);
     breadcrumbs.push(<div
 
         key={key}
@@ -57,11 +68,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             editing ? <input
                 onKeyDown={(e: any) => e.key === "Enter" ? setEditing(false) : 0}
                 style={{ borderBottom: "1px solid #4f4f4f" }}
-                value={patchName} onChange={
-                    (e: any) => {
-                        setPatchName(e.target.value);
-                        patch.name = e.target.value;
-                    }} className="text-white bg-black-clear outline-none px-1" /> : (patch.name || "current patch") + " " + patch.id}
+                value={patchName} onChange={onChange}
+                className="text-white bg-black-clear outline-none px-1" /> : (patch.name || "current patch") + " " + patch.id}
     </div >);
 
     const selectPatch = useCallback((_patch: Patch) => {
@@ -77,7 +85,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             return;
         }
         */
-        changeTileForPatch(patch, _patch);
+        changeTileForPatch(patchRef.current, _patch);
         /*
         let indexOf = patches.indexOf(patch);
         let _patches = [...patches];
@@ -114,7 +122,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     let [assistText, setAssistText] = useState("");
     let [loading, setLoading] = useState(false);
 
-    console.log('zen code=', patch.zenCode);
+    console.log('toolbar patch=', patch);
 
     if (breadcrumbs.length === 1) {
         return <div
@@ -137,9 +145,10 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
     let type = (patch as SubPatch).parentNode.attributes.type;
 
+    let __patch = patch;
     if (type === "zen") {
-        while (!(patch as SubPatch).isZenBase()) {
-            patch = (patch as SubPatch).parentPatch;
+        while (!(__patch as SubPatch).isZenBase()) {
+            __patch = (__patch as SubPatch).parentPatch;
         }
     }
     return <div
@@ -159,7 +168,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             </div>
             {<div className="absolute right-60 bottom-0 top-0  mr-3 my-auto pt-0.5 right-0 px-5 flex  flex w-28 text-right">
                 <div className="text-xs my-auto ml-auto text-zinc-400">
-                    {patch.zenCode ? "compiled" : type}
+                    {__patch.zenCode ? "compiled" : type}
                 </div>
                 <div className={`w-2 h-2 rounded-full ${type === 'audio' ? "bg-yellow-300" : type === "gl" ? "bg-purple-500" : "bg-teal-200"} my-auto ml-2`}>
                 </div>

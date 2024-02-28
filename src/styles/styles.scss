@@ -647,5 +647,10 @@ div:active {
         padding: 10px !important;
         background-color: white !important;
         color: black !important;
+        font-weight: unset !important;
     }
+}
+
+.bg-light-100 {
+    background-color: black;
 }

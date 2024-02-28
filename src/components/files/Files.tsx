@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { CommitIcon, HeartIcon, HeartFilledIcon } from '@radix-ui/react-icons'
 import FileComponent from './File';
 import { File } from '@/lib/files/types';
@@ -7,22 +7,24 @@ import { ArrowDownIcon, MagnifyingGlassIcon, Cross2Icon, PlusCircledIcon } from 
 import { getTime } from '@/components/ProjectOption';
 import { useNav, NavOption } from '@/contexts/NavContext';
 import Nav from '@/components/landing/Nav';
-import { Project, useStorage } from '@/contexts/StorageContext';
+import { FilesQueryResult, Project, useStorage } from '@/contexts/StorageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Skeleton from './Skeleton';
 
 const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void }> = ({ setFileToOpen, fileOpened }) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
     let [fileExpanded, setFileExpanded] = useState<File | null>(null);
-    let [projects, setProjects] = useState<File[]>([]);
+    let [queryResult, setQueryResult] = useState<FilesQueryResult | null>(null);
+    const [projects, setProjects] = useState<File[]>([]);
     let [searchText, setSearchText] = useState("");
     const { navOption, setNavOption } = useNav();
 
-    console.log("projects=", projects);
     const { fetchPatch, fetchPatchesForEmail } = useStorage();
     let { user } = useAuth();
 
     const [loading, setLoading] = useState(false);
     const [filterFavorited, setFilterFavorited] = useState(false);
+
 
     useEffect(() => {
         if (fileOpened && projects) {
@@ -38,10 +40,25 @@ const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void 
             setLoading(true);
             fetchPatchesForEmail(user.email, false, filterFavorited).then((x) => {
                 setLoading(false);
-                setProjects(x);
+                setQueryResult(x);
+                setProjects(x.files);
             });
         }
     }, [user, setLoading, filterFavorited]);
+
+    let loadingRef = useRef(false);
+    const fetchPaginatedResults = useCallback(() => {
+        if (user && !loadingRef.current) {
+            loadingRef.current = true;
+            setLoading(true);
+            fetchPatchesForEmail(user.email, false, filterFavorited, queryResult ? queryResult.cursor : undefined).then((x) => {
+                setLoading(false);
+                loadingRef.current = false;
+                setQueryResult(x);
+                setProjects([...projects, ...x.files]);
+            });
+        }
+    }, [filterFavorited, user, setProjects, projects, setLoading, setQueryResult, queryResult]);
 
     let { fetchRevisions } = useStorage();
     let [revisions, setRevisions] = useState<File[]>([]);
@@ -57,12 +74,31 @@ const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void 
     }, [fileExpanded, setLoading]);
 
 
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.addEventListener("scroll", onScroll);
+        }
+        return () => {
+            if (scrollRef.current) {
+                scrollRef.current.removeEventListener("scroll", onScroll);
+            }
+        }
+    }, [queryResult, setQueryResult, setProjects, projects, filterFavorited, user]);
+
+    const onScroll = useCallback((e: any) => {
+        if (scrollRef.current) {
+            let scrollTop = scrollRef.current.scrollTop;
+            if (scrollTop > scrollRef.current.scrollHeight - scrollRef.current.offsetHeight) {
+                fetchPaginatedResults();
+            }
+        }
+    }, [queryResult, projects, setProjects, setQueryResult, filterFavorited, user]);
+
     const goToEditor = useCallback(() => {
         setNavOption(NavOption.Editor);
     }, []);
 
     const openFile = useCallback((file: File | null) => {
-        console.log('open file called', file);
         setRevisions([]);
         setFileToOpen(file);
         setNavOption(NavOption.Editor);
@@ -151,10 +187,12 @@ const Files: React.FC<{ fileOpened: any | null, setFileToOpen: (x: any) => void 
                 {loading && <div className="ml-20 my-auto spinner" aria-label="Loading"></div>}
             </div>
         </div>
-        <div className="transition-all flex flex-wrap object-start flex-1 overflow-scroll duration-300 ease-in-out content-start ">
+        <div
+            ref={scrollRef}
+            className="transition-all flex flex-wrap object-start flex-1 overflow-scroll duration-300 ease-in-out content-start ">
             {!fileExpanded && loading && <div className="m-auto spinner" aria-label="Loading"></div>}
 
-            {[...projects].reverse().filter(x => searchText === "" || x.name.toLowerCase().includes(searchText.toLowerCase())).map(
+            {[...projects].filter(x => searchText === "" || x.name.toLowerCase().includes(searchText.toLowerCase())).map(
                 x => <FileComponent
                     key={x.id}
                     className="w-72 h-40"

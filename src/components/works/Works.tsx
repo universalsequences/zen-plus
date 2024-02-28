@@ -34,10 +34,12 @@ const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => vo
         setShowNav(selectedWork === null);
     }, [setShowNav, selectedWork]);
 
+    let [chain, setChain] = useState<number | null>(zora.id); //!user ? zora.id : goerli.id);
+
     useEffect(() => {
         // fetch all works
         const collectionRef = collection(db, 'drops');
-        const q = query(collectionRef);
+        const q = query(collectionRef, where('chain', '==', chain as number));;
         try {
             getDocs(q).then(
                 querySnapshot => {
@@ -53,9 +55,8 @@ const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => vo
         } catch (e) {
         }
 
-    }, []);
+    }, [chain]);
 
-    let [chain, setChain] = useState<number | null>(!user ? zora.id : goerli.id);
     console.log(works);
     if (selectedWork) {
         return <WorkPlayer close={() => setSelectedWork(null)} work={selectedWork} />;
@@ -66,9 +67,9 @@ const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => vo
                 {user && <div onClick={() => setChain(goerli.id)} className={(chain === goerli.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     testnet
                 </div>}
-                <div onClick={() => setChain(zoraTestnet.id)} className={(chain === zoraTestnet.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
+                {user && <div onClick={() => setChain(zoraTestnet.id)} className={(chain === zoraTestnet.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     zora testnet
-                </div>
+                </div>}
                 <div onClick={() => setChain(zora.id)} className={(chain === zora.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     zora
                 </div>

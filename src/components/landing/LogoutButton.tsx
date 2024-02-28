@@ -3,8 +3,12 @@ import { NavOption, useNav } from "@/contexts/NavContext";
 import { useAuth } from '@/contexts/AuthContext';
 
 const LogoutButton = () => {
-    const { logout } = useAuth();
+    const { user, logout } = useAuth();
     const { setNavOption } = useNav();
+
+    if (!user) {
+        return <></>;
+    }
     return (
         <button onClick={() => {
             logout().then(

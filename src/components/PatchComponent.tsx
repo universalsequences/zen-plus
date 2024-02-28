@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useStorage } from '@/contexts/StorageContext';
 import { usePatchLoader } from '@/hooks/usePatchLoader';
 import { useLocked } from '@/contexts/LockedContext';
 import { getUpdatedSize } from '@/lib/utils';
@@ -77,6 +78,11 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
             patch.onNewMessage = onNewMessage;
         }
     }, [onNewMessage]);
+
+    const { loadSubPatches } = useStorage();
+    useEffect(() => {
+        loadSubPatches();
+    }, []);
 
     let {
         updateSize,

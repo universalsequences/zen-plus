@@ -1,4 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { useBalance } from 'wagmi';
+import EditionSize from './EditionSize';
 import { useNetwork, useSwitchNetwork } from 'wagmi';
 import { DividerHorizontalIcon, DividerVerticalIcon } from '@radix-ui/react-icons';
 import { ethers } from 'ethers';
@@ -27,11 +29,10 @@ interface Props {
 }
 
 async function getBalance(provider: any, address: `0x${string}`) {
-    /*
+    console.log('getting balance = ', address);
     const balanceWei = await provider.getBalance(address);
-    return parseFloat(parseEther(balanceWei));
-    */
-    return 100;
+    console.log('balance wei=', balanceWei);
+    return balanceWei / 1000000000;
 }
 
 const MintBlock = (props: Props) => {
@@ -49,11 +50,16 @@ const MintBlock = (props: Props) => {
     let { setStep, step } = props;
     let [seed, setSeed] = useState(1);
     let [editionSize, setEditionSize] = useState(1);
-    let [balance, setBalance] = useState<number | null>();
+    //let [balance, setBalance] = useState<number | null>();
+
     let [comment, setComment] = useState<string>("");
 
     const { data: signer } = useWalletClient();
     const address = useAccount();
+
+    const { data: balance } = useBalance(address);
+    console.log('balance=', balance);
+
     let wrongNetwork = false;
     console.log('network = ', network);
     if (network && network.chain && network.chain.id !== props.chainId && address) {
@@ -61,12 +67,14 @@ const MintBlock = (props: Props) => {
     }
 
 
+    /*
     useEffect(() => {
         if (address && address.address && publicClient) {
             getBalance(publicClient, address.address).then(
                 setBalance);
         }
     }, [address, setBalance, publicClient]);
+    */
 
     const totalPriceInEth = calculateTotalPrice(editionSize, TOKEN_PRICE);
     const { data, isLoading, isSuccess, write } = useContractWrite({
@@ -149,6 +157,15 @@ const MintBlock = (props: Props) => {
         }
     }, [editionSize, write, signer, setStep, totalPrice, allowListEntry, price, accessAllowed]);
 
+    const _hide = useCallback(() => {
+        setTotalPrice(null);
+    }, [setTotalPrice]);
+
+    useEffect(() => {
+        window.addEventListener("click", _hide);
+        return () => window.removeEventListener("click", _hide);
+    }, [setTotalPrice]);
+
     let rectangles: JSX.Element[] = [];
     let binary = seed;
     let quad = seed;
@@ -197,46 +214,32 @@ const MintBlock = (props: Props) => {
             </div>
         );
     }
+
     return (
         <>
             <div
+                onClick={(e: any) => e.stopPropagation()}
                 style={{
                     borderTopLeftRadius: "30px",
                     borderTopRightRadius: "10px",
                 }}
                 className={className + ' mt-4 relative bg-zinc-900 pt-5 transition-all'}>
-                <div className={(minimized ? "top-3  " : " top-1 ") + "cursor-pointer absolute right-1 px-1 rounded-full border border-zinc-400 bg-zinc-900 transition-all duration-300 ease-in-out"}>
+                {/*<div className={(minimized ? "top-3  " : " top-3 ") + "cursor-pointer absolute right-2 px-1 rounded-full border border-zinc-400 bg-zinc-900 transition-all duration-300 ease-in-out"}>
                     {minimized ?
                         <DividerVerticalIcon color="white" onClick={() => setMinimized(false)} className="w-3 h-3" /> :
                         <DividerHorizontalIcon
                             color="white"
                             onClick={() => setMinimized(true)}
-                            className="w-3 h-3" />}</div>
+                            className="w-3 h-3" />}</div>*/}
                 {minimized ? <div className="h-4 w-16 " /> : <>
-                    <div className={(step !== Step.None ? "opacity-30 pointer-events-none " : "") + "mb-5 flex flex-col"} >
-                        <div className="flex border-b border-zinc-400 py-2 mb-1 text-sm md:text-xl text-zinc-500">
-                            <div className="mx-auto flex items-start">
-                                <div
-                                    style={{ lineHeight: "17px" }}
-                                    onClick={() => setEditionSize(Math.max(1, editionSize - 1))} className={(editionSize === 1 ? "opacity-10 pointer-events-none " : "") + "md:p-2 p-2 w-10 h-10 my-auto bg-zinc-300 text-zinc-500 border-2 border-zinc-400 rounded-full cursor-pointer active:scale-105 transition-all active:border-zinc-500"}>
-                                    -
-                                </div>
-                                <div
-                                    style={{ lineHeight: "4px" }}
-                                    className=" bg-zinc-300 text-zinc-500   py-5 w-12 h-12 rounded-2xl mx-5 text-center border border-zinc-400 border-2">
-                                    {editionSize}
-                                </div>
-                                <div
-                                    style={{ lineHeight: "17px" }}
-                                    onClick={() => setEditionSize(Math.min(1000, editionSize + 1))} className="md:p-2 p-2 w-10 h-10 my-auto bg-zinc-300 text-zinc-500 border-2 border-zinc-400 rounded-full cursor-pointer active:scale-105 transition-all active:border-zinc-500">
-                                    +
-                                </div>
-                            </div>
-                        </div>
+                    <div className={(step !== Step.None ? "opacity-30 pointer-events-none " : "") + " flex flex-col"} >
+                        {!address.address ? <div className="w-44 h-2" /> : <div className="flex py-2 mb-1 text-sm md:text-xl text-zinc-200">
+                            {totalPrice != null && <EditionSize editionSize={editionSize} setEditionSize={setEditionSize} maxEditionSize={props.totalSupply as number} />}
+                        </div>}
                         {totalPrice !== null && <textarea placeholder="add a comment" className="rounded-lg p-3 outline-none text-white bg-zinc-700" value={comment} onChange={e => setComment(e.target.value)} />}
                         {totalPrice !== null && <>
-                            <div className="flex border-b border-slate-900 py-1 mb-1 text-sm">
-                                <div className="">{editionSize} {editionSize === 1 ? "Edition" : "Editions"} {accessAllowed ? " (allowlist)" : ""}</div>
+                            <div className="flex border-b border-slate-900 py-1 mb-1 text-sm mt-5">
+                                <div className="">{editionSize}x <span className="text-zinc-400">{editionSize === 1 ? "NFT" : "NFTs"}</span> {accessAllowed ? " (allowlist)" : ""}</div>
                                 <div className="ml-auto">{round(editionSize * price)} ETH</div>
                             </div>
                             <div className="flex border-b border-slate-900 py-1 mb-1 text-sm">
@@ -261,12 +264,12 @@ const MintBlock = (props: Props) => {
                         <div className="mx-auto items-start">
                             <ConnectButton /></div> : wrongNetwork ? <div
                                 onClick={() => switchNetwork ? switchNetwork(props.chainId) : 0}
-                                className="px-2 py-1 bg-zinc-300 text-zinc-500 cursor-pointer rounded-full active:scale-105 transition-all">Switch to Zora</div> : <div onClick={balance && totalPrice && balance < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-300 text-zinc-500 text-black " : " bg-zinc-300 text-zinc-500") + " mint-button select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-500 bg-zinc-300 cursor-pointer object-start w-40 mx-auto  items-start z-10 left-0 right-0 relative "} >
+                                className="py-1 bg-light-100 text-zinc-200 cursor-pointer rounded-full active:scale-105 transition-all mx-5 px-5">Switch to Zora</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-light-100 text-zinc-200 text-black " : " bg-light-100 text-zinc-200") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  items-start z-10 left-0 right-0 relative "} >
                             {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
-                            {balance && totalPrice && balance < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
+                            {balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
                                 step === Step.OpenWallet ? "Confirm in Wallet" :
-                                    step === Step.Waiting ? <div className="flex w-44 mx-auto "><span className="mr-2">Processing</span> <svg className="mt-2" width={150} height="15">{rectangles}</svg></div> :
-                                        step === Step.None ? (`Mint ${TOKEN_PRICE} ETH`) : 'Completed'
+                                    step === Step.Waiting ? <div className="flex w-44 mx-auto hover:scale-105 transition-all"><span className="mr-2">Processing</span> <svg className="mt-2" width={150} height="15">{rectangles}</svg></div> :
+                                        step === Step.None ? "Mint" : 'Completed'
                             }
 
                         </div>}
