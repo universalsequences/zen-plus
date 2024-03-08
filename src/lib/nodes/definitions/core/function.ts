@@ -12,11 +12,13 @@ export class FunctionEditor {
     points: Point[];
     objectNode: ObjectNode;
     updates: number;
+    value: Message;
 
     constructor(objectNode: ObjectNode) {
         this.objectNode = objectNode;
         this.points = [];
         this.updates = 0;
+        this.value = 0;
     }
 
     getJSON() {

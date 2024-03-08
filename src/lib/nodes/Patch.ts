@@ -888,7 +888,7 @@ export class PatchImpl implements Patch {
         let nodes = this.getAllNodes();
         let presets = nodes.filter(x => x.name === "preset");
         for (let preset of presets) {
-            let custom = preset.custom as PresetManager;
+            let custom = preset.custom as any as PresetManager;
             if (custom) {
                 custom.hydrateSerializedPresets(nodes);
             }

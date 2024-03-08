@@ -33,6 +33,7 @@ export class PresetManager {
     presets: Preset[];
     serializedPresets?: SerializedPreset[];
     currentPreset: number;
+    value: Message;
 
     constructor(object: ObjectNode) {
         this.objectNode = object;
@@ -42,6 +43,7 @@ export class PresetManager {
             this.presets[i] = {};
         }
         this.currentPreset = 0;
+        this.value = 0;
 
         // use message passing
         this.listen();
