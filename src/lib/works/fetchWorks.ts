@@ -14,6 +14,7 @@ export interface WorkOption {
     chainId: number;
     patchId: string;
     image?: string;
+    version?: number;
 };
 
 

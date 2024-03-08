@@ -54,7 +54,7 @@ export class Component {
         this.isEntryPoint = isEntryPoint;
 
         this.material = material;
-        console.log('component initialized with material = ', this.material);
+        console.log('component initialized with material = ', this.material, web);
 
         this.web = web;
         this.neighbors = data(web.size * web.maxNeighbors, 1, web.neighbors, true, "none");

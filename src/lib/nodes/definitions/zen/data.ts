@@ -95,6 +95,8 @@ export const zen_peek = (
                 name: 'peek',
                 params: x as unknown as BlockGen
             };
+            let size = (x as unknown as BlockGen).getSize!();
+
             if (maxLength()) {
                 let ret = [operator, index() as Statement, channel() as Statement, maxLength() as Statement] as Statement;
                 (ret as Statement).node = node;

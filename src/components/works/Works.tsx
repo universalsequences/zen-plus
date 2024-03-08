@@ -23,6 +23,7 @@ export interface WorkOption {
     chain: number;
     patchId: string;
     image?: string;
+    version?: number;
 };
 
 const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => void }> = ({ setShowNav, defaultWork }) => {

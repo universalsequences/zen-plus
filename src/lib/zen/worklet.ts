@@ -588,6 +588,7 @@ export const prettyPrint = (prefix: string, code: string): string => {
 
 export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
     let initializes: any = [];
+    console.log('blocks=', context.memory.blocksInUse);
     for (let block of context.memory.blocksInUse) {
         if (block.initData !== undefined) {
             let idx = block._idx === undefined ? block.idx : block._idx;

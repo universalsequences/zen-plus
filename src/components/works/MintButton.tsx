@@ -161,10 +161,12 @@ const MintBlock = (props: Props) => {
         setTotalPrice(null);
     }, [setTotalPrice]);
 
+    /*
     useEffect(() => {
         window.addEventListener("click", _hide);
         return () => window.removeEventListener("click", _hide);
     }, [setTotalPrice]);
+    */
 
     let rectangles: JSX.Element[] = [];
     let binary = seed;
@@ -264,7 +266,11 @@ const MintBlock = (props: Props) => {
                         <div className="mx-auto items-start">
                             <ConnectButton /></div> : wrongNetwork ? <div
                                 onClick={() => switchNetwork ? switchNetwork(props.chainId) : 0}
-                                className="py-1 bg-light-100 text-zinc-200 cursor-pointer rounded-full active:scale-105 transition-all mx-5 px-5">Switch to Zora</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-light-100 text-zinc-200 text-black " : " bg-light-100 text-zinc-200") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  items-start z-10 left-0 right-0 relative "} >
+                                className="py-1 bg-light-100 text-zinc-200 cursor-pointer rounded-full active:scale-105 transition-all mx-5 px-5">Switch to Zora</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-100 text-zinc-700 " : " bg-zinc-100 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative "}
+
+
+                                    style={{ minWidth: 170 + 'px' }}
+                                >
                             {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
                             {balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
                                 step === Step.OpenWallet ? "Confirm in Wallet" :

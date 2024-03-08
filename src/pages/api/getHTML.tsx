@@ -32,13 +32,13 @@ function runMiddleware(req: any, res: any, fn: any) {
 }
 
 
-async function getHTML(contractAddress: string, tokenId: string, chainId: number): Promise<string | null> {
+async function getHTML(contractAddress: string, tokenId: string, chainId: number, version: number): Promise<string | null> {
 
     const web3 = chainId === 5 ? new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/v3/${process.env.INFURA_ID}`)) :
         chainId === 999 ? new Web3(new Web3.providers.HttpProvider('https://testnet.rpc.zora.energy/'))
             : new Web3(new Web3.providers.HttpProvider('https://rpc.zora.energy/'));
 
-    const contract = new web3.eth.Contract(abi as any, contracts[chainId].MetadataRenderer);
+    const contract = new web3.eth.Contract(abi as any, contracts[chainId][version].MetadataRenderer);
     try {
         const tokenURI: string = await contract.methods.onchainTokenURI(contractAddress, tokenId).call() as string;
         // Check if tokenURI is base64 encoded, if not, assume it's a URL
@@ -46,6 +46,8 @@ async function getHTML(contractAddress: string, tokenId: string, chainId: number
         if (tokenURI.startsWith('data:application/json;base64,')) {
             metadataJSON = JSON.parse(Buffer.from(tokenURI.replace('data:application/json;base64,', ''), 'base64').toString());
         }
+
+        console.log(metadataJSON);
 
         // Extract the 'animation_url' field and decode it
         const base64HTML = metadataJSON.animation_url;
@@ -60,7 +62,7 @@ async function getHTML(contractAddress: string, tokenId: string, chainId: number
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     await runMiddleware(req, res, cors);
 
-    const { contractAddress, tokenId, chainId } = req.query;
+    const { version, contractAddress, tokenId, chainId } = req.query;
 
     let _chainId = 5;
     if (typeof chainId === "string") {
@@ -69,13 +71,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         _chainId = chainId;
     }
 
+    let _version = 1;
+    if (typeof version === "string") {
+        _version = parseInt(version);
+    } else if (typeof version === "number") {
+        _version = version;
+    }
+
     if (typeof tokenId !== 'string' || typeof contractAddress !== 'string') {
         res.status(400).send('Token ID must be a string');
         return;
     }
 
     try {
-        let html = await getHTML(contractAddress, tokenId, _chainId);
+        let html = await getHTML(contractAddress, tokenId, _chainId, _version);
 
         if (html) {
             res.send(html);

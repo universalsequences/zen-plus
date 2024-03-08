@@ -119,6 +119,7 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph() {
+        console.log("recompileGraph called at", this.name);
         if (this.skipRecompile || this.skipRecompile2) {
             return;
         }
@@ -126,6 +127,7 @@ export class PatchImpl implements Patch {
             this.isCompiling = true;
         }
         this.skipRecompile2 = true;
+
         this.disconnectGraph();
         this.outputStatements = [];
         this.storedStatement = undefined;
@@ -140,9 +142,11 @@ export class PatchImpl implements Patch {
             let __o = this.getAllNodes();
             if (!(this as Patch as SubPatch).parentPatch) {
                 // skip all zen nodes... (cuz we're compiling from base patch)
-                __o = __o.filter(x => x.operatorContextType !== OperatorContextType.ZEN);
+                __o = __o.filter(x => x.operatorContextType !== OperatorContextType.ZEN && x.operatorContextType !== OperatorContextType.NUMBER && x.operatorContextType !== OperatorContextType.CORE && x.name !== "zen");
+                console.log("skipping all zen nodes...");
             }
 
+            console.log('objects to process=', __o);
             for (let node of __o) {
                 if (node.operatorContextType !== OperatorContextType.ZEN &&
                     node.operatorContextType !== OperatorContextType.GL) {
@@ -199,6 +203,7 @@ export class PatchImpl implements Patch {
             // we are in a zen node so we proceed as usual
             for (let node of objectNodes) {
                 if (node.subpatch && node.subpatch.patchType !== OperatorContextType.AUDIO) {
+                    console.log("NODE.subpatch.recompileGraph from", this.name, node.subpatch);
                     node.subpatch.recompileGraph(true);
                 }
             }
@@ -207,6 +212,7 @@ export class PatchImpl implements Patch {
             // only compile gl subpatches
             for (let node of objectNodes) {
                 if (node.subpatch && node.subpatch.patchType === OperatorContextType.GL) {
+                    console.log("NODE.subpatch.recompileGraph from", this.name, node.subpatch);
                     node.subpatch.recompileGraph(true);
                 }
             }
@@ -245,8 +251,9 @@ export class PatchImpl implements Patch {
 
         // first do any entry-point components
 
-        if (this.isZenBase() || this.name === undefined) {
+        if (this.isZenBase()) { // || this.name === undefined) {
             let histories = this.getAllNodes().filter(node => node.name === "history");
+            console.log("sourcenodes7=", sourceNodes);
             histories.forEach(
                 sourceNode => {
                     if (sourceNode.fn) {
@@ -254,6 +261,7 @@ export class PatchImpl implements Patch {
                     }
                 });
             let args = this.getAllNodes().filter(node => node.name === "argument" || node.name === "invocation");
+            console.log("sourcenodes6=", sourceNodes);
 
             args.forEach(
                 sourceNode => {
@@ -262,17 +270,29 @@ export class PatchImpl implements Patch {
                     }
                 });
 
-            sourceNodes = this.getAllNodes().filter(node => node.name === "param" || node.name === "uniform");
+            sourceNodes = this.getAllNodes().filter(node => node.name === "param");
+            console.log("sourcenodes5=", sourceNodes);
             sourceNodes.forEach(
                 sourceNode => {
                     if (sourceNode.fn) {
                         sourceNode.receive(sourceNode.inlets[0], "bang");
                     }
                 });
+        }
 
+        if (this.name === undefined) {
+            sourceNodes = this.getAllNodes().filter(node => node.name === "uniform");
+            console.log("sourcenodes5=", sourceNodes);
+            sourceNodes.forEach(
+                sourceNode => {
+                    if (sourceNode.fn) {
+                        sourceNode.receive(sourceNode.inlets[0], "bang");
+                    }
+                });
         }
 
         sourceNodes = objectNodes.filter(node => node.name === "data" && node.inlets[0].connections.length === 0);
+        console.log("sourcenodes4=", sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -289,6 +309,7 @@ export class PatchImpl implements Patch {
         this.waiting = false;
 
         sourceNodes = _objectNodes.filter(node => (node.inlets.length === 0 && !node.needsLoad));
+        console.log("sourcenodes3=", sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -302,6 +323,7 @@ export class PatchImpl implements Patch {
             });
 
         sourceNodes = objectNodes.filter(node => node.needsLoad && node.name !== "in" && node.inlets[0] && node.inlets[0].connections.length === 0);
+        console.log("sourcenodes2=", sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -310,6 +332,7 @@ export class PatchImpl implements Patch {
             });
 
         sourceNodes = objectNodes.filter(node => node.needsLoad && node.name !== "in" && !(node.inlets[0] && node.inlets[0].connections.length === 0));
+        console.log("sourcenodes1=", sourceNodes);
         sourceNodes.forEach(
             sourceNode => {
                 if (sourceNode.fn) {
@@ -324,6 +347,7 @@ export class PatchImpl implements Patch {
 
         if (this.isZenBase()) {
             let inputs = this.getAllNodes().filter(node => node.name === "in").filter(node => node.patch !== this);
+            console.log("inputs=", inputs);
             inputs.forEach(
                 input => {
                     // get the patch
@@ -343,7 +367,8 @@ export class PatchImpl implements Patch {
                 });
 
 
-            let calls = this.getAllNodes().filter(node => node.name === "call" || node.name === "latchcall" || node.name === "polycall");
+            let calls = this.getAllNodes().filter(node => node.operatorContextType === OperatorContextType.ZEN && (node.name === "call" || node.name === "latchcall" || node.name === "polycall"));
+            console.log("CALLS=", calls);
             calls.forEach(
                 call => {
                     if (call.fn && call.inlets[0] && call.inlets[0].lastMessage !== undefined) {
@@ -593,12 +618,13 @@ export class PatchImpl implements Patch {
                         }
 
                         let inputFile = printStatement(statement);
+                        console.log(inputFile);
                         inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
                         inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
                         inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
                         inputFile = inputFile.replace(/mult(\d+)/g, (_, number) => `m${number}`);
                         inputFile = inputFile.replace(/div(\d+)/g, (_, number) => `d${number}`);
-                        //inputFile = inputFile.replace(/history(\d+)/g, (_, number) => `h${number}`);
+                        inputFile = inputFile.replace(/history(\d+)/g, (_, number) => `hst${number}`);
                         inputFile = inputFile.replace(/rampToTrig(\d+)/g, (_, number) => `r${number}`);
                         inputFile = inputFile.replace(/phasor(\d+)/g, (_, number) => `p${number}`);
                         inputFile = inputFile.replace(/cycle(\d+)/g, (_, number) => `c${number}`);
@@ -872,6 +898,7 @@ export class PatchImpl implements Patch {
     }
 
     async initialLoadCompile() {
+        console.log('initial load compile called');
         this.recompileGraph()
 
         let compiled: Patch[] = [];
@@ -998,6 +1025,10 @@ const getFunctionNames = (dslCode: string, ultraMinify = true) => {
             shorthand = "d000";
         }
 
+        if (shorthand === "eq") {
+            shorthand = "eq000";
+        }
+
         shorthands[func] = shorthand;
 
         if (suffixIndex === alphabet.length) {
@@ -1014,14 +1045,22 @@ const getFunctionNames = (dslCode: string, ultraMinify = true) => {
     let outDSL = dslCode;
 
     ultraMinify = true;
+    console.log("shorthands=", shorthands);
     if (ultraMinify) {
         Object.entries(shorthands).forEach(([original, shorthand], i) => {
-            if (!original.includes("hist")) {
+            if (original.includes('connections') || original.includes('bidirectional') || original.includes('gen')) {
+                return;
+            }
+            if (!original.includes("hst") || original === "history") {
                 shorthandDefinitions += `${shorthand}=${original}`;
                 if (i < Object.values(shorthands).length - 1) {
                     shorthandDefinitions += ',';
                 }
+                if (original === "history") {
+                    console.log('replacing with shorthand=%s', shorthand, original);
+                }
                 outDSL = outDSL.replaceAll('= ' + original + '(', '=' + shorthand + '(');
+                outDSL = outDSL.replaceAll('=' + original + '(', '=' + shorthand + '(');
             }
         });
         shorthandDefinitions = replaceAll(shorthandDefinitions, "\n", "");

@@ -101,7 +101,7 @@ export const printStatement = (statement: Statement): string => {
         let block = blocks[i].data;
         let interpolation = block.interpolation === "none" ? "none" : "linear";
         let functions = blocks[i].node ? traverseBackwards(blocks[i].node).filter(x => (x as ObjectNode).name === "function") : [];
-        let initData = block.getInitData!();
+        let initData: Float32Array | number[] = block.getInitData!();
         let needsInterpolation = false;
         if (functions.length > 0) {
             let func = functions[0];
@@ -117,7 +117,14 @@ export const printStatement = (statement: Statement): string => {
                         pts.push(0);
                     }
                 }
-                initData = new Float32Array(pts);
+                let a = Math.round(100 * pts[pts.length - 3]) / 100;
+                let b = Math.round(100 * pts[pts.length - 2]) / 100;
+                let c = Math.round(100 * pts[pts.length - 1]) / 100;
+                pts.push(a + 1);
+                pts.push(b);
+                pts.push(c);
+                initData = pts;
+                console.log("PTS=", pts);
                 needsInterpolation = true;
             }
         }

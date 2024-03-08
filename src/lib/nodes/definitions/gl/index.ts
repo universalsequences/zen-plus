@@ -1,4 +1,5 @@
 import { API } from '@/lib/nodes/context';
+import { color } from './color';
 import { attribute, Attribute, AttributeGen } from '@/lib/gl/attributes';
 import { printCode } from './printCode';
 import { FunctionSignature, DataType, MessageType, functionType, maxCompatibleType, equalArguments, strictGLType, GLTypeCheck } from '@/lib/nodes/typechecker';
@@ -617,7 +618,8 @@ export const api: API = {
     texture2D,
     switch: zswitch,
     breakIf: breakIf,
-    loopAccumulator
+    loopAccumulator,
+    color
 };
 
 

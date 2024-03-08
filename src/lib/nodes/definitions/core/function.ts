@@ -74,6 +74,7 @@ export class FunctionEditor {
             if (t >= 0 && t <= 1) {
                 // If within the current segment, perform Bézier interpolation
                 const { cp1, cp2 } = this.calculateControlPoints(sortedPoints[currentSegmentIndex], sortedPoints[currentSegmentIndex + 1], 1);
+
                 interpolatedList[i] = this.bezierInterpolate(t, sortedPoints[currentSegmentIndex].y, cp1.y, cp2.y, sortedPoints[currentSegmentIndex + 1].y);
             } else if (t > 1 && currentSegmentIndex < sortedPoints.length - 2) {
                 // Move to the next segment

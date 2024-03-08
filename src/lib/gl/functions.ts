@@ -40,6 +40,10 @@ return ${_body.variable};
             functions: emitFunctions(_body), // maybe the body references even more functions
             functionArguments: emitArguments(_body),
         };
+
+        for (let uni of functionContext.uniforms) {
+            context.uniforms.push(uni);
+        }
         return cache;
     };
 };

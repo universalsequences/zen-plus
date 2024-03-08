@@ -64,10 +64,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     saveData?: any;
     custom?: SerializableCustom;
 
-    constructor(patch: Patch) {
+    constructor(patch: Patch, id?: string) {
         super(patch);
         this.zIndex = 0;
-        this.id = uuid();
+        this.id = id || uuid();
         this.text = "";
         this.inlets = [];
         this.outlets = [];
@@ -244,13 +244,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             }
 
         }
-        if (this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
+        if (this.name !== "param" && this.name !== "uniform" && this.name !== "color" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
             this.isSpecialCase = false;
         } else {
             this.isSpecialCase = true;
         }
 
-        if ((this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
+        if ((this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "color" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
             this.isInletSumSpecialCase = true;
         } else {
             this.isInletSumSpecialCase = false;

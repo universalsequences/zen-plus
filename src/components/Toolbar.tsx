@@ -21,7 +21,6 @@ enum Option {
 }
 const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
-    const { updatePositions } = usePosition();
     // for now this will simply tell us what nested subpatches are
     const [option, setOption] = useState<Option | null>(null);
 
@@ -73,7 +72,6 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     </div >);
 
     const selectPatch = useCallback((_patch: Patch) => {
-        console.log('select patch');
 
         /*
         if (!(_patch as SubPatch).parentPatch) {
@@ -121,8 +119,6 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     let [showAssist, setShowAssist] = useState(false);
     let [assistText, setAssistText] = useState("");
     let [loading, setLoading] = useState(false);
-
-    console.log('toolbar patch=', patch);
 
     if (breadcrumbs.length === 1) {
         return <div

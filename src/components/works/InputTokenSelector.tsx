@@ -18,7 +18,7 @@ const InputTokenSelector: React.FC<{ inputNumber: number, destinationContract: s
     let args = [destinationContract, tokenId, inputNumber, sourceContract, selectedToken, 0];
     console.log("args =", args);
     const { data: writerData, isLoading: isLoadingWriter, isSuccess: isSuccessWriter, write } = useContractWrite({
-        address: contracts[5].ZenModule as `0x${string}`,
+        address: contracts[5][2].ZenModule as `0x${string}`,
         abi: ZenModule.abi,
         functionName: "configureToken",
         args: [destinationContract, tokenId, inputNumber, sourceContract, selectedToken, 0]

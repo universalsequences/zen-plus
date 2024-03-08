@@ -1,4 +1,5 @@
 import Matrix from './Matrix';
+import Color from './Color';
 import SignalReceive from './SignalReceive';
 import Button from './Button';
 import Preset from './Preset';
@@ -41,7 +42,8 @@ export const index: ComponentIndex = {
     "divider": Divider,
     "function": FunctionUX,
     "button": Button,
-    "preset": Preset
+    "preset": Preset,
+    "color": Color
 };
 
 export const optionalIndex: ComponentIndex = {

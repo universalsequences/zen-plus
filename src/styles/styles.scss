@@ -1,11 +1,13 @@
 
+.locked.presentation {
+    .node-component {
+        overflow: hidden !important;
+    }
+}
+
 .locked, .presentation {
     textarea {
         pointer-events: none;
-    }
-        
-    .node-component {
-        overflow: hidden !important;
     }
 
     .iolets {

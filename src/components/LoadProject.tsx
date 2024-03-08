@@ -43,7 +43,7 @@ const LoadProject = (props: Props) => {
     useEffect(() => {
         if (user) {
             fetchPatchesForEmail(user.email).then(
-                setProjects);
+                (x) => setProjects(x.files));
         }
     }, [user]);
 

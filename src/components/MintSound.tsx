@@ -34,7 +34,7 @@ const MintSound: React.FC<{ fps: number, chainId: number, screenshot: string, nu
     console.log('args = ', args);
 
     const { config } = usePrepareContractWrite({
-        address: contracts[chainId].DropCreator,
+        address: contracts[chainId][2].DropCreator,
         abi: abi,
         functionName: 'newDrop',
         args

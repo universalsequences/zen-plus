@@ -127,7 +127,7 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
             list = Array.from(new Set(JSON.parse(payload)));
         }
         */
-        for (let elem of [...onchainSubPatches].reverse()) {
+        for (let elem of [...onchainSubPatches]) {
             let _name = elem.name.toLowerCase();
             if (_name.includes(_text)) {
                 options.push({

@@ -222,7 +222,7 @@ const InnerObjectNodeComponent: React.FC<{
                     copied.subpatch.fromJSON(
                         json.subpatch,
                         true);
-                    loadSubPatch(json.subpatch, "zen");
+                    // loadSubPatch(json.subpatch, "zen");
                 }
                 copied.attributes = {
                     ...copied.attributes,

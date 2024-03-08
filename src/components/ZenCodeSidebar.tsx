@@ -46,6 +46,38 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
     const { chain } = useNetwork();
 
     const [screenshot, setScreenshot] = useState<string | null>(null);
+
+    const [compressedDSP, setCompressedDSP] = useState<string | null>(null);
+    const [compressedVisuals, setCompressedVisuals] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetch("/api/deflate", {
+            method: "POST",
+            body: zenCode
+        }).then(
+            async x => {
+                let json = await x.json();
+                setCompressedDSP(json.compressed);
+            });
+    }, [zenCode]);
+
+    useEffect(() => {
+        if (visualsCode) {
+            console.log('visuals code to deflate=', visualsCode);
+            console.log('visuals code to deflate=', minify(visualsCode, false));
+            fetch("/api/deflate", {
+                method: "POST",
+                body: minify(visualsCode, false)
+            }).then(
+                async x => {
+                    let json = await x.json();
+                    console.log('deflated visuals');
+                    console.log(json);
+                    setCompressedVisuals(json.compressed);
+                });
+        }
+    }, [visualsCode]);
+
     useEffect(() => {
         if (user && dropAddress && account && patches[0] && chain) {
             // write to firebase
@@ -60,7 +92,8 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 numEditions,
                 patchId: patches[0].previousDocId,
                 image: screenshot,
-                chain: chain.id
+                chain: chain.id,
+                version: 2
             };
             addDoc(collection(db, 'drops'), document).then((snap) => {
             });
@@ -152,8 +185,8 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                     </div>
                 }
                 {
-                    screenshot && minting && parameters && visualsCode && zenCode && chain ?
-                        <MintSound chainId={chain.id} fps={fps} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={minify(visualsCode, false)} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={zenCode} /> : ''
+                    compressedDSP && compressedVisuals && screenshot && minting && parameters && visualsCode && zenCode && chain ?
+                        <MintSound chainId={chain.id} fps={fps} screenshot={screenshot} numEditions={numEditions} price={parseEther(price)} name={name} description={description} visuals={compressedVisuals} parameterNames={parameters.parameterNames} minValues={parameters.minValues} maxValues={parameters.maxValues} setDropAddress={setDropAddress} dsp={compressedDSP} /> : ''
                 }
                 {
                     !account ? <div>
@@ -224,7 +257,7 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 <ConnectButton />
             </div >
         );
-    }, [zenCode, setScreenshot, dropAddress, visualsCode, minting, parameters, name, description, price, numEditions, screenshot, chain, switchNetwork]);
+    }, [compressedDSP, compressedVisuals, zenCode, setScreenshot, dropAddress, visualsCode, minting, parameters, name, description, price, numEditions, screenshot, chain, switchNetwork]);
 
 
     return inner;

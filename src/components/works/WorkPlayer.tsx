@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import OwnerOf from './OwnerOf';
 import {
     mainnet
@@ -26,7 +26,11 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     const { switchNetwork } = useSwitchNetwork();
 
     useEffect(() => {
-        let url = `/api/getParameters?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}`;
+        window.history.pushState(null, '', `/${work.name}`);
+    }, [work]);
+    useEffect(() => {
+        let version = work.version ? work.version : 1;
+        let url = `/api/getParameters?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
         fetch(url).then(
             async r => {
                 let json = await r.json();
@@ -43,6 +47,23 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             switchNetwork(chainId);
         }
     }, [work, switchNetwork]);
+    */
+
+    let ref = useRef<any | null>(null);
+    /*
+    useEffect(() => {
+        window.addEventListener("message", (e: MessageEvent) => {
+            if (e.data === "ready") {
+                console.log("received ready");
+                setTimeout(() => {
+                    if (ref.current) {
+                        console.log("sending useC");
+                        ref.current.contentWindow!.postMessage("useC", "*");
+                    }
+                }, 100);
+            }
+        });
+    }, []);
     */
 
     const { data: totalSupply, isError, isLoading } = useContractRead({
@@ -68,7 +89,9 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     const [hovered, setHovered] = useState<number | null>(null);
     const [showInfo, setShowInfo] = useState(false);
 
-    let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}`;
+    let version = work.version ? work.version : 2;
+    let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
+
 
     return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-950">
         <div className="absolute top-5 right-5">
@@ -82,6 +105,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         </div>
         <div className="w-full flex m-auto">
             <iframe
+                ref={ref}
                 style={{
                     transform: fullscreen ? undefined : "translate(0px, -50px)",
                     boxShadow: fullscreen ? "" : "rgba(0, 0, 0, 0.35) 0px 5px 15px",

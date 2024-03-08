@@ -153,6 +153,7 @@ export type ObjectNode = Positioned & Node & {
 export interface SerializableCustom {
     getJSON: () => any;
     fromJSON: (x: any) => void;
+    value: Message;
 }
 
 export type MessageNode = Positioned & Node & {

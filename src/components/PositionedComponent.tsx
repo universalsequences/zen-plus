@@ -146,7 +146,7 @@ const PositionedComponent: React.FC<{
         if (skipOverflow) {
             _skipOverflow = true;
         }
-        let className = (isCustom ? "" : "h-6_5 border bg-black-clear") + ` absolute  node-component text-black text-xs flex ${_skipOverflow ? "" : "overflow-hidden"} hover:overflow-visible border `;
+        let className = (isCustom ? "" : "h-6_5 border bg-black-clear") + ` absolute  node-component text-black text-xs flex ${_skipOverflow ? "overflow-visible" : "overflow-hidden"} hover:overflow-visible border `;
         if ((node as MessageNode).messageType === MessageType.Message) {
             className += " rounded-md";
             minWidth = 60;
