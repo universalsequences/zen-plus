@@ -15,10 +15,12 @@ export class Matrix {
     objectNode: ObjectNode;
     buffer: Float32Array | Uint8Array;
     counter: number;
+    value: Message;
     constructor(objectNode: ObjectNode, buffer: Float32Array | Uint8Array) {
         this.objectNode = objectNode;
         this.buffer = buffer;
         this.counter = 77777777;
+        this.value = 0;
     }
 
     update() {
