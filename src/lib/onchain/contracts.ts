@@ -46,7 +46,7 @@ const zoraContracts: ContractVersions = {
         ZenModule: "0x25ea74dd4451015cab42c6e7905a71cf6fe31db1"
     },
     2: {
-        DropCreator: "0xef72bC0a011E337C1E14683f01fe4B84BFdCe57d",
+        DropCreator: "0xA9325246a957FFDadDbe2Bbc2F5bd2fC451bdDec",
         MetadataRenderer: "0xFE2b8Fb1c4623DCc2be6995488e081B8876600d0",
         ZenModule: "0x11a207e0166223af9dead98620e2b335267c5e7c"
     }

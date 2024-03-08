@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import OwnerOf from './OwnerOf';
+import { useRouter } from 'next/router';
 import {
     mainnet
 } from 'wagmi/chains';
@@ -20,14 +21,31 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     const [opened, setOpened] = useState(false);
     const [step, setStep] = useState(Step.None);
     const [mintedToken, setMintedToken] = useState<number | null>(null);
+    const router = useRouter();
+    const { id } = router.query; // Accessing the tokenid directly
     const [activeAnimation, setActiveAnimation] = useState<number | null>(null);
     const [parameters, setParameters] = useState<any | null>(null);
     //const publicClient = usePublicClient();
     const { switchNetwork } = useSwitchNetwork();
 
+
+    useEffect(() => {
+        if (id && typeof id === "string") {
+            setActiveAnimation(parseInt(id));
+        }
+    }, [id]);
+
+
     useEffect(() => {
         window.history.pushState(null, '', `/${work.name}`);
     }, [work]);
+
+    useEffect(() => {
+        if (activeAnimation) {
+            window.history.pushState(null, '', `/${work.name}?id=${activeAnimation}`);
+        }
+    }, [work, activeAnimation]);
+
     useEffect(() => {
         let version = work.version ? work.version : 1;
         let url = `/api/getParameters?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
@@ -75,7 +93,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
     let _totalSupply = totalSupply ? parseInt(totalSupply.toString()) : 0;
     useEffect(() => {
-        if (_totalSupply > 0) {
+        if (id == null && _totalSupply > 0) {
             setActiveAnimation(1);
         }
     }, [_totalSupply]);
