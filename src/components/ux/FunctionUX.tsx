@@ -10,7 +10,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let ref = useRef<SVGSVGElement | null>(null);
     const { sizeIndex } = usePosition();
     let { width, height } = sizeIndex[objectNode.id] || { width: 300, height: 80 };
-    let editor: FunctionEditor = objectNode.custom as FunctionEditor;
+    let editor: FunctionEditor = objectNode.custom as any as FunctionEditor;
     let [points, setPoints] = useState(editor.points);
     let { attributesIndex } = useSelection();
     let { lockedMode } = useLocked();
