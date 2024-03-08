@@ -10,7 +10,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     let ref = useRef<HTMLDivElement>(null);
     const { sizeIndex } = usePosition();
     let { width, height } = sizeIndex[objectNode.id] || { width: 100, height: 100 };
-    let mgmt = objectNode.custom as PresetManager;
+    let mgmt = objectNode.custom as any as PresetManager;
     let [current, setCurrent] = useState(mgmt.currentPreset);
 
     const switchToPreset = useCallback((i: number) => {

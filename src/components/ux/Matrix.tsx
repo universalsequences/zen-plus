@@ -90,7 +90,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         */
         toggle(editing.current.y, editing.current.x, value);
         if (objectNode.custom) {
-            (objectNode.custom as mat.Matrix).update();
+            (objectNode.custom as any as mat.Matrix).update();
         }
 
     }, [editing, columns, size, max]);
