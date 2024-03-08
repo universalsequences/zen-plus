@@ -26,12 +26,13 @@ interface Props {
     totalSupply: number | null;
     tokenPrice: string;
     chainId: number;
+    isMobile: boolean;
+    totalPrice: string | null;
+    setTotalPrice: (x: string | null) => void;
 }
 
 async function getBalance(provider: any, address: `0x${string}`) {
-    console.log('getting balance = ', address);
     const balanceWei = await provider.getBalance(address);
-    console.log('balance wei=', balanceWei);
     return balanceWei / 1000000000;
 }
 
@@ -46,7 +47,7 @@ const MintBlock = (props: Props) => {
 
     const { switchNetwork } = useSwitchNetwork();
     const network = useNetwork();
-    let [totalPrice, setTotalPrice] = useState<string | null>(null);
+    let { totalPrice, setTotalPrice } = props;
     let { setStep, step } = props;
     let [seed, setSeed] = useState(1);
     let [editionSize, setEditionSize] = useState(1);
@@ -58,10 +59,8 @@ const MintBlock = (props: Props) => {
     const address = useAccount();
 
     const { data: balance } = useBalance(address);
-    console.log('balance=', balance);
 
     let wrongNetwork = false;
-    console.log('network = ', network);
     if (network && network.chain && network.chain.id !== props.chainId && address) {
         wrongNetwork = true;
     }
@@ -98,11 +97,9 @@ const MintBlock = (props: Props) => {
 
     useEffect(() => {
         if (data && !transactionError && !transactionLoading) {
-            console.log("data=", transactionData);
             setStep(Step.Confirmed);
             fetchMintedTokenId(publicClient, data.hash, props.contractAddress, comment !== "").then(
                 x => {
-                    console.log('minted token=', mintedToken);
                     if (x !== null) {
                         setMintedToken(x + editionSize);
                     }
@@ -187,7 +184,10 @@ const MintBlock = (props: Props) => {
     quad = Math.floor(seed / 2);
 
     const [isCustom, setIsCustom] = useState(true);
-    let className = "p-2  text-white flex  flex-col mint-button-container select-none text-center w-50 text-center   z-10 bg-zinc-900 transition-all ";
+    let className = "p-2  text-white flex  flex-col mint-button-container select-none text-center w-50 text-center   z-10 transition-all ";
+    if (!props.isMobile || totalPrice !== null) {
+        className += " bg-zinc-900 ";
+    }
     if (hide && totalPrice === null) {
         className += " disappear";
     }
@@ -195,6 +195,12 @@ const MintBlock = (props: Props) => {
     if (totalPrice !== null) {
         className += " checking-out";
     }
+
+    useEffect(() => {
+        if (step === Step.Confirmed) {
+            setTotalPrice(null);
+        }
+    }, [setTotalPrice, step]);
 
     if (props.totalSupply && props.totalSupply >= 1024) {
         return (
@@ -225,7 +231,7 @@ const MintBlock = (props: Props) => {
                     borderTopLeftRadius: "30px",
                     borderTopRightRadius: "10px",
                 }}
-                className={className + ' mt-4 relative bg-zinc-900 pt-5 transition-all'}>
+                className={className + ' mt-4 relative pt-5 transition-all'}>
                 {/*<div className={(minimized ? "top-3  " : " top-3 ") + "cursor-pointer absolute right-2 px-1 rounded-full border border-zinc-400 bg-zinc-900 transition-all duration-300 ease-in-out"}>
                     {minimized ?
                         <DividerVerticalIcon color="white" onClick={() => setMinimized(false)} className="w-3 h-3" /> :
@@ -265,11 +271,15 @@ const MintBlock = (props: Props) => {
                     {checked && address.address === undefined ?
                         <div className="mx-auto items-start">
                             <ConnectButton /></div> : wrongNetwork ? <div
+                                style={{
+                                    transform: "translate(10px,0px)",
+                                    maxWidth: props.isMobile ? "95px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px')
+                                }}
                                 onClick={() => switchNetwork ? switchNetwork(props.chainId) : 0}
-                                className="py-1 bg-light-100 text-zinc-200 cursor-pointer rounded-full active:scale-105 transition-all mx-5 px-5">Switch to Zora</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-100 text-zinc-700 " : " bg-zinc-100 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative "}
+                                className="py-1 bg-zinc-800 text-zinc-200 cursor-pointer rounded-lg active:scale-105 transition-all mx-5 px-5">Switch Network</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-100 text-zinc-700 " : " bg-zinc-100 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative "}
 
 
-                                    style={{ minWidth: 170 + 'px' }}
+                                    style={step !== Step.None ? {} : { maxWidth: props.isMobile ? "80px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px') }}
                                 >
                             {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
                             {balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
@@ -279,14 +289,14 @@ const MintBlock = (props: Props) => {
                             }
 
                         </div>}
-                    <div className="flex mx-auto">
+                    {!props.isMobile && <div className="flex mx-auto">
                         <div className="w-1 h-1 rounded-full bg-white mt-3 mx-2" />
                         {
                             totalPrice === null && <div className="flex text-xs mt-1.5 ">
                                 {props.totalSupply} minted
                             </div>
                         }
-                    </div>
+                    </div>}
                 </>}
             </div >
         </>
@@ -302,17 +312,13 @@ export async function fetchMintedTokenId(provider: any, transactionHash: string,
         'event Sale(address indexed to, uint256 indexed quantity, uint256 indexed pricePerToken, uint256 firstPurchasedTokenId)'
     ];
 
-    console.log("provider =", provider);
     const receipt = await provider.getTransactionReceipt({ hash: transactionHash });
-
-    console.log('receipt=', receipt);
 
     // Check if there are logs and the logs are from the expected contract
     if (receipt && receipt.logs && receipt.logs.length > 0) {
         let num = isComment ? 2 : 1;
         let token = parseInt(receipt.logs[receipt.logs.length - num].data, 16);
 
-        console.log("token=", token);
         return token;
     }
 

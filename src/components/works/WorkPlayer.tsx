@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { isMobile } from 'react-device-detect';
 import OwnerOf from './OwnerOf';
 import { useRouter } from 'next/router';
 import {
@@ -10,7 +11,7 @@ import { ConnectButton, lightTheme } from '@rainbow-me/rainbowkit';
 import { usePublicClient, useContractRead, useSwitchNetwork } from 'wagmi'
 import { ethers } from 'ethers';
 import WorkEditor from './WorkEditor';
-import { TriangleDownIcon, EnterFullScreenIcon, ExitFullScreenIcon, Cross2Icon, InfoCircledIcon, DashboardIcon, ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
+import { CopyIcon, ArrowTopRightIcon, TriangleDownIcon, EnterFullScreenIcon, ExitFullScreenIcon, Cross2Icon, InfoCircledIcon, DashboardIcon, ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
 import MintButton from './MintButton';
 import { WorkOption } from './Works';
 import { Step } from './enum';
@@ -46,6 +47,9 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         }
     }, [work, activeAnimation]);
 
+    const [video, setVideo] = useState<string | null>(null);
+    const [audio, setAudio] = useState<string | null>(null);
+
     useEffect(() => {
         let version = work.version ? work.version : 1;
         let url = `/api/getParameters?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
@@ -55,7 +59,28 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 setParameters(json);
             });
     }, [activeAnimation]);
+
+    useEffect(() => {
+        let version = work.version ? work.version : 1;
+        let url = `/api/getVideo?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
+        fetch(url).then(
+            async r => {
+                let json = await r.json();
+                setVideo(json.video || null);
+                setAudio(json.audio || null);
+            });
+    }, [activeAnimation, setVideo, setAudio]);
+
+    console.log("VIDEO=", video);
+    console.log("audio=", audio);
+
     console.log("PARAMETERS =", parameters);
+
+    const [isClientMobile, setIsClientMobile] = useState(false);
+
+    useEffect(() => {
+        setIsClientMobile(isMobile);
+    }, [isMobile]);
 
     /*
     useEffect(() => {
@@ -66,6 +91,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         }
     }, [work, switchNetwork]);
     */
+
+    let [copied, setCopied] = useState(false);
 
     let ref = useRef<any | null>(null);
     /*
@@ -104,6 +131,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         }
     }, [mintedToken, setActiveAnimation]);
 
+    let [totalPrice, setTotalPrice] = useState<string | null>(null);
     const [hovered, setHovered] = useState<number | null>(null);
     const [showInfo, setShowInfo] = useState(false);
 
@@ -112,6 +140,11 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
 
     return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-950">
+        {totalPrice && isMobile &&
+            <div
+                onClick={() => setTotalPrice(null)}
+                style={{ backgroundColor: "#0000000f", backdropFilter: "blur(8px)" }}
+                className="w-full h-full bg-black absolute top-0 left-0 z-20" />}
         <div className="absolute top-5 right-5">
             {account && account.address && !fullscreen && <ConnectButton accountStatus="avatar" showBalance={false} />}
         </div>
@@ -122,19 +155,31 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 <EnterFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(true)} />}
         </div>
         <div className="w-full flex m-auto">
-            <iframe
-                ref={ref}
-                style={{
-                    transform: fullscreen ? undefined : "translate(0px, -50px)",
-                    boxShadow: fullscreen ? "" : "rgba(0, 0, 0, 0.35) 0px 5px 15px",
-                    width: fullscreen ? "100vw" : "106vh", height: fullscreen ? "100vh" : "80vh"
-                }}
-                src={url} className={(fullscreen ? "" : "border-zinc-800 rounded-md border ") + "w-full mx-auto transition-all duration-300 ease-in-out"} />
+            {isMobile && video !== null && video !== "" ?
+                <video
+                    controls
+
+                    src={video}
+                    style={{
+                        transform: fullscreen ? undefined : "translate(0px, -50px)",
+                        boxShadow: fullscreen ? "" : "rgba(0, 0, 0, 0.35) 0px 5px 15px",
+                        width: fullscreen ? "100vw" : isMobile ? "90vw" : "106vh", height: fullscreen ? "100vh" : isMobile ? "60vh" : "80vh"
+                    }}
+                    className={(fullscreen ? "" : "border-zinc-800 rounded-md border ") + "w-full mx-auto transition-all duration-300 ease-in-out"}
+                /> :
+                <iframe
+                    ref={ref}
+                    style={{
+                        transform: fullscreen ? undefined : "translate(0px, -50px)",
+                        boxShadow: fullscreen ? "" : "rgba(0, 0, 0, 0.35) 0px 5px 15px",
+                        width: fullscreen ? "100vw" : isMobile ? "90vw" : "106vh", height: fullscreen ? "100vh" : isMobile ? "60vh" : "80vh"
+                    }}
+                    src={url} className={(fullscreen ? "" : "border-zinc-800 rounded-md border ") + "w-full mx-auto transition-all duration-300 ease-in-out"} />}
         </div>
         {/*
         */}
 
-        {!fullscreen && parameters && <div className="left-40 bottom-5 flex w-64 py-1 absolute flex-wrap">
+        {!isClientMobile && !fullscreen && parameters && <div className="left-40 bottom-5 flex w-64 py-1 absolute flex-wrap">
             {Object.keys(parameters).map(
                 (name) => <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
                     <div>
@@ -151,14 +196,14 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         <div
             style={{
                 //overflow: "hidden",
-                width: fullscreen ? ((showInfo || opened) ? 500 : "") : showInfo ? 400 : 500,
+                width: isMobile ? "70vw" : fullscreen ? ((showInfo || opened) ? 500 : "") : showInfo ? 400 : 500,
                 borderRadius: 20,
                 boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px",
                 background: (fullscreen && opened) ? "#000000bd" : (fullscreen || opened || showInfo) ? "#00000074" : undefined,
                 backdropFilter: fullscreen || opened || showInfo ? "blur(8px)" : "",
                 border: (showInfo || opened) ? "1px solid #ffffff3f" : ""
             }}
-            className={(fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-32 pr-5 " : "h-10") + " fixed bottom-5  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
+            className={(isMobile ? "left-3 " : fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed bottom-8  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
             {opened ? <div className="flex flex-col w-full mt-5 items-start">
                 <Cross2Icon onClick={() => setOpened(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                 <div className="flex flex-wrap text-base mt-2 w-full pr-5">
@@ -179,14 +224,26 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 <div className="absolute bottom-3 left-3 text-xs text-zinc-500 w-32">
                     each minted token, is a unique composition
                 </div>
-            </div> : showInfo ? <div className="flex my-auto pr-5">
-                <Cross2Icon onClick={() => setShowInfo(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
-                <div>
-                    {work.description}
-                </div>
-                <div className="text-zinc-400 ml-5">
-                    created with <span className="text-white">zen+</span>. all sounds and visuals stored directly onchain.
+            </div> : showInfo ? <div className="flex my-auto pr-5 flex-col">
+                <div className="flex">
+                    <Cross2Icon onClick={() => setShowInfo(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
+                    <div>
+                        {work.description}
+                    </div>
+                    <div className="text-zinc-400 ml-5">
+                        created with <span className="text-white">zen+</span>. all sounds and visuals stored directly onchain.
 
+                    </div>
+                </div>
+                <div className="flex mt-2">
+                    <a className="text-zinc-300 underline" href={`https://explorer.zora.energy/address/${work.dropAddress}`}>contract</a><ArrowTopRightIcon className="w-3 h-3 ml-2" />
+                    <a className="ml-5 text-zinc-300 underline" href={`https://zora.co/collect/zora:${work.dropAddress}/${activeAnimation}`}>zora</a><ArrowTopRightIcon className="w-3 h-3 ml-2" />
+                    <div className="ml-auto text-zinc-300">{trunc(work.dropAddress)}</div><CopyIcon
+                        onClick={() => {
+                            navigator.clipboard.writeText(work.dropAddress);
+                            setCopied(true);
+                        }}
+                        className={(copied ? "text-teal-300 " : "text-zinc-300 ") + "transition-colors w-4 h-4 ml-2 cursor-pointer"} />
                 </div>
             </div> : <>
                 <div className="w-48 my-auto text-base flex">
@@ -205,7 +262,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 </div>}
 
 
-                {!fullscreen && <div
+                {!isMobile && !fullscreen && <div
                     className={(fullscreen ? "w-24" : "w-50") + " text-zinc-300 ml-10 my-auto text-center flex"}>
                     <div className="text-zinc-400 mr-5 flex">
                         {activeAnimation ? <OwnerOf dropAddress={work.dropAddress} chainId={work.chain || 5} tokenId={activeAnimation} /> :
@@ -239,8 +296,9 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 </div>
             </>}
         </div>
-        {!fullscreen && <div className="mx-auto fixed bottom-0 right-10 table">
+        {!fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + "mx-auto bottom-5 table fixed z-30") : "mx-auto fixed bottom-0 right-10 table z-30"}>
             <MintButton
+                isMobile={isMobile}
                 chainId={work.chain || 5}
                 work={work}
                 tokenPrice={work.price}
@@ -251,7 +309,11 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 step={step}
                 setStep={setStep}
                 contractAddress={work.dropAddress as `0x{string}`}
+                totalPrice={totalPrice} setTotalPrice={setTotalPrice}
                 hide={false} />
+        </div>}
+        {isMobile && video && <div className="bottom-2 w-96 text-xs italic text-zinc-300 fixed mx-auto left-0 right-0">
+            To view realtime version, please visit on Chrome/Arc desktop
         </div>}
     </div >);
 };
