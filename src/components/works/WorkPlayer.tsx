@@ -208,9 +208,10 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px",
                 background: (fullscreen && opened) ? "#000000bd" : (fullscreen || opened || showInfo) ? "#00000074" : undefined,
                 backdropFilter: fullscreen || opened || showInfo ? "blur(8px)" : "",
-                border: (showInfo || opened) ? "1px solid #ffffff3f" : ""
+                border: (showInfo || opened) ? "1px solid #ffffff3f" : "",
+                zIndex: 10000000
             }}
-            className={(isMobile ? "left-3 bottom-12 " : fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed bottom-8  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
+            className={(isMobile ? "left-3 bottom-16 " : fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed bottom-8  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
             {opened ? <div className="flex flex-col w-full mt-5 items-start">
                 <Cross2Icon onClick={() => setOpened(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                 <div className="flex flex-wrap text-base mt-2 w-full pr-5">
@@ -303,7 +304,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 </div>
             </>}
         </div>
-        {!fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + (isMobile && (!account || !account.address) ? " -top-5 " : "bottom-10") + " mx-auto table fixed z-30") : "mx-auto fixed bottom-0 right-10 table z-30"}>
+        {!fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + (isMobile && (!account || !account.address) ? " -top-5 " : "bottom-14") + " mx-auto table fixed z-30") : "mx-auto fixed bottom-0 right-10 table z-30"}>
             <MintButton
                 isMobile={isMobile}
                 chainId={work.chain || 5}
