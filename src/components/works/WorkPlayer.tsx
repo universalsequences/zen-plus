@@ -30,12 +30,6 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     const { switchNetwork } = useSwitchNetwork();
 
 
-    useEffect(() => {
-        if (id && typeof id === "string") {
-            setActiveAnimation(parseInt(id));
-        }
-    }, [id]);
-
 
     useEffect(() => {
         window.history.pushState(null, '', `/${work.name}`);
@@ -77,6 +71,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     console.log("PARAMETERS =", parameters);
 
     const [isClientMobile, setIsClientMobile] = useState(false);
+
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
     useEffect(() => {
         setIsClientMobile(isMobile);
@@ -126,6 +122,16 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     }, [_totalSupply]);
 
     useEffect(() => {
+        if (_totalSupply && id && typeof id === "string") {
+            if (_totalSupply >= parseInt(id)) {
+                setActiveAnimation(parseInt(id));
+            } else {
+                setActiveAnimation(_totalSupply);
+            }
+        }
+    }, [_totalSupply, id]);
+
+    useEffect(() => {
         if (mintedToken) {
             setActiveAnimation(mintedToken);
         }
@@ -148,7 +154,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         <div className="absolute top-5 right-5">
             {account && account.address && !fullscreen && <ConnectButton accountStatus="avatar" showBalance={false} />}
         </div>
-        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className="w-8 h-8 cursor-pointer absolute bottom-5 left-5" />}
+        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "bottom-3" : "bottom-5") + " w-8 h-8 cursor-pointer absolute left-5"} />}
         <div className="absolute z-30 top-5 left-5 cursor-pointer">
 
             {fullscreen ? <ExitFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(false)} /> :
@@ -157,6 +163,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         <div className="w-full flex m-auto">
             {isMobile && video !== null && video !== "" ?
                 <video
+                    ref={videoRef}
                     controls
 
                     src={video}
@@ -203,7 +210,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 backdropFilter: fullscreen || opened || showInfo ? "blur(8px)" : "",
                 border: (showInfo || opened) ? "1px solid #ffffff3f" : ""
             }}
-            className={(isMobile ? "left-3 " : fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed bottom-8  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
+            className={(isMobile ? "left-3 bottom-12 " : fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed bottom-8  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
             {opened ? <div className="flex flex-col w-full mt-5 items-start">
                 <Cross2Icon onClick={() => setOpened(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                 <div className="flex flex-wrap text-base mt-2 w-full pr-5">
@@ -222,7 +229,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                     <DashboardIcon className="w-6 h-6 mr-3" /> <div className="my-auto">gallery</div>
                 </div>
                 <div className="absolute bottom-3 left-3 text-xs text-zinc-500 w-32">
-                    each minted token, is a unique composition
+                    {!isMobile && "each minted token, is a unique composition"}
                 </div>
             </div> : showInfo ? <div className="flex my-auto pr-5 flex-col">
                 <div className="flex">
@@ -296,7 +303,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 </div>
             </>}
         </div>
-        {!fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + "mx-auto bottom-5 table fixed z-30") : "mx-auto fixed bottom-0 right-10 table z-30"}>
+        {!fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + (isMobile && (!account || !account.address) ? " -top-5 " : "bottom-10") + " mx-auto table fixed z-30") : "mx-auto fixed bottom-0 right-10 table z-30"}>
             <MintButton
                 isMobile={isMobile}
                 chainId={work.chain || 5}
@@ -312,7 +319,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 totalPrice={totalPrice} setTotalPrice={setTotalPrice}
                 hide={false} />
         </div>}
-        {isMobile && video && <div className="bottom-2 w-96 text-xs italic text-zinc-300 fixed mx-auto left-0 right-0">
+        {isMobile && video && <div className="bottom-5 w-96 text-xs italic text-zinc-300 fixed mx-auto left-14 right-0">
             To view realtime version, please visit on Chrome/Arc desktop
         </div>}
     </div >);

@@ -279,7 +279,7 @@ const MintBlock = (props: Props) => {
                                 className="py-1 bg-zinc-800 text-zinc-200 cursor-pointer rounded-lg active:scale-105 transition-all mx-5 px-5">Switch Network</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-100 text-zinc-700 " : " bg-zinc-100 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-5  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative "}
 
 
-                                    style={step !== Step.None ? {} : { maxWidth: props.isMobile ? "80px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px') }}
+                                    style={step !== Step.None || (balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice)) ? { color: "black" } : { maxWidth: props.isMobile ? "80px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px') }}
                                 >
                             {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
                             {balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
