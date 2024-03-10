@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import * as Tooltip from '@radix-ui/react-tooltip';
 import { isMobile } from 'react-device-detect';
 import OwnerOf from './OwnerOf';
 import { useRouter } from 'next/router';
@@ -11,7 +12,7 @@ import { ConnectButton, lightTheme } from '@rainbow-me/rainbowkit';
 import { usePublicClient, useContractRead, useSwitchNetwork } from 'wagmi'
 import { ethers } from 'ethers';
 import WorkEditor from './WorkEditor';
-import { CopyIcon, ArrowTopRightIcon, TriangleDownIcon, EnterFullScreenIcon, ExitFullScreenIcon, Cross2Icon, InfoCircledIcon, DashboardIcon, ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
+import { BoxIcon, VideoIcon, CopyIcon, ArrowTopRightIcon, TriangleDownIcon, EnterFullScreenIcon, ExitFullScreenIcon, Cross2Icon, InfoCircledIcon, DashboardIcon, ArrowLeftIcon, CaretSortIcon } from '@radix-ui/react-icons'
 import MintButton from './MintButton';
 import { WorkOption } from './Works';
 import { Step } from './enum';
@@ -140,28 +141,90 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     let [totalPrice, setTotalPrice] = useState<string | null>(null);
     const [hovered, setHovered] = useState<number | null>(null);
     const [showInfo, setShowInfo] = useState(false);
+    const [showVideo, setShowVideo] = useState(true);//isClientMobile);
 
     let version = work.version ? work.version : 2;
     let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
 
 
     return (<div className="flex flex-col w-full min-h-screen h-full max-h-screen bg-zinc-950">
-        {totalPrice && isMobile &&
+        {!fullscreen && !isMobile && <div className="fixed bottom-8 left-40 text-sm flex">
+            <Tooltip.Provider
+                disableHoverableContent={true}
+                delayDuration={200}>
+                <Tooltip.Root
+                >
+                    <Tooltip.Trigger asChild>
+
+                        <div
+                            onClick={() => setShowVideo(true)}
+                            className="flex flex-col mr-5 cursor-pointer">
+                            <VideoIcon className={(showVideo ? "" : " opacity-50 ") + "w-4 h-4 mx-auto"} /> <span className={(showVideo ? "underline " : " text-zinc-400 ") + "mt-1"}>video</span>
+                        </div>
+                    </Tooltip.Trigger >
+                    <Tooltip.Portal
+                    >
+                        <Tooltip.Content
+                            style={{ zIndex: 100000000000, fontSize: 12 }}
+                            side={"top"} className="pointer-events-none  bg-zinc-900 px-2 py-1 text-white rounded-lg w-64 " sideOffset={5}>
+                            click to view the rendered video version.
+                            <div className="mt-1 italic">
+                                best for computers with weak GPU/CPU
+                            </div>
+                            < Tooltip.Arrow fill="white" className="TooltipArrow" />
+                        </Tooltip.Content>
+                    </Tooltip.Portal>
+                </Tooltip.Root>
+            </Tooltip.Provider>
+            <Tooltip.Provider
+                disableHoverableContent={true}
+                delayDuration={200}>
+                <Tooltip.Root
+                >
+                    <Tooltip.Trigger asChild>
+
+                        <div
+                            onClick={() => setShowVideo(false)}
+                            className="flex flex-col cursor-pointer">
+                            <BoxIcon className={(showVideo ? "opacity-50 " : "") + "w-4 h-4 mx-auto"} /> <span className={(!showVideo ? "underline " : " text-zinc-400 ") + "mt-1"}>realtime</span>
+                        </div>
+
+                    </Tooltip.Trigger >
+                    <Tooltip.Portal
+                    >
+                        <Tooltip.Content
+                            style={{ zIndex: 100000000000, fontSize: 12 }}
+                            side={"top"} className="pointer-events-none  w-64 bg-zinc-900 px-2 py-1 text-white rounded-lg " sideOffset={5}>
+                            <div>
+                                click to view the realtime version of piece, with full resolution & infinite duration.
+                            </div>
+                            <div className="mt-2 italic">
+                                requires a strong GPU/CPU
+                            </div>
+                            < Tooltip.Arrow fill="white" className="TooltipArrow" />
+                        </Tooltip.Content>
+                    </Tooltip.Portal>
+                </Tooltip.Root>
+            </Tooltip.Provider>
+        </div>}
+        {
+            totalPrice && isMobile &&
             <div
                 onClick={() => setTotalPrice(null)}
                 style={{ backgroundColor: "#0000000f", backdropFilter: "blur(8px)" }}
-                className="w-full h-full bg-black absolute top-0 left-0 z-20" />}
+                className="w-full h-full bg-black absolute top-0 left-0 z-20" />
+        }
         <div className="absolute top-5 right-5">
             {account && account.address && !fullscreen && <ConnectButton accountStatus="avatar" showBalance={false} />}
         </div>
-        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "bottom-3" : "bottom-5") + " w-8 h-8 cursor-pointer absolute left-5"} />}
+        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "bottom-3" : "bottom-8") + " w-8 h-8 cursor-pointer absolute left-5"} />}
         <div className="absolute z-30 top-5 left-5 cursor-pointer">
 
             {fullscreen ? <ExitFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(false)} /> :
                 <EnterFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(true)} />}
         </div>
         <div className="w-full flex m-auto">
-            {isMobile && video !== null && video !== "" ?
+            {showVideo && video !== null && video !== "" ?
                 <video
                     ref={videoRef}
                     controls
@@ -186,17 +249,21 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         {/*
         */}
 
-        {!isClientMobile && !fullscreen && parameters && <div className="left-40 bottom-5 flex w-64 py-1 absolute flex-wrap">
-            {Object.keys(parameters).map(
-                (name) => <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
-                    <div>
-                        {parameters[name]}
-                    </div>
-                    <div className="text-zinc-500">
-                        {name}
-                    </div>
-                </div>)}
-        </div>}
+        {
+            !isClientMobile && !fullscreen && parameters && <div className="left-10 bottom-0 top-0 my-auto table w-44 py-1 absolute pointer-events-none content-start">
+                <div className="flex flex-wrap">
+                    {Object.keys(parameters).map(
+                        (name) => <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
+                            <div>
+                                {parameters[name]}
+                            </div>
+                            <div className="text-zinc-500">
+                                {name}
+                            </div>
+                        </div>)}
+                </div>
+            </div>
+        }
 
 
         {/* activeAnimation ? <WorkEditor tokenId={activeAnimation} contractAddress={work.dropAddress} /> : ''*/}
@@ -233,12 +300,12 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                     {!isMobile && "each minted token, is a unique composition"}
                 </div>
             </div> : showInfo ? <div className="flex my-auto pr-5 flex-col">
-                <div className="flex">
+                <div className="flex flex-1">
                     <Cross2Icon onClick={() => setShowInfo(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                     <div>
                         {work.description}
                     </div>
-                    <div className="text-zinc-400 ml-5">
+                    <div className="text-zinc-400 ml-5 mt-auto">
                         created with <span className="text-white">zen+</span>. all sounds and visuals stored directly onchain.
 
                     </div>
@@ -295,34 +362,57 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                         className="absolute bottom-10 -left-10 p-3 flex flex-col w-56 h-64 bg-zinc-950 border border-zinc-600 hover:bg-zinc-200 transition-colors">
                     </div>}
 
-                    <div
-                        className="my-auto w-32 pl-4 flex">
-                        <DashboardIcon className="w-4 h-4 my-auto mr-2" />
-                        <div>Token #{activeAnimation}</div>
-                        <CaretSortIcon className="ml-auto my-auto mr-4" />
-                    </div>
+                    <Tooltip.Provider
+                        disableHoverableContent={true}
+                        delayDuration={200}>
+                        <Tooltip.Root
+                        >
+                            <Tooltip.Trigger asChild>
+
+                                <div
+                                    className="my-auto w-32 pl-4 flex">
+                                    <DashboardIcon className="w-4 h-4 my-auto mr-2" />
+                                    <div>Token #{activeAnimation}</div>
+                                    <CaretSortIcon className="ml-auto my-auto mr-4" />
+                                </div>
+                            </Tooltip.Trigger >
+                            <Tooltip.Portal
+                            >
+                                <Tooltip.Content
+                                    style={{ zIndex: 100000000000, fontSize: 10 }}
+                                    side={"top"} className="pointer-events-none  mb-4 bg-zinc-100 px-2 py-1 text-black rounded-lg " sideOffset={5}>
+                                    view all minted variations of this piece
+                                    < Tooltip.Arrow fill="white" className="TooltipArrow" style={{ transform: "translate(0px,-16px)" }} />
+                                </Tooltip.Content>
+                            </Tooltip.Portal>
+                        </Tooltip.Root>
+                    </Tooltip.Provider>
                 </div>
             </>}
         </div>
-        {!fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + (isMobile && (!account || !account.address) ? " -top-5 " : "bottom-14") + " mx-auto table fixed z-30") : "mx-auto fixed bottom-0 right-10 table z-30"}>
-            <MintButton
-                isMobile={isMobile}
-                chainId={work.chain || 5}
-                work={work}
-                tokenPrice={work.price}
-                mintedToken={mintedToken}
-                setMintedToken={setMintedToken}
-                totalSupply={_totalSupply}
-                balanceOf={1000000}
-                step={step}
-                setStep={setStep}
-                contractAddress={work.dropAddress as `0x{string}`}
-                totalPrice={totalPrice} setTotalPrice={setTotalPrice}
-                hide={false} />
-        </div>}
-        {isMobile && video && <div className="bottom-5 w-96 text-xs italic text-zinc-300 fixed mx-auto left-14 right-0">
-            To view realtime version, please visit on Chrome/Arc desktop
-        </div>}
+        {
+            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + (isMobile && (!account || !account.address) ? " -top-5 " : "bottom-14") + " mx-auto flex flex-col fixed z-30 w-64") : "mx-auto fixed bottom-0 right-10 flex flex-col  z-30 w-64"}>
+                <MintButton
+                    isMobile={isMobile}
+                    chainId={work.chain || 5}
+                    work={work}
+                    tokenPrice={work.price}
+                    mintedToken={mintedToken}
+                    setMintedToken={setMintedToken}
+                    totalSupply={_totalSupply}
+                    balanceOf={1000000}
+                    step={step}
+                    setStep={setStep}
+                    contractAddress={work.dropAddress as `0x{string}`}
+                    totalPrice={totalPrice} setTotalPrice={setTotalPrice}
+                    hide={false} />
+            </div>
+        }
+        {
+            isMobile && video && <div className="bottom-5 w-96 text-xs italic text-zinc-300 fixed mx-auto left-14 right-0">
+                To view realtime version, please visit on Chrome/Arc desktop
+            </div>
+        }
     </div >);
 };
 

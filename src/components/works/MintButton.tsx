@@ -185,7 +185,7 @@ const MintBlock = (props: Props) => {
 
     const [isCustom, setIsCustom] = useState(true);
     let className = "p-2  text-white flex  flex-col mint-button-container select-none text-center w-50 text-center   z-10 transition-all ";
-    if (!props.isMobile || totalPrice !== null) {
+    if (totalPrice !== null) {
         className += " bg-zinc-900 ";
     }
     if (hide && totalPrice === null) {
