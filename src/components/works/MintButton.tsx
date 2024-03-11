@@ -187,6 +187,9 @@ const MintBlock = (props: Props) => {
     let className = "p-2  text-white flex  flex-col mint-button-container select-none text-center w-50 text-center   z-10 transition-all ";
     if (totalPrice !== null) {
         className += " bg-zinc-900 ";
+        if (props.isMobile) {
+            className += " m-auto";
+        }
     }
     if (hide && totalPrice === null) {
         className += " disappear";
@@ -215,7 +218,7 @@ const MintBlock = (props: Props) => {
                 You successfully minted {work.name} #{mintedToken}
                 <div
                     onClick={() => setStep(Step.None)}
-                    className="bg-white px-4 py-1 text-black rounded-full cursor-pointer w-32 text-sm mx-auto my-2">
+                    className="bg-green-200  px-4 py-1 text-black rounded-full cursor-pointer w-32 text-sm mx-auto my-2">
                     Mint Another?
                 </div>
 
@@ -231,7 +234,7 @@ const MintBlock = (props: Props) => {
                     borderTopLeftRadius: "30px",
                     borderTopRightRadius: "10px",
                 }}
-                className={className + ' mt-4 relative pt-5 transition-all'}>
+                className={(props.isMobile ? " rounded-xl " : "") + className + ' relative pt-5 transition-all'}>
                 {/*<div className={(minimized ? "top-3  " : " top-3 ") + "cursor-pointer absolute right-2 px-1 rounded-full border border-zinc-400 bg-zinc-900 transition-all duration-300 ease-in-out"}>
                     {minimized ?
                         <DividerVerticalIcon color="white" onClick={() => setMinimized(false)} className="w-3 h-3" /> :
@@ -276,7 +279,7 @@ const MintBlock = (props: Props) => {
                                     maxWidth: props.isMobile ? "95px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px')
                                 }}
                                 onClick={() => switchNetwork ? switchNetwork(props.chainId) : 0}
-                                className="py-1 bg-zinc-800 text-zinc-200 cursor-pointer rounded-lg active:scale-105 transition-all mx-5 px-5">Switch Network</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-zinc-100 text-zinc-700 " : " bg-zinc-100 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-2  mb-1 rounded-full px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative "}
+                                className="py-1 bg-zinc-800 text-zinc-200 cursor-pointer rounded-lg active:scale-105 transition-all mx-5 px-5">Switch Network</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-green-200 text-zinc-700 " : " bg-green-200 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-2  mb-1 rounded-xl px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative font-semibold "}
 
 
                                     style={step !== Step.None || (balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice)) ? { color: "black" } : { maxWidth: props.isMobile ? "80px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px') }}

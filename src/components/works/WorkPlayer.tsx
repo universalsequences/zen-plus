@@ -166,8 +166,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
                         <div
                             onClick={() => setShowVideo(true)}
-                            className={(!video ? "opacity-40 " : "") + "flex flex-col mr-5 cursor-pointer"}>
-                            <VideoIcon className={(showVideo ? "" : " opacity-50 ") + "w-4 h-4 mx-auto"} /> <span className={(showVideo ? "underline " : " text-zinc-400 ") + "mt-1"}>video</span>
+                            className={(!video ? "opacity-40 " : "") + "flex flex-row mr-5 cursor-pointer bg-zinc-900 rounded-xl p-2"}>
+                            <VideoIcon className={(showVideo ? " stroke-green-200 " : " opacity-50 ") + "w-3 h-3 my-auto mr-2"} /> <span className={(showVideo ? " text-green-200 " : " text-zinc-400 ") + "my-auto"}>video</span>
                         </div>
                     </Tooltip.Trigger >
                     <Tooltip.Portal
@@ -176,7 +176,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                             style={{ zIndex: 100000000000, fontSize: 12 }}
                             side={"top"} className="pointer-events-none  bg-zinc-900 px-2 py-1 text-white rounded-lg w-64 " sideOffset={5}>
                             {video && "click to view the rendered video version."}
-                            <div className="mt-1 italic">
+                            <div className="my-auto  italic">
                                 {video ? "best for computers with weak GPU/CPU" : "video not available"}
                             </div>
                             < Tooltip.Arrow fill="white" className="TooltipArrow" />
@@ -193,8 +193,8 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
                         <div
                             onClick={() => setShowVideo(false)}
-                            className="flex flex-col cursor-pointer">
-                            <BoxIcon className={(showVideo ? "opacity-50 " : "") + "w-4 h-4 mx-auto"} /> <span className={(!showVideo ? "underline " : " text-zinc-400 ") + "mt-1"}>realtime</span>
+                            className="flex flex-row cursor-pointer bg-zinc-900 p-2 rounded-xl">
+                            <BoxIcon className={(showVideo ? "opacity-50 " : " stroke-green-200 ") + "w-3 my-auto h-3 mr-2"} /> <span className={(!showVideo ? " text-green-200 " : " text-zinc-400 ") + "my-auto"}>realtime</span>
                         </div>
 
                     </Tooltip.Trigger >
@@ -307,7 +307,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 border: (showInfo || opened) ? "1px solid #ffffff3f" : "",
                 zIndex: 10
             }}
-            className={(isMobile ? "left-3 bottom-16 " : fullscreen ? "right-10 bottom-8 " : "left-0 right-0 mx-auto bottom-8 ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
+            className={(isMobile ? "left-3 bottom-16 " : fullscreen ? "right-10 bottom-8 " : "left-0 right-0 mx-auto bottom-8 ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-44 pr-5 " : "h-10") + " fixed  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
             {opened ? <div className="flex flex-col w-full mt-5 items-start">
                 <Cross2Icon onClick={() => setOpened(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                 <div className="flex flex-wrap text-base mt-2 w-full pr-5">
@@ -420,7 +420,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             </>}
         </div>
         {
-            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 w-64 " : "right-0 w-32 ") + (isMobile && (!account || !account.address) ? " -top-5 w-44" : " bottom-14 ") + " mx-auto flex flex-col fixed z-30") : "mx-auto fixed bottom-0 right-2 flex flex-col  z-30 w-64"}>
+            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 w-64 bottom-0 top-0 m-auto " : "right-0 w-32 ") + (isMobile && (!account || !account.address) ? " -top-5 w-44" : " bottom-14 ") + " mx-auto flex flex-col fixed z-30") : "mx-auto fixed bottom-0 right-2 flex flex-col  z-30 w-64"}>
                 <MintButton
                     isMobile={isMobile}
                     chainId={work.chain || 5}
