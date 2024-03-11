@@ -1,5 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic'
+import Head from 'next/head'; // Import the Head component
+
 import React from 'react';
 import { MessageProvider } from '@/contexts/MessageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -65,25 +67,36 @@ const CollectionPage: React.FC<{ collection: WorkOption }> = ({ collection }) =>
     }
 
     // Render the component for the collection
-    return <Theme appearance="dark" >
-        <WagmiConfig config={wagmiConfig}>
-            <RainbowKitProvider
-                theme={darkTheme({
-                    accentColor: 'black',
-                    accentColorForeground: 'white',
-                    borderRadius: 'large',
-                })}
-                chains={chains}>
-                <AuthProvider>
-                    <StorageProvider>
-                        <NavProvider>
-                            <Works setShowNav={() => 0} defaultWork={collection} />
-                        </NavProvider>
-                    </StorageProvider>
-                </AuthProvider>
-            </RainbowKitProvider>
-        </WagmiConfig>
-    </Theme>;
+    return <>
+        <Head>
+            <title>{collection.name}</title>
+            <meta property="og:title" content={collection.name} />
+            <meta property="og:image" content={collection.image} />
+            <meta property="twitter:title" content={collection.name} />
+            <meta property="twitter:image" content={collection.image} />
+            {/* Add more meta tags as needed for description, etc. */}
+        </Head>
+        <Theme appearance="dark" >
+            <WagmiConfig config={wagmiConfig}>
+                <RainbowKitProvider
+                    theme={darkTheme({
+                        accentColor: 'black',
+                        accentColorForeground: 'white',
+                        borderRadius: 'large',
+                    })}
+                    chains={chains}>
+                    <AuthProvider>
+                        <StorageProvider>
+                            <NavProvider>
+                                <Works setShowNav={() => 0} defaultWork={collection} />
+                            </NavProvider>
+                        </StorageProvider>
+                    </AuthProvider>
+                </RainbowKitProvider>
+            </WagmiConfig>
+        </Theme>
+    </>
+        ;
 
 }
 
