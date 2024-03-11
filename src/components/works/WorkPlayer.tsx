@@ -141,9 +141,17 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
     let [totalPrice, setTotalPrice] = useState<string | null>(null);
     const [hovered, setHovered] = useState<number | null>(null);
     const [showInfo, setShowInfo] = useState(false);
-    const [showVideo, setShowVideo] = useState(true);//isClientMobile);
+    const [showVideo, setShowVideo] = useState(true);
 
-    let version = work.version ? work.version : 2;
+    useEffect(() => {
+        if (!video) {
+            setShowVideo(false);
+        } else {
+            setShowVideo(true);
+        }
+    }, [video]);
+
+    let version = work.version ? work.version : 1;
     let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
 
 
@@ -158,7 +166,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
 
                         <div
                             onClick={() => setShowVideo(true)}
-                            className="flex flex-col mr-5 cursor-pointer">
+                            className={(!video ? "opacity-40 " : "") + "flex flex-col mr-5 cursor-pointer"}>
                             <VideoIcon className={(showVideo ? "" : " opacity-50 ") + "w-4 h-4 mx-auto"} /> <span className={(showVideo ? "underline " : " text-zinc-400 ") + "mt-1"}>video</span>
                         </div>
                     </Tooltip.Trigger >
@@ -167,9 +175,9 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                         <Tooltip.Content
                             style={{ zIndex: 100000000000, fontSize: 12 }}
                             side={"top"} className="pointer-events-none  bg-zinc-900 px-2 py-1 text-white rounded-lg w-64 " sideOffset={5}>
-                            click to view the rendered video version.
+                            {video && "click to view the rendered video version."}
                             <div className="mt-1 italic">
-                                best for computers with weak GPU/CPU
+                                {video ? "best for computers with weak GPU/CPU" : "video not available"}
                             </div>
                             < Tooltip.Arrow fill="white" className="TooltipArrow" />
                         </Tooltip.Content>
@@ -249,20 +257,41 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         {/*
         */}
 
-        {
-            !isClientMobile && !fullscreen && parameters && <div className="left-10 bottom-0 top-0 my-auto table w-44 py-1 absolute pointer-events-none content-start">
-                <div className="flex flex-wrap">
-                    {Object.keys(parameters).map(
-                        (name) => <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
-                            <div>
-                                {parameters[name]}
+        {showInfo &&
+            !isClientMobile && !fullscreen && parameters &&
+            <Tooltip.Provider
+                disableHoverableContent={true}
+                delayDuration={200}>
+                <Tooltip.Root
+                >
+                    <Tooltip.Trigger asChild>
+
+
+                        <div className="left-10 bottom-0 top-0 my-auto table w-44 py-1 absolute  content-start">
+                            <div className="flex flex-wrap">
+                                {Object.keys(parameters).map(
+                                    (name) => <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
+                                        <div>
+                                            {parameters[name]}
+                                        </div>
+                                        <div className="text-zinc-500">
+                                            {name}
+                                        </div>
+                                    </div>)}
                             </div>
-                            <div className="text-zinc-500">
-                                {name}
-                            </div>
-                        </div>)}
-                </div>
-            </div>
+                        </div>
+                    </Tooltip.Trigger >
+                    <Tooltip.Portal
+                    >
+                        <Tooltip.Content
+                            style={{ zIndex: 100000000000, fontSize: 12 }}
+                            side={"top"} className="bg-zinc-900 px-2 py-1 text-white rounded-lg w-64 " sideOffset={5}>
+                            Randomized synthesis parameters for this piece (immutable & generated onchain)
+                            < Tooltip.Arrow fill="white" className="TooltipArrow" />
+                        </Tooltip.Content>
+                    </Tooltip.Portal>
+                </Tooltip.Root>
+            </Tooltip.Provider>
         }
 
 
@@ -276,7 +305,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 background: (fullscreen && opened) ? "#000000bd" : (fullscreen || opened || showInfo) ? "#00000074" : undefined,
                 backdropFilter: fullscreen || opened || showInfo ? "blur(8px)" : "",
                 border: (showInfo || opened) ? "1px solid #ffffff3f" : "",
-                zIndex: 10000000
+                zIndex: 10
             }}
             className={(isMobile ? "left-3 bottom-16 " : fullscreen ? "right-10 " : "left-0 right-0 mx-auto ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed bottom-8  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
             {opened ? <div className="flex flex-col w-full mt-5 items-start">
@@ -391,7 +420,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             </>}
         </div>
         {
-            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 " : "right-0 ") + (isMobile && (!account || !account.address) ? " -top-5 " : "bottom-14") + " mx-auto flex flex-col fixed z-30 w-64") : "mx-auto fixed bottom-0 right-10 flex flex-col  z-30 w-64"}>
+            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 w-64 " : "right-0 w-32 ") + (isMobile && (!account || !account.address) ? " -top-5 w-44" : " bottom-14 ") + " mx-auto flex flex-col fixed z-30") : "mx-auto fixed bottom-0 right-2 flex flex-col  z-30 w-64"}>
                 <MintButton
                     isMobile={isMobile}
                     chainId={work.chain || 5}
