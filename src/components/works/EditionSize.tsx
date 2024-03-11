@@ -14,7 +14,11 @@ const EditionSize: React.FC<{ setEditionSize: (x: number) => void, editionSize: 
 
     useEffect(() => {
         window.addEventListener("mouseup", onMouseUp);
-        return () => window.removeEventListener("mouseup", onMouseUp);
+        window.addEventListener("touchend", onMouseUp);
+        return () => {
+            window.removeEventListener("mouseup", onMouseUp);
+            window.removeEventListener("touchend", onMouseUp);
+        }
     }, []);
 
     useEffect(() => {
@@ -42,7 +46,7 @@ const EditionSize: React.FC<{ setEditionSize: (x: number) => void, editionSize: 
         setEditionSize(Math.max(1, Math.min(33, size)));
     }, [setEditionSize]);
 
-    const onMouseUp = useCallback((e: MouseEvent) => {
+    const onMouseUp = useCallback((e: MouseEvent | TouchEvent) => {
         isMouseDown.current = false;
     }, []);
 

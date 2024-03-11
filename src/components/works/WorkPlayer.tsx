@@ -219,7 +219,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             totalPrice && isMobile &&
             <div
                 onClick={() => setTotalPrice(null)}
-                style={{ backgroundColor: "#000000ff", backdropFilter: "blur(8px)" }}
+                style={{ backgroundColor: "#0000008f", backdropFilter: "blur(8px)" }}
                 className="w-full h-full bg-black absolute top-0 left-0 z-20" />
         }
         <div className="absolute top-5 right-5">
