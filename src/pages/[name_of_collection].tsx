@@ -73,6 +73,7 @@ const CollectionPage: React.FC<{ collection: WorkOption }> = ({ collection }) =>
             <meta property="og:title" content={collection.name} />
             <meta property="og:image" content={collection.image} />
             <meta property="og:description" content={collection.description} />
+            <meta property="twitter:description" content={collection.description} />
             <meta property="og:image:url" content={collection.image} />
             <meta property="og:image:secure_url" content={collection.image} /> {/* Use if your site is served over HTTPS */}
             <meta property="twitter:title" content={collection.name} />
