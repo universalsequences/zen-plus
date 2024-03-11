@@ -219,7 +219,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             totalPrice && isMobile &&
             <div
                 onClick={() => setTotalPrice(null)}
-                style={{ backgroundColor: "#0000000f", backdropFilter: "blur(8px)" }}
+                style={{ backgroundColor: "#000000ff", backdropFilter: "blur(8px)" }}
                 className="w-full h-full bg-black absolute top-0 left-0 z-20" />
         }
         <div className="absolute top-5 right-5">
@@ -307,7 +307,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
                 border: (showInfo || opened) ? "1px solid #ffffff3f" : "",
                 zIndex: 10
             }}
-            className={(isMobile ? "left-3 bottom-20 " : fullscreen ? "right-10 bottom-8 " : "left-0 right-0 mx-auto bottom-8 ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
+            className={(isMobile ? "left-3 bottom-16 " : fullscreen ? "right-10 bottom-8 " : "left-0 right-0 mx-auto bottom-8 ") + (opened ? (_totalSupply > 20 ? "h-64 pr-5" : "h-36 pr-5") : showInfo ? "h-40 pr-5 " : "h-10") + " fixed  bg-zinc-900 pl-10 flex text-xs transition-all duration-300 ease-in-out "}>
             {opened ? <div className="flex flex-col w-full mt-5 items-start">
                 <Cross2Icon onClick={() => setOpened(false)} className="absolute top-5 right-5 w-5 h-5 cursor-pointer" />
                 <div className="flex flex-wrap text-base mt-2 w-full pr-5">
