@@ -72,7 +72,10 @@ const CollectionPage: React.FC<{ collection: WorkOption }> = ({ collection }) =>
             <title>{collection.name}</title>
             <meta property="og:title" content={collection.name} />
             <meta property="og:image" content={collection.image} />
+            <meta property="og:image:url" content={collection.image} />
+            <meta property="og:image:secure_url" content={collection.image} /> {/* Use if your site is served over HTTPS */}
             <meta property="twitter:title" content={collection.name} />
+            <meta property="twitter:card" content="summary_large_image" /> {/* This tag is essential for Twitter to display large images */}
             <meta property="twitter:image" content={collection.image} />
             {/* Add more meta tags as needed for description, etc. */}
         </Head>
