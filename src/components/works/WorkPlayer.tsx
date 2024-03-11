@@ -231,12 +231,12 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         <div className="absolute top-5 right-5">
             {account && account.address && !fullscreen && <ConnectButton accountStatus="avatar" showBalance={false} />}
         </div>
-        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "bottom-3" : "bottom-8") + " w-8 h-8 cursor-pointer absolute left-5"} />}
-        <div className="absolute z-30 top-5 left-5 cursor-pointer">
+        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "top-5" : "bottom-8") + " w-8 h-8 cursor-pointer absolute left-5"} />}
+        {!isMobile && <div className="absolute z-30 top-5 left-5 cursor-pointer">
 
             {fullscreen ? <ExitFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(false)} /> :
                 <EnterFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(true)} />}
-        </div>
+        </div>}
         <div className="w-full flex m-auto">
             {showVideo && video !== null && video !== "" ?
                 <video
@@ -444,7 +444,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             </div>
         }
         {
-            isMobile && video && <div className="bottom-5 w-96 text-xs italic text-zinc-300 fixed mx-auto left-14 right-0">
+            isMobile && video && <div className="bottom-5 w-96 text-xs italic text-zinc-300 fixed mx-auto left-0 w-full text-center right-0">
                 To view realtime version, please visit on Chrome/Arc desktop
             </div>
         }
