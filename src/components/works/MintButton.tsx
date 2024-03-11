@@ -76,13 +76,14 @@ const MintBlock = (props: Props) => {
     */
 
     const totalPriceInEth = calculateTotalPrice(editionSize, TOKEN_PRICE);
-    const { data, isLoading, isSuccess, write } = useContractWrite({
+    const { config } = usePrepareContractWrite({
         address: props.contractAddress,
         abi: abi,
         functionName: comment !== "" ? "purchaseWithComment" : "purchase",
         args: comment !== "" ? [editionSize, comment] : [editionSize],
         value: parseEther(totalPriceInEth.toString())
     })
+    const { isLoading, data, write } = useContractWrite(config);
 
     const { data: transactionData, isError: transactionError, isLoading: transactionLoading } = useWaitForTransaction(
         {
@@ -278,8 +279,13 @@ const MintBlock = (props: Props) => {
                                     transform: "translate(10px,0px)",
                                     maxWidth: props.isMobile ? "95px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px')
                                 }}
-                                onClick={() => switchNetwork ? switchNetwork(props.chainId) : 0}
-                                className="py-1 bg-zinc-800 text-zinc-200 cursor-pointer rounded-lg active:scale-105 transition-all mx-5 px-5">Switch Network</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-green-200 text-zinc-700 " : " bg-green-200 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-2  mb-1 rounded-xl px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative font-semibold "}
+                                onClick={() => {
+                                    if (switchNetwork) {
+                                        switchNetwork(props.chainId);
+                                        console.log('switching to chainId=', props.chainId);
+                                    }
+                                }}
+                                className="py-1 bg-red-500  text-zinc-900 cursor-pointer rounded-lg active:scale-105 transition-all mx-5 px-5">Switch Network</div> : <div onClick={balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? () => 0 : totalPrice == null ? showTotalPrice : mint} className={(step !== Step.None ? "bg-green-200 text-zinc-700 " : " bg-green-200 text-zinc-700") + " mint-button hover:scale-105 transition-all select-none text-center text-center  md:mb-2  mb-1 rounded-xl px-3 py-1 text-zinc-200 bg-light-100 cursor-pointer object-start w-40 mx-auto  w-full items-start z-10 left-0 right-0 relative font-semibold " + (step === Step.OpenWallet || step === Step.Waiting ? " pointer-events-none " : "")}
 
 
                                     style={step !== Step.None || (balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice)) ? { color: "black" } : { maxWidth: props.isMobile ? "80px" : (170 + 'px'), minWidth: props.isMobile ? "80px" : (170 + 'px') }}
@@ -287,7 +293,7 @@ const MintBlock = (props: Props) => {
                             {/*<div className="blur-2xl opacity-20 bg-white w-32 h-32 absolute -top-11 -left-4 rounded-full" />*/}
                             {balance && totalPrice && parseFloat(balance.formatted) < parseFloat(totalPrice) ? <a href="https://bridge.zora.energy">Bridge to Zora ↗</a> :
                                 step === Step.OpenWallet ? "Confirm in Wallet" :
-                                    step === Step.Waiting ? <div className="flex w-44 mx-auto hover:scale-105 transition-all"><span className="mr-2">Processing</span> <svg className="mt-2" width={150} height="15">{rectangles}</svg></div> :
+                                    step === Step.Waiting ? <div className=" flex w-44 mx-auto hover:scale-105 transition-all"><span className="mr-2">Processing</span> <svg className="mt-2" width={150} height="15">{rectangles}</svg></div> :
                                         step === Step.None ? "Mint" : 'Completed'
                             }
 

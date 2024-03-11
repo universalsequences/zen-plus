@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import {
     mainnet
 } from 'wagmi/chains';
-import { useAccount, useEnsName } from 'wagmi';
+import { useAccount, useNetwork, useEnsName } from 'wagmi';
 import { abi } from '@/lib/abi/erc721-abi';
 import { ConnectButton, lightTheme } from '@rainbow-me/rainbowkit';
 import { usePublicClient, useContractRead, useSwitchNetwork } from 'wagmi'
@@ -150,6 +150,12 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             setShowVideo(true);
         }
     }, [video]);
+
+    const network = useNetwork();
+    let wrongNetwork = false;
+    if (network && network.chain && network.chain.id !== work.chain && account) {
+        wrongNetwork = true;
+    }
 
     let version = work.version ? work.version : 1;
     let url = `/api/getHTML?contractAddress=${work.dropAddress}&tokenId=${activeAnimation}&chainId=${work.chain}&version=${version}`;
@@ -420,7 +426,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
             </>}
         </div>
         {
-            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 w-64 bottom-0 top-0 m-auto " : "right-0 w-32 ") + (isMobile && (!account || !account.address) ? " -top-5 w-44" : " bottom-14 ") + " mx-auto flex flex-col fixed z-30") : "mx-auto fixed bottom-0 right-2 flex flex-col  z-30 w-64"}>
+            !fullscreen && <div className={isMobile ? ((totalPrice ? "right-0 left-0 w-64 bottom-0 top-0 m-auto " : (wrongNetwork ? "text-center right-0 w-38 " : "right-0 w-32 ")) + (isMobile && (!account || !account.address) ? " -top-5 w-44" : " bottom-14 ") + " mx-auto flex flex-col fixed z-30") : "mx-auto fixed bottom-0 right-2 flex flex-col  z-30 w-64"}>
                 <MintButton
                     isMobile={isMobile}
                     chainId={work.chain || 5}
