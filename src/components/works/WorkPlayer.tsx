@@ -231,7 +231,7 @@ const WorkPlayer: React.FC<{ close: () => void, work: WorkOption }> = ({ work, c
         <div className="absolute top-5 right-5">
             {account && account.address && !fullscreen && <ConnectButton accountStatus="avatar" showBalance={false} />}
         </div>
-        {!fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "top-5" : "bottom-8") + " w-8 h-8 cursor-pointer absolute left-5"} />}
+        {!isMobile && !fullscreen && <ArrowLeftIcon onClick={() => close()} className={(isMobile ? "top-5" : "bottom-8") + " w-8 h-8 cursor-pointer absolute left-5"} />}
         {!isMobile && <div className="absolute z-30 top-5 left-5 cursor-pointer">
 
             {fullscreen ? <ExitFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(false)} /> :
