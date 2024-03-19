@@ -21,7 +21,6 @@ export const createWorklet = (
 
     return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
         let { code, wasm } = createWorkletCode(name, graph);
-        console.log(code);
         let workletCode = code;
         const workletBase64 = btoa(workletCode);
         const url = `data:application/javascript;base64,${workletBase64}`;
@@ -588,7 +587,6 @@ export const prettyPrint = (prefix: string, code: string): string => {
 
 export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
     let initializes: any = [];
-    console.log('blocks=', context.memory.blocksInUse);
     for (let block of context.memory.blocksInUse) {
         if (block.initData !== undefined) {
             let idx = block._idx === undefined ? block.idx : block._idx;

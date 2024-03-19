@@ -71,9 +71,9 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         let isAudio = this.patchType === OperatorContextType.AUDIO;
         if (isAudio) {
             this.setupAudioPatch();
+        } else {
+            this._setupInitialNodes();
         }
-        //this._setupInitialNodes();
-        console.log("initialized subpatch isZen=%s isZenBase=%s", this.isZen, this.isZenBase(), this);
     }
 
     _setupInitialNodes() {

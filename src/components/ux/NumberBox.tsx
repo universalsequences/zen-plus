@@ -58,12 +58,13 @@ const NumberBox: React.FC<{
                 let _min = min;
                 let _max = max;
                 if (mouseDelta < 0) {
-                    factor = mouseRef.current;
+                    factor = mouseRef.current * 1;
                     _min = initValue.current;
                 } else {
                     _max = initValue.current;
                 }
                 let valueChange = (mouseDelta / (factor)) * ((_max - _min));
+                console.log("mousedef=%s mouseDelta=%s valueChange=%s", mouseRef.current, mouseDelta, valueChange);
                 // Calculate new value based on initial value and the proportional change
                 newValue = initValue.current - valueChange; // Subtract because screen Y is inverted
                 // Clamp newValue to the min and max range
@@ -75,9 +76,12 @@ const NumberBox: React.FC<{
             setValue(newValue);
         }, [editing, setValue, min, max]);
 
-        let integer = Math.floor(value);
-        let float = value - Math.floor(value);
+        let integer: string | number = Math.trunc(value);
+        let float = value - Math.trunc(value);
         float = Math.round(float * 1000) / 1000;
+        if (value < 0 && value > -1) {
+            integer = "-0"
+        }
         return (
             <div ref={ref}>
                 <div
@@ -123,7 +127,7 @@ const NumberBox: React.FC<{
                         <div
                             onMouseDown={() => rounding.current = false}
                             className="flex-1">
-                            {float !== undefined ? float.toString().slice(2) : ""}
+                            {float !== undefined ? (value < 0 ? float.toString().slice(3) : float.toString().slice(2)) : ""}
                         </div>
                         {isParameter && <TargetIcon className="mr-1 w-2 h-2 my-auto" />}
                     </div>

@@ -28,7 +28,6 @@ export const op = (operator: string, name: string, evaluator?: (x: number, y: nu
                     ins.map(x => x as number).reduce(evaluator, first);
 
                 code = `${context.varKeyword} ${opVar} = ${total};`;
-                console.log("calling evaluator", ins, total, name, operator, first === undefined ? ins[0] as number : first, evaluator);
                 return context.emit(code, opVar);
             }
             return context.emit(code, opVar, ..._ins);

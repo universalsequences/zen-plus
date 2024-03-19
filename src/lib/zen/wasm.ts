@@ -12,8 +12,10 @@ export const generateWASM = (graph: ZenGraph) => {
        v128_t sum = wasm_f32x4_splat(0.0f); // initialize an SIMD vector with zeros
        int i=0;
        for (i=0; i < 4; i++) {
+          // load weights (aka the input matrix) into simd register
           v128_t weights = wasm_f32x4_splat(memory[inputIdx+i]); 
           int idx = matrixIdx + i * size;
+          // load the "inputs" (todo: could this be placed above the loop since its always the same)
           v128_t row = wasm_v128_load(&memory[idx]);
           v128_t prod = wasm_f32x4_mul(row, weights);
           sum = wasm_f32x4_add(sum, prod);
@@ -21,6 +23,56 @@ export const generateWASM = (graph: ZenGraph) => {
        wasm_v128_store(matrix4x4SumResult, sum); 
        return matrix4x4SumResult;
     }
+
+    float tempScalar[4]; // Temporary storage
+    float scalarValue[4]; // Temporary storage for 'scalarSum'
+    float* matrix4x4DotSum(int inputIdx, int matrixIdx, int size) {
+       // Initialize a result vector to store the sum of dot products for each matrix row
+
+      // Load the input vector
+      v128_t inputs = wasm_v128_load(&memory[inputIdx]);
+
+    for (int i = 0; i < 4; i++) {
+        // Correctly load the current row of the matrix
+        v128_t matrixRow = wasm_v128_load(&memory[matrixIdx + i * size]);
+        // Perform element-wise multiplication between 'inputs' vector and the matrix row
+        v128_t prod = wasm_f32x4_mul(inputs, matrixRow);
+
+        // Simulate a horizontal add to sum the elements of 'prod'
+        v128_t temp1 = wasm_i32x4_shuffle(prod, prod, 2, 3, 0, 1); // Swap pairs
+        v128_t sum1 = wasm_f32x4_add(prod, temp1); // Pairwise add
+        v128_t temp2 = wasm_i32x4_shuffle(sum1, sum1, 1, 0, 3, 2); // Cross pairs
+        v128_t scalarSum = wasm_f32x4_add(sum1, temp2); // Sum in all elements
+
+        // Extract the scalar sum and update the corresponding element in 'result'
+ float scalarValue2;
+        wasm_v128_store(&scalarValue2, scalarSum); // Temporarily store to access the scalar result
+   
+matrix4x4SumResult[i] = scalarValue2;
+    }
+return matrix4x4SumResult;
+}
+
+    float matrix4x4Dot(int idx1, int idx2) {
+// Load 4 elements from each buffer into SIMD vectors
+    v128_t vecA = wasm_v128_load(&memory[idx1]);
+    v128_t vecB = wasm_v128_load(&memory[idx2]);
+
+    // Multiply corresponding elements
+    v128_t prod = wasm_f32x4_mul(vecA, vecB);
+
+    // Sum the products to get the dot product
+    // Note: WebAssembly SIMD requires a workaround for horizontal addition
+    v128_t temp1 = wasm_i32x4_shuffle(prod, prod, 2, 3, 0, 1); // Swap pairs
+    v128_t sum1 = wasm_f32x4_add(prod, temp1); // Add swapped pairs
+    v128_t temp2 = wasm_i32x4_shuffle(sum1, sum1, 1, 0, 3, 2); // Cross pairs
+    v128_t finalSum = wasm_f32x4_add(sum1, temp2); // Final sum across all elements
+
+    // Extract the final result from the SIMD vector
+    float result;
+    wasm_v128_store(&result, finalSum); // Assuming we store and then access the first element
+    return result;
+}
 `;
     let hasSIMD = true;
     if (!graph.functions.some(x => x.code.includes("matrix4x4")) &&
@@ -32,6 +84,7 @@ export const generateWASM = (graph: ZenGraph) => {
     let code = `
 ${hasSIMD ? "#include <wasm_simd128.h>" : ""}
 #include <stdlib.h>
+#include <stdio.h>
 #include <emscripten.h>
 #include <math.h>
 #define BLOCK_SIZE 128 // The size of one block of samples

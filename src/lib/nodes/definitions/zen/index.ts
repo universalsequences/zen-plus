@@ -3,6 +3,7 @@ import { loop, loopVariable } from './loop';
 import { z_click } from './click';
 import { PatchImpl } from '@/lib/nodes/Patch';
 import { membraneAPI } from './physical-modeling/membrane';
+import { zen_simdDotSum, zen_simdDot, zen_simdMatSum } from './simd';
 import { gate } from './gate';
 import { condMessage, message } from './message';
 import { toConnectionType, API, OperatorContextType } from '@/lib/nodes/context';
@@ -259,7 +260,9 @@ export const api: API = {
     "click": z_click,
     loopVariable,
     loop,
-
+    simdMatSum: zen_simdMatSum,
+    simdDotSum: zen_simdDotSum,
+    simdDot: zen_simdDot,
     ...membraneAPI
 };
 

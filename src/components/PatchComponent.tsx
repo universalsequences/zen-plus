@@ -35,9 +35,13 @@ interface Selection {
     y2: number;
 }
 
-const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToOpen: any | null, maxWidth: number, maxHeight: number, visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean }> = ({ visibleObjectNodes, index, isCustomView, maxWidth, maxHeight, fileToOpen, setFileToOpen }) => {
+const PatchComponent: React.FC<{
+    tileRef: React.RefObject<HTMLDivElement | null>,
+    setFileToOpen: (x: any | null) => void, fileToOpen: any | null, maxWidth: number, maxHeight: number, visibleObjectNodes?: ObjectNode[], messageNodes?: MessageNode[], index: number, isCustomView?: boolean
+}> = ({ visibleObjectNodes, index, isCustomView, maxWidth, maxHeight, fileToOpen, setFileToOpen, tileRef }) => {
     useThemeContext();
     const { rootTile, selectedPatch, setSelectedPatch, setGridTemplate } = usePatches();
+
     const { gridTemplate } = useTilesContext();
     const {
         lastResizingTime,
@@ -198,6 +202,15 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
         }
     }, [patch, draggingCable, nearestInlet, setNearestInlet, setDraggingCable, setDraggingCable, presentationMode, resizingPatch, setResizingPatch, setDraggingSegmentation, setDraggingNode, setResizingNode, selection, setSelection, setSelectedNodes, messageNodes, objectNodes, lockedMode]);
 
+
+    useEffect(() => {
+        if (lockedMode && presentationMode && (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.attributes["Custom Presentation"]) {
+            if (scrollRef.current) {
+                scrollRef.current.scrollTo(0, 0);
+            }
+        }
+    }, [lockedMode, presentationMode]);
+
     const draggingNodeRef = useRef<DraggingNode | null>(null);
     const resizingNodeRef = useRef<ResizingNode | null>(null);
 
@@ -234,9 +247,17 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
             return;
         }
         if (resizingPatch) {
-            onResizePatch(e);
+            let updatedSize = onResizePatch(e, lockedMode);
+            /*
+            let subpatch = (patch as SubPatch);
+            if (subpatch && subpatch.parentNode && updatedSize) {
+                console.log('updating size=', subpatch.parentNode.id);
+                updateSize(subpatch.parentNode.id, updatedSize);
+            }
+            */
             return;
         }
+
         if (lockedMode) {
             return;
         }
@@ -363,18 +384,6 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
         resizingPatch,
         setGridTemplate,
         updatePositions, scrollRef, selection, setSelection, selectedNodes, updateSize, lockedMode]);
-
-    /*
-    useEffect(() => {
-        if (patch.objectNodes.length < 1) {
-            let node = new ObjectNodeImpl(patch);
-            node.parse("out 1");
-            let position = { x: 100, y: 100 };
-            newObjectNode(node, position);
-            updatePosition(node.id, position);
-        }
-    }, [objectNodes]);
-    */
 
     useEffect(() => {
         if (lockedMode) {
@@ -514,27 +523,6 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
         scrollRef
     });
 
-    /*
-    useEffect(() => {
-        if (patch && !patch.name) {
-            let local = localStorage.getItem("backup-patches")
-            if (local) {
-                let parsed = JSON.parse(local);
-                for (let p of parsed) {
-                    console.log('trying to parse=', p);
-                    let o = createObjectNode();
-                    o.parse("zen");
-                    if (o.subpatch) {
-                        o.subpatch.fromJSON(p.patch);
-                        o.subpatch.name = p.name;
-                    }
-                }
-            }
-        }
-    }, [patch]);
-    */
-
-
     const mem = React.useMemo(() => {
         let tile = rootTile ? rootTile.findPatch(patch) : null;
         let direction = tile && tile.parent ? (tile.parent.splitDirection === "vertical" ? "vertical" : "horizontal") : "";
@@ -626,11 +614,41 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                     overflow: "hidden",
                     margin: "auto",
                 };
+
                 // }
             }
         }
 
-        //<style dangerouslySetInnerHTML={{ __html: keyframe }} />
+        if (tile && tile.parent && tileRef) {
+            let matches = tile.parent.children.filter(
+                x => x.patch && (x.patch as SubPatch).parentNode && (x.patch as SubPatch).parentNode.attributes["Custom Presentation"] &&
+                    (x.patch as SubPatch).presentationMode)
+            if (matches.length > 0) {
+                // theres some presentatio mode here...
+
+                if (isFloatingCustom && (patch as SubPatch).parentNode) {
+                    style.minWidth = (patch as any).parentNode.size.width + 'px';
+                    style.minHeight = (patch as any).parentNode.size.height + 'px';
+                } else if (tileRef.current) {
+                    let size = (matches[0].patch as SubPatch).parentNode.size;
+                    let tile_height = tileRef.current.offsetHeight;
+                    let tile_width = tileRef.current.offsetWidth;
+                    if (size) {
+                        let remainingHeight = tile_height - size.height - 20;
+                        let remainingWidth = tile_width - size.width - 20;
+                        console.log("tile.height=%s node.height=%s", tile_height, size.height);
+                        style.minWidth = remainingWidth + 'px';
+                        style.minHeight = remainingHeight + 'px';
+                        console.log('remaining height=', remainingHeight);
+                        console.log("tile ref=", tileRef.current);
+                    }
+                } else {
+                    style.minWidth = undefined;
+                    style.minHeight = undefined;
+                }
+            }
+        }
+
         return (<>
             <div
                 style={style}
@@ -648,6 +666,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
+                                startSize: (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                                 startPosition: { x: e.pageX, y: e.pageY },
                                 gridTemplate, resizeType: PatchResizeType.South
                             });
@@ -659,6 +678,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
+                                startSize: (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                                 startPosition: { x: e.pageX, y: e.pageY },
                                 gridTemplate, resizeType: PatchResizeType.North
                             });
@@ -670,6 +690,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
+                                startSize: (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                                 startPosition: { x: e.pageX, y: e.pageY },
                                 gridTemplate, resizeType: PatchResizeType.East
                             });
@@ -681,6 +702,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                             e.preventDefault();
                             e.stopPropagation();
                             setResizingPatch({
+                                startSize: (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                                 startPosition: { x: e.pageX, y: e.pageY },
                                 gridTemplate, resizeType: PatchResizeType.West
                             })
@@ -689,7 +711,7 @@ const PatchComponent: React.FC<{ setFileToOpen: (x: any | null) => void, fileToO
                 </>}
 
 
-                <AssistantSidebar />
+                {/*<AssistantSidebar />*/}
                 <PatchInner visibleObjectNodes={visibleObjectNodes} index={index} isCustomView={isCustomView} zoomRef={zoomRef} zoomableRef={zoomableRef} />
                 {
                     !isCustomView && <>

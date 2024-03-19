@@ -167,8 +167,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
             }
         }
 
-        console.log("poly call computed and returning", new Date().getTime());
-
         return outputs;
     }
 }

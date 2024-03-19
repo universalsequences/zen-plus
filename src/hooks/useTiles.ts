@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { SubPatch } from '@/lib/nodes/types';
 import { usePatches } from '@/contexts/PatchesContext';
+import { usePosition } from '@/contexts/PositionContext';
 import { useTilesContext } from '@/contexts/TilesContext';
-import { Coordinate, Patch } from '@/lib/nodes/types';
+import { Coordinate, Patch, Size } from '@/lib/nodes/types';
 
 export enum PatchResizeType {
     South,
@@ -14,11 +16,13 @@ export interface ResizingPatch {
     gridTemplate: string;
     resizeType: PatchResizeType
     startPosition: Coordinate;
+    startSize?: Size;
 }
 
 export const useTiles = (patch: Patch) => {
     const [resizingPatch, setResizingPatch] = useState<ResizingPatch | null>(null);
     const { rootTile, gridLayout, selectedPatch, setSelectedPatch, gridTemplate } = usePatches();
+    const { updateSize } = usePosition();
 
     const { setGridTemplate } = useTilesContext();
 
@@ -66,11 +70,46 @@ export const useTiles = (patch: Patch) => {
         }
     }, [rootTile]);
 
-    const onResizePatch = useCallback((e: MouseEvent) => {
+    const onResizePatch = useCallback((e: MouseEvent, lockedMode: boolean) => {
         if (!resizingPatch) {
-            console.log('no resizing patch.');
             return;
         }
+
+        let subpatch = (patch as SubPatch);
+        if (subpatch && patch.presentationMode && subpatch.parentNode.attributes["Custom Presentation"] && lockedMode) {
+            // in this case, we wish to resize the patch
+            let { startSize, resizeType } = resizingPatch;
+            if (!startSize) {
+                return;
+            }
+
+            let diffX = e.pageX - resizingPatch.startPosition.x;
+            let diffY = e.pageY - resizingPatch.startPosition.y;
+            let newWidth = startSize.width;
+            let newHeight = startSize.height;
+            if (resizeType === PatchResizeType.West || resizeType === PatchResizeType.East) {
+                let widthDelta = diffX * 2;
+                if (resizeType === PatchResizeType.West) {
+                    widthDelta *= -1;
+                }
+                newWidth = startSize.width + widthDelta;
+            } else {
+                let heightDelta = diffY * 2;
+                if (resizeType === PatchResizeType.North) {
+                    heightDelta *= -1;
+                }
+                newHeight = startSize.height + heightDelta;
+            }
+            subpatch.parentNode.size = {
+                height: newHeight,
+                width: newWidth
+            }
+
+            updateSize(subpatch.parentNode.id, { ...subpatch.parentNode.size });
+            setGridTemplate(newWidth + " " + newHeight);
+            return;
+        }
+
 
         let boundingTile = getBoundingTile(resizingPatch);
         let ref = boundingTile && boundingTile.ref;
@@ -163,7 +202,7 @@ export const useTiles = (patch: Patch) => {
 
         // Create the grid template string
 
-    }, [setGridTemplate, resizingPatch, patch, rootTile]);
+    }, [setGridTemplate, resizingPatch, patch, rootTile, updateSize]);
 
     return { resizingPatch, setResizingPatch, onResizePatch };
 };

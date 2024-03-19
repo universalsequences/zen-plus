@@ -1,5 +1,7 @@
 "use client"
+import Skeleton from './files/Skeleton';
 import Files from '@/components/files/Files';
+import { File } from '@/lib/files/types';
 import { NavOption, useNav } from '@/contexts/NavContext';
 import { Landing } from './landing/Landing';
 import Image from 'next/image'
@@ -91,6 +93,8 @@ export default function App(props: Props) {
         }
     }, [setFileToOpen, user]);
 
+    const [fileExpanded, setFileExpanded] = useState<File | null>(null);
+
     if (navOption === NavOption.Home || navOption === NavOption.Works ||
         navOption === NavOption.Docs) {
         return <Landing />;
@@ -99,7 +103,7 @@ export default function App(props: Props) {
         return <></>;
     }
     if (navOption === NavOption.Files && user) {
-        return <Files fileOpened={fileOpened} setFileToOpen={setFileToOpen} />
+        return <Skeleton><Files setPatchOpened={() => 0} isMini={false} fileOpened={fileOpened} setFileToOpen={setFileToOpen} fileExpanded={fileExpanded} setFileExpanded={setFileExpanded} /></Skeleton>
 
     }
     return (

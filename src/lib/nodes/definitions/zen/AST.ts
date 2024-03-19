@@ -14,7 +14,7 @@ import { biquad, biquadI } from '../../../zen/filters/biquad';
 import { vactrol, onepole } from '../../../zen/filters/onepole';
 import { compressor } from '../../../zen/compressor';
 import { fixnan, elapsed, dcblock } from '../../../zen/utils';
-import { simdMatSum } from '../../../zen/simd';
+import { simdDot, simdDotSum, simdMatSum } from '../../../zen/simd';
 import { PhysicalModel } from './physical-modeling/types';
 import { createSpiderWeb, SpiderWeb } from '../../../zen/physical-modeling/web-maker';
 import { Material } from '../../../zen/physical-modeling/spider-web';
@@ -495,6 +495,10 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
             output = peek(blockGen, compiledArgs[0] as Arg, compiledArgs[1] as Arg, compiledArgs[2] as Arg);
         } else if (name === "simdMatSum") {
             return simdMatSum(compoundOperator.block1!, compoundOperator.block2!);
+        } else if (name === "simdDotSum") {
+            return simdDotSum(compoundOperator.block1!, compoundOperator.block2!);
+        } else if (name === "simdDot") {
+            return simdDot(compoundOperator.block1!, compoundOperator.block2!, compiledArgs[0] as Arg, compiledArgs[1] as Arg);
         } else if (name === "history") {
             let hist: History = compoundOperator.history!;
             output = hist(compiledArgs[0] as UGen, compiledArgs[1] as UGen);

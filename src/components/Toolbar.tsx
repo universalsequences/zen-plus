@@ -1,6 +1,7 @@
 import React, { memo, useRef, useEffect, useCallback, useState } from 'react';;
 import LockButton from './LockButton';
 import PresentationMode from './PresentationMode';
+import OrgSpaces from './org/OrgSpaces';
 import PatchDropdown from './PatchDropdown';
 import LoadProject from './LoadProject';
 import { useStorage } from '@/contexts/StorageContext';
@@ -128,6 +129,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
                 <PatchDropdown patch={patch}>
                     <GlobeIcon className="w-6 h-6 mt-1 mr-3 cursor-pointer" />
                 </PatchDropdown>
+                <OrgSpaces patch={patch} />
                 <div
                     style={{ borderLeft: "1px solid white" }}
                     className="ml-auto top-0 bottom my-auto pt-0.5 right-0 px-5 flex w-64">
@@ -156,6 +158,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             <PatchDropdown patch={patch}>
                 <GlobeIcon className="w-6 h-6 mt-1 mr-3 cursor-pointer" />
             </PatchDropdown>
+            <OrgSpaces patch={patch} />
             <div className="flex relative pr-8 my-auto mx-auto">
                 {breadcrumbs}
                 <Cross2Icon onClick={() => {

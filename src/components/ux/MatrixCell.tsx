@@ -4,8 +4,8 @@ import { Position } from './Matrix';
 import { ObjectNode } from '@/lib/nodes/types';
 import { useValue } from '@/contexts/ValueContext';
 
-const MatrixCell: React.FC<{ unit: string, showValue: boolean, ux: string, fillColor: string, max: number, cornerRadius: string, width: number, height: number, toggle: (row: number, col: number, value?: number) => void, type: string, lockedMode: boolean, objectNode: ObjectNode, idx: number, row: number, col: number, editing: React.MutableRefObject<Position | null> }> = ({
-    idx, row, col, editing, objectNode, unit, lockedMode, showValue, type, toggle, cornerRadius, width, height, max, fillColor, ux }) => {
+const MatrixCell: React.FC<{ min: number, unit: string, showValue: boolean, ux: string, fillColor: string, max: number, cornerRadius: string, width: number, height: number, toggle: (row: number, col: number, value?: number) => void, type: string, lockedMode: boolean, objectNode: ObjectNode, idx: number, row: number, col: number, editing: React.MutableRefObject<Position | null> }> = ({
+    idx, row, col, editing, objectNode, unit, lockedMode, showValue, type, toggle, cornerRadius, width, height, max, fillColor, ux, min }) => {
 
     let [isSelected, setIsSelected] = useState<boolean>(false);
     useValue();
@@ -77,9 +77,10 @@ const MatrixCell: React.FC<{ unit: string, showValue: boolean, ux: string, fillC
             className={`relative flex rounded-${cornerRadius} overflow-hidden border bg-black-clear2 border-zinc-800 cursor-pointer active:bg-zinc-800 active:border-zinc-100 `}>
             <MatrixInnerCell
                 ref1={ref1}
+                min={min}
                 objectNode={objectNode} isLine={ux === 'line'} idx={idx} valueRef={valueRef} unit={unit} isFullRadius={cornerRadius === "full"} cornerRadius={cornerRadius} max={max} showValue={showValue} fillColor={fillColor} />
         </div>);
-    }, [isSelected, width, height, fillColor, showValue, max, cornerRadius, lockedMode, ux, unit]);
+    }, [isSelected, width, height, fillColor, showValue, max, cornerRadius, lockedMode, ux, unit, min]);
 };
 
 export default MatrixCell;

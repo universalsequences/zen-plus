@@ -15,7 +15,7 @@ const MessageBox: React.FC<{
     const inputRef = useRef<HTMLInputElement | null>(null);
     let _value = typeof message === "string" ||
         typeof message === "number" ?
-        message.toString() : JSON.stringify(message);
+        message.toString() : Array.isArray(message) ? JSON.stringify(message) : "*message*";
 
     let [text, setText] = useState<string>(_value);
     let [editing, setEditing] = useState(false);

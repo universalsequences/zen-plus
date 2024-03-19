@@ -6,7 +6,7 @@ import { CommitIcon, HeartIcon, HeartFilledIcon } from '@radix-ui/react-icons'
 import { getTime } from '@/components/ProjectOption';
 import { File } from '@/lib/files/types';
 
-const FileComponent: React.FC<{ isRevision: boolean, className: string, openFile: (x: File | null) => void, fileExpanded: File | null, setFileExpanded: (x: File | null) => void, file: File, setFileToOpen: (x: any | null) => void, setRevisions: (x: File[]) => void }> = ({ file, setFileToOpen, setRevisions, fileExpanded, setFileExpanded, openFile, className, isRevision }) => {
+const FileComponent: React.FC<{ isMini: boolean, isRevision: boolean, className: string, openFile: (x: File | null) => void, fileExpanded: File | null, setFileExpanded: (x: File | null) => void, file: File, setFileToOpen: (x: any | null) => void, setRevisions: (x: File[]) => void }> = ({ file, setFileToOpen, setRevisions, fileExpanded, setFileExpanded, openFile, className, isRevision, isMini }) => {
 
     const [favorited, setFavorited] = useState(file.favorited);
     const toggleHeart = useCallback(async (e: any) => {

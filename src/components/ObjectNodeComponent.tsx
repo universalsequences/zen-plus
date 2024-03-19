@@ -248,7 +248,6 @@ const InnerObjectNodeComponent: React.FC<{
             // TODO: dont set timeout... this is a hack
             setTimeout(() => {
                 if (inputRef.current && editing && (clicked.current || objectNode.created)) {
-                    console.log('focus...');
                     inputRef.current.focus();
                     inputRef.current.select();
                     objectNode.created = false;

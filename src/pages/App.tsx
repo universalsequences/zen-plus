@@ -30,7 +30,7 @@ import {
     mainnet,
     goerli,
     zora,
-    zoraTestnet,
+    zoraSepolia,
 } from 'wagmi/chains';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
 import { infuraProvider } from 'wagmi/providers/infura';
@@ -38,7 +38,7 @@ import { publicProvider } from 'wagmi/providers/public';
 
 
 const { chains, publicClient } = configureChains(
-    [zoraTestnet, zora, goerli, mainnet],
+    [zoraSepolia, zora, goerli, mainnet],
     [
         infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
         publicProvider()

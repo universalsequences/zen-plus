@@ -33,6 +33,7 @@ const PatchTile: React.FC<{ fileToOpen: any | null, setFileToOpen: (x: any | nul
             let maxHeight = _direction === "vertical" ? size : 100;
             mem = (
                 <PatchWrapper
+                    tileRef={ref}
                     fileToOpen={fileToOpen}
                     setFileToOpen={setFileToOpen}
                     key={0}// + (_tile.patch ? _tile.patch.id : '')}

@@ -4,6 +4,7 @@ import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, q
 import { db } from '@/lib/db/firebase';
 import {
     zoraTestnet,
+    zoraSepolia,
     goerli,
     zora
 } from 'wagmi/chains';
@@ -68,8 +69,8 @@ const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => vo
                 {user && <div onClick={() => setChain(goerli.id)} className={(chain === goerli.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     testnet
                 </div>}
-                {user && <div onClick={() => setChain(zoraTestnet.id)} className={(chain === zoraTestnet.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
-                    zora testnet
+                {user && <div onClick={() => setChain(zoraSepolia.id)} className={(chain === zoraSepolia.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
+                    zora sepolia
                 </div>}
                 <div onClick={() => setChain(zora.id)} className={(chain === zora.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     zora

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { usePatches } from "@/contexts/PatchesContext";
 import { OperatorContextType } from '@/lib/nodes/context';
 import Assistant from '@/lib/openai/assistant';
 import { useStorage } from '@/contexts/StorageContext';
@@ -77,6 +78,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     const [objectNodes, setObjectNodes] = useState<ObjectNode[]>([]);
     const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
     let assistantNodes = useRef<ObjectNode[]>([]);
+
+    const { patches } = usePatches();
 
     const assist = useCallback((prompt: string): Promise<ObjectNode[]> => {
         return new Promise((resolve) => {
@@ -284,7 +287,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             connections[node.id] = _connections;
         }
         setConnections(connections);
-    }, [patch, setObjectNodes, setMessageNodes])
+    }, [patch, setObjectNodes, setMessageNodes, patches])
 
     const segmentCable = useCallback((connection: IOConnection, segment: number) => {
         if (segment !== undefined && !isNaN(segment)) {

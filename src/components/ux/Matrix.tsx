@@ -67,9 +67,9 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             y: e.clientY - rect.top - editing.current.y * height // - (editing.current.startY)
         };
         let DIFF = (editing.current.startY - client.y);
-        let v = editing.current.value + (max as number) * DIFF / (editing.current.startY);
+        let v = editing.current.value + ((min as number) + (max as number) * DIFF) / (editing.current.startY);
         if (DIFF < 0) {
-            v = editing.current.value + (max as number) * (DIFF) / ((height) - editing.current.startY);
+            v = editing.current.value + ((min as number) + (max as number) * (DIFF)) / ((height) - editing.current.startY);
 
         }
         let value = Math.min(max as number, v);
@@ -93,7 +93,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             (objectNode.custom as any as mat.Matrix).update();
         }
 
-    }, [editing, columns, size, max]);
+    }, [editing, columns, size, max, min]);
 
     let ux = objectNode.attributes["ux"];
 
@@ -133,6 +133,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                                     ux={ux as string}
                                     type={type as string}
                                     editing={editing}
+                                    min={min as number}
                                     max={objectNode.attributes["max"] as number}
                                     key={index} />
                         )}
@@ -140,7 +141,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         </div >
         );
 
-    }, [unit, rows, columns, width, height, type, fillColor, editing, lockedMode, max, toggle, ux, showValue, cornerRadius]);
+    }, [min, unit, rows, columns, width, height, type, fillColor, editing, lockedMode, max, toggle, ux, showValue, cornerRadius]);
     return memo;
 };
 

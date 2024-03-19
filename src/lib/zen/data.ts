@@ -172,7 +172,6 @@ export const peek = (
         if (length) {
             __length = variableContext.gen(length);
             maxChannel = __length.variable;
-            console.log("__length =", __length);
         }
 
         // todo: make this prettier... basically want the raw idx value
@@ -211,7 +210,6 @@ ${intKeyword} ${peekIdx} = ${perChannel} * ${channelIdx} + ${preIdx};
 ${intKeyword} ${peekIdx2} = ${idx} + ${peekIdx};
 ${varKeyword} ${peekVal} = memory[${peekIdx2}];
 `;
-            console.log('peek channels =%s size=%s', multichannelBlock.channels, multichannelBlock.length, code);
         }
 
         if (__length) {

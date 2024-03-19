@@ -5,7 +5,7 @@ import { minify } from '@/lib/nodes/Patch';
 import { db } from '@/lib/db/firebase';
 import { documentId, addDoc, doc, getDoc, getFirestore, updateDoc, collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import {
-    zoraTestnet,
+    zoraSepolia,
     goerli,
     zora
 } from 'wagmi/chains';
@@ -117,7 +117,7 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
 
     useEffect(() => {
         if (opened && switchNetwork) {
-            switchNetwork(zoraTestnet.id);
+            switchNetwork(zoraSepolia.id);
         }
     }, [opened, switchNetwork]);
 
@@ -177,8 +177,8 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                             onClick={() => switchNetwork(goerli.id)}
                             className={"cursor-pointer " + (chain.id === goerli.id ? "border-bottom text-white " : " text-zinc-400")}>goerli</div>
                         <div
-                            onClick={() => switchNetwork(zoraTestnet.id)}
-                            className={"cursor-pointer " + (chain.id === zoraTestnet.id ? "border-bottom text-white " : " text-zinc-400")}>zora testnet</div>
+                            onClick={() => switchNetwork(zoraSepolia.id)}
+                            className={"cursor-pointer " + (chain.id === zoraSepolia.id ? "border-bottom text-white " : " text-zinc-400")}>zora testnet</div>
                         <div
                             onClick={() => switchNetwork(zora.id)}
                             className={"cursor-pointer ml-5 " + (chain.id === zora.id ? "border-bottom text-white " : " text-zinc-400")}>zora network</div>

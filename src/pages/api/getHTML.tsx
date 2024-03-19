@@ -35,8 +35,9 @@ function runMiddleware(req: any, res: any, fn: any) {
 async function getHTML(contractAddress: string, tokenId: string, chainId: number, version: number): Promise<string | null> {
 
     const web3 = chainId === 5 ? new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/v3/${process.env.INFURA_ID}`)) :
-        chainId === 999 ? new Web3(new Web3.providers.HttpProvider('https://testnet.rpc.zora.energy/'))
-            : new Web3(new Web3.providers.HttpProvider('https://rpc.zora.energy/'));
+        chainId === 999999999 ? new Web3(new Web3.providers.HttpProvider('https://999999999.rpc.thirdweb.com')) :
+            chainId === 999 ? new Web3(new Web3.providers.HttpProvider('https://testnet.rpc.zora.energy/'))
+                : new Web3(new Web3.providers.HttpProvider('https://rpc.zora.energy/'));
 
     const contract = new web3.eth.Contract(abi as any, contracts[chainId][version].MetadataRenderer);
     try {

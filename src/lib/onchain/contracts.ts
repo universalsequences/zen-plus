@@ -52,6 +52,26 @@ const zoraContracts: ContractVersions = {
     }
 };
 
+const zoraSepoliaContracts: ContractVersions = {
+    //DropCreator: "0x86699fB76c8d513C0E324cf38aCD7F3Af9F910eb",
+    //MetadataRenderer: "0xb7057E6590199AbF68B91b6817e9e73691E7eFD3",
+    //ZenModule: "0x08047602036d96a0c8ef10f1d1fa4639929cc755"
+
+    //transaction: 0x7214af12f0b0fb8859897bc09487e1ba53e396dd51856b9587b18f1ab1d22f44
+    2: {
+        DropCreator: "0xA2BD8730F9a41B8b0592b1f3E2E2Dfe5AEBDe349",
+        MetadataRenderer: "0x357415c5074A46597B239c723f4957566a550Bc8",
+        ZenModule: "0x11a207e0166223af9dead98620e2b335267c5e7c"
+    },
+    3: {
+        DropCreator: "0xA2BD8730F9a41B8b0592b1f3E2E2Dfe5AEBDe349",
+        MetadataRenderer: "0x357415c5074A46597B239c723f4957566a550Bc8",
+        ZenModule: "0x11a207e0166223af9dead98620e2b335267c5e7c"
+    }
+};
+
+
+
 const zoraGoerliContracts: Contracts = {
     //DropCreator: "0x86699fB76c8d513C0E324cf38aCD7F3Af9F910eb",
     //MetadataRenderer: "0xb7057E6590199AbF68B91b6817e9e73691E7eFD3",
@@ -65,5 +85,6 @@ const zoraGoerliContracts: Contracts = {
 export const contracts: ContractsByChain = {
     5: goerliContracts,
     7777777: zoraContracts,
+    999999999: zoraSepoliaContracts
     //999: zoraGoerliContracts
 };

@@ -78,7 +78,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             _rootTile.children = rootTileRef.current.children;
             _rootTile.splitDirection = rootTileRef.current.splitDirection;
             _rootTile.id = rootTileRef.current.id;
-            console.log('setting root tile=', _rootTile);
             setRootTile(_rootTile);
             rootTileRef.current = _rootTile;
         }
@@ -191,7 +190,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
     const expandPatch = useCallback((objectNode: ObjectNode, replace?: boolean) => {
         if (!rootTileRef.current) {
-            console.log('no root');
             return;
         }
         let includes = rootTileRef.current.findPatch(objectNode.subpatch as Patch);
@@ -202,8 +200,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                 let allTiles: Tile[] = patchesRef.current.map((x: Patch) => rootTile.findPatch(x)).filter(x => x) as Tile[];
                 allTiles.sort((a: Tile, b: Tile) => a.getDepth() - b.getDepth());
                 let existingTile = rootTile.findPatch(objectNode.subpatch);
-                console.log('allTiles=', allTiles);
-                console.log("existing tile =", existingTile);
                 if (existingTile) {
                     setSelectedPatch(objectNode.subpatch);
                     return;
@@ -218,7 +214,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                     let tile = rootTile.findPatch(objectNode.patch);
                     if (true) {// !tile) {
                         let leaves = rootTile.getLeaves();
-                        console.log("LEAVES =", leaves);
                         // .filter(a => a.patch && (a.patch as SubPatch).parentNode)
                         let _leaves = leaves.sort((a, b) => {
                             return a.getDepth() - b.getDepth();
@@ -231,7 +226,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                             return 0;
                             */
                         });
-                        console.log("Leaves = ", _leaves);
                         if (_leaves[0]) {
                             tile = _leaves[0];
                         }

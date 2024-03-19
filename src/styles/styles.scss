@@ -112,7 +112,7 @@
 
 
 .dark-modal {
-    background-color: #3432322b;
+    background-color: #423f3f45;
     border: 1px solid #ffffff0f;
     backdrop-filter: blur(8px);
     z-index: 10000000000 !important;
@@ -155,6 +155,7 @@
 
 body {
     --dark-patch-color: #131315;
+    color: white;
 }
 
 .opened-sidebar, .opened-sidebar2 {
@@ -181,6 +182,15 @@ body {
 }
 }
 
+.light-mode {
+.dark-background {
+    .patcher-background {
+        background-color: #7e7e88cc !important;
+        //backdrop-filter: blur(8px);
+    }
+}
+
+}
 .dark-background {
     background-color: var(--dark-patch-color);
 
@@ -191,6 +201,19 @@ body {
         background-color: unset !important;
         background-image: unset !important;
     }
+}
+
+.light-mode {
+.slot-view.sequencer {
+    background-color: #191c1e9f;
+}
+.slot-view.generator {
+    background-color: #2426279f;
+}
+
+.slot-view.effect {
+    background-color: #1616169f;
+}
 }
 
 .slot-view.sequencer {
@@ -277,12 +300,13 @@ body {
     --dark-patch-color: #98989d;
     .locked {
         .patcher-background {
-                background-image: radial-gradient(circle at center center, rgb(97 89 89 / 78%) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(88, 80, 80, 0.6), rgba(86, 78, 78, 0.6));
+                background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
         }
     }
     .patcher-background {
         //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
         background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 60%), rgb(86 78 78 / 60%));
+        background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
     }
 
     .node-component.border-zinc-900 {
@@ -381,7 +405,7 @@ svg {
 }
 
 .tile-container {
-    gap: 30px;
+    gap: 5px;
 }
 
 .save-connect {
