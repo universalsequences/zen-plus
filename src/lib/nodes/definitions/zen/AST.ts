@@ -420,7 +420,8 @@ export const _compileStatement = (statement: Statement, compiled: CompiledStatem
     }
     if (typeof statement === "number") {
         if (_api === api) {
-            return float(statement as number);
+            //return float(statement as number);
+            return statement as number;
         } else {
             return () => (statement as number);
         }

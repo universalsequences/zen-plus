@@ -6,9 +6,7 @@ import { BlockGen } from './data';
 
 export const simdMatSum = (matrix: BlockGen, weights: BlockGen) => {
     return memo((context: Context) => {
-        let size = 4; //weights.getSize!();
-        // we want to pass the right index
-
+        let size = 4; 
         let weightsBlock = weights(context);
         let matrixBlock = matrix(context);
         let [result] = context.useVariables("matSum");
@@ -67,5 +65,29 @@ float ${result} = matrix4x4Dot(${b1.idx} + ${_offset1.variable} , ${b2.idx} + ${
     });
 };
 
+type SIMDOperationMap = {
+    [x: string]: string;
+};
 
 
+export const SIMD_OPERATIONS: SIMDOperationMap = {
+    '+': 'wasm_f32x4_add',
+    '*': 'wasm_f32x4_mul',
+    '/': 'wasm_f32x4_div',
+    '-': 'wasm_f32x4_sub',
+    '<': 'wasm_f32x4_lt',
+    '>': 'wasm_f32x4_gt',
+    '<=': 'wasm_f32x4_le',
+    '>=': 'wasm_f32x4_ge',
+    '==': 'wasm_f32x4_eq',
+    '!=': 'wasm_f32x4_ne',
+};
+
+// an encapsulated SIMD Block of operations that can execute via SIMD 
+export type SIMDBlock = {
+    isSIMD: true
+} & Generated;
+
+export type CodeBlock = {
+    isSIMD: boolean
+} & Generated;

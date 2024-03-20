@@ -1,6 +1,7 @@
 import { Context } from './context';
 import { Argument, Function } from './functions';
 import { Target } from './targets';
+import { CodeBlock } from './simd';
 import { History } from './history';
 
 /**
@@ -26,6 +27,7 @@ export interface Generated {
     outerLoops?: string[];
     functions: Function[];
     functionArguments: Argument[];
+    codeBlocks: CodeBlock[];
 };
 
 export type UGen = (context: Context) => Generated;
@@ -47,12 +49,13 @@ export const float = (x: number): UGen => {
     return () => {
         return {
             code: floated,
+            codeBlocks: [],
             variable: floated,
             variables: [],
             functions: [],
             functionArguments: [],
             histories: [],
-            params: []
+            params: [],
         };
     };
 };
@@ -68,14 +71,15 @@ export const input = (inputNumber: number = 0): UGen => {
             variables: [],
             histories: [],
             inputs: inputNumber,
-            params: []
+            params: [],
+            codeBlocks: []
         };
     };
 };
 
 
 export const zen = (...inputs: UGen[]): ZenGraph => {
-    return zenWithTarget(Target.Javascript, ...inputs);
+    return zenWithTarget(Target.C, ...inputs);
 }
 
 export const zenJavascript = (...inputs: UGen[]): ZenGraph => {
@@ -97,13 +101,19 @@ export const zenWithTarget = (target: Target, ...inputs: UGen[]): ZenGraph => {
     let params: History[] = [];
     let functions: Function[] = [];
     let variables: string[] = [];
+    let codeBlocks: CodeBlock[] = [];
     let i = 0;
     for (let input of inputs) {
+        console.log('a');
         let _out = input(context);
+        console.log("OUT =", _out, input);
         code += ' ' + _out.code;
         lastVariable = _out.variable!;
         params = [...params, ..._out.params];
         i++;
+        if (_out.codeBlocks) {
+            codeBlocks = [...codeBlocks, ..._out.codeBlocks];
+        }
         if (_out.variables) {
             variables = [...variables, ..._out.variables];
         }
@@ -141,10 +151,11 @@ output0 = ${lastVariable};
         variables: variables,
         histories,
         numberOfInputs: context.numberOfInputs,
+        codeBlocks,
         numberOfOutputs,
         params,
         functions,
-        functionArguments: []
+        functionArguments: [],
     };
 }
 

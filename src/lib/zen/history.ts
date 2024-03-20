@@ -2,7 +2,7 @@ import { MemoryBlock } from './block';
 import { LoopContext } from './context';
 import { UGen, Generated, Arg, float } from './zen';
 import { memo } from './memo';
-import { Context, emitCode, ContextMessageType } from './context';
+import { Context, emitCodeBlocks, emitCode, ContextMessageType } from './context';
 import { emitFunctions, emitArguments } from './functions';
 
 export type Samples = number;
@@ -43,6 +43,18 @@ export const history = (val?: number, params?: HistoryParams, debugName?: string
 
     let _history: History = (input?: Arg, reset?: Arg): UGen => {
         return (_context: Context): Generated => {
+            console.log("HISTORY CALLED WITH CONTEXT=", _context, input);
+            if (_context.idx >= 77777777) {
+                return float(0)(context);
+            }
+            let wasSIMD = _context.isSIMD;
+            if (wasSIMD) {
+                console.log("SKIPPING HISTORY!");
+                _context.isSIMD = false;
+                return float(0)(context);
+            }
+            console.log("was not simd");
+
             let ogContext = _context;
             let contextToUse = _context;
             if (params && params.name) {
@@ -57,13 +69,19 @@ export const history = (val?: number, params?: HistoryParams, debugName?: string
             let _input = typeof input === "number" ? float(input)(contextToUse) : input ? input(contextToUse) : undefined;
             let _reset = reset === undefined ? contextToUse.gen(float(0)) : contextToUse.gen(reset);
 
+            console.log("_INPUT IS=", _input);
+
 
             let contextChanged = context !== _context;
 
             context = _context;
             if (block === undefined || contextChanged) {
                 block = context.alloc(1);
-                historyVar = context.useVariables(debugName || "historyVal")[0];
+                console.log('old history var=', historyVar);
+                if (!historyVar) {
+                    historyVar = context.useVariables(debugName || "historyVal")[0];
+                }
+                console.log("GENERATING HISTORY VAR!", historyVar);
                 contextBlocks = contextBlocks.filter(
                     x => !x.context.disposed);
                 contextBlocks.push({ context, block });
@@ -75,6 +93,7 @@ export const history = (val?: number, params?: HistoryParams, debugName?: string
             let IDX = block.idx;
             let historyDef = `${context.varKeyword} ${historyVar} = memory[${IDX}]` + '\n';
 
+            console.log("HISTORY ACTUALLY CALLED", _input, historyDef);
             let code = '';
             let _variable: string = historyVar;
             if (_input) {
@@ -93,6 +112,7 @@ memory[${IDX}] = ${_input.variable};
                 }
                 _variable = newVariable;
                 let newCode = emitCode(context, code, _variable, _input, _reset);
+                console.log("new code = ", newCode);    
                 code = newCode;
             }
 
@@ -100,6 +120,7 @@ memory[${IDX}] = ${_input.variable};
             let outerHistories = _input ? emitOuterHistory(_input, _reset) : [];
             let functions = _input ? emitFunctions(_input, _reset) : [];
             let args = _input ? emitArguments(_input, _reset) : [];
+            let codeBlocks = _input ? emitCodeBlocks(_input, _reset) : [];
 
             if (val !== undefined) {
                 block.initData = new Float32Array([val]);
@@ -121,10 +142,12 @@ memory[${IDX}] = ${_input.variable};
                 histories: [historyDef, ...histories],
                 outerHistories,
                 params: _params,
+                codeBlocks,
                 functions,
                 variables: [_variable],
                 functionArguments: args
             };
+            console.log("history returning=", out);
 
             return out;
         }
@@ -179,7 +202,7 @@ memory[${IDX}] = ${_input.variable};
 
 /** used to collect all the histories for a functions arguments */
 export const emitHistory = (...gen: Generated[]): string[] => {
-    return Array.from(new Set(gen.flatMap(x => x.histories)));
+    return Array.from(new Set(gen.flatMap(x => x.histories))).filter(x => x !== undefined);
 };
 
 /** used to collect all the histories for a functions arguments */

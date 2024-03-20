@@ -1,4 +1,5 @@
 import { Context } from './context'
+import { CodeBlock } from './simd';
 import { UGen, Arg, genArg, Generated } from './zen';
 import { Argument, Function } from './functions';
 import { History } from './history';
@@ -13,6 +14,7 @@ export const s = (...inputs: Arg[]): UGen => {
         let outerHistories: string[] = [];
         let functions: Function[] = [];
         let functionArguments: Argument[] = [];
+        let codeBlocks: CodeBlock[] = [];
         let params: History[] = [];
         let outputs = 0;
         for (let input of inputs) {
@@ -30,6 +32,12 @@ export const s = (...inputs: Arg[]): UGen => {
                 histories = [
                     ...histories,
                     ..._out.histories
+                ];
+            }
+            if (_out.codeBlocks) {
+                codeBlocks = [
+                    ...codeBlocks,
+                    ..._out.codeBlocks
                 ];
             }
             if (_out.outerHistories) {
@@ -65,7 +73,8 @@ export const s = (...inputs: Arg[]): UGen => {
             code,
             variable: lastVariable,
             histories,
-            outerHistories
+            outerHistories,
+            codeBlocks
         };
     }
 }

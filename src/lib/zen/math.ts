@@ -1,13 +1,87 @@
 import { UGen, Arg, genArg, Generated, float } from './zen';
+import { History } from './history';
 import { Target } from './targets';
 import { memo } from './memo';
-import { Context } from './context';
+import { SIMDBlock, SIMD_OPERATIONS } from './simd';
+import { SIMDContext, Context } from './context';
 
 export const op = (operator: string, name: string, evaluator?: (x: number, y: number) => number, first?: number) => {
     return (...ins: Arg[]): UGen => {
         return memo((context: Context): Generated => {
+
+            console.log("***************************** ins=", ins);
+            let histories: string[];
+            if (context.target === Target.C && operator in SIMD_OPERATIONS) {
+                // then we need to do SIMD here
+                let simdContext = context.isSIMD ? context : new SIMDContext(context);
+
+                let _ins = ins.map(f => simdContext.gen(f, true));
+                if (!simdContext.isSIMD) { 
+                    // there was likely a history so we go back to no simd
+                    console.log("SIMD CONTEXT WAS WRONG", simdContext)
+                    let mock = new Context();
+                    mock.idx = 77777777;
+                    ins.forEach(x => mock.gen(x, true));
+                } else {
+                    let [opVar] = context.useVariables(name + "Val");
+
+                    let code = "";
+                    let inVariables = _ins.map(x => x.variable);
+                    let i=0;
+                    for (let input of _ins) {
+                        if (!(input as SIMDBlock).isSIMD) {
+                            let variable = input.variable;
+                            inVariables[i] = variable + opVar;
+                            variable = inVariables[i];
+                            // if its not a simd block then we need to fetch it from the array
+                            code += `
+v128_t ${variable} = wasm_v128_load(block_${input.variable} + j); // Load a block of 4 samples
+
+`;
+                        }
+                        i++;
+                    }
+                    if (isComparisonOperator(operator)) {
+                        let [bitmask, trueVec, falseVec] = context.useVariables("bitmask", "trueVec", "falseVec");
+                        code += `
+v128_t ${bitmask} = ${SIMD_OPERATIONS[operator]}(${inVariables[0]}, ${inVariables[1]});
+v128_t ${trueVec} = wasm_f32x4_splat(1.0f);
+v128_t ${falseVec} = wasm_f32x4_splat(0.0f);
+v128_t ${opVar} = wasm_v128_bitselect(${trueVec}, ${falseVec}, ${bitmask});
+                        `;
+
+                    } else {
+                        code += `
+v128_t ${opVar} = ${SIMD_OPERATIONS[operator]}(${_ins[0].variable}, ${_ins[1].variable});
+`;
+                    }
+                    for (let i=0; i < _ins.length; i++) {
+                        let ogVariable = _ins[i].variable;
+                        _ins[i].variable = inVariables[i];
+                        if (_ins[i].variables) {
+                            for (let j=0; j < _ins[i].variables?.length!; j++) {
+                                if (_ins[i].variables![j] === ogVariable) {
+                                    if (inVariables[i] && _ins[i].variables![j]) {
+                                        let varia = inVariables[i];
+                                        if (varia) {
+                                        _ins[i].variables![j] = varia;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // emit SIMD based on the ins
+                    // if all the ins are also SIMD then we will have them all share the same SIMD block
+                    console.log("emiited simd from math", opVar, _ins)
+                    return (simdContext as SIMDContext).emitSIMD(code, opVar, ..._ins);
+                } 
+            }
+
             let _ins = ins.map(f => context.gen(f));
             let [opVar] = context.useVariables(name + "Val");
+            console.log("so running normally with non-simd", _ins, opVar, context);
+
             let code = `${context.varKeyword} ${opVar} = ${_ins.map(x => x.variable).join(" " + operator + " ")};`
             if (operator === '%') {
                 if (context.target === Target.C) {
@@ -78,6 +152,8 @@ export const func = (func: string, name: string, jsFunc?: (...x: number[]) => nu
     };
 };
 
+const isComparisonOperator = (op: string) => ["<", ">"].includes(op);
+
 export const add = op("+", "add", (a, b) => a + b, 0);
 export const shiftLeft = op("<<", "shiftLeft", (a, b) => a << b, 0);
 export const shiftRight = op(">>", "shiftRight", (a, b) => a >> b, 0);
@@ -121,7 +197,7 @@ export const sign = (val: Arg): UGen => {
 
 export const mix = (a: Arg, b: Arg, amount: Arg): UGen => {
     return add(mult(b, amount),
-        mult(a, sub(float(1), amount)));
+        mult(a, sub(1, amount)));
 };
 
 export const wrap = (input: Arg, min: Arg, max: Arg): UGen => {
