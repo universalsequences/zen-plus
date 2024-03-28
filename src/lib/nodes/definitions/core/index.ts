@@ -12,10 +12,12 @@ import { lists } from './list';
 import { button, matrix } from './matrix';
 import { attrui } from './attrui';
 import { buffer } from './buffer';
+import { wasmviewer } from './wasmviewer';
 import { comment } from './comment';
 import { send, subscribe } from './messages';
 
 export const api: API = {
+    wasmviewer,
     route,
     buffer,
     subscribe,

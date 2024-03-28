@@ -16,7 +16,6 @@ export const phasor = (
     params: AccumParams = defaults
 ): UGen => {
     return memo((context: Context): Generated => {
-        console.log("PHASOR context=", context);
         let range = params.max - params.min;
         return zen_let("phasor",
             accum(

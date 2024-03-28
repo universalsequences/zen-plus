@@ -321,7 +321,7 @@ const InnerObjectNodeComponent: React.FC<{
 
         let { slotview } = objectNode.attributes;
         let { ux } = objectNode.attributes;
-        if (objectNode.name === "matrix") {
+        if (objectNode.name === "matrix") {//} || objectNode.name === "wasmviewer") {
             ux = undefined as any;
         }
 

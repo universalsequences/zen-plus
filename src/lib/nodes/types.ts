@@ -194,6 +194,7 @@ export type Patch = Identifiable & {
     skipRecompile2: boolean;
     getZenBase: () => Patch | null;
     setZenCode?: (x: string | null) => void;
+    wasmCode?: string;
     zenCode?: string;
     setVisualsCode?: (x: string | null) => void;
     setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled

@@ -47,6 +47,7 @@ export class PatchImpl implements Patch {
     setZenCode?: (x: string | null) => void;
     setVisualsCode?: (x: string | null) => void;
     zenCode?: string;
+    wasmCode?: string;
     previousSerializedPatch?: SerializedPatch;
     previousDocId?: string;
     isZen: boolean;
@@ -492,11 +493,12 @@ export class PatchImpl implements Patch {
                 workletId)
                 .then(
                     (ret) => {
-
                         ret = ret as ZenWorklet;
                         this.audioNode = ret.workletNode;
                         let worklet = ret.workletNode;
-
+                        if (ret.wasm) {
+                            this.wasmCode = (ret.wasm);
+                        }
                         ret.workletNode.port.onmessage = (e) => {
                             if (e.data.type === "wasm-ready") {
                                 initMemory(zenGraph.context, worklet)

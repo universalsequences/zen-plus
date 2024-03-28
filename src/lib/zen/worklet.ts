@@ -563,7 +563,7 @@ export const genOutputs = (graph: ZenGraph): string => {
     for (let i = 0; i < graph.numberOfOutputs; i++) {
         if (graph.context.target === Target.C) {
             out += `
-        outputs[j + ${128 * i}] = output${i};
+outputs[j + ${128 * i}] = output${i};
 `;
         } else {
             out += `

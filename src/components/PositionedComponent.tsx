@@ -47,6 +47,7 @@ const PositionedComponent: React.FC<{
                 (node as ObjectNode).isResizable ||
                 (node as ObjectNode).name === "scope~" ||
                 (node as ObjectNode).name === "umenu" ||
+                (node as ObjectNode).name === "wasmviewer" ||
                 (node as ObjectNode).name === "matrix" || ((node as ObjectNode).name === "button")) && node.size) {
                 if (node.size) {
                     updateSize(node.id, {

@@ -18,6 +18,7 @@ import { ObjectNode } from '@/lib/nodes/types';
 import Audio from './Audio';
 import Comment from './Comment';
 import HTMLViewer from './HTMLViewer';
+import WasmViewer from './WasmViewer';
 
 export interface NodeProps {
     objectNode: ObjectNode;
@@ -28,6 +29,7 @@ type ComponentIndex = {
 }
 
 export const index: ComponentIndex = {
+    wasmviewer: WasmViewer,
     matrix: Matrix,
     comment: Comment,
     "html": HTMLViewer,

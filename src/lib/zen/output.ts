@@ -7,6 +7,7 @@ export const output = (
 
     return (context: Context): Generated => {
         let _input = context.gen(input);
+
         let outputName = `output${outputNumber}`;
         let code = `
 ${outputName} = ${_input.variable};
