@@ -6,7 +6,7 @@ import { useSwitchNetwork } from 'wagmi';
 import {
     zora
 } from 'wagmi/chains';
-import SearchWindow from './SearchWindow';
+import SearchWindow from './search/SearchWindow';
 import { useSettings } from '@/contexts/SettingsContext';
 import React, { useEffect, useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
