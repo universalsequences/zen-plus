@@ -152,8 +152,9 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
                 {fileExpanded && <div className="ml-10">{fileExpanded.name}</div>}
                 {fileExpanded && revisions && <div className="absolute bottom-5  ml-10 text-zinc-400">revisions</div>}
                 {loading ? <div className="ml-20 my-auto spinner" aria-label="Loading"></div> : revisions && <div className="ml-10 flex-1 flex overflow-x-scroll overflow-y-hidden">
-                    {revisions.map(x =>
+                    {revisions.map((x, i) =>
                         <div
+                            key={i}
                             onClick={() => {
                                 setSelectedRevision(x);
                                 fetchPatch(x).then(
