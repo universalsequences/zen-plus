@@ -370,7 +370,7 @@ type CompiledStatements = {
 
 export const compileStatement = (statement: Statement, _api = api, _simpleFunctions = simpleFunctions): UGen | (() => string | number) => {
     let _compiled = _compileStatement(statement, undefined, undefined, undefined, _api, _simpleFunctions);
-    return _compiled;
+    return _compiled as UGen;
 }
 
 export const calculateDepth = (statement: Statement): Statement[] => {
@@ -414,7 +414,7 @@ export const getZObjects = (statement: Statement,): ObjectNode[] => {
     }
 };
 
-export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = [], _api: API, _simpleFunctions: API): UGen | (() => string | number) => {
+export const _compileStatement = (statement: Statement, compiled: CompiledStatements = {}, depth = 0, zobjects: ObjectNode[] = [], _api: API, _simpleFunctions: API): Arg | (() => string | number) => {
     if (!statement.node) {
         //console.log("no node for statement", statement);
     }
