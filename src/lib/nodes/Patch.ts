@@ -460,6 +460,7 @@ export class PatchImpl implements Patch {
             if (this.isZenBase()) {
                 this.isCompiling = false;
             }
+            console.log("og statement", statement);
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
                 let _statement = ["s" as Operator];
@@ -478,8 +479,10 @@ export class PatchImpl implements Patch {
                     }
                 }
                 _statement.push(statement as any);
-                statement = ["s" as Operator, _statement as Statement];
+                statement = _statement as Statement;
+                //statement = ["s" as Operator, _statement as Statement];
             }
+            console.log('statement = ', statement);
             let ast = compileStatement(statement);
             this.disconnectGraph();
 
@@ -605,6 +608,7 @@ export class PatchImpl implements Patch {
                         }
 
                         let inputFile = printStatement(statement);
+                        console.log("printed statement", inputFile);
                         inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
                         inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
                         inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
