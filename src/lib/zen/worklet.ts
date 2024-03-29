@@ -8,6 +8,7 @@ import { fetchWithRetry } from './fetchWithRetry';
 
 export interface ZenWorklet {
     code: string;
+    wasm: string;
     workletNode: AudioWorkletNode;
 }
 
@@ -79,7 +80,8 @@ export const createWorklet = (
             if (!onlyCompile) {
                 resolve({
                     code: workletCode,
-                    workletNode
+                    workletNode,
+                    wasm
                 })
             }
             return workletNode;
