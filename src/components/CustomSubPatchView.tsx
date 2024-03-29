@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { PositionProvider } from '@/contexts/PositionContext';
 import { usePatch, PatchProvider } from '@/contexts/PatchContext';
 import { MessageProvider } from '@/contexts/MessageContext';
@@ -34,7 +34,10 @@ const Inner = () => {
         setVisibleObjectNodes(nodes);
     }, [objectNodes, setVisibleObjectNodes]);
 
+    let ref = useRef<HTMLDivElement>(null);
+
     return (<PatchComponent
+        tileRef={ref}
         fileToOpen={null}
         setFileToOpen={(x: any) => 0}
         maxWidth={100} maxHeight={100} visibleObjectNodes={visibleObjectNodes} isCustomView={true} index={0} />
