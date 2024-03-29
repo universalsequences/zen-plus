@@ -40,6 +40,7 @@
     "openai": "^4.24.7",
     "pako": "^2.1.0",
     "postcss": "8.4.31",
+    "rainbowkit": "^0.0.1",
     "react": "18.2.0",
     "react-color": "^2.19.3",
     "react-device-detect": "^2.2.3",
@@ -49,7 +50,7 @@
     "three": "^0.158.0",
     "typescript": "5.2.2",
     "uuid": "^9.0.1",
-    "viem": "^2.9.5",
+    "viem": "1.0.0",
     "wagmi": "^1.4.12",
     "web3": "^4.4.0"
   }
