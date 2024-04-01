@@ -15,41 +15,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         try {
             // Assuming the JSON data is sent in the request body
-            let { start, filterFavorites, isSubPatch } = req.body;
+            let { start, commits } = req.body;
             let _limit = req.body.limit;
             if (!_limit) {
-                _limit = 20;
+                _limit = 10;
             }
 
-            console.log("req.body cursor=", req.body.cursor);
-
-            const collectionRef = collection(db, 'patches');
-            const q = filterFavorites ?
-                query(collectionRef, limit(_limit), where('user', '==', email), where('favorited', '==', filterFavorites)) :
-                query(
-                    collectionRef,
-                    where('user', '==', email),
-                    where('isSubPatch', '==', isSubPatch),
-                    orderBy('createdAt', 'desc'),
-                    startAfter(req.body.cursor ? Timestamp.fromMillis(req.body.cursor.seconds * 1000) : Timestamp.fromMillis(new Date().getTime())), limit(isSubPatch ? 1000 : _limit), where("hasNewVersion", '==', false));
+            console.log("req.body cursor=", req.body.start);
 
             try {
-                const querySnapshot = await getDocs(q);
-                const documents: File[] = [];
-                for (let doc of querySnapshot.docs) {
-                    if (!doc.data().hasNewVersion) {
-                        //await updateDoc(doc.ref, { hasNewVersion: false });
+
+
+                let documents: File[] = [];
+                let cursor = 0;
+                for (let i = start; i < Math.min(start + _limit, commits.length); i++) {
+                    let commit = commits[i];
+                    console.log("commit =", commit);
+                    const docRef = doc(db, 'patches', commit);
+                    try {
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            let document = docSnap.data();
+                            documents.push(docToFile(docRef.id, document));
+                        }
+                        cursor = i + 1;
+                    } catch (e) {
                     }
-                    if (filterFavorites || !doc.data().hasNewVersion) {
-                        let data = doc.data();
-                        documents.push(docToFile(doc.id, data));
-                    }
-                };
+                }
+
                 // documents.sort((a: any, b: any) => a.createdAt.seconds - b.createdAt.seconds);
-                console.log('new cursor=', documents[documents.length - 1].createdAt);
                 res.status(200).json({
-                    cursor: documents[documents.length - 1].createdAt,
-                    projects: documents,
+                    cursor,
+                    revisions: documents,
                 });
             } catch (error) {
                 console.log(error);
@@ -64,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(405).json({ error: 'Method not allowed' });
     }
 }
+
 const docToFile = (id: string, x: DocumentData): File => {
     return {
         id,

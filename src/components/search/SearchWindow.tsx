@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { useRevisions } from '@/hooks/useRevisions';
 import ObjectNodeImpl from '@/lib/nodes/ObjectNode';
 import { FilesQueryResult, Project, useStorage } from '@/contexts/StorageContext';
 import Files from '@/components/files/Files';
@@ -12,11 +13,12 @@ import Tree from './Tree';
 
 const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const revisionsRef = useRef<HTMLDivElement>(null);
     const ref = useRef<HTMLInputElement>(null);
     let { basePatch } = usePatches();
     let [text, setText] = useState("");
     let [cursor, setCursor] = useState(0);
-    let { fetchPatch, fetchRevisions } = useStorage();
+    let { fetchPatch } = useStorage();
 
     useEffect(() => {
         window.addEventListener("keydown", onKeyDown);
@@ -34,6 +36,7 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
     const [patchOpened, setPatchOpened] = useState<Patch | null>(null);
 
     const [revisions, setRevisions] = useState<File[] | null>(null);
+    const { fetchRevisions } = useRevisions();
     let originalBasePatch = basePatch;
     if (patchOpened) {
         basePatch = patchOpened;
@@ -46,7 +49,6 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
 
 
     const clearDrag = useCallback(() => {
-        console.log('clear drag');
         setDragging(null);
     }, [setDragging]);
     let counter = 0;
@@ -111,6 +113,32 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
         }
     }, [cursor]);
 
+    useEffect(() => {
+        if (revisionsRef.current) {
+            revisionsRef.current.addEventListener("scroll", onRevisionsScroll);
+        }
+        return () => {
+            if (revisionsRef.current) {
+                revisionsRef.current.removeEventListener("scroll", onRevisionsScroll);
+            }
+        }
+    }, [fileExpanded, revisions]);
+
+
+    const onRevisionsScroll = useCallback((e: any) => {
+        if (revisionsRef.current && revisions && fileExpanded) {
+            let scrollLeft = revisionsRef.current.scrollLeft;
+            if (scrollLeft + 2 >= revisionsRef.current.scrollWidth - revisionsRef.current.offsetWidth) {
+                fetchRevisions(fileExpanded).then(
+                    x => {
+                        setRevisions([...revisions, ...x]);
+                    });
+            }
+        }
+    }, [revisions, fileExpanded]);
+
+
+
     let [fileOpened, setFileOpened] = useState<any | null>(null);
     let [selectedRevision, setSelectedRevision] = useState<File | null>(null);
     return (<div
@@ -151,7 +179,7 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
                     className="w-6 h-6 cursor-pointer absolute top-2 left-2" />
                 {fileExpanded && <div className="ml-10">{fileExpanded.name}</div>}
                 {fileExpanded && revisions && <div className="absolute bottom-5  ml-10 text-zinc-400">revisions</div>}
-                {loading ? <div className="ml-20 my-auto spinner" aria-label="Loading"></div> : revisions && <div className="ml-10 flex-1 flex overflow-x-scroll overflow-y-hidden">
+                {loading ? <div className="ml-20 my-auto spinner" aria-label="Loading"></div> : revisions && <div ref={revisionsRef} className="ml-10 flex-1 flex overflow-x-scroll overflow-y-hidden">
                     {revisions.map((x, i) =>
                         <div
                             key={i}
@@ -161,13 +189,10 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
                                     p => {
                                         let node = new ObjectNodeImpl(originalBasePatch);
                                         let mockPatch = new SubPatchImpl(originalBasePatch, node);
-                                        console.log('p = ', p);
                                         if (p.id === "1") {
-                                            console.log('its base...');
                                             // if theres a canvas then we want gl
                                             if (p.objectNodes.some(x => x.text === "canvas")) {
                                                 node.parse('zen @type gl');
-                                                console.log(node);
                                             } else {
                                                 node.parse('zen @type audio');
                                             }
@@ -175,11 +200,7 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
                                                 mockPatch = node.subpatch as SubPatchImpl;
                                             }
                                         }
-                                        console.log("node = ", node);
                                         mockPatch.fromJSON(p, true);
-                                        if (p.id === "1") {
-                                            // originalBasePatch.initialLoadCompile();
-                                        }
                                         setPatchOpened(mockPatch);
                                     });
 

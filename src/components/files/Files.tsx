@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import { CommitIcon, HeartIcon, HeartFilledIcon } from '@radix-ui/react-icons'
 import FileComponent from './File';
 import { File } from '@/lib/files/types';
@@ -19,6 +20,7 @@ const Files: React.FC<{
     basePatch?: Patch, setPatchOpened: (x: Patch | null) => void, text?: string, isMini: boolean, fileOpened: any | null, setFileToOpen: (x: any) => void
 }> = ({ setFileToOpen, fileOpened, isMini = false, text, basePatch, setPatchOpened, fileExpanded, setFileExpanded }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const revisionsRef = useRef<HTMLDivElement>(null);
     let [queryResult, setQueryResult] = useState<FilesQueryResult | null>(null);
     const [projects, setProjects] = useState<File[]>([]);
     let [searchText, setSearchText] = useState("");
@@ -65,8 +67,42 @@ const Files: React.FC<{
         }
     }, [filterFavorited, user, setProjects, projects, setLoading, setQueryResult, queryResult]);
 
-    let { fetchRevisions } = useStorage();
+    //let { fetchRevisions } = useStorage();
     let [revisions, setRevisions] = useState<File[]>([]);
+    let [revisionCursor, setRevisionCursor] = useState(0);
+
+    const fetchRevisions = useCallback((file: File): Promise<File[]> => {
+        return new Promise((resolve) => {
+            user.getIdToken().then(
+                (token: string) => {
+
+                    fetch('/api/revisions/query', {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            commits: file.commits,
+                            start: revisionCursor
+                        })
+                    }).then(
+                        async r => {
+                            let json = await r.json();
+                            let revisions: File[] = [];
+                            for (let x of json.revisions) {
+                                revisions.push({
+                                    ...x,
+                                    createdAt: Timestamp.fromMillis(x.createdAt.seconds * 1000 + x.createdAt.nanoseconds / 1000000)
+                                });
+                            }
+                            setRevisionCursor(json.cursor);
+                            resolve(revisions);
+
+                        });
+                });
+        });
+    }, [revisionCursor, revisions]);
 
     useEffect(() => {
         if (!isMini && fileExpanded && fileExpanded.commits) {
@@ -76,7 +112,7 @@ const Files: React.FC<{
                 setRevisions(x);
             });
         }
-    }, [fileExpanded, isMini, setLoading]);
+    }, [fileExpanded, isMini, setRevisions, setLoading]);
 
 
     useEffect(() => {
@@ -88,7 +124,31 @@ const Files: React.FC<{
                 scrollRef.current.removeEventListener("scroll", onScroll);
             }
         }
-    }, [queryResult, setQueryResult, setProjects, projects, filterFavorited, user]);
+    }, [queryResult, setQueryResult, revisions, setProjects, projects, filterFavorited, user]);
+
+    useEffect(() => {
+        if (revisionsRef.current) {
+            revisionsRef.current.addEventListener("scroll", onRevisionsScroll);
+        }
+        return () => {
+            if (revisionsRef.current) {
+                revisionsRef.current.removeEventListener("scroll", onRevisionsScroll);
+            }
+        }
+    }, [queryResult, setQueryResult, setProjects, projects, filterFavorited, user, fileExpanded, revisions]);
+
+
+    const onRevisionsScroll = useCallback((e: any) => {
+        if (revisionsRef.current && fileExpanded) {
+            let scrollLeft = revisionsRef.current.scrollLeft;
+            if (scrollLeft >= revisionsRef.current.scrollWidth - revisionsRef.current.offsetWidth) {
+                fetchRevisions(fileExpanded).then(
+                    x => {
+                        setRevisions([...revisions, ...x]);
+                    });
+            }
+        }
+    }, [queryResult, projects, setProjects, setQueryResult, filterFavorited, user, revisions]);
 
     const onScroll = useCallback((e: any) => {
         if (scrollRef.current) {
@@ -181,7 +241,7 @@ const Files: React.FC<{
                         </div>
                     </button>}
                 </div>}
-                <div className="flex overflow-x-scroll content-start">
+                <div ref={revisionsRef} className="flex overflow-x-scroll content-start">
                     {fileExpanded && [fileExpanded, ...[...revisions]].map(
                         x =>
                             <FileComponent
@@ -221,21 +281,7 @@ const Files: React.FC<{
                     setFileToOpen={setFileToOpen} />
             )}
         </div>
-    </>
-
-    /*
-return <div className="flex flex-1 w-full h-full bg-zinc-900 min-h-screen max-h-screen">
-    <div className="min-h-screen w-64 border-r border-r-zinc-700">
-        <div className="text-sm text-zinc-400 p-5 mb-10">
-            {user.email}
-        </div>
-        <div className="w-40"><Nav /></div>
-    </div>
-    <div style={{}} className="flex flex-1  flex-col overflow-hidden">
-    </div>
-</div >
-*/
+    </>;
 };
-
 
 export default Files;
