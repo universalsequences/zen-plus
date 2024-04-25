@@ -50,9 +50,11 @@ export class PatchImpl implements Patch {
     wasmCode?: string;
     previousSerializedPatch?: SerializedPatch;
     previousDocId?: string;
+    zenGraph?: ZenGraph;
     isZen: boolean;
     merger?: ChannelMergerNode;
     assistant: Assistant;
+    isSelected?: boolean;
 
     constructor(audioContext: AudioContext, isZen: boolean = false) {
         this.isZen = isZen;
@@ -120,6 +122,10 @@ export class PatchImpl implements Patch {
     }
 
     recompileGraph() {
+        let parentNode = (this as Patch as SubPatch).parentNode;
+        if (parentNode && parentNode.attributes.type === "core") {
+            return;
+        }
         if (this.skipRecompile || this.skipRecompile2) {
             return;
         }
@@ -170,7 +176,9 @@ export class PatchImpl implements Patch {
                     });
                 node.lastSentMessage = undefined;
                 let name = (node as ObjectNode).name;
-                if (name === "call" || name === "defun" || name === "polycall") {
+
+                // do we want latchcall here
+                if (name === "call" || name === "defun" || name === "polycall" || name === "polytrig" || name === "latchcall") {
                     node.storedMessage = undefined;
                 }
             }
@@ -354,11 +362,15 @@ export class PatchImpl implements Patch {
                 });
 
 
-            let calls = this.getAllNodes().filter(node => node.operatorContextType === OperatorContextType.ZEN && (node.name === "call" || node.name === "latchcall" || node.name === "polycall"));
+            let calls = this.getAllNodes().filter(node => node.operatorContextType === OperatorContextType.ZEN && (node.name === "call" || node.name === "latchcall" || node.name === "polycall" || node.name === "polytrig"));
             calls.forEach(
                 call => {
-                    if (call.fn && call.inlets[0] && call.inlets[0].lastMessage !== undefined) {
-                        call.receive(call.inlets[0], call.inlets[0].lastMessage);
+                    if (call.name === "polytrig") {
+                        call.receive(call.inlets[0], "bang");
+                    } else {
+                        if (call.fn && call.inlets[0] && call.inlets[0].lastMessage !== undefined) {
+                            call.receive(call.inlets[0], call.inlets[0].lastMessage);
+                        }
                     }
                     return;
                 });
@@ -460,11 +472,14 @@ export class PatchImpl implements Patch {
             if (this.isZenBase()) {
                 this.isCompiling = false;
             }
-            console.log("og statement", statement);
             if (this.historyDependencies.length > 0) {
                 let historyDependencies = this.historyDependencies.filter(x => notInFunction(x))
                 let _statement = ["s" as Operator];
                 for (let dependency of historyDependencies) {
+
+                    if (dependency.node && dependency.node.name === "param") {
+                        continue;
+                    }
                     // make sure that statement contains the history
                     let hist = ((dependency as Statement[])[0] as any).history;
                     // make sure the hist is somewhere in the statement
@@ -478,18 +493,27 @@ export class PatchImpl implements Patch {
                         _statement.push(dependency as any);
                     }
                 }
-                _statement.push(statement as any);
-                statement = _statement as Statement;
+                let __statement: Statement[] = sortHistories(_statement as Statement[]) as Statement[];
+                __statement.push(statement as any);
+                statement = __statement as Statement;
                 //statement = ["s" as Operator, _statement as Statement];
             }
-            console.log('statement = ', statement);
+
+            let inputFile = printStatement(statement);
             let ast = compileStatement(statement);
             this.disconnectGraph();
 
+            let a = new Date().getTime();
             let zenGraph: ZenGraph = Array.isArray(ast) ? zen(...ast) : zen(ast as UGen);
+            let h = new Date().getTime();
+            console.log('compiling zen graph took %s ms', h - a);
+            console.log("average memo-calls =", window.memoCalls / window.memoDefs);
             let parentNode = (this as Patch as SubPatch).parentNode;
             let parentId = parentNode ? parentNode.id : this.id;
             let workletId = 'zen' + parentId + '_' + id + new Date().getTime();
+
+            this.zenGraph = zenGraph;
+
             createWorklet(
                 this.audioContext,
                 zenGraph,
@@ -517,7 +541,7 @@ export class PatchImpl implements Patch {
 
 
                             }
-                            publish(e.data.type, [e.data.subType, e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body, this]);
+                            publish(e.data.type, [e.data.subType, e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body, this, e.data.time]);
                         };
 
                         let merger = this.audioContext.createChannelMerger(zenGraph.numberOfInputs);
@@ -608,7 +632,6 @@ export class PatchImpl implements Patch {
                         }
 
                         let inputFile = printStatement(statement);
-                        console.log("printed statement", inputFile);
                         inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
                         inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
                         inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);
@@ -884,10 +907,14 @@ export class PatchImpl implements Patch {
             }
         }
 
+        let loadBangs = this.objectNodes.filter(x => x.operatorContextType === OperatorContextType.CORE && x.needsLoad);
+        loadBangs.forEach(x => x.receive(x.inlets[0], "bang"));
+
         return _connections;
     }
 
     async initialLoadCompile() {
+        console.log('initial load compile');
         this.recompileGraph()
 
         let compiled: Patch[] = [];
@@ -929,6 +956,9 @@ export class PatchImpl implements Patch {
 
 
         this.sendAttributeMessages();
+
+        let loadBangs = this.objectNodes.filter(x => x.operatorContextType === OperatorContextType.CORE && x.needsLoad);
+        loadBangs.forEach(x => x.receive(x.inlets[0], "bang"));
     }
 
     resolveMissedConnections() {
@@ -1119,3 +1149,87 @@ export const minify = (inputFile: string, ultraMinify = true): string => {
     return inputFile;
 
 };
+
+export const sortHistories = (statements: Statement[]): Statement[] => {
+    let histories = statements.slice(1);
+    let historyPairs: any[] = [];
+    for (let h of histories) {
+        let _h = getAllHistories(h as Statement[]);
+        historyPairs.push([h, Array.from(new Set(_h))]);
+    }
+
+    let sorted: any[] = historyPairs.sort((a, b) => a[1].length - b[1].length);
+
+    return ["s", ...sorted.map(x => x[0])] as Statement[];
+};
+
+const getAllHistories = (statement: Statement[], visited: Set<string> = new Set()): any[] => {
+    let node = (statement as Statement).node;
+    if (node) {
+        if (visited.has(node.id)) {
+            return [];
+        }
+        visited.add(node.id);
+    }
+    let histories: any[] = [];
+    if (statement[0] && (statement[0] as any).name === "history") {
+        histories.push((statement[0] as any).history);
+    }
+    for (let i = 1; i < statement.length; i++) {
+        histories.push(...getAllHistories(statement[i] as Statement[], visited));
+    }
+    return histories;
+};
+
+
+type DependencyPair = [any, any[]];
+
+function sortDependencies(pairs: DependencyPair[]): DependencyPair[] {
+    // Map to store the graph. Since we can't rely on simple string keys,
+    // we'll use the original 'any' typed identifiers as keys in a Map.
+    const graph = new Map<any, any[]>();
+
+    // Initialize the graph with pairs.
+    pairs.forEach(([id, dependencies]) => {
+        graph.set(id, dependencies);
+    });
+
+    // A helper function to check if all dependencies of an item are already in the sorted list.
+    const allDependenciesSorted = (dependencies: any[], sorted: DependencyPair[]): boolean => {
+        return dependencies.every(dep => sorted.some(([id, _]) => dep === id));
+    };
+
+    // Array to hold the sorted elements.
+    let sorted: DependencyPair[] = [];
+    // Set to keep track of items already sorted.
+    let sortedIds = new Set<any>();
+
+    // Keep sorting until all items are sorted.
+    while (sorted.length < pairs.length) {
+        let addedToSortedThisRound = false;
+
+        graph.forEach((dependencies, id) => {
+            // If this id is already sorted, skip it.
+            if (sortedIds.has(id)) return;
+
+            // If all dependencies of this item are sorted, add it to the sorted list.
+            if (allDependenciesSorted(dependencies, sorted)) {
+                sorted.push([id, dependencies]);
+                sortedIds.add(id);
+                addedToSortedThisRound = true;
+            }
+        });
+
+        // If no items were added in this round, and we haven't sorted everything, we have a dependency cycle or unsatisfiable dependencies.
+
+        console.log('sorted vs pairs', sorted, pairs);
+        if (!addedToSortedThisRound && sorted.length < pairs.length) {
+            throw new Error("Cannot sort due to unsatisfiable dependencies or a dependency cycle.");
+        }
+    }
+
+    return sorted;
+}
+
+
+
