@@ -1,9 +1,10 @@
 import { OperatorContextType, OperatorContext, getOperatorContext } from './context';
 import { NumberOfInlets } from '@/lib/docs/docs';
 import { DataType } from '@/lib/nodes/typechecker';
+import { MessageNode } from './types';
 import { GLType } from '@/lib/gl/index';
 import { createGLFunction } from './definitions/create';
-import { Statement, Operator } from './definitions/zen/types';
+import { CompoundOperator, Statement, Operator } from './definitions/zen/types';
 import pako from 'pako';
 import { Definition } from '../docs/docs';
 import { BaseNode } from './BaseNode';
@@ -63,6 +64,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     storedMessage?: Message;
     saveData?: any;
     custom?: SerializableCustom;
+    definition?: Definition;
 
     constructor(patch: Patch, id?: string) {
         super(patch);
@@ -156,6 +158,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         if (definition && definition.name) {
             name = definition.name;
+
+            this.definition = definition;
         }
 
         if (definition && definition.attributeOptions) {
@@ -226,7 +230,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if (compile && this.name !== "zen" && (this.operatorContextType === OperatorContextType.ZEN ||
             this.operatorContextType === OperatorContextType.GL)) {
             if (!this.patch.skipRecompile) {
-                this.patch.recompileGraph();
+                //this.patch.recompileGraph();
+                let parentNode = (this.patch as SubPatch).parentNode;
+                if (!parentNode || parentNode.attributes.type !== "core") {
+                    this.patch.recompileGraph();
+                }
             }
         }
 
@@ -244,13 +252,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             }
 
         }
-        if (this.name !== "param" && this.name !== "uniform" && this.name !== "color" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
+        if (this.name !== "param" && this.name !== "uniform" && this.name !== "color" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "polytrig" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
             this.isSpecialCase = false;
         } else {
             this.isSpecialCase = true;
         }
 
-        if ((this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "color" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
+        if ((this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "color" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall" || this.name === "polytrig") {
             this.isInletSumSpecialCase = true;
         } else {
             this.isInletSumSpecialCase = false;
@@ -351,11 +359,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         }
 
         // check the number of io-lets matches the spec
-        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "latchcall" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "param" && this.name !== "modeling.synth" && this.name !== "modeling.component") {
+        if (!this.audioNode && this.name !== "speakers~" && this.name !== "call" && this.name !== "latchcall" && this.name !== "zen" && this.outlets.length > _numberOfOutlets && this.name !== "canvas" && this.name !== "polycall" && this.name !== "polytrig" && this.name !== "param" && this.name !== "modeling.synth" && this.name !== "modeling.component") {
             this.outlets = this.outlets.slice(0, _numberOfOutlets);
         }
 
-        if (!this.audioNode && this.name !== "zen" && this.inlets.length > _numberOfInlets && this.name !== "polycall") {
+        if (!this.audioNode && this.name !== "zen" && this.inlets.length > _numberOfInlets && this.name !== "polycall" && this.name !== "polytrig") {
             this.inlets = this.inlets.slice(0, _numberOfInlets);
         }
 
@@ -466,6 +474,18 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || this.isInletSumSpecialCase) { //(this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "defun" || this.name === "polycall") {
             return message;
         }
+
+        if (message && Array.isArray(message) && message[0] === "nth") {
+            // TODO: need something better for here, cuz this is ugly
+            return message;
+        }
+
+        if (message && Array.isArray(message) && message[0] && (message[0] as CompoundOperator).name === "modeling.synth") {
+            // TODO: need something better for here, cuz this is ugly
+            return message;
+        }
+
+
         let lastMessage: Message | undefined = inlet.lastMessage;
         if (lastMessage !== undefined && ((inlet.lastMessage as Statement).node === undefined || ((message as Statement).node === undefined) || (inlet.lastMessage as Statement).node !== (message as Statement).node)) {
             if (this.operatorContextType === OperatorContextType.ZEN ||
@@ -535,7 +555,25 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
         let ogMessage = message;
-        message = this.applyInletSumming(inlet, message, fromNode);
+
+        let zenBase = this.patch.getZenBase();
+        let isCompilable = (this.operatorContextType === OperatorContextType.ZEN || this.operatorContextType === OperatorContextType.GL);
+        let isCompiling = (zenBase && zenBase.isCompiling && isCompilable) || (this.patch.skipRecompile2 && isCompilable);
+        if (Array.isArray(message) && (message as Statement).node) { // || message[0] === "add") {
+            isCompiling = true;
+        }
+
+        if (this.operatorContextType === OperatorContextType.ZEN || this.operatorContextType === OperatorContextType.GL) {
+            if ((typeof message === "number") || (this.name !== "zen" && this.name !== "out")) {
+                isCompiling = true;
+            }
+        }
+
+        if (isCompiling) {
+            message = this.applyInletSumming(inlet, message, fromNode);
+        }
+
+
         super.receive(inlet, message, fromNode);
         if (!inlet.markedMessages) {
             inlet.markedMessages = [];
@@ -549,13 +587,18 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             this.arguments[argumentNumber] = message;
         }
 
+        if (this.definition && !this.definition.isHot && this.inlets.indexOf(inlet) > 0) {
+            //console.log('skipping ishot...');
+            return;
+        }
+
         if (inlet.messagesReceived === undefined) {
             inlet.messagesReceived = 0;
         }
         inlet.messagesReceived++;
 
-        if (this.operatorContextType === OperatorContextType.ZEN ||
-            this.operatorContextType === OperatorContextType.GL) {
+        if (isCompiling && (this.operatorContextType === OperatorContextType.ZEN ||
+            this.operatorContextType === OperatorContextType.GL)) {
             let INLETS = [];
             for (let inlet of this.inlets) {
                 for (let connection of inlet.connections) {
@@ -574,7 +617,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
                 INLETS.push(inlet);
             }
 
-            let _inlets = INLETS.filter(inlet => inlet.messagesReceived! < inlet.connections.filter(x => x.source && (!(x.source as ObjectNode).name || (x.source as ObjectNode).name !== "attrui")).length);
+            //let _inlets = INLETS.filter(inlet => inlet.messagesReceived! < inlet.connections.filter(x => x.source && (!(x.source as ObjectNode).name || (x.source as ObjectNode).name !== "attrui")).length);
+
+            let _inlets = INLETS.filter(inlet => inlet.messagesReceived! < inlet.connections.filter(x => x.source && ((!(x.source as ObjectNode).name && (x.source as MessageNode).messageType === undefined) || ((x.source as MessageNode).messageType === undefined && (x.source as ObjectNode).name !== "attrui"))).length);
             if (typeof message !== "string" && _inlets.length > 0) {
                 if ((this.name === "accum" && indexOf >= 2) || this.isInletSumSpecialCase) { //(this.name && this.name.includes("modeling")) || this.name === "uniform" || this.name === "data" || this.name === "param" || this.name === "history" || this.name === "zen" || this.name === "latchcall" || this.name === "call" || this.name === "polycall" || this.name === "defun" || this.name === "canvas") {
                 } else {
@@ -590,7 +635,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             return;
         }
 
-        if ((this.operatorContextType === OperatorContextType.ZEN || this.operatorContextType === OperatorContextType.GL) && this.lastSentMessage !== undefined && !this.isSpecialCase) { //this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
+        if (isCompiling && (this.operatorContextType === OperatorContextType.ZEN || this.operatorContextType === OperatorContextType.GL) && this.lastSentMessage !== undefined && !this.isSpecialCase) { //this.name !== "param" && this.name !== "uniform" && this.name !== "attrui" && this.name !== "call" && this.name !== "history" && this.name !== "defun" && this.name !== "polycall" && this.name !== "modeling.component" && this.name !== "modeling.synth" && this.name !== "data" && this.name !== "canvas") {
 
             return;
         } else {
