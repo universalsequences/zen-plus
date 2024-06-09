@@ -23,6 +23,7 @@ export interface Definition {
     fn?: (...args: Arg[]) => UGen,
     fnString?: string;
     glTypeChecker?: GLTypeCheck
+    isHot?: boolean,
     file?: File;
 }
 
@@ -35,6 +36,9 @@ export const documenter = () => {
     let doc = (name: string, definition: Definition) => {
         if (definition.numberOfOutlets === undefined) {
             definition.numberOfOutlets = 1;
+        }
+        if (definition.isHot === undefined) {
+            definition.isHot = true;
         }
         api[name] = {
             ...definition,

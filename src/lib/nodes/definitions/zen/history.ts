@@ -61,7 +61,7 @@ export const zen_history = (object: ObjectNode) => {
     // 2. we want to retrieve data out of the history to use
     return (x: Message): Statement[] => {
         if (h == undefined) {
-            h = history(object.attributes["initial"] as number);
+            h = history(object.attributes["initial"] as number, undefined, undefined, true);
         }
 
         let inputStatement: Statement = x as Statement;

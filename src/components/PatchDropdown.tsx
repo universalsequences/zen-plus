@@ -127,6 +127,7 @@ const PatchDropdown = React.memo((props: Props) => {
                                         if (o.subpatch) {
                                             o.subpatch.objectNodes = [];
                                             o.subpatch.messageNodes = [];
+                                            console.log('wet');
                                             o.subpatch.recompileGraph();
                                             o.subpatch.disconnectGraph();
                                         }

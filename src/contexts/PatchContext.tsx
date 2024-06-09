@@ -407,7 +407,11 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         setConnections({ ...connections });
         setObjectNodes([...patch.objectNodes]);
         setMessageNodes([...patch.messageNodes]);
-        patch.recompileGraph();
+        if (nodes.some(x => ((x as ObjectNode).operatorContextType === OperatorContextType.ZEN) ||
+            ((x as ObjectNode).operatorContextType === OperatorContextType.GL))) {
+            console.log("BRUV");
+            patch.recompileGraph();
+        }
     }, [patch, setObjectNodes, connections, setConnections]);
 
 

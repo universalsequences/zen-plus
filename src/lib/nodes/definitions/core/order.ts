@@ -19,7 +19,7 @@ doc(
     'loadBang',
     {
         numberOfOutlets: 1,
-        numberOfInlets: 0,
+        numberOfInlets: 1,
         description: "sends bang on load",
     });
 

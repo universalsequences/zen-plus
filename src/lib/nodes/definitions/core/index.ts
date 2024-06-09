@@ -1,42 +1,78 @@
-import { API } from '@/lib/nodes/context';
-import { select, route } from './select';
-import { function_editor } from './function';
-import { knob, slider } from './slider';
-import { preset } from './preset';
-import { interval } from './metro';
-import { strings } from './strings';
-import { divider, umenu } from './umenu';
-import { order } from './order';
-import { math } from './math';
-import { lists } from './list';
-import { button, matrix } from './matrix';
-import { attrui } from './attrui';
-import { buffer } from './buffer';
-import { wasmviewer } from './wasmviewer';
-import { comment } from './comment';
-import { send, subscribe } from './messages';
+import { API } from "@/lib/nodes/context";
+import { keydown } from "./keys";
+import { currenttime, converttime } from "./time";
+import { select, route, filterselect } from "./select";
+import { dict, dict_get, dictpack } from "./json";
+import { toggle } from "./toggle";
+import { print } from "./print";
+import {
+  identity,
+  filter_neq,
+  filter_arg_eq,
+  filter_eq,
+  filter_mod_eq,
+  filter_lt,
+  filter_lte,
+  filter_gte,
+} from "./control";
+import { function_editor } from "./function";
+import { knob, slider } from "./slider";
+import { preset } from "./preset";
+import { interval, metro, schedule } from "./metro";
+import { strings } from "./strings";
+import { divider, umenu, buttonoptions } from "./umenu";
+import { order } from "./order";
+import { math } from "./math";
+import { lists } from "./list";
+import { button, matrix } from "./matrix";
+import { attrui } from "./attrui";
+import { buffer } from "./buffer";
+import { ast, wasmviewer } from "./wasmviewer";
+import { comment } from "./comment";
+import { send, patchmessage, subscribe } from "./messages";
 
 export const api: API = {
-    wasmviewer,
-    route,
-    buffer,
-    subscribe,
-    send,
-    button,
-    select,
-    "function": function_editor,
-    matrix,
-    comment,
-    ...lists,
-    ...math,
-    ...order,
-    interval,
-    attrui,
-    umenu,
-    divider,
-    slider,
-    knob,
-    preset,
-    ...strings
+  wasmviewer,
+  ast,
+  patchmessage,
+  route,
+  buffer,
+  subscribe,
+  send,
+  schedule,
+  button,
+  get: dict_get,
+  select,
+  function: function_editor,
+  matrix,
+  comment,
+  ...lists,
+  ...math,
+  ...order,
+  interval,
+  metro,
+  "filter.=": filter_eq,
+  "filter.!=": filter_neq,
+  "filter.<": filter_lt,
+  "filter.<=": filter_lte,
+  "filter.>=": filter_gte,
+  "filter.%=": filter_mod_eq,
+  "filter.i=": filter_arg_eq,
+  buttonoptions,
+  attrui,
+  umenu,
+  filterselect,
+  divider,
+  slider,
+  knob,
+  preset,
+  dictpack,
+  currenttime,
+  converttime,
+  print,
+  dict,
+  identity,
+  toggle,
+  "key.down": keydown,
+  ...strings,
 };
-

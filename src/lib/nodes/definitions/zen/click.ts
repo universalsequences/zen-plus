@@ -25,7 +25,14 @@ export const z_click = (node: ObjectNode) => {
         }
 
         // otherwise we simply click
-        clicker.click!();
+        if (!isNaN(parseFloat(message as string))) {
+            message = parseFloat(message as string);
+        }
+        if (typeof message === "number") {
+            clicker.click!(44100 * (message - node.patch.audioContext.currentTime));
+        } else {
+            clicker.click!();
+        }
         return [];
     };
 };

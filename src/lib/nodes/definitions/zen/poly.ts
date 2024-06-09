@@ -1,4 +1,5 @@
 import { doc } from './doc';
+import { getDefunBodies } from './defun-utils';
 import { parseArguments } from '@/lib/nodes/definitions/gl/index';
 import { API } from '@/lib/nodes/context';
 import { SubPatch, Message, Lazy, ObjectNode, Patch } from '../../types';
@@ -18,7 +19,7 @@ doc(
         }
     });
 
-type Mode = "pipe" | "sum";
+type Mode = "pipe" | "sum" | "inputs";
 
 export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
     if (!node.attributes.voices) {
@@ -26,10 +27,11 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
     }
 
     if (!node.attributes["mode"]) {
-        node.attributes["mode"] = "sum";
+        node.attributes["mode"] = "sum" as Mode;
     }
 
     return (message: Message) => {
+        /*
         let name = node.attributes["name"];
         let upstream = getUpstreamNodes(node.patch);
         let defuns = upstream.filter(x => x.name === "defun" &&
@@ -39,9 +41,12 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
         if (!defun) {
             return [];
         }
+        */
 
-        let body = defun.storedMessage;
-        if (!body) {
+        let body = getDefunBodies(node); //defun.storedMessage;
+        console.log("BODY FOR POLY=", body);
+
+        if (!body || body.length === 0) {
             return [];
         }
 
@@ -85,9 +90,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
                         }
                     }
 
-                    //if (ARGS.includes(argumentNumber)) {
-                    //    continue;
-                    // }
                     if (!ARGS.includes(argumentNumber) && i === 0) {
                         numArgs++;
                     }

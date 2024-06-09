@@ -45,6 +45,7 @@
     "react-color": "^2.19.3",
     "react-device-detect": "^2.2.3",
     "react-dom": "18.2.0",
+    "react-syntax-highlighter": "^15.5.0",
     "sass": "^1.69.5",
     "tailwindcss": "3.3.5",
     "three": "^0.158.0",
@@ -52,6 +53,7 @@
     "uuid": "^9.0.1",
     "viem": "1.21.4",
     "wagmi": "^1.4.12",
-    "web3": "^4.4.0"
+    "web3": "^4.4.0",
+    "worker-loader": "^3.0.8"
   }
 }

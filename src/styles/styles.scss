@@ -1,11 +1,11 @@
-
 .locked.presentation {
     .node-component {
         overflow: hidden !important;
     }
 }
 
-.locked, .presentation {
+.locked,
+.presentation {
     textarea {
         pointer-events: none;
     }
@@ -14,18 +14,14 @@
         opacity: 0 !important;
     }
 
-.pushable {
-    cursor: pointer;
+    .pushable {
+        cursor: pointer;
+    }
+
+    .pushable:active {
+        transform: scale(0.95); /* Scale down when active/pressed */
+    }
 }
-
-.pushable:active {
-    transform: scale(0.95); /* Scale down when active/pressed */
-
-}
-
-}
-
-
 
 .edge-mover {
     pointer-events: auto;
@@ -45,8 +41,6 @@
 .sidebar.opened-sidebar2 {
     width: 320px;
 }
-
-
 
 @keyframes opensidebar {
     0% {
@@ -68,8 +62,6 @@
     }
 }
 
-
-
 @keyframes closesidebar {
     0% {
         width: 240px;
@@ -79,7 +71,6 @@
         width: 0px;
     }
 }
-
 
 //.node-component:active {
 //    z-index:100000000000 !important;
@@ -110,7 +101,6 @@
     background-color: #8f18ff;
 }
 
-
 .dark-modal {
     background-color: #423f3f45;
     border: 1px solid #ffffff0f;
@@ -124,7 +114,6 @@
     }
 }
 
-
 .light-mode {
     .border-zinc-800 {
         border-color: #ffffff61;
@@ -136,21 +125,20 @@
             box-shadow: none !important;
         }
     }
-    
-.node-component {
-    box-shadow:2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
-  6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
-  12.5px 12.5px 10px rgba(0, 0, 0, 0.035),
-  22.3px 22.3px 17.9px rgba(0, 0, 0, 0.042),
-  41.8px 41.8px 33.4px rgba(0, 0, 0, 0.05),
-  100px 100px 80px rgba(0, 0, 0, 0.07);
 
+    .node-component {
+        box-shadow:
+            2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
+            6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
+            12.5px 12.5px 10px rgba(0, 0, 0, 0.035),
+            22.3px 22.3px 17.9px rgba(0, 0, 0, 0.042),
+            41.8px 41.8px 33.4px rgba(0, 0, 0, 0.05),
+            100px 100px 80px rgba(0, 0, 0, 0.07);
+    }
 }
-}
-
 
 .node-component.selected {
-    z-index: 100000000000 !important;
+    z-index: 1000000000 !important;
 }
 
 body {
@@ -158,7 +146,8 @@ body {
     color: white;
 }
 
-.opened-sidebar, .opened-sidebar2 {
+.opened-sidebar,
+.opened-sidebar2 {
     backdrop-filter: blur(8px);
 }
 .sidebar {
@@ -168,8 +157,8 @@ body {
 }
 
 .bg-toolbar.top-toolbar {
-    background-color: #2e2e2e69;
-        backdrop-filter:blur(8px);
+    background-color: #373c4469;
+    backdrop-filter: blur(8px);
 }
 
 .bg-toolbar {
@@ -177,19 +166,18 @@ body {
 }
 
 body {
-.bg-zinc-900 {
-    //background-color: var(--dark-patch-color);
-}
-}
-
-.light-mode {
-.dark-background {
-    .patcher-background {
-        background-color: #7e7e88cc !important;
-        //backdrop-filter: blur(8px);
+    .bg-zinc-900 {
+        background-color: var(--dark-patch-color);
     }
 }
 
+.light-mode {
+    .dark-background {
+        .patcher-background {
+            background-color: #7e7e88cc !important;
+            //backdrop-filter: blur(8px);
+        }
+    }
 }
 .dark-background {
     background-color: var(--dark-patch-color);
@@ -204,16 +192,16 @@ body {
 }
 
 .light-mode {
-.slot-view.sequencer {
-    background-color: #191c1e9f;
-}
-.slot-view.generator {
-    background-color: #2426279f;
-}
+    .slot-view.sequencer {
+        background-color: #191c1e9f;
+    }
+    .slot-view.generator {
+        background-color: #2426279f;
+    }
 
-.slot-view.effect {
-    background-color: #1616169f;
-}
+    .slot-view.effect {
+        background-color: #1616169f;
+    }
 }
 
 .slot-view.sequencer {
@@ -227,18 +215,17 @@ body {
     background-color: #161616;
 }
 .custom-view {
-        background-color: var(--dark-patch-color);
+    background-color: var(--dark-patch-color);
     .patcher-background {
         border: none;
-    .node-component {
-        border: none;
-        box-shadow: unset;
+        .node-component {
+            border: none;
+            box-shadow: unset;
 
-        .cursor-ew-resize {
-            display: none;
+            .cursor-ew-resize {
+                display: none;
+            }
         }
-
-    }
     }
     border: none;
 }
@@ -267,31 +254,28 @@ body {
     justify-content: space-between;
 }
 
-
 .light-mode {
-
     .object-context {
         background-color: #0b0b0b42;
     }
-.node-component.context-type-1 {
-    background-color: #d2ff00;
-}
-.node-component.context-type-7 {
-    background-color: #ffffff;
-}
+    .node-component.context-type-1 {
+        background-color: #d2ff00;
+    }
+    .node-component.context-type-7 {
+        background-color: #ffffff;
+    }
 
-.node-component.context-type-2 {
-    background-color: #0118ff;
-}
+    .node-component.context-type-2 {
+        background-color: #0118ff;
+    }
 
-.node-component.context-type-6 {
-    background-color: #8f18ff;
-}
+    .node-component.context-type-6 {
+        background-color: #8f18ff;
+    }
 
-.bg-dark-transparent {
-    background-color: #848181b8;
-}
-
+    .bg-dark-transparent {
+        background-color: #848181b8;
+    }
 
     .bg-black-clear {
         background-color: #9e959561;
@@ -300,13 +284,35 @@ body {
     --dark-patch-color: #98989d;
     .locked {
         .patcher-background {
-                background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
+            //background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
+            background-image: radial-gradient(
+                    circle at center center,
+                    rgba(68, 67, 67, 0.51) 0%,
+                    rgba(61, 58, 58, 0.05) 11%,
+                    transparent 11%,
+                    transparent 100%
+                ),
+                linear-gradient(90deg, rgb(11 11 11 / 91%), rgb(11 11 11 / 99%));
         }
     }
     .patcher-background {
         //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
-        background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 60%), rgb(86 78 78 / 60%));
-        background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
+        background-image: radial-gradient(
+                circle at center center,
+                rgba(170, 155, 155, 0.78) 0%,
+                rgba(114, 110, 100, 0.28) 11%,
+                transparent 11%,
+                transparent 100%
+            ),
+            linear-gradient(90deg, rgb(88 80 80 / 60%), rgb(86 78 78 / 60%));
+        background-image: radial-gradient(
+                circle at center center,
+                rgba(170, 155, 155, 0.78) 0%,
+                rgba(114, 110, 100, 0.28) 11%,
+                transparent 11%,
+                transparent 100%
+            ),
+            linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
     }
 
     .node-component.border-zinc-900 {
@@ -319,15 +325,14 @@ body {
     }
 
     .custom-view {
-            background-color: var(--light-patch-color);
-            div {
-                box-shadow: none !important;
-            }
-
+        background-color: var(--light-patch-color);
+        div {
+            box-shadow: none !important;
+        }
     }
 
     .bg-zinc-900 {
-            background-color: var(--light-patch-color);
+        background-color: var(--light-patch-color);
         //color: black;
 
         .text-white {
@@ -336,7 +341,7 @@ body {
     }
 }
 
-.dragging-cable { 
+.dragging-cable {
     svg {
         z-index: 0 !important;
     }
@@ -345,8 +350,8 @@ body {
 svg {
     .edge-group.hover {
         .visible-edge {
-        stroke: red !important;
-    }
+            stroke: red !important;
+        }
     }
     path.selected-edge {
         stroke: red !important;
@@ -369,7 +374,7 @@ svg {
 }
 
 .tile.selected-patch {
-     border-color:  #cbffef !important;
+    border-color: #cbffef !important;
 }
 
 .tile {
@@ -381,7 +386,6 @@ svg {
     border-radius: 12px;
     overflow: hidden;
     border-color: #1b1b1b !important;
-
 }
 
 .tile.horizontal-tile {
@@ -395,13 +399,21 @@ svg {
 }
 
 @keyframes horizontal-slide {
-    0% { max-width: 0%};
-    100% { max-width: 100% }
+    0% {
+        max-width: 0%;
+    }
+    100% {
+        max-width: 100%;
+    }
 }
 
 @keyframes vertical-slide {
-    0% { max-height: 0%};
-    100% { max-height: 100% }
+    0% {
+        max-height: 0%;
+    }
+    100% {
+        max-height: 100%;
+    }
 }
 
 .tile-container {
@@ -425,11 +437,10 @@ svg {
     z-index: 100000000000000000;
 }
 
-
 .custom-view {
-.message-node {
-    background-color: var(--dark-patch-color) !important;
-}
+    .message-node {
+        background-color: var(--dark-patch-color) !important;
+    }
 }
 
 .bg-dark-transparent {
@@ -472,39 +483,39 @@ svg {
 }
 
 .lds-ring {
-  display: inline-block;
-  position: relative;
-  width: 20px;
-  height: 20px;
+    display: inline-block;
+    position: relative;
+    width: 20px;
+    height: 20px;
 }
 .lds-ring div {
-  box-sizing: border-box;
-  display: block;
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  margin: 1px;
-  border: 5px solid #000;
-  border-radius: 50%;
-  animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  border-color: #000 transparent transparent transparent;
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    margin: 1px;
+    border: 5px solid #000;
+    border-radius: 50%;
+    animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-color: #000 transparent transparent transparent;
 }
 .lds-ring div:nth-child(1) {
-  animation-delay: -0.45s;
+    animation-delay: -0.45s;
 }
 .lds-ring div:nth-child(2) {
-  animation-delay: -0.3s;
+    animation-delay: -0.3s;
 }
 .lds-ring div:nth-child(3) {
-  animation-delay: -0.15s;
+    animation-delay: -0.15s;
 }
 @keyframes lds-ring {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .sidebar-btn {
@@ -514,7 +525,6 @@ svg {
 
 .nearest-inlet {
     background-color: red !important;
-    
 }
 
 .rt-DropdownMenuViewport {
@@ -529,15 +539,15 @@ svg {
 }
 .DropdownMenuItem {
     width: 100%;
-    outline:  none !important;
+    outline: none !important;
     padding-left: 15px;
     padding-right: 15px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
 
-
-.bg-clear-button, button.iekbcc0 {
+.bg-clear-button,
+button.iekbcc0 {
     background-color: #ffffff0f;
     color: white;
     padding-left: 8px;
@@ -578,7 +588,7 @@ button.iekbcc0 {
     div {
         display: flex;
         flex-direction: row;
-                 
+
     }
 }
 */
@@ -612,60 +622,76 @@ div:active {
     animation: colorChange 100ms forwards;
 }
 
-
 /* Spinner Styles */
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .spin {
-  animation: spin 10s linear infinite;
+    animation: spin 10s linear infinite;
 }
 
 .spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-left-color: #09f;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #09f;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
 }
 
 .locked {
-.patcher-background {
-    background-color: #3b3b3b4a;
-    background-image: radial-gradient(circle at center center, rgb(41 41 41 / 44%) 0%, rgb(28 27 27 / 8%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
-    background-size: 14px 14px;
+    .patcher-background {
+        background-color: #12151bf0;
+        background-image: radial-gradient(
+                circle at center center,
+                rgb(41 41 41 / 44%) 0%,
+                rgb(28 27 27 / 8%) 11%,
+                transparent 11%,
+                transparent 100%
+            ),
+            linear-gradient(
+                90deg,
+                rgba(11, 11, 11, 0.69),
+                rgba(11, 11, 11, 0.69)
+            );
+        background-size: 14px 14px;
+    }
 }
-
-}
 .patcher-background {
-    background-color: #3b3b3b4a;
+    background-color: #12151bf0;
     //background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf0,#0b0b0bf2);
-    background-image: radial-gradient(circle at center center, rgb(68 67 67 / 51%) 0%, rgb(61 58 58 / 5%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
+    background-image: radial-gradient(
+            circle at center center,
+            rgb(68 67 67 / 51%) 0%,
+            rgb(61 58 58 / 5%) 11%,
+            transparent 11%,
+            transparent 100%
+        ),
+        linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
     background-size: 14px 14px;
 }
 
 .text-zen-violet {
-    color: #D06BFF
+    color: #d06bff;
 }
 .text-zen-blue {
-    color: #28FFE4;
+    color: #28ffe4;
 }
 .text-zen-yellow {
-    color: #9EFF01 ;
+    color: #9eff01;
 }
 .text-zen-pink {
-    color: #FF11CB;
+    color: #ff11cb;
 }
 
 .iekbcc0.iekbcc9.ju367v76.ju367v7r.ju367v8b.ju367v6k.ju367v4.ju367va2.ju367vn.ju367veh.ju367vft.ju367vb.ju367va.ju367v16.ju367v1h.ju367v1p.ju367v8t._12cbo8i3.ju367v8r._12cbo8i4._12cbo8i6 {
-    display:  none;
+    display: none;
 }
 
 .mint-button-container {
@@ -679,4 +705,26 @@ div:active {
 
 .bg-light-100 {
     background-color: black;
+}
+
+.patch-window {
+    .patcher-background {
+        background-color: #313131;
+    }
+    .tile {
+        height: unset !important;
+        min-height: unset !important;
+        flex: 1;
+    }
+    .dark-background,
+    .selected-patch {
+        border: none !important;
+    }
+    .tile {
+        border-width: 0px !important;
+        border-radius: 0px !important;
+    }
+    .overflow-scroll {
+        overflow: hidden !important;
+    }
 }

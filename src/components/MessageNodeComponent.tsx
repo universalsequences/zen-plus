@@ -16,6 +16,10 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageN
     const { setSelectedNodes, selectedNodes } = useSelection();
     const [value, setValue] = useState<number>(messageNode.message as number || 0);
     let { value: message } = useValue();
+
+    if (message === null) {
+        message = messageNode.message as string;
+    }
     let lockedModeRef = useRef(lockedMode);
     useEffect(() => {
         lockedModeRef.current = lockedMode;

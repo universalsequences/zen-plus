@@ -81,10 +81,20 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
             let split = x.split(" ");
             x = parseFloat(split[1]);
         }
-        if (typeof x === "number") {
-            object.storedMessage = x;
-            _param.set!(x);
-            object.storedParameterValue = x;
+        let isScheduleSet = (Array.isArray(x) && typeof x[0] === "number");
+        if (typeof x === "number" || isScheduleSet) {
+            if (Array.isArray(x)) {
+                object.storedMessage = x[0] as number;
+                let time = x[1] as number;
+                time = (time - object.patch.audioContext.currentTime) * 44100;
+                _param.set!(x[0] as number, time);
+                object.storedParameterValue = x[0] as number;
+            } else {
+                object.storedMessage = x as number;
+                _param.set!(x as number);
+                object.storedParameterValue = x as number;
+            }
+
             return [];
         }
 

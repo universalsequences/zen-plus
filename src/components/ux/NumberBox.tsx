@@ -64,7 +64,6 @@ const NumberBox: React.FC<{
                     _max = initValue.current;
                 }
                 let valueChange = (mouseDelta / (factor)) * ((_max - _min));
-                console.log("mousedef=%s mouseDelta=%s valueChange=%s", mouseRef.current, mouseDelta, valueChange);
                 // Calculate new value based on initial value and the proportional change
                 newValue = initValue.current - valueChange; // Subtract because screen Y is inverted
                 // Clamp newValue to the min and max range

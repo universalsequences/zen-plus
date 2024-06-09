@@ -124,7 +124,6 @@ export const printStatement = (statement: Statement): string => {
                 pts.push(b);
                 pts.push(c);
                 initData = pts;
-                console.log("PTS=", pts);
                 needsInterpolation = true;
             }
         }

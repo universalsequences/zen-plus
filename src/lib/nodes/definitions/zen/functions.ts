@@ -1,6 +1,8 @@
 import { doc } from './doc';
+import { sortHistories } from '../../Patch';
 import { API } from '@/lib/nodes/context';
 import { polycall } from './poly';
+import { polytrig } from './polytrig';
 import { SubPatch, Message, Lazy, ObjectNode, Patch } from '../../types';
 import { Operator, Statement, CompoundOperator } from './types';
 import { traverseBackwards } from '@/lib/nodes/traverse';
@@ -32,6 +34,9 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
             }
         }
 
+        let sortDep = ["s" as Operator, ...deps] as Statement[];
+        sortDep = sortHistories(sortDep);
+
         _bodies = [_message, ..._bodies];
         if (_bodies.length === 0) {
             return [];
@@ -40,7 +45,7 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
         let __bodies = [];
         for (let x of _bodies) {
             if (deps.length > 0) {
-                __bodies.push(["s" as Operator, ...deps, x as unknown as Statement]);
+                __bodies.push(["s" as Operator, ...sortDep.slice(1), x as unknown as Statement]);
             } else {
                 __bodies.push(x);
             }
@@ -55,7 +60,7 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
                 n.attributes["name"] === name) {
                 totalInvocations++;
             }
-            if ((n as ObjectNode).name === "polycall" &&
+            if (((n as ObjectNode).name === "polytrig" || (n as ObjectNode).name === "polycall") &&
                 n.attributes["name"] === name) {
                 totalInvocations += (n as ObjectNode).attributes.voices as number;
             }
@@ -112,6 +117,10 @@ const call = (node: ObjectNode, ...args: Lazy[]) => {
         let rets: Statement[] = [];
         for (let i = 0; i < numBodies; i++) {
             let nth: Statement = ["nth" as Operator, ret as Statement, i];
+            nth.node = {
+                ...node,
+                id: node.id + '_nth_' + i
+            };
             if (!node.outlets[i]) {
                 node.newOutlet();
             }
@@ -163,6 +172,10 @@ const latchcall = (node: ObjectNode, ...args: Lazy[]) => {
         let rets: Statement[] = [];
         for (let i = 0; i < numBodies; i++) {
             let nth: Statement = ["nth" as Operator, ret as Statement, i];
+            nth.node = {
+                ...node,
+                id: node.id + '_nth_' + i
+            };
             if (!node.outlets[i]) {
                 node.newOutlet();
             }
@@ -216,6 +229,7 @@ export const functions: API = {
     defun,
     call,
     argument,
+    polytrig,
     polycall,
     latchcall,
     invocation
