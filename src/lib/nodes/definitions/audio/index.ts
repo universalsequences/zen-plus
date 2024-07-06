@@ -2,8 +2,8 @@ import { doc } from "./doc";
 import { slots } from "./slots";
 import { live_meter } from "./meter";
 import { receive, publishPatchSignals, send } from "./pubsub";
-import { API } from "@/lib/nodes/context";
-import { ObjectNode, Message, ConnectionType } from "../../types";
+import type { API } from "@/lib/nodes/context";
+import { type ObjectNode, type Message, ConnectionType } from "../../types";
 
 doc("speakers~", {
   description: "represents the speakers with outlets per output channel",
@@ -20,15 +20,15 @@ export const speakers = (node: ObjectNode) => {
   // so upon the "compilation" stage of the Patch, we need to search for "speaker~"
   // nodes and wrap this object node with that audio worklet node
 
-  if (typeof node.attributes["channels"] === "number") {
-    for (let i = 0; i < node.attributes["channels"]; i++) {
+  if (typeof node.attributes.channels === "number") {
+    for (let i = 0; i < node.attributes.channels; i++) {
       if (!node.inlets[i]) {
         node.newInlet("channel input" + (i + 1), ConnectionType.AUDIO);
       }
     }
   }
 
-  let numberOfInputs = (node.attributes["channels"] || 1) as number;
+  const numberOfInputs = (node.attributes.channels || 1) as number;
   if (node.audioNode && node.audioNode.numberOfInputs !== numberOfInputs) {
     node.audioNode.disconnect();
     node.audioNode = undefined;
@@ -36,13 +36,21 @@ export const speakers = (node: ObjectNode) => {
 
   if (!node.audioNode) {
     // need to create an audio node that connects to speakers
-    let ctxt = node.patch.audioContext;
-    let splitter = ctxt.createChannelMerger(
-      (node.attributes["channels"] || 1) as number,
+    const ctxt = node.patch.audioContext;
+    const splitter = ctxt.createChannelMerger(
+      (node.attributes.channels || 1) as number,
     );
-    console.log("merger = ", splitter);
     node.audioNode = splitter; //node.patch.audioContext.destination;
     splitter.connect(ctxt.destination);
+    if (node.patch.recorderWorklet) {
+      splitter.connect(node.patch.recorderWorklet);
+    } else {
+      setTimeout(() => {
+        if (node.patch.recorderWorklet) {
+          splitter.connect(node.patch.recorderWorklet);
+        }
+      }, 1000);
+    }
   }
 
   return (_message: Message) => [];
@@ -57,7 +65,10 @@ doc("number~", {
 
 export const number_tilde = (node: ObjectNode) => {
   // setup the visualizer worklet and hook it up to this node
-  createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor");
+  createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor").then(
+    () => {},
+  );
+
   return (_message: Message) => [];
 };
 

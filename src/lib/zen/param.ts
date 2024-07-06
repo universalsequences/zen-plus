@@ -11,6 +11,9 @@ export const param = (val: number, name: string = "hello"): ParamGen => {
 
     let p: ParamGen = ssd();
     p.set = (val: number, time?: number) => {
+        if (isNaN(val)) {
+            val = 0;
+        }
         ssd.value!(val, time!);
     };
 

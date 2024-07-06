@@ -1,49 +1,54 @@
 import { UGen, Arg, Generated, float } from './zen'
+import { uuid } from './uuid';
 import { phasor } from './phasor';
-import { memo } from './memo';
+import { simdMemo } from './memo-simd';
 import { Context } from './context';
-import { add, wrap } from './math';
+import { add, wrap, mult, sub, floor } from './math';
 import { Target } from './targets';
 import { cKeywords } from './math';
 
 const SINE_TABLE_SIZE = 1024;
 
-export const cycle = (
-    freq: Arg,
-    phase: Arg = 0
-): UGen => {
-    return memo((context: Context): Generated => {
-        let _freq = context.gen(freq);
-        let _phase = context.gen(phase);
-        let cyclePhase = wrap(
-            add(
-                phasor(freq),
-                phase),
-            0, 1)(context);
-
+export const cycleHelper = (index: Arg, nextIndex: Arg, frac: Arg) => {
+    let id = uuid();
+    return simdMemo((context: Context, _index: Generated, _nextIndex: Generated, _frac: Generated) => {
         let [
             floatIndex,
             frac,
             lerp,
             index,
-            nextIndex] = context.useVariables(
+            nextIndex] = context.useCachedVariables(id,
                 "floatIndex", "frac", "clerp", "index", "nextIndex");
 
         const SINE_TABLE = context.target === Target.C ? "sineTable" : "this.sineTable";
         let intKeyword = context.intKeyword;
         let varKeyword = context.varKeyword;
-        let floor = context.target === Target.C ? cKeywords["Math.floor"] : "Math.floor";
+        let caster = context.target === Target.C ? "(int)" : "";
         let out = `
-${cyclePhase.code}
-${context.varKeyword} ${floatIndex} = ${cyclePhase.variable} * ${SINE_TABLE_SIZE};
-${context.varKeyword} ${frac} = ${floatIndex} - ${floor}(${floatIndex});
-${intKeyword} ${index} = ${floor}(${floatIndex});
-${intKeyword} ${nextIndex} = ${index} + 1;
-if (${nextIndex} >= ${SINE_TABLE_SIZE}) {
-  ${nextIndex} = 0;
-}
-${varKeyword} ${lerp} = (1.0-${frac})*${SINE_TABLE}[${index}] + ${frac}*${SINE_TABLE}[${nextIndex}];
+${varKeyword} ${lerp} = (1.0-${_frac.variable})*${SINE_TABLE}[${caster} ${_index.variable}] + ${_frac.variable}*${SINE_TABLE}[${caster} ${_nextIndex.variable}];
 `;
-        return context.emit(out, lerp, _freq, _phase);
-    });
+        return context.emit(out, lerp, _index, _nextIndex, _frac);
+    },
+        undefined,
+        index,
+        nextIndex,
+        frac);
+};
+
+export const cycle = (
+    freq: Arg,
+    phase: Arg = 0
+): UGen => {
+
+    let cyclePhase = wrap(
+        add(
+            phasor(freq),
+            phase),
+        0, 1);
+
+    let floatIndex = mult(cyclePhase, SINE_TABLE_SIZE);
+    let index = floor(floatIndex);
+    let frac = sub(floatIndex, index);
+    let nextIndex = wrap(add(index, 1), 0, SINE_TABLE_SIZE);
+    return cycleHelper(index, nextIndex, frac);
 };

@@ -1,4 +1,5 @@
 import Matrix from "./Matrix";
+import { Waveform } from "./Waveform";
 import { ASTViewer } from "./ASTViewer";
 import ButtonOptions from "./ButtonOptions";
 import Color from "./Color";
@@ -50,6 +51,7 @@ export const index: ComponentIndex = {
   slider: Slider,
   knob: Knob,
   divider: Divider,
+  waveform: Waveform,
   function: FunctionUX,
   button: Button,
   preset: Preset,

@@ -1,4 +1,7 @@
 import { data, peek, BlockGen, poke, Gettable } from '../data';
+import { Context } from '../context';
+import { float } from '../zen';
+import { zen_let } from '../let';
 import { print } from '../print';
 import { Structure } from './web-maker'
 import { breakIf } from '../break';
@@ -54,8 +57,6 @@ export class Component {
         this.isEntryPoint = isEntryPoint;
 
         this.material = material;
-        console.log('component initialized with material = ', this.material, web);
-
         this.web = web;
         this.neighbors = data(web.size * web.maxNeighbors, 1, web.neighbors, true, "none");
         this.coeffs = web.data;
@@ -91,26 +92,53 @@ export class Component {
     /**
      * Calculate the entire displacement across the network
      */
+
+    cachedContext?: Context;
+
+    context(input: UGen) {
+        // this ensures that we share the same context across connected components...
+        return (context: Context) => {
+            let initializedConnection = this.connections.find(x => x.component.cachedContext);
+            if (this.cachedContext) {
+                console.log("BRO CACHE=", context, this.cachedContext);
+                context = this.cachedContext;
+            } else if (initializedConnection && initializedConnection.component.cachedContext) {
+                context = initializedConnection.component.cachedContext;
+                console.log("using cachied context =", context);
+            } else {
+                this.cachedContext = context.useContext(false, true);
+                this.cachedContext.forceScalar = true;
+                context = this.cachedContext;
+                console.log("caching context =", this.cachedContext);
+            }
+            return input(context);
+        };
+    }
+
     gen(input: UGen) {
         if (this.isEntryPoint) {
             this.excitementEnergy = input;
         }
-        return s(
-            this.currentChannel,
-            this.prevChannel, // problem is prev channel is wrong?,
-            input,
-            this.nt2,
-            this.u_center,
-            this.tension,
-            this.p0,
-            this.material.couplingCoefficient,
-            this.p_eff,
-            mult(
-                div(200, this.size),
+        // note: if there are connected components, we need to ensure that they all occur in the same
+        // context (so that they can share data sample-by-sample)
+        // lets have the 
+        return mult(
+            div(60, this.size),
+            this.context(s(
+                this.currentChannel,
+                this.prevChannel, // problem is prev channel is wrong?,
+                input,
+                this.nt2,
+                this.u_center,
+                this.tension,
+                this.p0,
+                this.material.couplingCoefficient,
+                this.p_eff,
                 sumLoop(
                     { min: 0, max: this.size },
                     (idx: UGen) => this.nodeDisplacement(input, idx)
                 )
+            )
             ));
     }
 
@@ -260,19 +288,17 @@ export class Component {
             let coeff = peek(coeffs, neighbor, idx);
 
             // if neighbor is not -1 then we have a valid neighbor 
-            return s(
-                //(neighbors === this.neighbors ? breakIf(and(gte(idx, maxNeighbors), gt(i, 3))) : add(0)),
-                zswitch(
-                    neq(neighbor, -1),
-                    mult(
-                        zswitch(
-                            eq(coeff, -1),
-                            mult(-1, peek(u, idx, prevChannel)),
-                            // the value of the neighbor in previous time-step
-                            peek(u, neighbor, prevChannel)),
-                        coeff // the coefficient for that neighbor & idx combo (multiply value by that)
-                    ),
-                    0))
+            return zswitch(
+                neq(neighbor, -1),
+                mult(
+                    zswitch(
+                        eq(coeff, -1),
+                        mult(-1, peek(u, idx, prevChannel)),
+                        // the value of the neighbor in previous time-step
+                        peek(u, neighbor, prevChannel)),
+                    coeff // the coefficient for that neighbor & idx combo (multiply value by that)
+                ),
+                0)
         });
     }
 

@@ -1,73 +1,70 @@
 import OpenAI from "openai";
-import { ObjectNode, Patch } from '@/lib/nodes/types';
+import { ObjectNode, Patch } from "@/lib/nodes/types";
 
 const client = new OpenAI({
-    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
 });
 
-
 export interface AssistantMessage {
-    role: "user" | "assistant";
-    message: string;
+  role: "user" | "assistant";
+  message: string;
 }
 
 class Assistant {
-    assistant?: OpenAI.Beta.Assistant;
-    patch: Patch;
-    thread: OpenAI.Beta.Thread | undefined;
+  assistant?: OpenAI.Beta.Assistant;
+  patch: Patch;
+  thread: OpenAI.Beta.Thread | undefined;
 
-    nodesAdded: ObjectNode[];
-    messages: AssistantMessage[];
+  nodesAdded: ObjectNode[];
+  messages: AssistantMessage[];
 
-    constructor(patch: Patch) {
-        this.patch = patch;
-        this.thread = undefined;
-        this.messages = [];
-        this.nodesAdded = [];
+  constructor(patch: Patch) {
+    this.patch = patch;
+    this.thread = undefined;
+    this.messages = [];
+    this.nodesAdded = [];
+  }
+
+  async createThread(prompt: string) {
+    if (!this.assistant) {
+      await this.setup();
     }
-
-    async createThread(prompt: string) {
-        if (!this.assistant) {
-            await this.setup();
-        }
-        if (!this.assistant) {
-            return;
-        }
-        this.messages.push({
+    if (!this.assistant) {
+      return;
+    }
+    this.messages.push({
+      role: "user",
+      message: prompt,
+    });
+    if (!this.thread) {
+      this.thread = await client.beta.threads.create({
+        messages: [
+          {
             role: "user",
-            message: prompt
-        });
-        if (!this.thread) {
-            this.thread = await client.beta.threads.create({
-                messages: [{
-                    role: "user",
-                    content: prompt
-                }]
-            });
+            content: prompt,
+          },
+        ],
+      });
 
-            // store the thread id in database
-        } else {
-            // Send a message to the thread
-            await client.beta.threads.messages.create(this.thread.id, {
-                role: "user",
-                content: prompt,
-            });
+      // store the thread id in database
+    } else {
+      // Send a message to the thread
+      await client.beta.threads.messages.create(this.thread.id, {
+        role: "user",
+        content: prompt,
+      });
+    }
+    let thread = this.thread;
+    console.log("thread", thread);
 
-        }
-        let thread = this.thread;
-        console.log("thread", thread);
+    let run = await client.beta.threads.runs.create(thread.id, {
+      assistant_id: this.assistant.id,
+    });
 
-        let run = await client.beta.threads.runs.create(
-            thread.id,
-            {
-                assistant_id: this.assistant.id,
-            }
-        );
-
-        let status = run.status;
-        while (status !== "completed") {
-            /*
+    let status = run.status;
+    while (status !== "completed") {
+      /*
             if (status === "in_progress" || status === "completed") {
                 let steps = await client.beta.threads.runs.steps.list(thread.id, run.id);
                 console.log("steps=", steps.data.length);
@@ -99,34 +96,35 @@ class Assistant {
                 }
             }
             */
-            let result = await client.beta.threads.runs.retrieve(thread.id, run.id);
-            status = result.status;
-            console.log(result);
-            console.log('status = ', status);
-            await sleep(5000);
-        }
-        let messages = await client.beta.threads.messages.list(thread.id);
-        let msgData: string[] = [];
-        for (let message of messages.data) {
-            let msg = await client.beta.threads.messages.retrieve(thread.id, message.id);
-            if (msg.content[0] && (msg.content[0] as any).text) {
-                msgData.push((msg.content[0] as any).text.value);
-            }
-            console.log("message returned =", msg);
-        }
-        //        window.localStorage.setItem("gpt", JSON.stringify(msgData));
-        console.log(msgData);
-        this.messages.push({
-            role: "assistant",
-            message: msgData[0]
-        });
-
-        return [msgData[0]];
+      let result = await client.beta.threads.runs.retrieve(thread.id, run.id);
+      status = result.status;
+      console.log(result);
+      console.log("status = ", status);
+      await sleep(5000);
     }
+    let messages = await client.beta.threads.messages.list(thread.id);
+    let msgData: string[] = [];
+    for (let message of messages.data) {
+      let msg = await client.beta.threads.messages.retrieve(thread.id, message.id);
+      if (msg.content[0] && (msg.content[0] as any).text) {
+        msgData.push((msg.content[0] as any).text.value);
+      }
+      console.log("message returned =", msg);
+    }
+    //        window.localStorage.setItem("gpt", JSON.stringify(msgData));
+    console.log(msgData);
+    this.messages.push({
+      role: "assistant",
+      message: msgData[0],
+    });
 
-    async setup() {
-        this.assistant = await client.beta.assistants.retrieve("asst_RG9y8ON9AzW6WQDk3vOI5hxp");
-        /*
+    return [msgData[0]];
+  }
+
+  async setup() {
+    this.assistant = await client.beta.assistants.retrieve("asst_tWRscOq6EBeoV9bGPXSQ2SzR");
+    console.log("assistant = ", this.assistant);
+    /*
         this.assistant = await client.beta.assistants.create(
             {
                 name: "Patcher",
@@ -180,15 +178,15 @@ tanh,applies tanh to input,input
         console.log('assistants = ', this.assistant);
         console.log(this);
     */
-    }
+  }
 }
 
 export default Assistant;
 
 const sleep = (time: number): Promise<void> => {
-    return new Promise((resolve: () => void) => {
-        setTimeout(() => {
-            resolve();
-        }, time);
-    })
+  return new Promise((resolve: () => void) => {
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
 };

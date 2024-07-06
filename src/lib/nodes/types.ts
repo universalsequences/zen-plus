@@ -1,15 +1,16 @@
-import { BlockGen } from "../zen";
-import { StateChange } from "@/lib/nodes/definitions/core/preset";
-import Assistant from "@/lib/openai/assistant";
-import { TypeSuccess, TypeError } from "./typechecker";
-import { RenderJob } from "@/lib/gl/zen";
-import { SVGObject } from "./definitions/svg/index";
-import { ZenGraph } from "@/lib/zen/zen";
-import { ParamGen, param } from "@/lib/zen/index";
-import { OperatorContextType } from "./context";
-import { Connections } from "@/contexts/PatchContext";
-import { Statement } from "./definitions/zen/types";
-import { Slot } from "./definitions/audio/slots";
+import type { BlockGen } from "../zen";
+import type { StateChange } from "@/lib/nodes/definitions/core/preset";
+import type Assistant from "@/lib/openai/assistant";
+import type { TypeSuccess, TypeError } from "./typechecker";
+import type { RenderJob } from "@/lib/gl/zen";
+import type { SVGObject } from "./definitions/svg/index";
+import type { ZenGraph } from "@/lib/zen/zen";
+import type { ParamGen, param } from "@/lib/zen/index";
+import type { OperatorContextType } from "./context";
+import type { Connections } from "@/contexts/PatchContext";
+import type { Statement } from "./definitions/zen/types";
+import type { Slot } from "./definitions/audio/slots";
+import type { BaseNode } from "./BaseNode";
 
 export interface Size {
   width: number;
@@ -70,19 +71,16 @@ export type Lazy = () => Message;
 
 export type InstanceFunction = (x: Message) => Message[];
 
-export type NodeFunction = (
-  node: ObjectNode,
-  ...args: Lazy[]
-) => InstanceFunction;
+export type NodeFunction = (node: ObjectNode, ...args: Lazy[]) => InstanceFunction;
 
 // a node has inlets and outlets
 
 export enum ConnectionType {
-  AUDIO,
-  ZEN,
-  CORE,
-  GL,
-  NUMBER,
+  AUDIO = 0,
+  ZEN = 1,
+  CORE = 2,
+  GL = 3,
+  NUMBER = 4,
 }
 
 export interface IOConnection {
@@ -147,17 +145,8 @@ export type Node = Identifiable &
     outlets: IOlet[];
     newInlet: (name?: string, type?: ConnectionType) => void;
     newOutlet: (name?: string, type?: ConnectionType) => void;
-    connect: (
-      destination: Node,
-      inlet: IOlet,
-      outlet: IOlet,
-      compile: boolean,
-    ) => IOConnection;
-    disconnect: (
-      connection: IOConnection,
-      compile: boolean,
-      ignoreAudio?: boolean,
-    ) => void;
+    connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
+    disconnect: (connection: IOConnection, compile: boolean, ignoreAudio?: boolean) => void;
     disconnectAll: () => void;
     connectAudioNode: (connection: IOConnection) => void;
     disconnectAudioNode: (connection: IOConnection) => void;
@@ -233,13 +222,14 @@ export type Patch = Identifiable & {
   messageNodes: MessageNode[];
   presentationMode: boolean;
   lockedMode?: boolean;
-  compile: (x: Statement, outputNumber: number) => void;
+  compile: (x: Statement, outputNumber?: number) => void;
   assistant: Assistant;
   recompileGraph: (force?: boolean) => void;
   type: PatchType;
   isZenBase: () => boolean;
   audioContext: AudioContext;
   historyDependencies: Statement[];
+  outputStatements: Statement[];
   historyNodes: Set<ObjectNode>;
   getAllNodes: () => ObjectNode[];
   //getAudioNodes: () => ObjectNode[];
@@ -249,7 +239,6 @@ export type Patch = Identifiable & {
   fromJSON: (x: SerializedPatch, isPreset?: boolean) => Connections;
   name?: string;
   skipRecompile: boolean;
-  skipRecompile2: boolean;
   getZenBase: () => Patch | null;
   setZenCode?: (x: string | null) => void;
   wasmCode?: string;
@@ -266,6 +255,18 @@ export type Patch = Identifiable & {
   updateAttributes?: (id: string, attribute: Attributes) => void;
   isSelected?: boolean;
   setupPostCompile: (x: boolean) => void;
+  registerNewNode?: (node: BaseNode) => void;
+  registerConnect?: (fromNode: BaseNode, toNode: BaseNode, inlet: number, outlet: number) => void;
+  registerReceive?: (node: BaseNode, message: Message, inlet: IOlet) => void;
+  storedStatement?: Statement;
+  waiting?: boolean;
+  recorderWorklet?: AudioWorkletNode;
+  isRecording: boolean;
+  getBuffer: () => void;
+  startRecording: () => void;
+  stopRecording: () => void;
+  recordingStartedAt?: Date;
+  audioNode?: AudioNode;
 };
 
 export type SubPatch = Patch & {

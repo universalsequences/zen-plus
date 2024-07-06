@@ -1,99 +1,46 @@
-import { ZenGraph } from './zen';
-import { replaceAll } from './replaceAll';
-import { genFunctions, genInputs, genHistories, declareOutputs, prettyPrint, genOutputs } from './worklet';
+import { ZenGraph, Generated } from "./zen";
+import { Context } from "./context";
+import {
+  isVariableEmitted,
+  getAllVariables,
+  printCodeFragments,
+  CodeFragment,
+} from "./emitter";
 
+import { CodeBlock, SIMDBlock } from "./simd";
+import { replaceAll } from "./replaceAll";
+import {
+  genFunctions,
+  genInputs,
+  genHistories,
+  declareOutputs,
+  prettyPrint,
+  genOutputs,
+} from "./worklet";
+import { determineBlocks } from "./blocks/analyze";
+import { printBlocks, printUserFunction } from "./blocks/printBlock";
+import { printConstantInitializer } from "./blocks/printConstants";
+import { Target } from "./targets";
 
 export const generateWASM = (graph: ZenGraph) => {
-    let memorySize = graph.context.memory.size;
-    const SIMD_FUNCTIONS = `
-    float matrix4x4SumResult[4];
+  const memorySize = graph.context.memory.size;
 
-    float* matrix4x4Sum(int inputIdx, int matrixIdx, int size) {
-       v128_t sum = wasm_f32x4_splat(0.0f); // initialize an SIMD vector with zeros
-       int i=0;
-       for (i=0; i < 4; i++) {
-          // load weights (aka the input matrix) into simd register
-          v128_t weights = wasm_f32x4_splat(memory[inputIdx+i]); 
-          int idx = matrixIdx + i * size;
-          // load the "inputs" (todo: could this be placed above the loop since its always the same)
-          v128_t row = wasm_v128_load(&memory[idx]);
-          v128_t prod = wasm_f32x4_mul(row, weights);
-          sum = wasm_f32x4_add(sum, prod);
-       }
-       wasm_v128_store(matrix4x4SumResult, sum); 
-       return matrix4x4SumResult;
-    }
+  const hasSIMD = true;
+  const blocks = determineBlocks(...graph.codeFragments);
+  const blocksCode = printBlocks(blocks, Target.C);
 
-    float tempScalar[4]; // Temporary storage
-    float scalarValue[4]; // Temporary storage for 'scalarSum'
-    float* matrix4x4DotSum(int inputIdx, int matrixIdx, int size) {
-       // Initialize a result vector to store the sum of dot products for each matrix row
-
-      // Load the input vector
-      v128_t inputs = wasm_v128_load(&memory[inputIdx]);
-
-    for (int i = 0; i < 4; i++) {
-        // Correctly load the current row of the matrix
-        v128_t matrixRow = wasm_v128_load(&memory[matrixIdx + i * size]);
-        // Perform element-wise multiplication between 'inputs' vector and the matrix row
-        v128_t prod = wasm_f32x4_mul(inputs, matrixRow);
-
-        // Simulate a horizontal add to sum the elements of 'prod'
-        v128_t temp1 = wasm_i32x4_shuffle(prod, prod, 2, 3, 0, 1); // Swap pairs
-        v128_t sum1 = wasm_f32x4_add(prod, temp1); // Pairwise add
-        v128_t temp2 = wasm_i32x4_shuffle(sum1, sum1, 1, 0, 3, 2); // Cross pairs
-        v128_t scalarSum = wasm_f32x4_add(sum1, temp2); // Sum in all elements
-
-        // Extract the scalar sum and update the corresponding element in 'result'
- float scalarValue2;
-        wasm_v128_store(&scalarValue2, scalarSum); // Temporarily store to access the scalar result
-   
-matrix4x4SumResult[i] = scalarValue2;
-    }
-return matrix4x4SumResult;
-}
-
-    float matrix4x4Dot(int idx1, int idx2) {
-// Load 4 elements from each buffer into SIMD vectors
-    v128_t vecA = wasm_v128_load(&memory[idx1]);
-    v128_t vecB = wasm_v128_load(&memory[idx2]);
-
-    // Multiply corresponding elements
-    v128_t prod = wasm_f32x4_mul(vecA, vecB);
-
-    // Sum the products to get the dot product
-    // Note: WebAssembly SIMD requires a workaround for horizontal addition
-    v128_t temp1 = wasm_i32x4_shuffle(prod, prod, 2, 3, 0, 1); // Swap pairs
-    v128_t sum1 = wasm_f32x4_add(prod, temp1); // Add swapped pairs
-    v128_t temp2 = wasm_i32x4_shuffle(sum1, sum1, 1, 0, 3, 2); // Cross pairs
-    v128_t finalSum = wasm_f32x4_add(sum1, temp2); // Final sum across all elements
-
-    // Extract the final result from the SIMD vector
-    float result;
-    wasm_v128_store(&result, finalSum); // Assuming we store and then access the first element
-    return result;
-}
-`;
-    let hasSIMD = true;
-    if (!graph.functions.some(x => x.code.includes("matrix4x4")) &&
-        !graph.code.includes("matrix4x4")) {
-        hasSIMD = false;
-    }
-
-    let varKeyword = graph.context.varKeyword;
-    let code = `
+  let code = `
 ${hasSIMD ? "#include <wasm_simd128.h>" : ""}
 #include <stdlib.h>
 #include <stdio.h>
 #include <emscripten.h>
 #include <math.h>
 #define BLOCK_SIZE 128 // The size of one block of samples
-
 #define MEM_SIZE ${memorySize} // Define this based on your needs
 #define SINE_TABLE_SIZE 1024
 #define MAX_MESSAGES 10000
 
-double memory[MEM_SIZE]; // Your memory buffer
+double memory[MEM_SIZE] __attribute__((aligned(16))); // Your memory buffer
 double  sineTable[SINE_TABLE_SIZE]; // Your memory buffer
 
 int elapsed = 0;
@@ -102,15 +49,17 @@ struct Message {
    int type;
    double subType;
    double body;
+   double currentTime;
 };
 
 int message_counter = 0;
 struct Message messages[MAX_MESSAGES];
 
-void new_message(int type, float subType, float body) {
+void new_message(int type, float subType, float body, float currentTime) {
    messages[message_counter].type = type;
    messages[message_counter].subType = subType;
    messages[message_counter].body = body;
+   messages[message_counter].currentTime = currentTime;
    message_counter = (message_counter + 1);
    if (message_counter >= MAX_MESSAGES) {
      message_counter = 0;
@@ -127,76 +76,144 @@ struct Message* EMSCRIPTEN_KEEPALIVE flush_messages() {
    return messages;
 }
 
-
 // Get a pointer to the messages array
 double * EMSCRIPTEN_KEEPALIVE get_memory() {
-        return memory;
-    }
-
-    EMSCRIPTEN_KEEPALIVE
-    void empty_messages() {
-        //message_counter = 0;
-    }
-
-    
-    double random_double() {
-        return rand() / (float)RAND_MAX;
-    }
-
-${hasSIMD ? SIMD_FUNCTIONS : ""}
-/*
-*/
-
-    EMSCRIPTEN_KEEPALIVE
-    void* my_malloc(size_t size) {
-        return malloc(size);
-    }
-
-    EMSCRIPTEN_KEEPALIVE
-    void initSineTable() {
-        for (int i = 0; i < SINE_TABLE_SIZE; i++) {
-            sineTable[i] = sin((2 * M_PI * i) / SINE_TABLE_SIZE);
-        }
-    }
-
-/*
-    void init(float * mem) {
-        for (int i = 0; i < MEM_SIZE; i++) {
-            memory[i] = mem[i];
-        }
-    }
-*/
-
-    EMSCRIPTEN_KEEPALIVE
-    void setMemorySlot(int idx, double val) {
-        memory[idx] = val;
-    }
-
-/*
-    void setMemoryRegion(int idx, double* val, int size) {
-        for (int i = 0; i < size; i++) {
-            memory[idx + i] = val[i];
-        }
-    }
-*/
-
-${genFunctions(graph.functions, graph.context.target, graph.context.varKeyword)}
-
-    EMSCRIPTEN_KEEPALIVE
-    void process(float * inputs, float * outputs) {
-        for (int j = 0; j < BLOCK_SIZE; j++) {
-      ${genInputs(graph)}
-      ${declareOutputs(graph)}
-      ${genHistories(graph)}
-      ${prettyPrint("      ", graph.code)}
-      ${genOutputs(graph)}
-            elapsed++;
-        }
-    }
-
-    `;
-    if (hasSIMD) {
-        code = replaceAll(code, "double", "float");
-    }
-    return code;
+    return memory;
 }
+
+EMSCRIPTEN_KEEPALIVE
+void empty_messages() {
+    message_counter = 0;
+}
+
+double random_double() {
+    return rand() / (float)RAND_MAX;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void* my_malloc(size_t size) {
+    return malloc(size);
+}
+
+${printConstantInitializer(graph.context)}
+
+EMSCRIPTEN_KEEPALIVE
+void initSineTable() {
+    for (int i = 0; i < SINE_TABLE_SIZE; i++) {
+        sineTable[i] = sin((2 * M_PI * i) / SINE_TABLE_SIZE);
+    }
+
+    initializeConstants();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setMemorySlot(int idx, double val) {
+    memory[idx] = val;
+}
+
+v128_t wasm_f32x4_mod(v128_t a, v128_t b) {
+    // a: dividend vector, b: divisor vector
+    v128_t div_result = wasm_f32x4_div(a, b);
+    v128_t floored = wasm_f32x4_floor(div_result);
+    v128_t multiplied_back = wasm_f32x4_mul(floored, b);
+    v128_t remainder = wasm_f32x4_sub(a, multiplied_back);
+    return remainder;
+}
+
+
+v128_t float_blend(v128_t condition, v128_t vecA, v128_t vecB) {
+    // Generate a mask where true (condition > 0) lanes are all bits set
+    v128_t mask = wasm_f32x4_gt(condition, wasm_f32x4_splat(0.0));
+
+    // This part assumes vecA if condition > 0, else vecB.
+    // Since WebAssembly currently lacks a direct f32x4 blend operation based on a mask,
+    // a workaround that simulates this operation is necessary.
+
+    // Apply mask: true selects from vecA, false selects from vecB.
+    // Unfortunately, we can't apply wasm_v128_and/not/or directly to floating points
+    // in a manner that achieves conditional selection based on floating-point values.
+    // The correct approach in WebAssembly SIMD would typically involve integer masks
+    // generated from comparisons, then using these masks to select between vectors.
+
+    // Placeholder for a correct SIMD blending approach:
+    // - Use comparison operations to generate masks.
+    // - Use generated masks to blend between vectors.
+
+    // Return a placeholder result; this needs proper implementation.
+    return wasm_v128_or(wasm_v128_and(mask, vecA), wasm_v128_and(wasm_v128_not(mask), vecB));
+}
+
+${graph.functions.map((x) => printUserFunction(x, Target.C)).join("\n")}
+
+${blocksCode}
+`;
+  if (hasSIMD) {
+    code = replaceAll(code, "double", "float");
+  }
+  return code;
+};
+
+const genSIMDArrays = (simdBlocks: SIMDBlock[]): string => {
+  let code = "";
+  for (let block of simdBlocks) {
+    let variable = block.variable;
+    // need to declare all the arrays we need outside the body of the process function
+    code += `
+float block_${variable}[128];
+`;
+  }
+  return code;
+};
+
+const genBlockArrays = (variables: string[]): string => {
+  let code = "";
+  let arrays = [];
+  for (let variable of variables) {
+    arrays.push(`float block_${variable}[128];`);
+  }
+  return Array.from(new Set(arrays)).join("\n");
+};
+
+const getOutboundVariables = (
+  block: CodeBlock,
+  blocks: CodeBlock[],
+  isSIMD: boolean,
+): string[] => {
+  if (!block.codeFragments) {
+    return [];
+  }
+  let allVariables = getAllVariables(
+    block.context!,
+    block.codeFragments[block.codeFragments.length - 1],
+  );
+
+  if (isSIMD) {
+    return allVariables.filter((x) => !x.includes("constant"));
+  }
+  let outbound: string[] = [];
+  for (let b of blocks) {
+    if (b === block) continue;
+    let frags = b.codeFragments;
+    if (frags) {
+      console.log(
+        "block #%s frags",
+        b.context!.id,
+        frags[frags.length - 1],
+        frags,
+      );
+      let blockVariables = getAllVariables(null, frags[frags.length - 1]);
+      let out = blockVariables.filter((x) => allVariables.includes(x));
+      console.log(
+        "out for block #%s",
+        b.context!.id,
+        out,
+        blockVariables,
+        allVariables,
+      );
+      outbound.push(...out);
+    }
+  }
+  outbound = Array.from(new Set(outbound));
+  console.log("outbound=", block.context!.id, outbound);
+  return outbound.filter((x) => !x.includes("constant"));
+};

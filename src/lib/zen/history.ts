@@ -1,9 +1,15 @@
 import { MemoryBlock } from './block';
+import { getContextWithHistory } from './memo-simd';
+import { uuid } from './uuid';
+import { getAllContexts, Memoized, shallowestContext, deepestContext, getParentContexts } from './memo';
 import { LoopContext } from './context';
+import { CodeFragment } from './emitter';
 import { UGen, Generated, Arg, float } from './zen';
 import { memo } from './memo';
-import { Context, emitCode, ContextMessageType } from './context';
+import { Context, emitCodeHelper, emitCode, ContextMessageType } from './context';
+import { emitBlocks } from './simd';
 import { emitFunctions, emitArguments } from './functions';
+import { SIMDContext } from './index';
 
 export type Samples = number;
 interface HistoryParams {
@@ -25,7 +31,11 @@ interface HistoryParams {
 export type History = ((input?: UGen, reset?: UGen) => UGen) & {
     value?: (v: number, time?: number) => void,
     paramName?: string,
-    getInitData?: () => number
+    getInitData?: () => number,
+}
+
+interface Clearer {
+    clear?: () => void;
 }
 
 export type ContextualBlock = {
@@ -33,80 +43,329 @@ export type ContextualBlock = {
     context: Context;
 };
 
-export const history = (val?: number, params?: HistoryParams, debugName?: string): History => {
-    let block: MemoryBlock;
-    let historyVar: string;
-    let context: Context;
-    let cachedValue: number;
+const getAllCompleted = (context: Context): string[] => {
+    return [...Array.from(context.completedCycles), ...Array.from(getParentContexts(context)).flatMap(x => Array.from(x.completedCycles))];
+};
 
+const getAllEmitted = (context: Context): string[] => {
+    return [...Array.from(context.historiesEmitted), ...Array.from(getParentContexts(context)).flatMap(x => Array.from(x.historiesEmitted))];
+};
+
+
+export const history = (val?: number, params?: HistoryParams, debugName?: string, FORCENEW?: boolean): History => {
+    let block: MemoryBlock | undefined;
+    let historyVar: string | undefined;
+    let cachedValue: number | undefined;
+    let inMem: Generated | undefined;
+    let outMem: Generated | undefined;
     let contextBlocks: ContextualBlock[] = [];
+    let cachedContext: Context | undefined;
+    let inputId = uuid();
+    let outputId = uuid();
+    let __input: Generated | undefined;
 
-    let _history: History = (input?: Arg, reset?: Arg): UGen => {
-        return (_context: Context): Generated => {
-            let ogContext = _context;
-            let contextToUse = _context;
-            if (params && params.name) {
-                // need the base context if its a parameter (we dont want
-                // a different parameter for every single loop iteration)
-                while ("context" in contextToUse) {
-                    contextToUse = contextToUse["context"] as Context;
+    let _history: History = (input?: Arg, reset?: Arg): UGen & Clearer => {
+        const determineContext = (context: Context): Context => {
+            if (cachedContext) {
+                return cachedContext;
+            }
+
+            if (context.forceScalar) {
+                return context;
+            }
+
+            if (params) {
+                return context.useContext(false, true);
+            }
+
+            //            console.log("determining context completedCycles/emitted", getAllCompleted(context), getAllEmitted(context));
+
+            let allEmitted = new Set(getAllEmitted(context));
+            let parent: Context | undefined = (context as SIMDContext).context;
+            if (parent && (parent.isFunctionCaller || (FORCENEW && parent === parent.baseContext))) {
+                parent = undefined;
+            }
+            if (parent && allEmitted.size > 0) {
+                let contexts: Set<Context> = new Set();
+                allEmitted.forEach(
+                    emitted => {
+                        let c = getContextWithHistory(emitted, context);
+                        contexts.add(c);
+                    });
+
+                // evaluate the input to determine whether there are any loops between the incoming context
+                // and the input argument
+                let hero = false;
+                let proceed = true;
+                let useShallow = false;
+                let _input: Generated | undefined;
+                if (input) {
+                    let _context = context;
+
+                    _input = _context.gen(input);
+
+                    __input = _input;
+                    let histories = _input.histories.filter(x => allEmitted.has(x));
+
+                    if (!_input.codeFragments[0]) {
+                        proceed = false;
+                    } else if (histories.length > 0) {
+                        contexts = new Set();
+                        for (let h of histories) {
+                            contexts.add(getContextWithHistory(h, _context));
+                        }
+                        proceed = true;
+                        hero = true;
+                    } else {
+                        proceed = false;
+                        if (!_input.codeFragments[0].context.isSIMD) {
+                            cachedContext = _input.codeFragments[0].context;
+                            if (FORCENEW || allEmitted.size === 0) {
+                                __input = undefined;
+                            }
+                            return cachedContext;
+                        }
+                        proceed = true;
+
+                        // experimentally found by process of elimination:
+                        // TODO: explain why this works
+                        let deep = deepestContext(Array.from(contexts));
+                        if ((deep && deep.context !== deep.baseContext) && parent.isSIMD) {
+                            proceed = false;
+                        }
+                    }
+                } else {
+                    proceed = true;
+
+                    // experimentally found by process of elimination:
+                    // jesus christ this is hellish
+                    let deep = deepestContext(Array.from(contexts));
+                    if (((deep && deep.context !== deep.baseContext) && (context.isSIMD || parent.isSIMD)) && (context !== deep)) {
+                        if (((!FORCENEW && parent.isSIMD) || (!FORCENEW && context.isSIMD))) {
+                            if (parent.isSIMD) {
+                                if (contexts.size > 2) {
+                                    useShallow = true;
+                                    proceed = true;
+                                } else {
+                                    if (context.isSIMD) {
+                                        proceed = true;
+                                    } else {
+                                        proceed = true;
+                                        return context.useContext(false);
+                                    }
+                                }
+                            } else {
+                                proceed = false;
+                            }
+                        }
+                    } else {
+                    }
+                }
+
+                if (contexts.size > 0 && proceed) {
+                    let deepest = useShallow ? shallowestContext(Array.from(contexts)) : deepestContext(Array.from(contexts));
+                    if (deepest) {
+                        cachedContext = deepest;
+                        return cachedContext;
+                    }
                 }
             }
 
-            _context = contextToUse;
-            let _input = typeof input === "number" ? float(input)(contextToUse) : input ? input(contextToUse) : undefined;
-            let _reset = reset === undefined ? contextToUse.gen(float(0)) : contextToUse.gen(reset);
+            if (FORCENEW && !context.newBase && parent && !parent.isSIMD && !parent.newBase) {
+                cachedContext = parent;
+                return cachedContext;
+            }
 
+            cachedContext = context.useContext(false);
+            return cachedContext;
+        };
 
-            let contextChanged = context !== _context;
+        const allocateBlock = (context: Context): MemoryBlock => {
+            let block = params ? context.baseContext.alloc(1) : context.alloc(1);
+            contextBlocks = contextBlocks.filter(
+                x => !x.context.disposed);
+            contextBlocks.push({ context: context.baseContext, block });
+            return block;
+        };
 
-            context = _context;
-            if (block === undefined || contextChanged) {
-                block = context.alloc(1);
-                historyVar = context.useVariables(debugName || "historyVal")[0];
-                contextBlocks = contextBlocks.filter(
-                    x => !x.context.disposed);
-                contextBlocks.push({ context, block });
+        const getMemoizedValueIfAny = (context: Context): Generated | undefined => {
+            if (input) {
+                if (inMem) {
+                    return inMem;
+                    /*
+                    //}
+                    if (cachedContext !== context) {
+                        if (context.isSIMD) {
+                            return inMem;
+                        }
+                        cachedContext = context;
+                        if (historyVar && cachedContext) {
+                            cachedContext.historiesEmitted.add(historyVar);
+                        }
+                    } else {
+                        return inMem;
+                    }
+                    */
+                }
+
             } else {
+                if (outMem) {
+                    return outMem;
+                    /*
+                    if (cachedContext !== context) {
+                        if (context.isSIMD) {
+                            console.log('context.isSIMD so sending out mem');
+                            return outMem;
+                        }
+                        cachedContext = context;
+                        if (historyVar && cachedContext) {
+                            console.log("OUT MEM CONVERSION CACHC");
+                            cachedContext.historiesEmitted.add(historyVar);
+                            cachedContext.historiesEmitted.forEach(
+                                h => {
+                                    console.log("***** ADDING HISTORY=%s to context", h, context);
+                                    context.historiesEmitted.add(h);
+                                });
+                        }
+                    } else {
+                        return outMem;
+                    }
+                    */
+                }
+            }
+            return undefined;
+        };
+
+        let _h: (UGen & Clearer) = (context: Context): Generated => {
+            let memoizedResult = getMemoizedValueIfAny(context);
+            if (memoizedResult) {
+                return memoizedResult;
             }
 
-            if (block._idx === 44794) {
+            context = determineContext(context);
+
+            if (!block) {
+                block = allocateBlock(context);
             }
+
+            if (!historyVar) {
+                historyVar = context.useCachedVariables(outputId, debugName || "historyVal")[0];
+            }
+
             let IDX = block.idx;
-            let historyDef = `${context.varKeyword} ${historyVar} = memory[${IDX}]` + '\n';
 
-            let code = '';
-            let _variable: string = historyVar;
-            if (_input) {
-                let [newVariable] = context.useVariables("histVal");
-                code = `
-memory[${IDX}] = ${_input.variable};
-`;
-                if (!params || !params.inline) {
-                    code += `${context.varKeyword} ${newVariable} = ${historyVar};
-`
+            // reading from history (accessing memory)
+            let historyDef = `${context.varKeyword} ${historyVar} = memory[${IDX}];` + (params ? "/* param */" : "") + '\n';
 
-                }
-                if (params && params.inline) {
-                    newVariable = code;
-                    code = '';
-                }
-                _variable = newVariable;
-                let newCode = emitCode(context, code, _variable, _input, _reset);
-                code = newCode;
+            if (input && historyVar) {
+                // we are writing to this history from this context
+                context.historiesEmitted.add(historyVar);
             }
 
-            let histories = _input ? emitHistory(_input, _reset) : [];
-            let outerHistories = _input ? emitOuterHistory(_input, _reset) : [];
-            let functions = _input ? emitFunctions(_input, _reset) : [];
-            let args = _input ? emitArguments(_input, _reset) : [];
+            let _input = input !== undefined ? (__input || context.gen(input)) : undefined;
+            let _reset = reset === undefined ? context.gen(float(0)) : context.gen(reset);
 
+            // TODO: inspect the results of the _input (context), and potentially
+            // grab the context and lift it to be used here
+
+            if (_input && _input.context) {
+                if (_input.context !== context) {
+
+                    //console.log("inspecting input context completedCycles/emitted", getAllCompleted(_input.context), getAllEmitted(_input.context));
+                    if (_input.context.isSIMD) {
+                        /*
+                        if (_input.context.context) {
+                            context = _input.context.context;
+                        } else {
+                            context = _input.context.useContext(false, true);
+                        }
+                        cachedContext = context;
+                        */
+                    } else {
+                        context = _input.context;
+                        cachedContext = context;
+                    }
+
+                    if (outMem) {
+                        outMem.codeFragments.forEach(
+                            frag => frag.context = context);
+                    }
+                }
+            }
+
+            let fragmentVariable: string = historyVar || "";
+            let codeFragments: CodeFragment[] = [];
+
+            if (_input) {
+                codeFragments = generateInputFragment(context, IDX, historyDef, _input, _reset);
+                fragmentVariable = codeFragments[0].variable;
+            } else {
+                // no "input" to history (aka reading the history value)
+                codeFragments.push({
+                    context,
+                    code: "",
+                    variable: historyVar as string,
+                    histories: [historyDef],
+                    dependencies: []
+                })
+            }
+
+            initializeBlockWithData(block);
+
+            let out: Generated = emit(context, _input, _reset, codeFragments, historyVar!, historyDef, fragmentVariable);
+
+            // memoize the results
+            if (input !== undefined) {
+                inMem = out;
+            } else {
+                outMem = out;
+            }
+            return out;
+        }
+
+        const initializeBlockWithData = (block: MemoryBlock) => {
             if (val !== undefined) {
                 block.initData = new Float32Array([val]);
             }
             if (cachedValue !== undefined) {
                 block.initData = new Float32Array([cachedValue]);
             }
+        };
+
+        const generateInputFragment = (
+            context: Context,
+            IDX: string | number,
+            historyDef: string,
+            _input: Generated,
+            _reset: Generated): CodeFragment[] => {
+            // we are writing to the history, placing the input into the memory at
+            // the block index
+            let [newVariable] = context.useCachedVariables(inputId, debugName || "histVal");
+            let code = `
+memory[${IDX}] = ${_input.variable};
+`;
+            // the following needs to be revisited:
+            if (!params || !params.inline) {
+                code += `${context.varKeyword} ${newVariable} = ${historyVar};
+`
+            }
+            if (params && params.inline) {
+                newVariable = code;
+                code = '';
+            }
+
+            let codeFragments = emitCodeHelper(false, context, code, newVariable, _input, _reset);
+            codeFragments.forEach(frag => frag.histories = [historyDef]);
+            return codeFragments;
+        };
+
+        const emit = (context: Context, _input: Generated | undefined, _reset: Generated, codeFragments: CodeFragment[], historyVar: string, historyDef: string, fragmentVariable: string): Generated => {
+            let outputHistories = _input ? emitOutputHistory(_input, _reset) : [];
+            let histories = _input ? emitHistory(_input, _reset) : [];
+            let outerHistories = _input ? emitOuterHistory(_input, _reset) : [];
+            let functions = _input ? emitFunctions(_input, _reset) : [];
+            let args = _input ? emitArguments(_input, _reset) : [];
+
             let _params = _input ? emitParams(_input) : [];
             if (params && params.name) {
                 _params = [_history, ..._params];
@@ -115,19 +374,36 @@ memory[${IDX}] = ${_input.variable};
             if (!historyDef.includes("*")) {
                 outerHistories = [historyDef, ...outerHistories];
             }
-            let out: Generated = {
-                code,
-                variable: _variable,
-                histories: [historyDef, ...histories],
+
+            // go thru all code frags and add them to the history list
+            for (let codeFrag of codeFragments) {
+                codeFrag.context = context;
+                let h = Array.from(new Set([(historyVar as string), ...outputHistories]));
+                for (let h1 of h) {
+                    if (!codeFrag.histories.includes(h1)) {
+                        codeFrag.histories.push(h1);
+                    }
+                }
+            }
+
+            return {
+                variable: fragmentVariable,
+                codeFragments,
+                histories: Array.from(new Set([historyDef, ...histories])),
+                outputHistories: input === undefined ? Array.from(new Set([(historyVar as string), ...outputHistories])) : outputHistories,
                 outerHistories,
                 params: _params,
+                context: context,
                 functions,
-                variables: [_variable],
+                variables: [fragmentVariable],
                 functionArguments: args
             };
 
-            return out;
+        };
+
+        _h.clear = () => {
         }
+        return _h;
     };
 
 
@@ -143,20 +419,14 @@ memory[${IDX}] = ${_input.variable};
 
     _history.getInitData = () => {
         if (block && block.initData && block.initData[0] !== undefined) {
-            console.log("getting init data =", block.initData);
-            console.log("cached value =", cachedValue);
             return block.initData[0];
         }
-        console.log('returning val');
-        console.log("cached value =", cachedValue);
         return val || 0;
     };
 
-    _history.value = (val: number, time?: Samples) => {
-        if (context === undefined) {
-            return;
-        }
 
+
+    _history.value = (val: number, time?: Samples) => {
         for (let { context, block } of contextBlocks) {
             let messageType: ContextMessageType = time !== undefined ?
                 "schedule-set" : "memory-set";
@@ -165,7 +435,8 @@ memory[${IDX}] = ${_input.variable};
                 value: val,
                 time
             }
-            context.postMessage({
+            //            console.log('setting value =', val, body, block);
+            context.baseContext.postMessage({
                 type: messageType,
                 body
             });
@@ -179,8 +450,13 @@ memory[${IDX}] = ${_input.variable};
 
 /** used to collect all the histories for a functions arguments */
 export const emitHistory = (...gen: Generated[]): string[] => {
-    return Array.from(new Set(gen.flatMap(x => x.histories)));
+    return Array.from(new Set(gen.flatMap(x => x.histories))).filter(x => x !== undefined);
 };
+
+export const emitOutputHistory = (...gen: Generated[]): string[] => {
+    return Array.from(new Set(gen.flatMap(x => x.outputHistories))).filter(x => x !== undefined);
+};
+
 
 /** used to collect all the histories for a functions arguments */
 export const emitOuterHistory = (...gen: Generated[]): string[] => {

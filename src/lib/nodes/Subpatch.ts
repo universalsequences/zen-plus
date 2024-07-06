@@ -1,7 +1,7 @@
-import { Statement } from "./definitions/zen/types";
+import type { Statement } from "./definitions/zen/types";
 import { toConnectionType, OperatorContextType } from "./context";
 import { PatchImpl } from "./Patch";
-import { ConnectionType, ObjectNode, Message, Patch, SubPatch } from "./types";
+import type { ObjectNode, Message, Patch, SubPatch } from "./types";
 import ObjectNodeImpl from "./ObjectNode";
 
 /**
@@ -18,14 +18,14 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   patchType: OperatorContextType;
 
   constructor(parentPatch: Patch, parentNode: ObjectNode) {
-    let parentNodeType = parentNode.attributes["type"];
-    super(parentPatch.audioContext, parentNodeType === "zen");
+    const parentNodeType = parentNode.attributes.type;
+    super(parentPatch.audioContext, parentNodeType === "zen", true);
     this.parentPatch = parentPatch;
     this.parentNode = parentNode;
     this.parentNode.newAttribute("Custom Presentation", false);
 
     this.patchType = OperatorContextType.ZEN;
-    let _parentPatch = this.parentPatch as SubPatch;
+    const _parentPatch = this.parentPatch as SubPatch;
 
     if (typeof this.parentNode.attributes["type"] === "string") {
       this.setupPatchType(this.parentNode.attributes.type);
@@ -157,19 +157,13 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         return false;
       }
 
-      let time: number | undefined =
-        tokens[2] !== undefined ? parseFloat(tokens[2]) : undefined;
+      let time: number | undefined = tokens[2] !== undefined ? parseFloat(tokens[2]) : undefined;
 
       // look for parameters in this patch
-      let nodes = this.getAllNodes().filter(
-        (x) => x.name === "param" || x.name === "uniform",
-      );
+      let nodes = this.getAllNodes().filter((x) => x.name === "param" || x.name === "uniform");
       let params = nodes.filter((x) => x.arguments[0] === paramName);
       params.forEach((x) =>
-        x.receive(
-          x.inlets[0],
-          time !== undefined ? [paramValue, time] : paramValue,
-        ),
+        x.receive(x.inlets[0], time !== undefined ? [paramValue, time] : paramValue),
       );
       if (params.length > 0) {
         return true;

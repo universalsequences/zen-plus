@@ -1,10 +1,4 @@
-import {
-  ConnectionType,
-  Lazy,
-  Message,
-  ObjectNode,
-  NodeFunction,
-} from "../../types";
+import { ConnectionType, Lazy, Message, ObjectNode, NodeFunction } from "../../types";
 import { loop, loopVariable } from "./loop";
 import { z_click } from "./click";
 import { PatchImpl } from "@/lib/nodes/Patch";
@@ -12,11 +6,7 @@ import { membraneAPI } from "./physical-modeling/membrane";
 import { zen_simdDotSum, zen_simdDot, zen_simdMatSum } from "./simd";
 import { gate } from "./gate";
 import { condMessage, message } from "./message";
-import {
-  toConnectionType,
-  API,
-  OperatorContextType,
-} from "@/lib/nodes/context";
+import { toConnectionType, API, OperatorContextType } from "@/lib/nodes/context";
 import { functions } from "./functions";
 import { Statement, Operator, CompoundOperator } from "./types";
 import { doc } from "./doc";
@@ -54,7 +44,9 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
         parentNode.outlets[i].connectionType = ConnectionType.AUDIO;
       }
     }
-    parentNode.outlets[outputNumber - 1].name = name;
+    if (parentNode.outlets[outputNumber - 1]) {
+      parentNode.outlets[outputNumber - 1].name = name;
+    }
   }
   _node.attributeOptions["io"] = [
     "trig",
@@ -97,20 +89,17 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
 
     let _parentNode = (_node.patch as SubPatch).parentNode;
     let patchType = (_node.patch as SubPatch).patchType;
-    if (
-      patchType !== OperatorContextType.ZEN &&
-      patchType !== OperatorContextType.GL
-    ) {
+    if (patchType !== OperatorContextType.ZEN && patchType !== OperatorContextType.GL) {
       let outlet = _parentNode.outlets[outputNumber - 1];
       _parentNode.send(outlet, message);
       if (outlet && outlet.callback) {
         outlet.callback(message);
       }
+
       return [];
     }
     if (
-      ((typeof message === "string" || typeof message === "object") &&
-        !Array.isArray(message)) ||
+      ((typeof message === "string" || typeof message === "object") && !Array.isArray(message)) ||
       (Array.isArray(message) && !(message as Statement).node)
     ) {
       if ((message as Statement).node) {
@@ -225,10 +214,7 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   }
 
   return (message: Message) => {
-    if (
-      !subpatch.parentPatch.isZen &&
-      subpatch.patchType === OperatorContextType.ZEN
-    ) {
+    if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
       if (node.attributes["type"] === "core") {
         return [];
       }
@@ -237,18 +223,10 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
       ];
       let ogType = statement.type;
       if (node.attributes["min"] !== undefined) {
-        statement = [
-          "max" as Operator,
-          node.attributes["min"] as number,
-          statement,
-        ];
+        statement = ["max" as Operator, node.attributes["min"] as number, statement];
       }
       if (node.attributes["max"] !== undefined) {
-        statement = [
-          "min" as Operator,
-          node.attributes["max"] as number,
-          statement,
-        ];
+        statement = ["min" as Operator, node.attributes["max"] as number, statement];
       }
       statement.type = ogType;
       statement.node = node;
@@ -264,6 +242,7 @@ doc("zen", {
   numberOfOutlets: 1,
   attributeOptions: {
     type: ["zen", "gl"],
+    target: ["C", "JS"],
     moduleType: ["sequencer", "generator", "effect", "other"],
   },
 });
@@ -274,6 +253,16 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     noType = true;
     node.attributes["type"] = "zen";
   }
+
+  if (!node.attributes.target) {
+    node.attributes.target = "JS";
+    node.attributeOptions.target = ["C", "JS"];
+  }
+
+  if (!node.attributes.SIMD) {
+    node.attributes.SIMD = false;
+  }
+
   let subpatch = node.subpatch || new SubpatchImpl(node.patch, node);
   node.subpatch = subpatch;
   subpatch.clearState();
@@ -310,6 +299,7 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 
   node.attributeOptions = {
     moduleType: ["sequencer", "generator", "effect", "other"],
+    target: ["JS", "C"],
     type: ["zen", "gl", "core", "audio"],
   };
 

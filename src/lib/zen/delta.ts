@@ -1,36 +1,43 @@
 import { UGen, Arg } from './zen';
 import { memo } from './memo';
+import { s } from './seq';
 import { Context } from './context';
 import { history } from './history';
 import { lt } from './compare'
+import { zen_let } from './let';
 import { sign, div, sub, add, abs } from './math';
 
 export const delta = (input: Arg): UGen => {
-    return memo((context: Context) => {
-        let h = history();
-        return sub(input, h(input as UGen))(context);
-    });
+    let h = history();
+    //return zen_let("delta", s(
+    //    h(input as UGen),
+    //    sub(input, h())));
+    return zen_let("delta", s(
+        h(input as UGen),
+        sub(input, h())));
 };
 
 export const change = (input: Arg): UGen => {
-    return memo((context: Context) => {
-        let h = history();
-        return sign(sub(input, h(input as UGen)))(context);
-    });
+    let h = history();
+    return s(
+        h(input as UGen),
+        sign(sub(input, h())));
 };
 
 export const rampToTrig = (ramp: Arg): UGen => {
-    return memo((context: Context) => {
-        let history1 = history();
+    let history1 = history();
 
-        let hval = history1(ramp as UGen);
-        return lt(
+    //let hval = history1(ramp as UGen);
+    return zen_let("rampToTrig", s(
+        history1(ramp as UGen),
+        lt(
             0,
             change(
                 lt(
                     0.5,
                     abs(div(
-                        sub(ramp, hval),
-                        add(ramp, hval))))))(context);
-    });
+                        sub(ramp, history1(
+                        )),
+                        add(ramp, history1()))))))));
+
 };

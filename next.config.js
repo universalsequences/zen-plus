@@ -1,11 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-     images: {
-         domains: ['storage.googleapis.com', 'zequencer.mypinata.cloud'],
+  api: {
+    responseLimit: "8mb",
+    bodyParser: {
+      sizeLimit: "10mb", // Set the desired limit here
+    },
   },
-    future: {
-webpack5: true,
-   },
+  images: {
+    domains: ["storage.googleapis.com", "zequencer.mypinata.cloud"],
+  },
+  future: {
+    webpack5: true,
+  },
   webpack(config) {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -16,6 +22,6 @@ webpack5: true,
 
     return config;
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

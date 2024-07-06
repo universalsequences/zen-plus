@@ -254,6 +254,11 @@ body {
     justify-content: space-between;
 }
 
+.dragging-over {
+        .patcher-background {
+            background-color: white !important;
+        }
+}
 .light-mode {
     .object-context {
         background-color: #0b0b0b42;
@@ -292,27 +297,27 @@ body {
                     transparent 11%,
                     transparent 100%
                 ),
-                linear-gradient(90deg, rgb(11 11 11 / 91%), rgb(11 11 11 / 99%));
+                linear-gradient(
+                    90deg,
+                    rgb(179 174 174 / 89%),
+                    rgb(165 158 158 / 99%)
+                );
         }
     }
     .patcher-background {
         //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
         background-image: radial-gradient(
                 circle at center center,
-                rgba(170, 155, 155, 0.78) 0%,
-                rgba(114, 110, 100, 0.28) 11%,
+                rgba(68, 67, 67, 0.51) 0%,
+                rgba(61, 58, 58, 0.05) 11%,
                 transparent 11%,
                 transparent 100%
             ),
-            linear-gradient(90deg, rgb(88 80 80 / 60%), rgb(86 78 78 / 60%));
-        background-image: radial-gradient(
-                circle at center center,
-                rgba(170, 155, 155, 0.78) 0%,
-                rgba(114, 110, 100, 0.28) 11%,
-                transparent 11%,
-                transparent 100%
-            ),
-            linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
+            linear-gradient(
+                90deg,
+                rgb(179 174 174 / 89%),
+                rgb(165 158 158 / 99%)
+            );
     }
 
     .node-component.border-zinc-900 {

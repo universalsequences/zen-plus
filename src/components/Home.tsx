@@ -18,39 +18,22 @@ import { PatchesProvider } from "@/contexts/PatchesContext";
 import { SelectionProvider } from "@/contexts/SelectionContext";
 import PatchesComponent from "@/components/PatchesComponent";
 import { Theme } from "@radix-ui/themes";
-import {
-  Patch,
-  IOlet,
-  MessageNode,
-  IOConnection,
-  ObjectNode,
-  Coordinate,
-} from "@/lib/nodes/types";
+import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from "@/lib/nodes/types";
 import { PatchImpl } from "@/lib/nodes/Patch";
 import "@/styles/radix.scss";
 import "@rainbow-me/rainbowkit/styles.css";
 
-import {
-  getDefaultWallets,
-  RainbowKitProvider,
-  darkTheme,
-} from "@rainbow-me/rainbowkit";
+import { getDefaultWallets, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import {
-  goerli,
-  //zoraTestnet
-} from "wagmi/chains";
+import { zoraSepolia } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { infuraProvider } from "wagmi/providers/infura";
 import { publicProvider } from "wagmi/providers/public";
 import { WorkerProvider } from "@/contexts/WorkerContext";
 
 const { chains, publicClient } = configureChains(
-  [goerli],
-  [
-    infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
-    publicProvider(),
-  ],
+  [zoraSepolia],
+  [infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }), publicProvider()],
 );
 
 const { connectors } = getDefaultWallets({
@@ -87,16 +70,18 @@ export default function App(props: Props) {
   const { user } = useAuth();
   const { setNavOption, navOption } = useNav();
 
+  /*
   useEffect(() => {
     // Ensure the worker is only loaded on the client side
     const worker = new Worker(new URL("../workers/core", import.meta.url));
 
     worker.onmessage = (event: MessageEvent) => {
-      console.log("Worker result:", event.data);
+      console.log("Worker result:", JSON.parse(event.data));
     };
 
     worker.postMessage(42); // Send data to the worker
   }, []);
+  */
 
   useEffect(() => {
     if (user && props.projectId) {
@@ -141,14 +126,13 @@ export default function App(props: Props) {
       <MessageProvider>
         <SelectionProvider>
           <PatchesProvider basePatch={basePatch}>
-            <TilesProvider>
-              <main className="flex min-h-screen flex-col h-full w-full">
-                <PatchesComponent
-                  fileToOpen={fileToOpen}
-                  setFileToOpen={setFileToOpen}
-                />
-              </main>
-            </TilesProvider>
+            <WorkerProvider patch={basePatch}>
+              <TilesProvider>
+                <main className="flex min-h-screen flex-col h-full w-full">
+                  <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
+                </main>
+              </TilesProvider>
+            </WorkerProvider>
           </PatchesProvider>
         </SelectionProvider>
       </MessageProvider>

@@ -1,7 +1,8 @@
 import { UGen, Arg, genArg, Generated, } from './zen';
+import { uuid } from './uuid';
 import { LoopContext, Context } from './context';
 import { MemoryBlock } from './block';
-import { memo } from './memo'
+import { simdMemo } from './memo'
 
 export interface AccumParams {
     min: number,
@@ -12,11 +13,12 @@ export interface AccumParams {
 }
 export const accum = (incr: Arg, reset: Arg = 0, params: AccumParams) => {
     let block: MemoryBlock;
-    return memo((context: Context) => {
+    let id = uuid();
+    return simdMemo((context: Context, _incr: Generated, _reset: Generated) => {
         block = context.alloc(1);
-        let _incr = genArg(incr, context);
-        let _reset = genArg(reset, context);
-        let [varName] = context.useVariables("accum");
+        //let _incr = genArg(incr, context);
+        //let _reset = genArg(reset, context);
+        let [varName] = context.useCachedVariables(id, "accum");
 
         if (params.init !== undefined) {
             block.initData = new Float32Array([params.init]);
@@ -34,5 +36,9 @@ memory[${block.idx}] = ${varName} + ${_incr.variable};
 if (memory[${block.idx}] ${comp} ${params.max}) memory[${block.idx}] -= ${!exclusive ? inclusiveCase : params.max - params.min};` + '\n';
 
         return context.emit(code, varName, _incr, _reset);
-    });
+    },
+        undefined,
+        incr,
+        reset
+    );
 };

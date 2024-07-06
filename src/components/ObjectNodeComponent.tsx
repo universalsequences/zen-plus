@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import UXView from "./ux/UXView";
 import SlotView from "./SlotView";
-import { File } from "@/lib/files/types";
-import { TypeError, TypeSuccess } from "@/lib/nodes/typechecker";
+import type { File } from "@/lib/files/types";
+import type { TypeError, TypeSuccess } from "@/lib/nodes/typechecker";
 import { fetchOnchainSubPatch } from "@/lib/onchain/fetch";
 import { useValue } from "@/contexts/ValueContext";
 import { usePublicClient } from "wagmi";
@@ -47,10 +47,10 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({
   const { setSelection, selectedNodes, setSelectedNodes } = useSelection();
   const { updatePosition, sizeIndexRef } = usePosition();
 
-  let { value } = useValue();
+  const { value } = useValue();
   const { lockedMode } = useLocked();
   const lockedModeRef = useRef(lockedMode);
-  let errorMessage =
+  const errorMessage =
     objectNode.operatorContextType === OperatorContextType.CORE
       ? undefined
       : value;
@@ -93,7 +93,9 @@ const InnerObjectNodeComponent: React.FC<{
   lockedModeRef: React.MutableRefObject<boolean>;
   sizeIndexRef: React.MutableRefObject<SizeIndex>;
   updatePosition: (id: string, position: Coordinate) => void;
-  setSelectedNodes: (x: (ObjectNode | MessageNode)[]) => void;
+  setSelectedNodes: React.Dispatch<
+    React.SetStateAction<(ObjectNode | MessageNode)[]>
+  >;
   objectNode: ObjectNode;
 }> = ({
   typeError,
@@ -383,8 +385,15 @@ const InnerObjectNodeComponent: React.FC<{
           setSelectedNodes([]);
         }
       } else {
+        /*
         setSelectedPatch(objectNode.patch);
-        setSelectedNodes([objectNode]);
+        if (e.shiftKey) {
+          console.log("shift key...");
+          setSelectedNodes((prev) => [...prev, objectNode]);
+        } else {
+          setSelectedNodes([objectNode]);
+        }
+        */
       }
 
       if (editing) {

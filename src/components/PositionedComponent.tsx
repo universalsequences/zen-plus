@@ -3,21 +3,19 @@ import { useMessage } from "@/contexts/MessageContext";
 import { index } from "./ux/index";
 import IOletsComponent from "./IOletsComponent";
 import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "./SlotView";
-import { Definition } from "@/lib/docs/docs";
 import {
-  MessageType,
-  ObjectNode,
-  MessageNode,
   Orientation,
-  Patch,
-  Coordinate,
-  Positioned,
-  Identifiable,
+  MessageType,
+  type ObjectNode,
+  type MessageNode,
+  type Coordinate,
 } from "@/lib/nodes/types";
 import { useSelection } from "@/contexts/SelectionContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { usePositionStyle } from "@/hooks/usePositionStyle";
 import { OperatorContextType } from "@/lib/nodes/context";
+import { usePatches } from "@/contexts/PatchesContext";
+import { usePatch } from "@/contexts/PatchContext";
 
 const PositionedComponent: React.FC<{
   fullscreen?: boolean;
@@ -40,6 +38,8 @@ const PositionedComponent: React.FC<{
   lockedModeRef,
   isHydrated,
 }) => {
+  const { setSelectedPatch } = usePatches();
+  const { patch } = usePatch();
   const { setSelectedNodes, selectedNodes } = useSelection();
   const {
     nearestInlet,
@@ -93,7 +93,7 @@ const PositionedComponent: React.FC<{
           });
         }
       } else {
-        let size = {
+        const size = {
           width: ref.current.offsetWidth,
           height: ref.current.offsetHeight,
         };
@@ -104,12 +104,6 @@ const PositionedComponent: React.FC<{
         });
       }
     } else if (node.size) {
-      /*
-            updateSize(node.id, {
-                width: node.size.width,
-                height: node.size.height
-            });
-            */
     } else {
       if ((node as MessageNode).message !== undefined) {
         return;
@@ -154,7 +148,16 @@ const PositionedComponent: React.FC<{
         let y = e.clientY - divRect.top;
 
         if (!selectedNodes.includes(node)) {
-          setSelectedNodes([node]);
+          if (e.shiftKey) {
+            setSelectedNodes((prev) =>
+              prev.includes(node)
+                ? prev.filter((x) => x !== node)
+                : [...prev, node],
+            );
+          } else {
+            setSelectedNodes([node]);
+          }
+          setSelectedPatch(patch);
         }
 
         initialPosition.current = { ...node.position };
@@ -169,7 +172,7 @@ const PositionedComponent: React.FC<{
         updateZIndex(node.id, node.zIndex);
       }
     },
-    [setDraggingNode, selectedNodes],
+    [setDraggingNode, selectedNodes, patch],
   );
 
   const onClick = useCallback(

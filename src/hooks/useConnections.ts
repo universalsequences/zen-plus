@@ -1,8 +1,7 @@
-import React from 'react';
-import { usePatch } from '@/contexts/PatchContext';
+import { usePatch } from "@/contexts/PatchContext";
 
 export const useConnections = (id: string) => {
-    let { connections } = usePatch();
+  let { connections } = usePatch();
 
-    return connections[id];
+  return connections[id];
 };

@@ -119,3 +119,14 @@ export class LoopMemoryBlock extends MemoryBlock {
     }
 }
 
+// whenever we read/write from/to memory, we need to keep track of it
+// so that the SIMD generator can decide whether to be SIMD/non-simd
+export type MemoryBlockWritten = {
+    block: MemoryBlock;
+    type: "history" | "data"
+}
+
+export type MemoryBlockRead = {
+    block: MemoryBlock;
+    type: "history" | "data"
+}

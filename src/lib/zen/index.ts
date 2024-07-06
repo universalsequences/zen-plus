@@ -1,4 +1,5 @@
 export * from "./accum";
+export * from "./memory/initialize";
 export * from "./interp";
 export * from "./adsr";
 export * from "./print";

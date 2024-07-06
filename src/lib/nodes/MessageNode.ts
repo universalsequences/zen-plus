@@ -6,6 +6,7 @@ import {
   IOlet,
   Coordinate,
   MessageNode,
+  Node,
   Message,
   MessageObject,
 } from "./types";
@@ -34,6 +35,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     this.newAttribute("max", 1);
     this.newAttribute("number box", messageType === MessageType.Number);
     this.newAttribute("is parameter", false);
+
     this.newAttribute("scripting name", "");
     this.newAttribute("Include in Presentation", false, () => {
       this.patch.objectNodes = [...this.patch.objectNodes];
@@ -52,9 +54,13 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     }
 
     this.messageType = messageType || MessageType.Number;
+
+    if (this.patch.registerNewNode) {
+      this.patch.registerNewNode(this);
+    }
   }
 
-  receive(inlet: IOlet, message: Message) {
+  receive(inlet: IOlet, message: Message, fromNode?: Node) {
     switch (inlet.name) {
       case TRIGGER:
         if (
@@ -67,9 +73,15 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
         } else if (this.message !== undefined && message !== undefined) {
           this.send(this.outlets[0], this.pipeIfApplicable(message));
         }
+        if (this.patch.registerReceive && !fromNode) {
+          this.patch.registerReceive(this, "bang", inlet);
+        }
         break;
       case REPLACE:
         this.message = message;
+        if (this.patch.registerReceive && !fromNode) {
+          this.patch.registerReceive(this, message, inlet);
+        }
         break;
     }
     if (this.message !== undefined) {
@@ -80,15 +92,21 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
   }
 
   parse(text: string) {
+    console.log("PARSE=", text);
     if (text.includes("[") && text.includes("]")) {
       try {
-        let list = JSON.parse(text);
+        console.log("text includes []");
+        const list = JSON.parse(text);
+        console.log("sending list=", list);
         this.receive(this.inlets[1], list);
         return list;
-      } catch (e) {}
+      } catch (e) {
+        console.log("error parsing text", text, e);
+      }
     }
-    let parsed: Message[] | Message = isNumber(text) ? parseFloat(text) : text;
+    const parsed: Message[] | Message = isNumber(text) ? Number.parseFloat(text) : text;
     this.receive(this.inlets[1], parsed as Message);
+    return parsed;
   }
 
   pipeIfApplicable(incomingMessage: Message): Message {
@@ -100,16 +118,15 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
       !Array.isArray(incomingMessage) &&
       typeof this.message === "string"
     ) {
-      let incoming: MessageObject = incomingMessage as MessageObject;
+      const incoming: MessageObject = incomingMessage as MessageObject;
       let msg = this.message as string;
-      for (let key in incoming) {
+      for (const key in incoming) {
         msg = msg.replace(`$${key}`, incoming[key] as string);
       }
       return msg;
     }
     if (
-      (typeof incomingMessage === "string" ||
-        typeof incomingMessage === "number") &&
+      (typeof incomingMessage === "string" || typeof incomingMessage === "number") &&
       typeof this.message === "string" &&
       this.message.includes("$1")
     ) {
@@ -122,7 +139,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
       let msg = this.message;
       for (let i = 0; i < incomingMessage.length; i++) {
         if (incomingMessage[i] !== undefined) {
-          msg = msg.replaceAll("$" + (i + 1), incomingMessage[i].toString());
+          msg = msg.replaceAll(`\$${i + 1}`, incomingMessage[i].toString());
         }
       }
       return msg;
@@ -141,7 +158,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     };
 
     json.attributes = {};
-    for (let name in this.attributes) {
+    for (const name in this.attributes) {
       if (this.attributes[name] !== this.attributeDefaults[name]) {
         json.attributes[name] = this.attributes[name];
       }

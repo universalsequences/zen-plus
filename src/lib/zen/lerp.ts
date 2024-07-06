@@ -5,16 +5,21 @@ import { cKeywords } from './math';
 import { Generated } from './zen';
 
 export const lerpPeek = (
+    id: number,
     context: Context,
     block: MemoryBlock,
     index: string,
     memory: string = "memory")
     : Generated => {
-    let varIdx = context.idx++;
-    let fracName = `frac${varIdx}`;
-    let lerpName = `lerpVal${varIdx}`;
-    let nextIdxName = `nextIdx${varIdx}`;
-    let flooredName = `flooredName${varIdx}`;
+    let [fracName, lerpName, nextIdxName, flooredName] = context.useCachedVariables(
+        id, "frac", "lerpVal", "nextIdx", "flooredName");
+    /*
+let varIdx = context.idx++;
+let fracName = `frac${varIdx}`;
+let lerpName = `lerpVal${varIdx}`;
+let nextIdxName = `nextIdx${varIdx}`;
+let flooredName = `flooredName${varIdx}`;
+*/
     let floor = context.target === Target.C ? cKeywords["Math.floor"] : "Math.floor";
     let out = `
 /** lerp begin **/
@@ -30,6 +35,9 @@ ${context.varKeyword} ${lerpName} = (1.0-${fracName})*${memory}[${flooredName}] 
     return {
         params: [],
         code: out,
+        codeFragments: [],
+        outputHistories: [],
+        codeBlocks: [],
         variable: lerpName,
         histories: [],
         functions: [],

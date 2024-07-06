@@ -11,12 +11,12 @@ import { scale } from './scale';
 import { add, sub, and, or, gt, div, mult, clamp, pow } from './math';
 
 export const triangle = (ramp: Arg, duty: Arg = 0.5): UGen => {
-    return memo((context: Context) => {
-        return zswitch(
-            lt(ramp, duty),
-            scale(ramp, 0, duty, 0, 1),
-            scale(ramp, duty, 1, 1, 0))(context);
-    });
+    //return memo((context: Context) => {
+    return zswitch(
+        lt(ramp, duty),
+        scale(ramp, 0, duty, 0, 1),
+        scale(ramp, duty, 1, 1, 0))// (context);
+    //});
 
 };
 

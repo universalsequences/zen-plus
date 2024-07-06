@@ -28,10 +28,12 @@ import { button, matrix } from "./matrix";
 import { attrui } from "./attrui";
 import { buffer } from "./buffer";
 import { ast, wasmviewer } from "./wasmviewer";
+import { waveform } from "./waveform";
 import { comment } from "./comment";
 import { send, patchmessage, subscribe } from "./messages";
 
 export const api: API = {
+  waveform,
   wasmviewer,
   ast,
   patchmessage,

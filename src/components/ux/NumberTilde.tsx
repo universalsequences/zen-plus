@@ -1,32 +1,31 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { useInterval } from '@/hooks/useInterval';
-import { ObjectNode } from '@/lib/nodes/types';
+import React, { useRef, useEffect, useCallback, useState } from "react";
+import { useInterval } from "@/hooks/useInterval";
+import { ObjectNode } from "@/lib/nodes/types";
 
 const NumberTilde: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+  const [value, setValue] = useState<number>(0);
 
-    const [value, setValue] = useState<number>(0);
+  const onMessage = useCallback((e: MessageEvent) => {
+    setValue(e.data);
+  }, []);
 
-    useEffect(() => {
-        if (objectNode.audioNode) {
-            let worklet = (objectNode.audioNode) as AudioWorkletNode;
-            worklet.port.onmessage = onMessage;
-        }
-        return () => {
-            if (objectNode.audioNode) {
-                let worklet = (objectNode.audioNode) as AudioWorkletNode;
-                worklet.port.onmessage = null;
-            }
-        }
-    }, [setValue, objectNode.audioNode])
+  useEffect(() => {
+    if (objectNode.audioNode) {
+      const worklet = objectNode.audioNode as AudioWorkletNode;
+      worklet.port.onmessage = onMessage;
+    }
+    return () => {
+      if (objectNode.audioNode) {
+        const worklet = objectNode.audioNode as AudioWorkletNode;
+        worklet.port.onmessage = null;
+      }
+    };
+  }, [objectNode.audioNode, onMessage]);
 
-    const onMessage = useCallback((e: MessageEvent) => {
-        setValue(e.data);
-    }, [setValue]);
-
-    return (
-        <div className="text-base w-full h-full px-2 py-1 text-white px-2 py-1 bg-zinc-700">
-            {value}
-        </div>
-    );
-}
+  return (
+    <div className="text-base w-full h-full px-2 py-1 text-white px-2 py-1 bg-zinc-700">
+      {value}
+    </div>
+  );
+};
 export default NumberTilde;

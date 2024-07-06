@@ -1,11 +1,12 @@
 import { UGen, Arg, genArg, Generated, float } from './zen';
 import { ContextualBlock } from './history';
-import { memo } from './memo';
+import { memo, simdMemo } from './memo';
 import { Context, LoopContext } from './context';
 import { Target } from './targets';
 import { cKeywords } from './math';
 import { add, mult, wrap } from './math';
 import { LoopMemoryBlock, Block, MemoryBlock } from './block'
+import { uuid } from './uuid';
 
 /*
 export type MultiChannelBlock  = (LoopMemoryBlock | Block) & {
@@ -54,36 +55,14 @@ export const data = (
         if (block === undefined || _context !== context) {
             // how should really work? 
             if (root) {
-                // need the base context if its a parameter (we dont want
-                // a different parameter for every single loop iteration)
-                while ("context" in variableContext) {
-                    variableContext = variableContext["context"] as Context;
-                }
+                // what is root used for?
+                variableContext = context.baseContext;
             }
             context = variableContext;
 
-            // this is really fucking confusing
-            /*
             if (!block) {
-                // if theres no block we need to allocate one
                 block = context.alloc(size * channels);
-            } else {
-                // if the "base context" changed (i.e. this is a new compilation graph
-                // we are building), then we need to re-allocate
             }
-            */
-
-            if (!block ||
-                (!((context as LoopContext).context === _context) &&
-                    !((_context as LoopContext).context === context))
-            ) {
-                if (context === _context) {
-                } else {
-                    block = context.alloc(size * channels);
-                }
-            } else {
-            }
-
 
             block.initData = initData;
             block.length = size;
@@ -99,8 +78,7 @@ export const data = (
         if (initData != undefined) {
             block.initData = initData;
         }
-        // bad: forcve context to keep track of block
-        context.memory.blocksInUse.push(block);
+        context.baseContext.memory.blocksInUse.push(block);
         return block;
     };
 
@@ -129,7 +107,7 @@ export const data = (
         lastData = buf;
         for (let { context, block } of contextBlocks) {
             block.initData = buf;
-            context.postMessage({
+            context.baseContext.postMessage({
                 type: "init-memory",
                 body: {
                     idx: block.idx,
@@ -143,6 +121,25 @@ export const data = (
     return resp;
 };
 
+
+export const unsafeMemoryFetch = (
+    index: Arg,
+): UGen => {
+    let id = uuid();
+    return simdMemo((context: Context, _index: Generated): Generated => {
+        // need the base context if its a parameter (we dont want
+        let [fetchVal] = context.useCachedVariables(id,
+            "fetchVal");
+        let code = `
+${context.varKeyword} ${fetchVal} = memory[${_index.variable}];
+`;
+
+        return context.emit(code, fetchVal, _index);
+    },
+        undefined,
+        index);
+};
+
 export const peek = (
     data: BlockGen,
     index: Arg,
@@ -150,21 +147,27 @@ export const peek = (
     length?: Arg
 ): UGen => {
     let counts = 0;
-    return memo((context: Context): Generated => {
+    let id = uuid();
+    return simdMemo((context: Context, _index: Generated, _channel: Generated): Generated => {
         // need the base context if its a parameter (we dont want
         // a different parameter for every single loop iteration)
+        // note: since this being run by simdMemo, it might not actually use the variableContext to 
+        // call the indices...
+
         let variableContext = context;
         let __context = context;
+        /*
+          * trying to fix bug with env
         while ("context" in context) {
-            context = context["context"] as Context;
+            context = (context as any)["context"] as Context;
         }
+        */
 
         let multichannelBlock: MemoryBlock = data(context);
-        let _index = variableContext.gen(index);
-        let _channel = variableContext.gen(channel);
-        let [preIdx, peekIdx, peekVal, channelIdx, frac, nextIdx, peekIdx2, peekIdx3] = variableContext.useVariables(
+        let [preIdx, peekIdx, peekVal, channelIdx, frac, nextIdx, peekIdx2, peekIdx3] = variableContext.useCachedVariables(id,
             "preIdx", "peekIdx", "peekVal", "channelIdx", "frac", "nextIdx", "peekIdx_2", "peekIdx_3");
         let perChannel: any = multichannelBlock.length;
+        // console.log("PER CHANNEL DATA=", perChannel);
 
         let __length = undefined;
         let _length = multichannelBlock.length;
@@ -174,7 +177,6 @@ export const peek = (
             maxChannel = __length.variable;
         }
 
-        // todo: make this prettier... basically want the raw idx value
         let idx = multichannelBlock._idx === undefined ? multichannelBlock.idx : multichannelBlock._idx;
         let intKeyword = context.intKeyword;
         let varKeyword = context.varKeyword;
@@ -217,7 +219,10 @@ ${varKeyword} ${peekVal} = memory[${peekIdx2}];
         }
         let peeked = __context.emit(code, peekVal, _index, _channel);
         return peeked;
-    });
+    },
+        undefined,
+        index,
+        channel);
 };
 
 export const poke = (
@@ -226,12 +231,13 @@ export const poke = (
     channel: Arg,
     value: Arg,
 ): UGen => {
-    return memo((context: Context): Generated => {
+    let id = uuid();
+    return simdMemo((context: Context, _index: Generated, _channel: Generated, _value: Generated): Generated => {
         let multichannelBlock = data(context);
-        let _index: Generated = context.gen(index);
-        let [_idx2]: string[] = context.useVariables('pokeIdx_2_');
-        let _channel: Generated = context.gen(channel);
-        let _value: Generated = context.gen(value);
+        //let _index: Generated = context.gen(index);
+        let [_idx2, pokeVal]: string[] = context.useCachedVariables(id, 'pokeIdx_2_', 'pokeVal');
+        //let _channel: Generated = context.gen(channel);
+        //let _value: Generated = context.gen(value);
         let perChannel: number = multichannelBlock.length!;
         let intKeyword = context.intKeyword;
         let varKeyword = context.varKeyword;
@@ -241,11 +247,18 @@ export const poke = (
 // begin poke
 ${intKeyword} ${_idx2} = ${multichannelBlock._idx || multichannelBlock.idx} + ${pokeIdx};
 memory[${_idx2}] = ${_value.variable};
+${context.varKeyword} ${pokeVal} = ${_value.variable};
 // end poke
 `
         // this can be used as a value
-        return context.emit(code, _value.variable!, _index, _channel, _value);
-    });
+        let x = context.emit(code, pokeVal, _index, _channel, _value);
+        return x;
+    },
+        undefined,
+        index,
+        channel,
+        value
+    );
 };
 
 export const clearData = (

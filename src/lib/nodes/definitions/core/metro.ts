@@ -1,9 +1,4 @@
-import type {
-  Lazy,
-  Message,
-  MessageObject,
-  ObjectNode,
-} from "@/lib/nodes/types";
+import type { Lazy, Message, MessageObject, ObjectNode } from "@/lib/nodes/types";
 import { createWorklet } from "../audio/index";
 import { doc } from "./doc";
 
@@ -29,7 +24,7 @@ export const interval = (node: ObjectNode) => {
 };
 
 doc("metro", {
-  description: "outputs timed messages to a bpm",
+  description: "outputs timed messages to a bpm. sending 1 to 1st inlet plays and 0 stops",
   numberOfInlets: 2,
   inletNames: ["message", "bpm"],
   numberOfOutlets: 1,
@@ -70,16 +65,23 @@ export const metro = (node: ObjectNode, bpm: Lazy) => {
   // create an audioworklet for metro
   return (message: Message) => {
     // update bpm and restart if necessary
+    let worklet = node.audioNode as AudioWorkletNode;
+    if (message === 1) {
+      worklet?.port.postMessage({ type: "play" });
+    } else if (message === 0) {
+      // stop
+      worklet?.port.postMessage({ type: "stop" });
+    }
+
     if (node.audioNode && typeof bpm() === "number") {
-      updateBPM(node.audioNode as AudioWorkletNode, bpm() as number);
+      updateBPM(worklet, bpm() as number);
     }
     return [];
   };
 };
 
 doc("schedule", {
-  description:
-    "schedules objects with time fields to be triggered with lookahead",
+  description: "schedules objects with time fields to be triggered with lookahead",
   inletNames: ["event", "lookahead (seconds)"],
   outletNames: ["event"],
   isHot: false,

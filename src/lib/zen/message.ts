@@ -1,26 +1,28 @@
-import { Context, Arg, Generated, UGen } from './index';
-import { memo } from './memo';
-import { Target } from './targets';
+import { LoopContext, Context, Arg, Generated, UGen } from "./index";
+import { simdMemo } from "./memo-simd";
+import { uuid } from "./uuid";
+import { memo } from "./memo";
+import { Target } from "./targets";
 
 /**
  * Its not e
  */
 export const message = (name: string, subType: Arg, value: Arg) => {
-    return memo((context: Context): Generated => {
-        let _value = context.gen(value);
-        let _subType = context.gen(subType);
-        let [vari] = context.useVariables('message');
-        // in a loop this will only catch one of the iterations (the last)
-        // instead we need to have some sort of threshold
-        // or store the messages somewhere
-        let code = ``;
-        if (context.target === Target.C) {
-            code += `
-new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable});
-`
-        } else {
-            code += `
-if (this.messageCounter % 512 === 0) {
+  let id = uuid();
+  return simdMemo(
+    (context: Context, _value: Generated, _subType: Generated): Generated => {
+      let [vari] = context.useCachedVariables(id, "message");
+      // in a loop this will only catch one of the iterations (the last)
+      // instead we need to have some sort of threshold
+      // or store the messages somewhere
+      let code = ``;
+      if (context.target === Target.C) {
+        code += `
+//new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable});
+`;
+      } else {
+        code += `
+if (this.messageCounter % 1000 === 0) {
 this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
 /*
     let subTypeMap = this.messageQueue[@beginMessage${name}@endMessage];
@@ -35,14 +37,18 @@ console.log("creating new array");
 */
 }
 `;
-        }
-        code += `
+      }
+      code += `
 ${context.varKeyword} ${vari} = ${_value.variable};
 
 `;
 
-        return context.emit(code, vari, _subType, _value);
-    });
+      return context.emit(code, vari, _subType, _value);
+    },
+    undefined,
+    value,
+    subType,
+  );
 };
 
 /**
@@ -50,25 +56,37 @@ ${context.varKeyword} ${vari} = ${_value.variable};
  * The idea is that for proper sample-accurate sequencing we'd need to be able
  * to only send messages when a condition is met (like a "tick")
  *
-  **/
-export const condMessage = (name: string, subType: Arg, value: Arg, condition: Arg) => {
-    return memo((context: Context): Generated => {
-        let _value = context.gen(value);
-        let _subType = context.gen(subType);
-        let _condition = context.gen(condition);
-        let [vari] = context.useVariables('message');
-        // in a loop this will only catch one of the iterations (the last)
-        // instead we need to have some sort of threshold
-        // or store the messages somewhere
-        let code = ``;
-        if (context.target === Target.C) {
-            code += `
+ **/
+export const condMessage = (
+  name: string,
+  subType: Arg,
+  value: Arg,
+  condition: Arg,
+) => {
+  return simdMemo(
+    (
+      context: Context,
+      _value: Generated,
+      _subType: Generated,
+      _condition: Generated,
+    ): Generated => {
+      let [vari] = context.useVariables("message");
+      // in a loop this will only catch one of the iterations (the last)
+      // instead we need to have some sort of threshold
+      // or store the messages somewhere
+      let code = ``;
+      if (context.target === Target.C) {
+        let timer =
+          context.forceScalar || (context as LoopContext).loopSize
+            ? "0.0"
+            : "currentTime + j/44100.0";
+        code += `
 if (${_condition.variable}) {
-new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable});
+new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, ${timer});
 }
-`
-        } else {
-            code += `
+`;
+      } else {
+        code += `
 if (${_condition.variable}) {
 this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
 /*
@@ -84,13 +102,17 @@ console.log("creating new array");
 */
 }
 `;
-        }
-        code += `
+      }
+      code += `
 ${context.varKeyword} ${vari} = ${_value.variable};
 
 `;
 
-        return context.emit(code, vari, _subType, _value);
-    });
+      return context.emit(code, vari, _value, _subType, _condition);
+    },
+    undefined,
+    value,
+    subType,
+    condition,
+  );
 };
-

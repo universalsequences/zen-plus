@@ -6,6 +6,7 @@ const AlignmentHelper = () => {
     if (!draggingNode) {
         return <></>
     }
+  
     return <>{alignmentLines.map(
         (alignmentLine, index) => <line key={index} opacity={0.5} x1={alignmentLine.x1} y1={alignmentLine.y1} x2={alignmentLine.x2} y2={alignmentLine.y2} stroke="#fa04bf" />)}
         </>;

@@ -11,12 +11,10 @@ import {
   type IOlet,
   type Message,
   type ObjectNode,
-  MessageNode,
   type Node,
   type Attributes,
 } from "./types";
-import type Subpatch from "./Subpatch";
-import { isCompiledType, OperatorContextType } from "./context";
+import { isCompiledType } from "./context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
 
@@ -48,11 +46,7 @@ export class BaseNode implements Node {
     this.attributeDefaults = {};
   }
 
-  newAttribute(
-    name: string,
-    defaultValue: AttributeValue,
-    callback?: (x: AttributeValue) => void,
-  ) {
+  newAttribute(name: string, defaultValue: AttributeValue, callback?: (x: AttributeValue) => void) {
     if (this.attributes[name] !== undefined) {
       if (callback) {
         this.attributeCallbacks[name] = callback;
@@ -130,10 +124,7 @@ export class BaseNode implements Node {
 
     if (
       !inlet.connections.some(
-        (x) =>
-          x.source === this &&
-          x.destinationInlet === inlet &&
-          x.sourceOutlet === outlet,
+        (x) => x.source === this && x.destinationInlet === inlet && x.sourceOutlet === outlet,
       )
     ) {
       inlet.connections.push(connection);
@@ -146,14 +137,18 @@ export class BaseNode implements Node {
       this.connectAudioNode(connection);
     } else if (
       compile &&
-      (isCompiledType(outlet.connectionType) ||
-        isCompiledType(inlet.connectionType))
+      (isCompiledType(outlet.connectionType) || isCompiledType(inlet.connectionType))
     ) {
-      const parentNode = (this.patch as Subpatch).parentNode;
-      if (!parentNode && (destination as ObjectNode).name === "zen") {
-      } else {
-        this.patch.recompileGraph();
-      }
+      this.patch.recompileGraph();
+    }
+
+    if (this.patch.registerConnect) {
+      this.patch.registerConnect(
+        this,
+        destination as BaseNode,
+        destination.inlets.indexOf(inlet),
+        this.outlets.indexOf(outlet),
+      );
     }
     return connection;
   }
@@ -174,15 +169,21 @@ export class BaseNode implements Node {
     const sourceNode = (this as any as ObjectNode).audioNode;
     let destNode = (destination as any as ObjectNode).audioNode;
     if (sourceNode && destNode) {
-      const splitter = this.patch.audioContext.createChannelSplitter(
-        this.outlets.length,
-      );
+      const splitter = this.patch.audioContext.createChannelSplitter(this.outlets.length);
       connection.splitter = splitter;
       sourceNode.connect(splitter);
 
       if ((connection.destination as ObjectNode).merger) {
         destNode = (connection.destination as ObjectNode).merger!;
       }
+      console.log(this, destNode);
+      console.log(
+        "splitter connecting to",
+        splitter,
+        destNode,
+        this.outlets.indexOf(sourceOutlet),
+        destination.inlets.indexOf(destinationInlet),
+      );
       splitter.connect(
         destNode,
         this.outlets.indexOf(sourceOutlet),
@@ -228,8 +229,10 @@ export class BaseNode implements Node {
 
   receive(inlet: IOlet, msg: Message, fromNode?: Node) {
     inlet.lastMessage = msg;
-    (inlet as any).yo = msg;
-    /** rest gets implemented by other extended classes */
+
+    if (this.patch.registerReceive && !fromNode) {
+      this.patch.registerReceive(this, msg, inlet);
+    }
   }
 
   getConnectionsJSON(): SerializedOutlet[] {

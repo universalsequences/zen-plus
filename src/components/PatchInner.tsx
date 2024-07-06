@@ -169,30 +169,6 @@ const PatchInner: React.FC<{
     const [dragging, setDragging] = useState(false);
     const [preDragging, setPreDragging] = useState(false);
 
-    const onKeyDown = useCallback(
-      (e: KeyboardEvent) => {
-        if (e.shiftKey && e.metaKey && isSelected) {
-          setPreDragging(true);
-        }
-      },
-      [setPreDragging, isSelected],
-    );
-    const onKeyUp = useCallback(
-      (e: KeyboardEvent) => {
-        setPreDragging(false);
-      },
-      [setPreDragging],
-    );
-
-    useEffect(() => {
-      window.addEventListener("keydown", onKeyDown);
-      window.addEventListener("keyup", onKeyUp);
-      return () => {
-        window.removeEventListener("keydown", onKeyDown);
-        window.removeEventListener("keyup", onKeyUp);
-      };
-    }, [setPreDragging, onKeyDown, onKeyUp, isSelected]);
-
     let out = React.useMemo(() => {
       let inner = (
         <div
@@ -299,6 +275,9 @@ const PatchInner: React.FC<{
                 <ContextMenu.Content
                   color="indigo"
                   className="object-context p-2 rounded-md text-white text-xs"
+                  onMouseDown={(e: React.MouseEvent<ContextMenu.Context>) =>
+                    e.stopPropagation()
+                  }
                 >
                   <ContextMenu.Item
                     onClick={createObjectNode}
@@ -374,6 +353,7 @@ const PatchInner: React.FC<{
       visibleObjectNodes,
       objectNodes,
       patch.objectNodes,
+      selectedNodes,
       messageNodes,
       selection,
       patch,

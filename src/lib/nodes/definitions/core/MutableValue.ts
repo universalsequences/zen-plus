@@ -1,4 +1,4 @@
-import { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
+import type { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
 
 export class MutableValue {
@@ -30,7 +30,6 @@ export class MutableValue {
   }
 
   fromJSON(x: any) {
-    console.log("FROM JSON custom=", x, this);
     this._value = x;
     if (this.index !== undefined) {
       this.objectNode.arguments[this.index] = x;

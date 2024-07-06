@@ -8,7 +8,7 @@ import {
 } from "../../types";
 import { doc } from "./doc";
 import ObjectNodeImpl from "../../ObjectNode";
-import { sleep } from "../../Patch";
+import { sleep } from "../../compilation/onCompile";
 
 doc("slots~", {
   description: "connect subpatches in series",
@@ -172,10 +172,7 @@ const newPatch = (node: ObjectNode): ObjectNode => {
   return objectNode;
 };
 
-export const deserializedSlots = async (
-  node: ObjectNode,
-  y: SerializedObjectNode[],
-) => {
+export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
   let slots: Slot[] = [];
   for (let serialized of y) {
     let _node = newPatch(node);
@@ -188,6 +185,7 @@ export const deserializedSlots = async (
 
 const compileSlots = async (node: ObjectNode) => {
   let slots = node.slots;
+  console.log("compile slots called...");
   if (!slots) {
     return;
   }
@@ -204,7 +202,8 @@ const compileSlots = async (node: ObjectNode) => {
       break;
     }
   }
-  await sleep(1000);
+  await sleep(500);
+  console.log("setup post compile for slots...");
   for (let slot of slots) {
     slot.subpatch?.setupPostCompile(true);
   }

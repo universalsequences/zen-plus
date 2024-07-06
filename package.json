@@ -37,7 +37,7 @@
     "formidable": "^3.5.1",
     "fs": "^0.0.1-security",
     "next": "14.0.1",
-    "openai": "^4.24.7",
+    "openai": "4.52.3",
     "pako": "^2.1.0",
     "postcss": "8.4.31",
     "rainbowkit": "^0.0.1",
@@ -53,6 +53,7 @@
     "uuid": "^9.0.1",
     "viem": "1.21.4",
     "wagmi": "^1.4.12",
+    "wavefile": "^11.0.0",
     "web3": "^4.4.0",
     "worker-loader": "^3.0.8"
   }

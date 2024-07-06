@@ -1,8 +1,6 @@
 import { Arg, zswitch, eq, s } from './index';
-import { message } from './message';
-import { pow, lt, lte, gte, log, min, log2, log10, sign, gt, exp, max, clamp, abs, tanh, sub, div, mult, add } from './math';
+import { pow, lt, lte, gte, log, log10, sign, gt, exp, max, abs, sub, div, mult, add } from './math';
 import { history } from './history';
-import { samplerate } from './filters/zdf';
 
 const amp2db = (amp: Arg) => mult(20, log10(max(abs(amp), 0.00001)));
 const db2amp = (db: Arg) => pow(10, div(db, 20));
@@ -24,11 +22,6 @@ export const compressor = (
     //const release_coef = add(0, exp(div(-1, mult(release, 44100))));
 
     // Compute the difference between the input signal and the threshold
-    const delta = sub(in_db, threshold);
-
-    const tmp = add(delta, mult(0.5, knee));
-
-
     const kneeStart = sub(threshold, div(knee, 2));
     const kneeEnd = add(threshold, div(knee, 2));
 
@@ -63,5 +56,6 @@ export const compressor = (
     return s(
         prev_gr(
             zswitch(gt(gr, prev_gr()), add(mult(attack_coef, prev_gr()), mult(gr, sub(1, attack_coef))),
-                add(mult(release_coef, prev_gr()), mult(gr, sub(1, release_coef))))), mult(sign(in1), db2amp(sub(in_db, prev_gr()))));
+                add(mult(release_coef, prev_gr()), mult(gr, sub(1, release_coef))))),
+        mult(sign(in1), db2amp(sub(in_db, prev_gr()))));
 };
