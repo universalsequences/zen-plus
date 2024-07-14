@@ -21,7 +21,6 @@ export const toggle = (node: ObjectNode) => {
     node.custom = new MutableValue(node);
     node.custom.value = 1;
   }
-  console.log("TOGGLE CUSTOM=", node.custom);
   return (message: Message) => {
     if (node.custom) {
       node.custom.value = node.custom.value ? 0 : 1;

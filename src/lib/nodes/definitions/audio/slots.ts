@@ -12,8 +12,9 @@ import { sleep } from "../../compilation/onCompile";
 
 doc("slots~", {
   description: "connect subpatches in series",
-  numberOfInlets: 1,
+  numberOfInlets: 2,
   numberOfOutlets: 2,
+  defaultValue: 0,
 });
 
 export type Slot = ObjectNode;
@@ -81,9 +82,16 @@ export const slots = (node: ObjectNode) => {
     node.audioNode = splitter; //node.patch.audioContext.destination;
   }
 
+  if (!node.merger) {
+    let ctxt = node.patch.audioContext;
+    const merger = ctxt.createChannelMerger(2);
+    node.merger = merger;
+  }
+
   const splitter = node.patch.audioContext.createChannelSplitter(2);
 
   let counter = 0;
+
   const reconnect = () => {
     if (!node.slots) {
       return;
@@ -114,6 +122,15 @@ export const slots = (node: ObjectNode) => {
     if (node.audioNode) {
       splitter.connect(node.audioNode, 0, 0);
       splitter.connect(node.audioNode, 1, 1);
+    }
+
+    let first: ObjectNode = node.slots[0];
+    if (node.merger && first.merger) {
+      let _splitter = node.patch.audioContext.createChannelSplitter(2);
+      node.merger.connect(_splitter);
+      _splitter.connect(first.merger, 0, 0);
+      _splitter.connect(first.merger, 1, 1);
+      // first.merger.connect(node.patch.audioContext.destination);
     }
 
     last.outlets[0].callback = (message: Message) => {
@@ -172,7 +189,10 @@ const newPatch = (node: ObjectNode): ObjectNode => {
   return objectNode;
 };
 
-export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
+export const deserializedSlots = async (
+  node: ObjectNode,
+  y: SerializedObjectNode[],
+) => {
   let slots: Slot[] = [];
   for (let serialized of y) {
     let _node = newPatch(node);
@@ -204,6 +224,7 @@ const compileSlots = async (node: ObjectNode) => {
   }
   await sleep(500);
   console.log("setup post compile for slots...");
+
   for (let slot of slots) {
     slot.subpatch?.setupPostCompile(true);
   }

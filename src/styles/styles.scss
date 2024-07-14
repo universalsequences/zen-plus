@@ -255,9 +255,9 @@ body {
 }
 
 .dragging-over {
-        .patcher-background {
-            background-color: white !important;
-        }
+    .patcher-background {
+        background-color: white !important;
+    }
 }
 .light-mode {
     .object-context {
@@ -713,10 +713,11 @@ div:active {
 }
 
 .patch-window {
-    .patcher-background {
-        background-color: #313131;
-    }
     .tile {
+        .patcher-background {
+            background-color: #121212;
+            background-image: none;
+        }
         height: unset !important;
         min-height: unset !important;
         flex: 1;
@@ -731,5 +732,15 @@ div:active {
     }
     .overflow-scroll {
         overflow: hidden !important;
+    }
+}
+
+.light-mode {
+    .patch-window {
+        .tile {
+            .patcher-background {
+                background-color: #6a6a72;
+            }
+        }
     }
 }

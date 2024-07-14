@@ -1,14 +1,14 @@
 import {
   ConnectionType,
-  SerializedMessageNode,
+  type SerializedMessageNode,
   MessageType,
-  Patch,
-  IOlet,
-  Coordinate,
-  MessageNode,
-  Node,
-  Message,
-  MessageObject,
+  type Patch,
+  type IOlet,
+  type Coordinate,
+  type MessageNode,
+  type Node,
+  type Message,
+  type MessageObject,
 } from "./types";
 import { BaseNode } from "./BaseNode";
 import { uuid } from "@/lib/uuid/IDGenerator";
@@ -45,12 +45,15 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     });
 
     this.message = "";
+
     this.newInlet(TRIGGER, ConnectionType.CORE);
     this.newInlet(REPLACE, ConnectionType.CORE);
     this.newOutlet("message result", ConnectionType.CORE);
 
     if (messageType === MessageType.Number) {
-      this.inlets.forEach((inlet) => (inlet.hidden = true));
+      for (const inlet of this.inlets) {
+        inlet.hidden = true;
+      }
     }
 
     this.messageType = messageType || MessageType.Number;
@@ -92,19 +95,18 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
   }
 
   parse(text: string) {
-    console.log("PARSE=", text);
     if (text.includes("[") && text.includes("]")) {
       try {
-        console.log("text includes []");
         const list = JSON.parse(text);
-        console.log("sending list=", list);
         this.receive(this.inlets[1], list);
         return list;
       } catch (e) {
         console.log("error parsing text", text, e);
       }
     }
-    const parsed: Message[] | Message = isNumber(text) ? Number.parseFloat(text) : text;
+    const parsed: Message[] | Message = isNumber(text)
+      ? Number.parseFloat(text)
+      : text;
     this.receive(this.inlets[1], parsed as Message);
     return parsed;
   }
@@ -126,7 +128,8 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
       return msg;
     }
     if (
-      (typeof incomingMessage === "string" || typeof incomingMessage === "number") &&
+      (typeof incomingMessage === "string" ||
+        typeof incomingMessage === "number") &&
       typeof this.message === "string" &&
       this.message.includes("$1")
     ) {

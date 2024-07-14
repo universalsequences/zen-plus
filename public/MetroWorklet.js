@@ -5,17 +5,18 @@ class MetroWorklet extends AudioWorkletProcessor {
   constructor() {
     super();
 
-    this.playing = true;
-    this.sampleCount = 0;
-    this.stepCounter = 0;
-    
     this.bpm = 128;
-    
+    this.playing = true;
+
+    this.sampleCount = 0; //-this.divisor;
+    this.stepCounter = 0;
+
     this.port.onmessage = (e) => {
       if (e.data.type === "bpm") {
         this.bpm = e.data.value;
       }
       if (e.data.type === "play") {
+        this.sampleCount = Math.floor(this.divisor - this.lookahead) - 100;
         this.playing = true;
       }
       if (e.data.type === "stop") {
@@ -25,20 +26,19 @@ class MetroWorklet extends AudioWorkletProcessor {
       }
     };
   }
-  
+
   get divisor() {
-    return ((7.5 * 44100) / this.bpm);
+    return (7.5 * 44100) / this.bpm;
   }
-  
+
   get lookahead() {
     return 256;
   }
-  
-  
+
   process(inputs, outputs, parameters) {
     const input = inputs[0];
 
-    let sampleRate = 44100; 
+    let sampleRate = 44100;
 
     if (!this.playing) {
       return true;
@@ -46,18 +46,21 @@ class MetroWorklet extends AudioWorkletProcessor {
 
     for (let i = 0; i < outputs.length; i++) {
       for (let j = 0; j < outputs[i].length; j++) {
-        for (let k=0; k < outputs[i][j].length; k++) {
-          this.sampleCount++;
-          if (this.sampleCount % Math.floor(this.divisor) === Math.floor(this.divisor - this.lookahead)) {
+        for (let k = 0; k < outputs[i][j].length; k++) {
+          if (
+            mod(this.sampleCount, Math.floor(this.divisor)) ===
+            Math.floor(this.divisor - this.lookahead)
+          ) {
             // calculate time til the thing
             let lookaheadTime = this.lookahead / 44100.0;
-            this.stepCounter++;
-            
+
             this.port.postMessage({
               time: currentTime + lookaheadTime,
-              stepNumber: this.stepCounter
+              stepNumber: this.stepCounter,
             });
+            this.stepCounter++;
           }
+          this.sampleCount++;
         }
       }
     }
@@ -65,4 +68,8 @@ class MetroWorklet extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor('metro-processor', MetroWorklet);
+registerProcessor("metro-processor", MetroWorklet);
+
+function mod(a, b) {
+  return ((a % b) + b) % b;
+}

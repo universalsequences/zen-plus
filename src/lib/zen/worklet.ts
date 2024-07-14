@@ -24,7 +24,6 @@ export const createWorklet = (
 ): Promise<LazyZenWorklet> => {
   return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
     const { code, wasm } = createWorkletCode(name, graph);
-    console.log(code);
     const workletCode = code;
     const workletBase64 = btoa(workletCode);
     const url = `data:application/javascript;base64,${workletBase64}`;
@@ -101,7 +100,11 @@ interface ParsedCode {
   messageArray: string;
 }
 
-const parseMessages = (target: Target, code: string, parsed: ParsedCode): ParsedCode => {
+const parseMessages = (
+  target: Target,
+  code: string,
+  parsed: ParsedCode,
+): ParsedCode => {
   let beginToken = "@beginMessage";
   let endToken = "@endMessage";
   let indexOf = code.indexOf(beginToken);
@@ -115,7 +118,10 @@ const parseMessages = (target: Target, code: string, parsed: ParsedCode): Parsed
     let messageKey = code.slice(indexOf + beginToken.length, end);
     messageConstants.push(messageKey);
     if (target === Target.C) {
-      code = code.slice(0, indexOf) + `${messageIdx++}` + code.slice(end + endToken.length);
+      code =
+        code.slice(0, indexOf) +
+        `${messageIdx++}` +
+        code.slice(end + endToken.length);
     } else {
       code =
         code.slice(0, indexOf) +
@@ -126,8 +132,10 @@ const parseMessages = (target: Target, code: string, parsed: ParsedCode): Parsed
   }
   messageIdx = parsed.messageIdx;
   for (let message of messageConstants) {
-    parsed.messageArray += `this.messageKey${messageIdx} = "${message}";` + "\n";
-    parsed.messageArray += `this.messageKeys[${messageIdx - 1}] = "${message}";` + "\n";
+    parsed.messageArray +=
+      `this.messageKey${messageIdx} = "${message}";` + "\n";
+    parsed.messageArray +=
+      `this.messageKeys[${messageIdx - 1}] = "${message}";` + "\n";
     messageIdx++;
   }
 
@@ -140,7 +148,10 @@ const parseMessages = (target: Target, code: string, parsed: ParsedCode): Parsed
   };
 };
 
-export const createWorkletCode = (name: string, graph: ZenGraph): CodeOutput => {
+export const createWorkletCode = (
+  name: string,
+  graph: ZenGraph,
+): CodeOutput => {
   // first lets replace all instances of @message with what we want
   let parsed: ParsedCode = {
     code: graph.code || "",
@@ -237,23 +248,25 @@ this.port.postMessage({type: "ack",body: "yo"});
          let {idx, value, time} = e.data.body;
          this.events.push(e.data.body);
        } else if (e.data.type === "init-memory") {
+       console.log('init memory...');
          let {idx, data, time} = e.data.body;
          if (this.wasmModule) {
-           for (let i=0; i < data.length; i++) {
-             if (time) {
-               this.events.push({idx: idx+i, value: data[i], time});
-             } else {
-               this.wasmModule.exports.setMemorySlot(idx + i, data[i]);
-             }
-           }
+          if (time) {
+            for (let i=0; i < data.length; i++) {
+              this.events.push({idx: idx+i, value: data[i], time});
+            }
+          } else {
+            const ptr = this.allocateMemory(data.length);
+            this.copyDataToWasmMemory(data, ptr);
+            console.log('about to');
+            this.wasmModule.exports.initializeMemory(idx, ptr, data.length);
+            this.wasmModule.exports.my_free(ptr);
+            console.log('complete');
+          }
          } else {
-//           for (let i=0; i < data.length; i++) {
-if (this.memory) {
             this.memory.set(data, idx)
-}
-//         }
-}
-       } else if (e.data.type === "memory-get") {
+         }
+      } else if (e.data.type === "memory-get") {
            if (this.wasmModule) {
              const memPointer = this.wasmModule.exports.get_memory();
              const memArray  = new Float32Array(this.wasmModule.exports.memory.buffer, memPointer , this.memory.length * 3);
@@ -275,6 +288,7 @@ if (this.memory) {
            this.memory = null;
        } else if (e.data.type === "ready") {
            this.ready = true;
+           console.log("READY=", this.ready);
        }
     }
   }
@@ -339,8 +353,8 @@ let keys = [];
           let time = heapF32[(messagePtr + 12) / 4];
 
          let type = this.messageKeys[_type];
-ids.push(_type);
-keys.push(type);
+         ids.push(_type);
+         keys.push(type);
          if (!messages[type]) {
             messages[type] = {};
          }
@@ -358,6 +372,20 @@ let msg = {type, subType, body: messages[type][subType], time: times[type][subTy
           }
       }
       this.wasmModule.exports.empty_messages();
+   }
+
+
+   copyDataToWasmMemory(data, ptr) {
+     const bytesPerElement = Float32Array.BYTES_PER_ELEMENT;
+     const memory = this.wasmModule.exports.memory;
+     const wasmFloat32Array = new Float32Array(memory.buffer, ptr, data.length);
+     wasmFloat32Array.set(data);
+   }
+
+   allocateMemory(length) {
+     const bytesPerElement = Float32Array.BYTES_PER_ELEMENT;
+     const ptr = this.wasmModule.exports.my_malloc(length * bytesPerElement);
+     return ptr;
    }
 
    queueMessage(type, subType, data) {
@@ -573,7 +601,11 @@ export const prettyPrint = (prefix: string, code: string): string => {
     .join("\n");
 };
 
-export const genFunctions = (functions: Function[], target: Target, varKeyword: string) => {
+export const genFunctions = (
+  functions: Function[],
+  target: Target,
+  varKeyword: string,
+) => {
   let out = "";
   for (let func of functions) {
     let name: string = func.name;

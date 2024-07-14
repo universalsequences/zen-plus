@@ -361,7 +361,7 @@ const Files: React.FC<{
             <FileComponent
               isMini={isMini}
               key={x.id}
-              className={isMini ? "w-32 h-32" : "w-72 h-40"}
+              className={isMini ? "w-32 h-32" : "w-64 h-40"}
               setRevisions={setRevisions}
               file={x}
               isRevision={false}

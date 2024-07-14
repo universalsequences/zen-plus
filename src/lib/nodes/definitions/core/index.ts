@@ -31,6 +31,7 @@ import { ast, wasmviewer } from "./wasmviewer";
 import { waveform } from "./waveform";
 import { comment } from "./comment";
 import { send, patchmessage, subscribe } from "./messages";
+import { zfetch } from "./fetch";
 
 export const api: API = {
   waveform,
@@ -74,6 +75,7 @@ export const api: API = {
   print,
   dict,
   identity,
+  fetch: zfetch,
   toggle,
   "key.down": keydown,
   ...strings,

@@ -176,14 +176,6 @@ export class BaseNode implements Node {
       if ((connection.destination as ObjectNode).merger) {
         destNode = (connection.destination as ObjectNode).merger!;
       }
-      console.log(this, destNode);
-      console.log(
-        "splitter connecting to",
-        splitter,
-        destNode,
-        this.outlets.indexOf(sourceOutlet),
-        destination.inlets.indexOf(destinationInlet),
-      );
       splitter.connect(
         destNode,
         this.outlets.indexOf(sourceOutlet),

@@ -1,8 +1,8 @@
 import { doc } from "./doc";
-import { Message, ObjectNode } from "../../types";
+import type { Message, ObjectNode } from "../../types";
 
 doc("waveform", {
-  inletNames: [],
+  inletNames: ["buffer"],
   description: "shows waveform",
   numberOfInlets: 1,
   numberOfOutlets: 0,
@@ -12,10 +12,16 @@ export const waveform = (node: ObjectNode) => {
   if (!node.size) {
     node.size = { width: 25, height: 25 };
   }
-  return (_message: Message) => {
-    // when it receives a
+  if (!node.attributes.playhead) {
+    node.attributes.playhead = 0;
+  }
+  node.isResizable = true;
+  return (message: Message) => {
     if (node.onNewValue) {
-      node.onNewValue(_message);
+      node.onNewValue(message);
+    }
+    if (ArrayBuffer.isView(message)) {
+      node.buffer = message;
     }
     return [];
   };

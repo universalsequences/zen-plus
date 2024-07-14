@@ -1,53 +1,44 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useValue } from "@/contexts/ValueContext";
+import type { ObjectNode } from "@/lib/nodes/types";
+import ShaderWaveform from "../waveform/ShaderWaveform";
+import { usePosition } from "@/contexts/PositionContext";
+import { useSelection } from "@/contexts/SelectionContext";
+import { hashFloat32Array } from "@/utils/waveform/hashFloat32Array";
 
-export const Waveform = () => {
-  const { value } = useValue();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export const Waveform = ({ objectNode }: { objectNode: ObjectNode }) => {
+  const { value: myValue } = useValue();
+  const value = objectNode.buffer || myValue;
+  const selection = useSelection();
+  const playhead = (objectNode.attributes.playhead || 0) as number;
+  const { sizeIndex } = usePosition();
+  const { width, height } = objectNode.size || { width: 300, height: 100 };
 
+  const [key, setKey] = useState("");
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-
-    const drawWaveform = (array: Float32Array) => {
-      if (!ctx) return;
-      console.log("drawing canvas");
-      const width = canvas.width;
-      const height = canvas.height;
-      ctx.clearRect(0, 0, width, height);
-      ctx.beginPath();
-      const sliceWidth = width / array.length;
-      let x = 0;
-      for (let i = 0; i < array.length; i++) {
-        const v = array[i] * 0.5 + 0.5; // Normalize to 0-1 range
-        const y = v * height;
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-        x += sliceWidth;
-      }
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-    };
-
-    if (value && ArrayBuffer.isView(value) && value.length) {
-      if (!canvas.parentElement || !ctx) {
-        return;
-      }
-      canvas.width = canvas.parentElement.offsetWidth;
-      canvas.height = canvas.parentElement.offsetHeight;
-      ctx.strokeStyle = "#00f";
-      ctx.lineWidth = 2;
-      drawWaveform(value as Float32Array);
+    if (value) {
+      setKey(
+        `${hashFloat32Array(value as Float32Array).toString()}_${height}_${width}`,
+      );
     }
-  }, [value]);
+  }, [value, width, height]);
 
   return (
-    <div style={{ width: "100%", height: "150px" }}>
-      <canvas ref={canvasRef} />
+    <div style={{ width, height }}>
+      {value && (
+        <ShaderWaveform
+          zoomLevel={1}
+          width={width}
+          height={height}
+          audioSamples={value as Float32Array}
+          color={[1, 0, 0, 1]}
+          waveformKey={key}
+        />
+      )}
+      <div
+        style={{ backgroundColor: "#ffffff1f", width: `${100 * playhead}%` }}
+        className="h-full absolute z-30  top-0 left-0"
+      />
     </div>
   );
 };

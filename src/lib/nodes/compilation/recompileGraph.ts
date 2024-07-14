@@ -1,5 +1,16 @@
 import { OperatorContextType } from "../context";
-import type { Message, ObjectNode, Patch, SubPatch } from "../types";
+import {
+  PatchType,
+  type Message,
+  type ObjectNode,
+  type Patch,
+  type SubPatch,
+} from "../types";
+
+const debug = false;
+const dlog = (...x: any[]) => {
+  if (debug) console.log(...x);
+};
 
 const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
   const parentPatch = (patch as Patch as SubPatch).parentPatch;
@@ -12,7 +23,8 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
 
   // re-parse every node so that we "start from scratch"
   const objectNodes = patch.objectNodes;
-  const _objectNodes = patch.name === undefined ? patch.getAllNodes() : objectNodes; //objectNodes;
+  const _objectNodes =
+    patch.name === undefined ? patch.getAllNodes() : objectNodes; //objectNodes;
   if (patch.name === undefined || patch.isZenBase()) {
     let __o = patch.getAllNodes();
     if (!parentPatch) {
@@ -110,7 +122,10 @@ export const recompileGraph = (patch: Patch) => {
   if (parentPatch) {
     // we are in a zen node so we proceed as usual
     for (const node of objectNodes) {
-      if (node.subpatch && node.subpatch.patchType !== OperatorContextType.AUDIO) {
+      if (
+        node.subpatch &&
+        node.subpatch.patchType !== OperatorContextType.AUDIO
+      ) {
         node.subpatch.recompileGraph(true);
       }
     }
@@ -142,41 +157,67 @@ export const recompileGraph = (patch: Patch) => {
     mapReceive(audioInputs);
 
     const parent = (patch as Patch as SubPatch).parentPatch;
-    if (parent) {
-      const functions = parent.getAllNodes().filter((x) => x.name === "function");
+    if (parent && (patch as SubPatch).patchType === OperatorContextType.ZEN) {
+      const functions = parent
+        .getAllNodes()
+        .filter((x) => x.name === "function");
       mapReceive(functions);
     }
-  }
 
-  // first do any entry-point components
-  if (patch.isZenBase()) {
-    const histories = patch.getAllNodes().filter((node) => node.name === "history");
+    const histories = patch
+      .getAllNodes()
+      .filter((node) => node.name === "history");
+    dlog("sending histories", histories);
     mapReceive(histories);
 
     const args = patch
       .getAllNodes()
       .filter((node) => node.name === "argument" || node.name === "invocation");
+
+    dlog("sending args", args);
     mapReceive(args);
 
-    const dataNodes = patch.getAllNodes().filter((node) => node.name === "data");
-    mapReceive(dataNodes, [0]);
+    //const dataNodes = patch.getAllNodes().filter((node) => node.name === "data");
+    //mapReceive(dataNodes, [0]);
 
-    const bufferNodes = patch.getAllNodes().filter((node) => node.name === "buffer");
+    const bufferNodes = patch
+      .getAllNodes()
+      .filter((node) => node.name === "buffer");
+    dlog("sending bufferNodes", bufferNodes);
     mapReceive(bufferNodes, [0]);
 
-    const paramNodes = patch.getAllNodes().filter((node) => node.name === "param");
+    const paramNodes = patch
+      .getAllNodes()
+      .filter((node) => node.name === "param");
+    dlog("sending bufferNodes", paramNodes);
     mapReceive(paramNodes);
   }
 
   if (patch.name === undefined) {
-    const uniformNodes = patch.getAllNodes().filter((node) => node.name === "uniform");
+    const uniformNodes = patch
+      .getAllNodes()
+      .filter((node) => node.name === "uniform");
+    dlog("sending uniformNodes", uniformNodes);
     mapReceive(uniformNodes, "bang");
   }
 
   patch.waiting = false;
 
-  const topNodesNoLoad = _objectNodes.filter((node) => node.inlets.length === 0 && !node.needsLoad);
+  const dataNodes = objectNodes.filter((node) => node.name === "data");
+  dlog("sending data nodes ", dataNodes);
+  mapReceive(dataNodes, "bang");
+
+  //const topNodesNoLoad = (patch.isZenBase() ? _objectNodes : objectNodes).filter(
+  //  (node) => node.inlets.length === 0 && !node.needsLoad,
+  //);
+  const topNodesNoLoad = objectNodes.filter(
+    (node) => node.inlets.length === 0 && !node.needsLoad,
+  );
+  dlog("sending topNodesNoLoad", topNodesNoLoad);
+  const a1 = new Date().getTime();
   executeAndSend(topNodesNoLoad);
+  const b1 = new Date().getTime();
+  dlog("topNodesNoLoad took %s ms", b1 - a1);
 
   const sourceNodes = objectNodes.filter(
     (node) =>
@@ -186,6 +227,7 @@ export const recompileGraph = (patch: Patch) => {
       node.inlets[0].connections.length === 0,
   );
 
+  dlog("sending sourceNodes", sourceNodes);
   mapReceive(sourceNodes);
 
   const topNodes = objectNodes.filter(
@@ -195,14 +237,16 @@ export const recompileGraph = (patch: Patch) => {
       !(node.inlets[0] && node.inlets[0].connections.length === 0),
   );
 
+  dlog("sending topNodes", topNodes);
   executeAndSend(topNodes);
 
-  if (!patch.isZenBase()) {
+  if (!patch.isZenBase() && (patch as SubPatch).parentPatch) {
     const inputs = patch
       .getAllNodes()
       .filter((node) => node.name === "in")
       .filter((node) => node.patch !== this);
-    console.log("inputs=", inputs);
+
+    dlog("sending inputs bc has a parent patch", inputs);
     for (const input of inputs) {
       // get the patch
       const p = input.patch as SubPatch;
@@ -214,29 +258,39 @@ export const recompileGraph = (patch: Patch) => {
           for (const c of input.outlets[0].connections) {
             const { destinationInlet, destination } = c;
             const value = (input.attributes.default as number) || 0;
-            console.log("sending a 0 to destinationInlet = ", value, destinationInlet);
             destination.receive(destinationInlet, value, input);
           }
         }
       }
     }
 
-    const calls = patch
-      .getAllNodes()
-      .filter(
-        (node) =>
-          node.operatorContextType === OperatorContextType.ZEN &&
-          (node.name === "call" ||
-            node.name === "latchcall" ||
-            node.name === "polycall" ||
-            node.name === "polytrig"),
-      );
-    for (const call of calls) {
-      if (call.name === "polytrig") {
-        call.receive(call.inlets[0], "bang");
-      } else {
-        if (call.fn && call.inlets[0] && call.inlets[0].lastMessage !== undefined) {
-          call.receive(call.inlets[0], call.inlets[0].lastMessage);
+    if (
+      (patch as SubPatch).patchType === OperatorContextType.ZEN &&
+      (patch as SubPatch).parentPatch
+    ) {
+      const calls = patch
+        .getAllNodes()
+        .filter(
+          (node) =>
+            node.operatorContextType === OperatorContextType.ZEN &&
+            (node.name === "call" ||
+              node.name === "latchcall" ||
+              node.name === "polycall" ||
+              node.name === "polytrig"),
+        );
+
+      dlog("sending calls bc zen and has parent patch", calls);
+      for (const call of calls) {
+        if (call.name === "polytrig") {
+          call.receive(call.inlets[0], "bang");
+        } else {
+          if (
+            call.fn &&
+            call.inlets[0] &&
+            call.inlets[0].lastMessage !== undefined
+          ) {
+            call.receive(call.inlets[0], call.inlets[0].lastMessage);
+          }
         }
       }
     }

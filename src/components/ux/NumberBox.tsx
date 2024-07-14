@@ -40,13 +40,20 @@ const NumberBox: React.FC<{
   const onMouseUp = useCallback(
     (e: MouseEvent) => {
       setEditing(false);
+      keyMode.current = false;
     },
     [setEditing],
   );
 
+  const keyMode = useRef(false);
+
   const onMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!editing) {
+        return;
+      }
+
+      if (keyMode.current) {
         return;
       }
 
@@ -94,8 +101,10 @@ const NumberBox: React.FC<{
           setValue(num);
         } else if (e.key === "ArrowUp") {
           setValue(value + off);
+          keyMode.current = true;
         } else if (e.key === "ArrowDown") {
           setValue(value - off);
+          keyMode.current = true;
         }
       }
     },

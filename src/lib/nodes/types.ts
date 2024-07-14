@@ -11,6 +11,7 @@ import type { Connections } from "@/contexts/PatchContext";
 import type { Statement } from "./definitions/zen/types";
 import type { Slot } from "./definitions/audio/slots";
 import type { BaseNode } from "./BaseNode";
+import { ExportedAudioUnit, ParameterData } from "./compilation/export";
 
 export interface Size {
   width: number;
@@ -267,6 +268,7 @@ export type Patch = Identifiable & {
   stopRecording: () => void;
   recordingStartedAt?: Date;
   audioNode?: AudioNode;
+  exportedAudioUnit?: ExportedAudioUnit;
 };
 
 export type SubPatch = Patch & {

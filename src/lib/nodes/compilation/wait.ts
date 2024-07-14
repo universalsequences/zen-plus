@@ -5,6 +5,7 @@ export const waitForBuffers = async (patch: Patch) => {
   let buffers = patch.getAllNodes().filter((x) => x.name === "buffer");
 
   if (buffers.length === 0) {
+    await sleep(100);
     return;
   }
 
@@ -13,4 +14,5 @@ export const waitForBuffers = async (patch: Patch) => {
       await sleep(25);
     }
   }
+  await sleep(100);
 };

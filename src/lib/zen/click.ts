@@ -39,7 +39,6 @@ if (${clickVar} > 0) {
 
   clicker.click = (time?: number, value?: number) => {
     for (let { context, block } of contextBlocks) {
-      console.log("schedule-set click=", time);
       let msg: any = {
         type: time !== undefined ? "schedule-set" : "memory-set",
         body: {

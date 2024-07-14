@@ -1,6 +1,10 @@
 import React, { useEffect, useCallback, useRef, useState } from "react";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import { FilesQueryResult, Project, useStorage } from "@/contexts/StorageContext";
+import {
+  FilesQueryResult,
+  Project,
+  useStorage,
+} from "@/contexts/StorageContext";
 import Files from "@/components/files/Files";
 import TreePath from "./TreePath";
 import { File } from "@/lib/files/types";
@@ -37,8 +41,17 @@ const Tree: React.FC<{
   searchTerm: string;
   hide: () => void;
   idx: number;
-}> = ({ searchTerm, patch, hide, idx, cursor, patchOpened, dragging, setDragging }) => {
-  let { expandPatch, selectedPatch, setSelectedPatch } = usePatches();
+}> = ({
+  searchTerm,
+  patch,
+  hide,
+  idx,
+  cursor,
+  patchOpened,
+  dragging,
+  setDragging,
+}) => {
+  let { patches, expandPatch, selectedPatch, setSelectedPatch } = usePatches();
 
   useEffect(() => {
     window.addEventListener("keydown", onKeyDown);
@@ -50,7 +63,8 @@ const Tree: React.FC<{
       if (e.key === "Enter" && cursor === idx) {
         if (
           searchTerm !== "" &&
-          (!patch.name || !patch.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          (!patch.name ||
+            !patch.name.toLowerCase().includes(searchTerm.toLowerCase()))
         ) {
           return;
         }
@@ -96,7 +110,9 @@ const Tree: React.FC<{
               x.subpatch &&
               (searchTerm === "" ||
                 (x.subpatch.name &&
-                  x.subpatch.name!.toLowerCase().includes(searchTerm.toLowerCase()))),
+                  x.subpatch
+                    .name!.toLowerCase()
+                    .includes(searchTerm.toLowerCase()))),
           ) || [];
       if (searchTerm !== "") {
         if (
@@ -116,7 +132,9 @@ const Tree: React.FC<{
     patch.presentationMode ||
     ((patch as SubPatch).parentNode &&
       (patch as SubPatch).parentNode.attributes["Custom Presentation"]);
-  let type = (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.attributes.type;
+  let type =
+    (patch as SubPatch).parentNode &&
+    (patch as SubPatch).parentNode.attributes.type;
 
   const onDrop = useCallback(() => {
     if (patch === dragging) {
@@ -126,7 +144,9 @@ const Tree: React.FC<{
     let sub = dragging as SubPatch;
     if (sub.parentPatch) {
       let node = sub.parentNode;
-      sub.parentPatch.objectNodes = sub.parentPatch.objectNodes.filter((x) => x !== node);
+      sub.parentPatch.objectNodes = sub.parentPatch.objectNodes.filter(
+        (x) => x !== node,
+      );
       sub.parentPatch = patch;
       node.patch = patch;
       patch.objectNodes.push(node);
@@ -139,8 +159,10 @@ const Tree: React.FC<{
   return (
     <div>
       {(searchTerm === "" ||
-        (patch.name && patch.name.toLowerCase().includes(searchTerm.toLowerCase()))) && (
+        (patch.name &&
+          patch.name.toLowerCase().includes(searchTerm.toLowerCase()))) && (
         <div
+          onKeyUp={(e) => 0}
           onClick={(e: any) => {
             e.stopPropagation();
 
@@ -184,13 +206,18 @@ const Tree: React.FC<{
           onDrop={onDrop}
           style={
             cursor === idx
-              ? { backgroundColor: "#b6dcd42f", borderBottom: "1px solid #2f2f2f" }
-              : { borderBottom: "1px solid transparent" }
+              ? {
+                  backgroundColor: "#b6dcd42f",
+                }
+              : {}
           }
           className={
+            (patches.includes(patch)
+              ? " bg-black-clear2 border border-zinc-600 "
+              : "") +
             (draggingOver ? "bg-zinc-400 " : "") +
             (cursor === idx ? "   " : "") +
-            " pl-3  cursor-pointer flex py-1 overflow-hidden whitespace-nowrap " +
+            " pl-3  my-1 cursor-pointer flex py-1 overflow-hidden whitespace-nowrap " +
             (!patch.name ? " text-zinc-300" : "")
           }
         >
@@ -208,7 +235,8 @@ const Tree: React.FC<{
             ) : (
               <CubeIcon className="mr-2 w-3 my-auto" />
             )}{" "}
-            {patch.name || ((patch as SubPatch).parentPatch ? "subpatch" : "base patch")}
+            {patch.name ||
+              ((patch as SubPatch).parentPatch ? "subpatch" : "base patch")}
             <div
               className={`w-1 h-1 rounded-full ${type === "audio" ? "bg-yellow-300" : type === "gl" ? "bg-purple-500" : "bg-teal-200"} my-auto ml-2`}
             />
@@ -216,7 +244,9 @@ const Tree: React.FC<{
           {<TreePath patch={patch as SubPatch} />}
         </div>
       )}
-      {dragging !== patch && <div className={searchTerm === "" ? "ml-2" : ""}>{trees}</div>}
+      {dragging !== patch && (
+        <div className={searchTerm === "" ? "ml-2" : ""}>{trees}</div>
+      )}
     </div>
   );
 };

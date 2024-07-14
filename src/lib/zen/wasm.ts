@@ -95,6 +95,12 @@ void* my_malloc(size_t size) {
     return malloc(size);
 }
 
+EMSCRIPTEN_KEEPALIVE
+void my_free(float *ptr) {
+    free(ptr);
+}
+
+
 ${printConstantInitializer(graph.context)}
 
 EMSCRIPTEN_KEEPALIVE
@@ -109,6 +115,14 @@ void initSineTable() {
 EMSCRIPTEN_KEEPALIVE
 void setMemorySlot(int idx, double val) {
     memory[idx] = val;
+}
+
+// Function to initialize the memory array
+EMSCRIPTEN_KEEPALIVE
+void initializeMemory(int idx, float* data, int length) {
+    for (int i = 0; i < length && i < MEM_SIZE; i++) {
+        memory[idx + i] = data[i];
+    }
 }
 
 v128_t wasm_f32x4_mod(v128_t a, v128_t b) {

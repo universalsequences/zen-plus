@@ -6,18 +6,14 @@ import { ObjectNode } from "@/lib/nodes/types";
 import { TriangleLeftIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   return (
     <ValueProvider node={objectNode}>
       <LiveMeterInner objectNode={objectNode} />
     </ValueProvider>
   );
 };
-const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
   useValue();
   const { lockedMode } = useLocked();
@@ -100,11 +96,10 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
 
   return (
     <div style={{ width, height }} className="flex flex-col relative">
-      <div ref={containerRef} className="w-5 h-full bg-zinc-600 relative">
+      <div onMouseDown={onMouseDown} ref={containerRef} className="w-5 h-full bg-zinc-600 relative">
         <div
           style={{ bottom: `${value * 100}%` }}
-          onMouseDown={onMouseDown}
-          className="translate-y-2 absolute w-10 h-10 -right-4 flex  z-10 "
+          className="translate-y-3 absolute w-10 h-10 -right-4 flex  z-10 "
         >
           <TriangleLeftIcon
             color={isDown ? "lime" : "white"}
@@ -139,11 +134,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
  * @param dBMax - The maximum decibel value (e.g., 0 dB)
  * @returns The normalized value between 0 and 1
  */
-function normalizeDecibel(
-  dBValue: number,
-  dBMin: number = -100,
-  dBMax: number = 0,
-): number {
+function normalizeDecibel(dBValue: number, dBMin: number = -100, dBMax: number = 0): number {
   if (dBMax === dBMin) {
     throw new Error("Decibel max and min values cannot be the same");
   }

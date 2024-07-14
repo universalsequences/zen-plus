@@ -26,11 +26,9 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
   }
 
   return (message: Message) => {
-    console.log("polycall", message, ...args.map((x) => x()));
     const body = getDefunBodies(node); //defun.storedMessage;
 
     if (!body || body.length === 0) {
-      console.log("no bodies");
       return [];
     }
 
@@ -158,7 +156,6 @@ export const polycall = (node: ObjectNode, ...args: Lazy[]) => {
     if (outputs[0]?.node) {
       outputs[0].node = node;
     }
-    console.log("sending out of polycall");
     return outputs;
   };
 };

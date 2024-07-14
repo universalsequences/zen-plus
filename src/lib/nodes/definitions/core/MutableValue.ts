@@ -1,4 +1,4 @@
-import type { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
+import type { ObjectNode, Message } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
 
 export class MutableValue {

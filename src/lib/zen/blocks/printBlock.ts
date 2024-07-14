@@ -34,7 +34,11 @@ ${isLast ? "" : prettify("    ", printOutbound(block))}
           new Set(
             block.histories.filter(
               (h) =>
-                post.includes(h.includes("double") || h.includes("float") ? h.split(" ")[1] : h) &&
+                post.includes(
+                  h.includes("double") || h.includes("float")
+                    ? h.split(" ")[1]
+                    : h,
+                ) &&
                 (h.includes("float") || h.includes("double")) &&
                 !Array.from(block.fullInboundDependencies).some((y) => {
                   return h.split(" ").some((h1) => h1 === y);
@@ -58,7 +62,13 @@ ${prettify("    ", inbound)}
 ${post}
 `;
   if (block.outputs.length > 0) {
-    code += printOutputs(outputName, block, totalInvocations, forceScalar, target);
+    code += printOutputs(
+      outputName,
+      block,
+      totalInvocations,
+      forceScalar,
+      target,
+    );
   }
   if (!forceScalar) {
     code += "}\n";
@@ -103,11 +113,17 @@ export const printOutputs = (
   return out;
 };
 
-export const printInbound = (block: CodeBlock, histories: string[], blockCode: string): string => {
+export const printInbound = (
+  block: CodeBlock,
+  histories: string[],
+  blockCode: string,
+): string => {
   let code = "";
   let inbounds = block.inboundDependencies;
   if ((block.context as LoopContext).inboundDependencies) {
-    (block.context as LoopContext).inboundDependencies!.forEach((d) => inbounds.add(d));
+    (block.context as LoopContext).inboundDependencies!.forEach((d) =>
+      inbounds.add(d),
+    );
   }
   for (let inboundVariable of Array.from(inbounds)) {
     // TODO: use a proper object to hold a history so we can figure out if if its here
@@ -199,8 +215,12 @@ const mergeAdjacentBlocks = (blocks: CodeBlock[]): CodeBlock[] => {
             ...Array.from(currentBlock.fullInboundDependencies),
             ...Array.from(block.fullInboundDependencies),
           ]),
-          histories: Array.from(new Set([...currentBlock.histories, ...block.histories])),
-          outputs: Array.from(new Set([...currentBlock.outputs, ...block.outputs])),
+          histories: Array.from(
+            new Set([...currentBlock.histories, ...block.histories]),
+          ),
+          outputs: Array.from(
+            new Set([...currentBlock.outputs, ...block.outputs]),
+          ),
         };
 
         const inbound: string[] = [];
@@ -238,7 +258,9 @@ const mergeAdjacentBlocks = (blocks: CodeBlock[]): CodeBlock[] => {
 export const printBlocks = (blocks: CodeBlock[], target: Target): string => {
   const returnType = target === Target.C ? "void" : "";
   const args =
-    target === Target.C ? "float * inputs, float * outputs, float currentTime" : "inputs, outputs";
+    target === Target.C
+      ? "float * inputs, float * outputs, float currentTime"
+      : "inputs, outputs";
   const prefix = `${target === Target.C ? "EMSCRIPTEN_KEEPALIVE" : ""}
 ${returnType} process(${args})`;
   return printFunction(prefix, "outputs", blocks, undefined, undefined, target);
@@ -249,7 +271,9 @@ export const printUserFunction = (func: Function, target: Target): string => {
   const args = [...func.functionArguments].sort((a, b) => a.num - b.num);
   const argPrefix = func.context!.forceScalar ? "" : "*";
   const varKeyword = target === Target.C ? "float" : "";
-  const printedArgs = args.map((x) => `${varKeyword} ${argPrefix}${x.name} `).join(",");
+  const printedArgs = args
+    .map((x) => `${varKeyword} ${argPrefix}${x.name} `)
+    .join(",");
   const outputs = countOutputs(func.codeFragments);
   const totalSize = outputs * 128 * func.size;
 
@@ -286,6 +310,9 @@ ${functionSignature} {
   if (target === Target.Javascript) {
     code += `let memory = this.memory;
     let BLOCK_SIZE = 128;
+    if (this.disposed || !this.ready) {
+      return true;
+    }
     this.scheduleEvents(218);
 `;
   }
@@ -318,7 +345,11 @@ ${printBlock(outputName, block, totalInvocations, isLast, forceScalar, target)
     post += "return true;\n";
   }
   post += "\n}\n";
-  return replaceAll(code + dedupeConstants(constants) + post, "double", "float");
+  return replaceAll(
+    code + dedupeConstants(constants) + post,
+    "double",
+    "float",
+  );
 };
 
 const dedupeConstants = (constants: string): string => {

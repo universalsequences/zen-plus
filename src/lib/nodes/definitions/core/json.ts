@@ -30,6 +30,7 @@ doc("get", {
 });
 
 export const dict_get = (_node: ObjectNode, ...indices: Lazy[]) => {
+  _node.inlets.forEach((x) => (x.hidden = false));
   return (dict: Message) => {
     let ret = indices.map((index) => (dict as any)[index() as string]);
     return ret;

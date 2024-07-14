@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import { sortHistories } from "../../compilation/onCompile";
+import { sortHistories } from "../../compilation/histories";
 import { API } from "@/lib/nodes/context";
 import { polycall } from "./poly";
 import { polytrig } from "./polytrig";
@@ -45,7 +45,11 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
     let __bodies = [];
     for (let x of _bodies) {
       if (deps.length > 0) {
-        __bodies.push(["s" as Operator, ...sortDep.slice(1), x as unknown as Statement]);
+        __bodies.push([
+          "s" as Operator,
+          ...sortDep.slice(1),
+          x as unknown as Statement,
+        ]);
       } else {
         __bodies.push(x);
       }
@@ -63,7 +67,8 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
         totalInvocations++;
       }
       if (
-        ((n as ObjectNode).name === "polytrig" || (n as ObjectNode).name === "polycall") &&
+        ((n as ObjectNode).name === "polytrig" ||
+          (n as ObjectNode).name === "polycall") &&
         n.attributes["name"] === name
       ) {
         totalInvocations += (n as ObjectNode).attributes.voices as number;
@@ -92,12 +97,16 @@ const call = (node: ObjectNode, ...args: Lazy[]) => {
 
     let upstream = getUpstreamNodes(node.patch);
     let backwards = upstream;
-    let defuns = backwards.filter((x) => x.name === "defun" && x.attributes["name"] === name);
+    let defuns = backwards.filter(
+      (x) => x.name === "defun" && x.attributes["name"] === name,
+    );
     let _node = defuns[0];
     if (!_node) {
       return [];
     }
-    let callers = upstream.filter((x) => x.name === "call" && x.attributes["name"] == name);
+    let callers = upstream.filter(
+      (x) => x.name === "call" && x.attributes["name"] == name,
+    );
 
     let invocationNumber = callers.indexOf(node);
     let _args = args.map((x) => x()).filter((x) => x !== undefined);
@@ -105,7 +114,12 @@ const call = (node: ObjectNode, ...args: Lazy[]) => {
     if (!body) {
       return [];
     }
-    let ret = [{ name: "call", value: invocationNumber }, body, message, ..._args];
+    let ret = [
+      { name: "call", value: invocationNumber },
+      body,
+      message,
+      ..._args,
+    ];
     (ret as Statement).node = node;
 
     let numBodies = (body as Statement[]).length - 1;
@@ -137,13 +151,17 @@ const latchcall = (node: ObjectNode, ...args: Lazy[]) => {
 
     let upstream = getUpstreamNodes(node.patch);
     let backwards = upstream;
-    let defuns = backwards.filter((x) => x.name === "defun" && x.attributes["name"] === name);
+    let defuns = backwards.filter(
+      (x) => x.name === "defun" && x.attributes["name"] === name,
+    );
     let _node = defuns[0];
     if (!_node) {
       return [];
     }
     let callers = upstream.filter(
-      (x) => (x.name === "call" || x.name === "latchcall") && x.attributes["name"] == name,
+      (x) =>
+        (x.name === "call" || x.name === "latchcall") &&
+        x.attributes["name"] == name,
     );
 
     let invocationNumber = callers.indexOf(node);
@@ -152,7 +170,12 @@ const latchcall = (node: ObjectNode, ...args: Lazy[]) => {
     if (!body) {
       return [];
     }
-    let ret = [{ name: "latchcall", value: invocationNumber }, body, message, ..._args];
+    let ret = [
+      { name: "latchcall", value: invocationNumber },
+      body,
+      message,
+      ..._args,
+    ];
     (ret as Statement).node = node;
 
     let numBodies = (body as Statement[]).length - 1;
@@ -182,7 +205,11 @@ const argument = (node: ObjectNode, num: Lazy, name: Lazy) => {
     let _name = name() || "arg_" + num();
     if (_name) {
       let ret: Statement = [
-        { name: "argument", value: num() as number, variableName: _name as string },
+        {
+          name: "argument",
+          value: num() as number,
+          variableName: _name as string,
+        },
       ];
       ret.node = node;
 

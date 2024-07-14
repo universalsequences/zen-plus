@@ -13,12 +13,6 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({
   const [value, setValue] = useState(objectNode.custom?.value as number);
   const { lockedMode } = useLocked();
 
-  console.log(
-    "TOGGLE UX VALUE=%s custom.value=%s",
-    value,
-    objectNode.custom?.value,
-    objectNode.custom,
-  );
   const size = objectNode.size || { width: 80, height: 80 };
 
   useEffect(() => {
