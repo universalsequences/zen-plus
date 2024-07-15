@@ -442,9 +442,9 @@ process(inputs, outputs, parameters) {
     let inputChannel = inputs[0];
     let outputChannel = outputs[0];
 
-    //if (this.messageCounter % 10 === 0) {
-    this.flushWASMMessages();
-    //}
+    if (this.messageCounter % 32 === 0) {
+      this.flushWASMMessages();
+    }
     this.messageCounter++;
 
     this.scheduleEvents(128);

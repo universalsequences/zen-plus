@@ -4,9 +4,6 @@ import { uuid } from "./uuid";
 import { memo } from "./memo";
 import { Target } from "./targets";
 
-/**
- * Its not e
- */
 export const message = (name: string, subType: Arg, value: Arg) => {
   let id = uuid();
   return simdMemo(
@@ -18,7 +15,9 @@ export const message = (name: string, subType: Arg, value: Arg) => {
       let code = ``;
       if (context.target === Target.C) {
         code += `
-//new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable});
+        if ((message_checker++) % 97 == 0) {
+new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, 0.0);
+         }
 `;
       } else {
         code += `

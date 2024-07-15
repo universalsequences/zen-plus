@@ -52,6 +52,7 @@ struct Message {
    double currentTime;
 };
 
+int message_checker = 0;
 int message_counter = 0;
 struct Message messages[MAX_MESSAGES];
 
@@ -94,6 +95,7 @@ EMSCRIPTEN_KEEPALIVE
 void* my_malloc(size_t size) {
     return malloc(size);
 }
+
 
 EMSCRIPTEN_KEEPALIVE
 void my_free(float *ptr) {

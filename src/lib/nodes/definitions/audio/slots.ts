@@ -1,10 +1,10 @@
 import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "@/components/SlotView";
 import {
-  AttributeValue,
+  type AttributeValue,
   ConnectionType,
-  Message,
-  ObjectNode,
-  SerializedObjectNode,
+  type Message,
+  type ObjectNode,
+  type SerializedObjectNode,
 } from "../../types";
 import { doc } from "./doc";
 import ObjectNodeImpl from "../../ObjectNode";
@@ -22,11 +22,12 @@ export type Slot = ObjectNode;
 export const slots = (node: ObjectNode) => {
   node.needsLoad = true;
 
+  // note: what the fuck is a hijack lol
   const getHijacks = (x: AttributeValue) => {
-    let nums = Array.isArray(x)
+    const nums = Array.isArray(x)
       ? x
       : typeof x === "string"
-        ? x.split(",").map((x) => parseInt(x))
+        ? x.split(",").map((x) => Number.parseInt(x))
         : typeof x === "number"
           ? [x]
           : [];
@@ -97,19 +98,19 @@ export const slots = (node: ObjectNode) => {
       return;
     }
     // then we need to connect each slot
-    for (let slot of node.slots) {
+    for (const slot of node.slots) {
       slot.disconnectAll();
     }
 
-    for (let slot of node.slots) {
+    for (const slot of node.slots) {
       if (slot.audioNode) {
         slot.audioNode.disconnect();
       }
     }
 
     for (let i = 0; i < node.slots.length - 1; i++) {
-      let a = node.slots[i];
-      let b = node.slots[i + 1];
+      const a = node.slots[i];
+      const b = node.slots[i + 1];
 
       for (let j = 0; j < a.outlets.length; j++) {
         if (b.inlets[j]) {
@@ -117,16 +118,17 @@ export const slots = (node: ObjectNode) => {
         }
       }
     }
-    let last: ObjectNode = node.slots[node.slots.length - 1];
+    const last: ObjectNode = node.slots[node.slots.length - 1];
     last.audioNode?.connect(splitter); //(node.audioNode!);
     if (node.audioNode) {
       splitter.connect(node.audioNode, 0, 0);
       splitter.connect(node.audioNode, 1, 1);
     }
 
-    let first: ObjectNode = node.slots[0];
+    const first: ObjectNode = node.slots[0];
     if (node.merger && first.merger) {
-      let _splitter = node.patch.audioContext.createChannelSplitter(2);
+      node.merger.disconnect();
+      const _splitter = node.patch.audioContext.createChannelSplitter(2);
       node.merger.connect(_splitter);
       _splitter.connect(first.merger, 0, 0);
       _splitter.connect(first.merger, 1, 1);
@@ -233,7 +235,7 @@ const compileSlots = async (node: ObjectNode) => {
 
   // reconnect each of the connections out from the slots node
   for (const outlet of node.outlets) {
-    for (let connection of outlet.connections) {
+    for (const connection of outlet.connections) {
       if (outlet.connectionType === ConnectionType.AUDIO) {
         node.disconnectAudioNode(connection);
         node.connectAudioNode(connection);

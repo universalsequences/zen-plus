@@ -1,4 +1,10 @@
-import { ConnectionType, Lazy, Message, ObjectNode, NodeFunction } from "../../types";
+import {
+  ConnectionType,
+  Lazy,
+  Message,
+  ObjectNode,
+  NodeFunction,
+} from "../../types";
 import { loop, loopVariable } from "./loop";
 import { z_click } from "./click";
 import { PatchImpl } from "@/lib/nodes/Patch";
@@ -6,7 +12,11 @@ import { membraneAPI } from "./physical-modeling/membrane";
 import { zen_simdDotSum, zen_simdDot, zen_simdMatSum } from "./simd";
 import { gate } from "./gate";
 import { condMessage, message } from "./message";
-import { toConnectionType, API, OperatorContextType } from "@/lib/nodes/context";
+import {
+  toConnectionType,
+  API,
+  OperatorContextType,
+} from "@/lib/nodes/context";
 import { functions } from "./functions";
 import { Statement, Operator, CompoundOperator } from "./types";
 import { doc } from "./doc";
@@ -89,7 +99,10 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
 
     let _parentNode = (_node.patch as SubPatch).parentNode;
     let patchType = (_node.patch as SubPatch).patchType;
-    if (patchType !== OperatorContextType.ZEN && patchType !== OperatorContextType.GL) {
+    if (
+      patchType !== OperatorContextType.ZEN &&
+      patchType !== OperatorContextType.GL
+    ) {
       let outlet = _parentNode.outlets[outputNumber - 1];
       _parentNode.send(outlet, message);
       if (outlet && outlet.callback) {
@@ -99,7 +112,8 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
       return [];
     }
     if (
-      ((typeof message === "string" || typeof message === "object") && !Array.isArray(message)) ||
+      ((typeof message === "string" || typeof message === "object") &&
+        !Array.isArray(message)) ||
       (Array.isArray(message) && !(message as Statement).node)
     ) {
       if ((message as Statement).node) {
@@ -214,7 +228,10 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   }
 
   return (message: Message) => {
-    if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
+    if (
+      !subpatch.parentPatch.isZen &&
+      subpatch.patchType === OperatorContextType.ZEN
+    ) {
       if (node.attributes["type"] === "core") {
         return [];
       }
@@ -223,10 +240,18 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
       ];
       let ogType = statement.type;
       if (node.attributes["min"] !== undefined) {
-        statement = ["max" as Operator, node.attributes["min"] as number, statement];
+        statement = [
+          "max" as Operator,
+          node.attributes["min"] as number,
+          statement,
+        ];
       }
       if (node.attributes["max"] !== undefined) {
-        statement = ["min" as Operator, node.attributes["max"] as number, statement];
+        statement = [
+          "min" as Operator,
+          node.attributes["max"] as number,
+          statement,
+        ];
       }
       statement.type = ogType;
       statement.node = node;
@@ -258,6 +283,14 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes.target = "JS";
     node.attributeOptions.target = ["C", "JS"];
   }
+  node.attributeCallbacks["target"] = (
+    opt: string | number | number[] | boolean,
+  ) => {
+    console.log("changing target!");
+    if (node.subpatch?.isZenBase()) {
+      node.subpatch?.recompileGraph();
+    }
+  };
 
   if (!node.attributes.SIMD) {
     node.attributes.SIMD = false;

@@ -1,4 +1,5 @@
-import { API } from "@/lib/nodes/context";
+import type { API } from "@/lib/nodes/context";
+import { dedupe } from "./dedupe";
 import { keydown } from "./keys";
 import { currenttime, converttime } from "./time";
 import { select, route, filterselect } from "./select";
@@ -66,6 +67,7 @@ export const api: API = {
   umenu,
   filterselect,
   divider,
+  dedupe,
   slider,
   knob,
   preset,

@@ -16,10 +16,10 @@ class MetroWorklet extends AudioWorkletProcessor {
         this.bpm = e.data.value;
       }
       if (e.data.type === "play") {
-        this.sampleCount = Math.floor(this.divisor - this.lookahead) - 100;
         this.playing = true;
       }
       if (e.data.type === "stop") {
+        this.sampleCount = Math.floor(this.divisor - this.lookahead) - 100;
         this.playing = false;
         this.sampleCount = 0;
         this.stepCounter = 0;

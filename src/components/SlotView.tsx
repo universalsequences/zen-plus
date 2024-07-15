@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { getTime } from "@/components/ProjectOption";
-import { File } from "@/lib/files/types";
+import type { File } from "@/lib/files/types";
 import {
   OperatorContext,
   OperatorContextType,
@@ -14,22 +14,21 @@ import { ContextMenu } from "@radix-ui/themes";
 import { useStorage } from "@/contexts/StorageContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
-import { ObjectNode, SubPatch } from "@/lib/nodes/types";
+import type { ObjectNode, SubPatch } from "@/lib/nodes/types";
+import { duplicate } from "@/lib/nodes/utils/duplicateObject";
 import {
-  Cross2Icon,
-  DividerHorizontalIcon,
   FileIcon,
-  GroupIcon,
-  MagnifyingGlassIcon,
   Pencil2Icon,
+  CardStackPlusIcon,
 } from "@radix-ui/react-icons";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { usePosition } from "@/contexts/PositionContext";
 
 export const SLOT_VIEW_WIDTH = 180;
 export const SLOT_VIEW_HEIGHT = 20;
 
 const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-  let _name =
+  const _name =
     objectNode.subpatch && objectNode.subpatch.name
       ? objectNode.subpatch.name
       : objectNode.text;
@@ -41,13 +40,15 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     addPatchWindow,
     patches,
   } = usePatches();
-  const { registerConnection } = usePatch();
-  let { fetchSubPatchForDoc, onchainSubPatches } = useStorage();
+  const { registerConnection, newObjectNode } = usePatch();
+  const { fetchSubPatchForDoc, onchainSubPatches } = useStorage();
+  const { updatePosition } = usePosition();
+
   const [searchText, setSearchText] = useState("");
   const [name, setName] = useState(_name);
   const { loadSubPatch } = useSubPatchLoader(objectNode);
 
-  let [subpatches, setSubPatches] = useState(
+  const [subpatches, setSubPatches] = useState(
     [...onchainSubPatches].sort((a, b) => a.name.localeCompare(b.name)),
   );
 
@@ -69,7 +70,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const load = useCallback(
     async (x: File) => {
-      let serializedSubPatch = await fetchSubPatchForDoc(x.id);
+      const serializedSubPatch = await fetchSubPatchForDoc(x.id);
       if (serializedSubPatch) {
         await loadSubPatch(serializedSubPatch, x.name);
         setName(x.name);
@@ -78,7 +79,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     [fetchSubPatchForDoc, loadSubPatch],
   );
 
-  let patchMemo = React.useMemo(() => {
+  const patchMemo = React.useMemo(() => {
     return (
       <div className="h-64 overflow-scroll">
         {subpatches.map((x) => (
@@ -100,7 +101,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         ))}
       </div>
     );
-  }, [subpatches]);
+  }, [subpatches, load]);
 
   return (
     <ContextMenu.Root>
@@ -116,7 +117,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         <div className="flex mb-2">
           <FileIcon
             onClick={() => {
-              let subpatch = objectNode.subpatch as SubPatch;
+              const subpatch = objectNode.subpatch as SubPatch;
               subpatch.clearPatch();
               setName("zen");
             }}
@@ -124,10 +125,16 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           />
           <Pencil2Icon
             onClick={() => {
-              let subpatch = objectNode.patch as SubPatch;
+              const subpatch = objectNode.patch as SubPatch;
               subpatch.presentationMode = false;
               subpatch.lockedMode = false;
               expandPatch(objectNode);
+            }}
+            className="w-4 h-4 ml-4 cursor-pointer"
+          />
+          <CardStackPlusIcon
+            onClick={() => {
+              duplicate({ objectNode, newObjectNode, updatePosition });
             }}
             className="w-4 h-4 ml-4 mr-3 cursor-pointer"
           />

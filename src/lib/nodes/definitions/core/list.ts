@@ -24,6 +24,13 @@ doc("pak", {
 
 export const pak = (node: ObjectNode, ...args: Lazy[]) => {
   return (message: Message): Message[] => {
+    if (message === "clear") {
+      console.log("clearing all inlets");
+      for (const inlet of node.inlets) {
+        inlet.lastMessage = undefined;
+      }
+      return [];
+    }
     const list: Message[] = [message];
     for (const a of args) {
       list.push(a() as Message);

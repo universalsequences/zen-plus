@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import { ObjectNode, Message } from "../../types";
+import type { ObjectNode, Message } from "../../types";
 import { arrayBufferToArray } from "@/lib/audio/arrayBufferToArray";
 
 doc("buffer", {
@@ -10,7 +10,7 @@ doc("buffer", {
 });
 
 type Cache = {
-  [key: string]: Float32Array;
+  [key: string]: [Float32Array, number];
 };
 
 const cache: Cache = {};
@@ -39,7 +39,7 @@ export const buffer = (node: ObjectNode) => {
     "data format": ["byte", "int32"],
   };
 
-  let lastDownload: string = "";
+  let lastDownload = "";
   let requests = 0;
   return (message: Message): Message[] => {
     // receives an array outputs data with it
@@ -57,14 +57,14 @@ export const buffer = (node: ObjectNode) => {
       lastDownload = url;
 
       if (cache[url]) {
-        const buffer = cache[url];
+        const [buffer, length] = cache[url];
         node.buffer = buffer;
         node.send(node.outlets[0], buffer);
-        node.send(node.outlets[1], buffer.length);
+        node.send(node.outlets[1], length);
         return [];
       }
 
-      let requestId = ++requests;
+      const requestId = ++requests;
       setTimeout(() => {
         if (requests !== requestId) {
           return;
@@ -79,17 +79,17 @@ export const buffer = (node: ObjectNode) => {
               return;
             }
             try {
-              let arrayBuffer = await r.arrayBuffer();
-              let buffer = await arrayBufferToArray(
+              const arrayBuffer = await r.arrayBuffer();
+              const [buffer, length] = await arrayBufferToArray(
                 arrayBuffer,
                 node.patch.audioContext,
                 node.attributes["data format"] as string,
                 node.attributes.channels as number,
               );
-              cache[url] = buffer;
+              cache[url] = [buffer, length];
               node.buffer = buffer;
               node.send(node.outlets[0], buffer);
-              node.send(node.outlets[1], buffer.length);
+              node.send(node.outlets[1], length);
             } catch (e) {}
           })
           .catch((e) => {

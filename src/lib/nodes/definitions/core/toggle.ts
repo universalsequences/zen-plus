@@ -17,6 +17,13 @@ export const toggle = (node: ObjectNode) => {
       height: 80,
     };
   }
+  if (!node.attributes.playIcon) {
+    node.attributes.playIcon = false;
+  }
+  if (!node.attributes.text) {
+    node.attributes.text = "";
+  }
+
   if (!node.custom) {
     node.custom = new MutableValue(node);
     node.custom.value = 1;

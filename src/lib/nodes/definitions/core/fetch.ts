@@ -8,11 +8,17 @@ doc("fetch", {
 });
 
 export const zfetch = (_node: ObjectNode) => {
+  let counter = 0;
   return (x: Message) => {
-    fetch(x as string).then(async (res) => {
-      const json = await res.json();
-      _node.send(_node.outlets[0], json);
-    });
+    let id = ++counter;
+    // debouncing
+    setTimeout(() => {
+      if (id !== counter) return;
+      fetch(x as string).then(async (res) => {
+        const json = await res.json();
+        _node.send(_node.outlets[0], json);
+      });
+    }, 30);
     return [];
   };
 };

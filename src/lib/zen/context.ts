@@ -1,10 +1,20 @@
 import { Memory } from "./memory-helper";
 import { emitBlocks, CodeBlock, SIMDBlock } from "./simd";
-import { CodeFragment, emitCode, emitCodeHelper, printCodeFragments } from "./emitter";
+import {
+  CodeFragment,
+  emitCode,
+  emitCodeHelper,
+  printCodeFragments,
+} from "./emitter";
 import { Block, MemoryBlock, LoopMemoryBlock } from "./block";
 import { Arg, Generated, float } from "./zen";
 import { Function } from "./functions";
-import { emitParams, emitHistory, emitOutputHistory, emitOuterHistory } from "./history";
+import {
+  emitParams,
+  emitHistory,
+  emitOutputHistory,
+  emitOuterHistory,
+} from "./history";
 import { emitArguments, emitFunctions } from "./functions";
 import { Range } from "./loop";
 import { Target } from "./targets";
@@ -32,13 +42,17 @@ export type MemoizedValues = {
   [id: number]: Generated;
 };
 
-const HEAP_SIZE = 512 * 512 * 128 * 2 * 2;
+const HEAP_SIZE = 512 * 512 * 128 * 2 * 1;
 
 type EmittedVariables = {
   [key: string]: boolean;
 };
 
-export type ContextMessageType = "memory-set" | "memory-get" | "schedule-set" | "init-memory";
+export type ContextMessageType =
+  | "memory-set"
+  | "memory-get"
+  | "schedule-set"
+  | "init-memory";
 
 export interface ContextMessage {
   type: ContextMessageType;
@@ -185,7 +199,12 @@ export class Context {
   loopAlloc(size: number, context: LoopContext): LoopMemoryBlock {
     let block: MemoryBlock = this.memory.alloc(size * context.loopSize);
     let index = this.memory.blocksInUse.indexOf(block);
-    let _block = new LoopMemoryBlock(context, block.idx as number, block.size, size); //block.allocatedSize);
+    let _block = new LoopMemoryBlock(
+      context,
+      block.idx as number,
+      block.size,
+      size,
+    ); //block.allocatedSize);
     this.memory.blocksInUse[index] = _block;
     return _block;
   }
@@ -372,7 +391,9 @@ export class Context {
       histories,
       outerHistories,
       params,
-      variables: Array.from(new Set([variable, ...Object.keys(this.emittedVariables)])), //Array.from(new Set(_variables)).filter(x => isNaN(parseFloat(x))),
+      variables: Array.from(
+        new Set([variable, ...Object.keys(this.emittedVariables)]),
+      ), //Array.from(new Set(_variables)).filter(x => isNaN(parseFloat(x))),
       context: this,
       functions,
       functionArguments,
@@ -381,7 +402,9 @@ export class Context {
       codeFragments: codeFragments,
     };
 
-    const inputs = args.filter((x) => x.inputs !== undefined).map((x) => x.inputs as number);
+    const inputs = args
+      .filter((x) => x.inputs !== undefined)
+      .map((x) => x.inputs as number);
     if (inputs.length > 0) {
       out.inputs = Math.max(...inputs);
     }
@@ -497,7 +520,9 @@ export class LoopContext extends Context {
 
   isVariableEmitted(name: string): boolean {
     // check any upstream blocks to see if we've already emmitted
-    let ret = this.emittedVariables[name] === true || this.context.isVariableEmitted(name);
+    let ret =
+      this.emittedVariables[name] === true ||
+      this.context.isVariableEmitted(name);
     return ret;
   }
 
@@ -505,7 +530,12 @@ export class LoopContext extends Context {
     let block: MemoryBlock = this.memory.alloc(size * this.loopSize);
     let index = this.memory.blocksInUse.indexOf(block);
     let context = this.context;
-    let _block = new LoopMemoryBlock(this, block.idx as number, block.size, size); //block.allocatedSize);
+    let _block = new LoopMemoryBlock(
+      this,
+      block.idx as number,
+      block.size,
+      size,
+    ); //block.allocatedSize);
     this.memory.blocksInUse[index] = _block;
     return _block;
   }

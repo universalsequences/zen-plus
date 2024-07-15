@@ -138,7 +138,7 @@
 }
 
 .node-component.selected {
-    z-index: 1000000000 !important;
+    z-index: 1000000 !important;
 }
 
 body {
@@ -442,9 +442,10 @@ svg {
     z-index: 100000000000000000;
 }
 
-.custom-view {
+.custom-view,
+.patch-window {
     .message-node {
-        background-color: var(--dark-patch-color) !important;
+        background-color: #0000000f !important; //var(--dark-patch-color) !important;
     }
 }
 

@@ -1,4 +1,4 @@
-import { Message, ObjectNode } from "../../types";
+import type { Message, ObjectNode } from "../../types";
 import { MutableValue } from "../core/MutableValue";
 import { doc } from "./doc";
 

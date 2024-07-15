@@ -134,7 +134,7 @@ const ShaderWaveform: React.FC<WaveformProps> = ({
     console.log("creating waveform...");
     waveformTextureRef.current = createWaveformTexture(
       waveformKey,
-      audioSamples,
+      audioSamples.slice(0, Math.floor(audioSamples.length / 2)),
       1.0,
       width * 2,
     );
@@ -196,7 +196,7 @@ const ShaderWaveform: React.FC<WaveformProps> = ({
     if (audioSamples && waveformKey && zoomLevel && width) {
       const ret = createWaveformTexture(
         waveformKey,
-        audioSamples,
+        audioSamples.slice(0, Math.floor(audioSamples.length / 2)),
         zoomLevel,
         width * 2,
       );

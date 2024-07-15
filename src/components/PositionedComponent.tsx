@@ -204,7 +204,7 @@ const PositionedComponent: React.FC<{
       ` absolute  node-component text-black text-xs flex ${_skipOverflow ? "overflow-visible" : "overflow-hidden"} hover:overflow-visible border `;
     if ((node as MessageNode).messageType === MessageType.Message) {
       className += " rounded-md";
-      minWidth = 60;
+      minWidth = 20;
       className = className.replace("h-6_5", "h-6");
       className += " bg-zinc-600";
       className = className.replace("bg-black-clear", "");

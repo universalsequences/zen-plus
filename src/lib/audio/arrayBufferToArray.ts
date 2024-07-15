@@ -11,7 +11,7 @@ export const BYTE_TYPE_NAMES: ByteTypeNames = {
 };
 
 type Cache = {
-  [key: string]: Float32Array;
+  [key: string]: [Float32Array, number];
 };
 
 const cache: Cache = {};
@@ -47,7 +47,6 @@ const detectAudioType = (header: Uint8Array): string => {
   ) {
     return "ftyp";
   }
-
   // Check for MP3 frame sync (0xFFFB or 0xFFF3 or similar)
   if (header[0] === 0xff && (header[1] & 0xe0) === 0xe0) {
     return "ID3";
@@ -55,21 +54,26 @@ const detectAudioType = (header: Uint8Array): string => {
   return "";
 };
 
-let worker: Worker | undefined = undefined;
-const pendingRequests: Record<
-  string,
-  {
-    resolve: (value: Float32Array | PromiseLike<Float32Array>) => void;
-    reject: (reason?: any) => void;
+const workerPool: Worker[] = [];
+const MAX_WORKERS = 4; // Adjust based on your needs
+
+const getWorker = (): Worker => {
+  if (workerPool.length < MAX_WORKERS) {
+    const worker = new Worker(
+      new URL("../../workers/mp3Worker", import.meta.url),
+    );
+    workerPool.push(worker);
+    return worker;
   }
-> = {};
+  return workerPool[Math.floor(Math.random() * workerPool.length)];
+};
 
 export const arrayBufferToArray = async (
   raw: ArrayBuffer,
   audioContext: AudioContext,
   dataFormat?: string,
   channels = 1,
-): Promise<Float32Array> => {
+): Promise<[Float32Array, number]> => {
   const ArrayType = dataFormat
     ? BYTE_TYPE_NAMES[dataFormat] || Int8Array
     : Int8Array;
@@ -80,7 +84,10 @@ export const arrayBufferToArray = async (
   if (type.includes("RIFF")) {
     // Handle WAV format
     const audioBuffer = await audioContext.decodeAudioData(blob.buffer);
-    return audioBuffer.getChannelData(0);
+    const left = audioBuffer.getChannelData(0);
+    const right = audioBuffer.getChannelData(1);
+
+    return [combineBuffers([left, right]), left.length];
   }
 
   if (type.includes("ID3")) {
@@ -89,37 +96,38 @@ export const arrayBufferToArray = async (
     if (cache[key]) {
       return cache[key];
     }
-    return new Promise((resolve, reject) => {
-      if (!worker) {
-        worker = new Worker(
-          new URL("../../workers/mp3Worker", import.meta.url),
-        );
-        worker.onmessage = (e: MessageEvent) => {
-          const { data, id, error } = e.data;
-          const buffer = new Float32Array(3980000 * 2);
-          if (!data) {
-            return;
-          }
-          buffer.set(data[0], 0);
-          buffer.set(data[1], 3980000);
-          const request = pendingRequests[id];
-          if (request) {
-            delete pendingRequests[id];
-            if (error) {
-              request.reject(error);
-            } else {
-              cache[id] = buffer;
-              request.resolve(buffer);
-            }
-          }
-        };
-      }
 
-      pendingRequests[key] = { resolve, reject };
+    return new Promise((resolve, reject) => {
+      const worker = getWorker();
+
+      const handleMessage = (e: MessageEvent) => {
+        const { data, id, error } = e.data;
+        if (id !== key) return; // Ignore messages for other requests
+
+        worker.removeEventListener("message", handleMessage);
+
+        if (error) {
+          reject(error);
+        } else {
+          const buffer = combineBuffers(data);
+          cache[key] = [buffer, data[0].length];
+          resolve(cache[key]);
+        }
+      };
+
+      worker.addEventListener("message", handleMessage);
       worker.postMessage({ raw, id: key });
     });
   }
 
   // Default case, treat as raw PCM data
-  return new Float32Array(blob);
+  const buf = new Float32Array(blob);
+  return [buf, buf.length];
+};
+
+const combineBuffers = (data: [Float32Array, Float32Array]) => {
+  const buffer = new Float32Array(3980000 * 2);
+  buffer.set(data[0], 0);
+  buffer.set(data[1], 3980000);
+  return buffer;
 };

@@ -2,18 +2,24 @@ import { useLocked } from "@/contexts/LockedContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { ValueProvider, useValue } from "@/contexts/ValueContext";
 import { useInterval } from "@/hooks/useInterval";
-import { ObjectNode } from "@/lib/nodes/types";
+import type { ObjectNode } from "@/lib/nodes/types";
 import { TriangleLeftIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+const SMOOTHING_FACTOR = 0.8; // Adjust this value to change the meter's responsiveness
+const SCALE_FACTOR = 2.5;
 
-export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({
+  objectNode,
+}) => {
   return (
     <ValueProvider node={objectNode}>
       <LiveMeterInner objectNode={objectNode} />
     </ValueProvider>
   );
 };
-const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
+  objectNode,
+}) => {
   usePosition();
   useValue();
   const { lockedMode } = useLocked();
@@ -28,6 +34,26 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   const refRight = useRef<HTMLDivElement>(null);
   const dataLeft = useRef(new Float32Array(128));
   const dataRight = useRef(new Float32Array(128));
+  const [leftLevel, setLeftLevel] = useState(0);
+  const [rightLevel, setRightLevel] = useState(0);
+  const [normalizedLevel, setNormalizedLevel] = useState(0);
+
+  const getRMS = (data: Float32Array) => {
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      sum += data[i] * data[i];
+    }
+    return Math.sqrt(sum / data.length);
+  };
+
+  const normalizeLoudness = (rms: number) => {
+    // Convert RMS to decibels
+    const db = 20 * Math.log10(rms);
+    // Normalize decibels to a 0-1 range (assuming -60dB as the minimum audible level)
+    const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
+    // Apply non-linear scaling for better visual representation
+    return Math.pow(normalized, SCALE_FACTOR);
+  };
 
   const onTick = useCallback(() => {
     if (objectNode.auxAudioNodes) {
@@ -35,16 +61,25 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       let b = objectNode.auxAudioNodes[1] as AnalyserNode;
       a.getFloatTimeDomainData(dataLeft.current);
       b.getFloatTimeDomainData(dataRight.current);
-      const rmsA = getRMS(dataLeft.current);
-      const normalizedLoudnessA = rmsA;
-      const rmsB = getRMS(dataRight.current);
-      const normalizedLoudnessB = rmsB;
-      if (refLeft.current) {
-        refLeft.current.style.height = `${normalizedLoudnessA * 100}%`;
-      }
-      if (refRight.current) {
-        refRight.current.style.height = `${normalizedLoudnessB * 100}%`;
-      }
+
+      const rmsA = getRMS(dataLeft.current) * 2;
+      const rmsB = getRMS(dataRight.current) * 2;
+
+      const normalizedLoudnessA = normalizeLoudness(rmsA);
+      const normalizedLoudnessB = normalizeLoudness(rmsB);
+
+      setNormalizedLevel(normalizedLoudnessA);
+      // Apply smoothing
+      setLeftLevel(
+        (prevLevel) =>
+          prevLevel * SMOOTHING_FACTOR +
+          2 * normalizedLoudnessA * (1 - SMOOTHING_FACTOR),
+      );
+      setRightLevel(
+        (prevLevel) =>
+          prevLevel * SMOOTHING_FACTOR +
+          2 * normalizedLoudnessB * (1 - SMOOTHING_FACTOR),
+      );
     }
   }, [objectNode.auxAudioNodes]);
 
@@ -96,7 +131,11 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
 
   return (
     <div style={{ width, height }} className="flex flex-col relative">
-      <div onMouseDown={onMouseDown} ref={containerRef} className="w-5 h-full bg-zinc-600 relative">
+      <div
+        onMouseDown={onMouseDown}
+        ref={containerRef}
+        className="w-5 h-full bg-zinc-600 relative"
+      >
         <div
           style={{ bottom: `${value * 100}%` }}
           className="translate-y-3 absolute w-10 h-10 -right-4 flex  z-10 "
@@ -110,14 +149,16 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
           <div
             ref={refLeft}
             style={{
-              backgroundColor: getMeterColor(value),
+              backgroundColor: getMeterColor(normalizedLevel * 1.2),
+              height: `${leftLevel * 100}%`,
             }}
             className="absolute bottom-0 left-0 w-2"
           ></div>
           <div
             ref={refRight}
             style={{
-              backgroundColor: getMeterColor(value),
+              backgroundColor: getMeterColor(normalizedLevel * 1.2),
+              height: `${rightLevel * 100}%`,
             }}
             className="absolute bottom-0 right-0 w-2"
           ></div>
@@ -134,7 +175,11 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
  * @param dBMax - The maximum decibel value (e.g., 0 dB)
  * @returns The normalized value between 0 and 1
  */
-function normalizeDecibel(dBValue: number, dBMin: number = -100, dBMax: number = 0): number {
+function normalizeDecibel(
+  dBValue: number,
+  dBMin: number = -100,
+  dBMax: number = 0,
+): number {
   if (dBMax === dBMin) {
     throw new Error("Decibel max and min values cannot be the same");
   }
@@ -152,7 +197,7 @@ function getMeterColor(normalizedValue: number): string {
   let color;
   if (normalizedValue <= 0.5) {
     // Interpolate between startColor and middleColor
-    const ratio = normalizedValue / 0.5;
+    const ratio = normalizedValue / 100;
     color = interpolateColor(startColor, middleColor, ratio);
   } else {
     // Interpolate between middleColor and endColor
