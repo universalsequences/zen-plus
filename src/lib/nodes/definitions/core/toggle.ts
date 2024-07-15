@@ -17,6 +17,12 @@ export const toggle = (node: ObjectNode) => {
       height: 80,
     };
   }
+  if (!node.attributes.strokeColor) {
+    node.attributes.strokeColor = "#000000";
+  }
+  if (!node.attributes.fillColor) {
+    node.attributes.fillColor = "#ffffff";
+  }
   if (!node.attributes.playIcon) {
     node.attributes.playIcon = false;
   }

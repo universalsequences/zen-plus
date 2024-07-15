@@ -28,22 +28,23 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({
   }, [objectNode.custom, lockedMode, objectNode]);
 
   const isPlayIcon = objectNode.attributes.playIcon;
-  const text = objectNode.attributes.text;
+  const { text, fillColor, strokeColor } = objectNode.attributes;
   return (
     <div
       onClick={toggle}
-      style={{ width: size.width, height: size.height }}
-      className={
-        "flex cursor-pointer " + (value ? "bg-zinc-200" : "bg-zinc-800")
-      }
+      style={{
+        color: value ? strokeColor : fillColor,
+        backgroundColor: value ? fillColor : strokeColor,
+        width: size.width,
+        height: size.height,
+      }}
+      className={`flex cursor-pointer border border-zinc-${value ? 700 : 400} text-xs`}
     >
       {text !== "" ? (
-        <span className={(value ? "text-black" : "text-white") + " m-auto"}>
-          {text}
-        </span>
+        <span className="m-auto text-xs">{text}</span>
       ) : isPlayIcon ? (
         !value ? (
-          <PlayIcon className="w-full h-full" color="white" />
+          <PlayIcon className="w-full h-full" color={strokeColor as string} />
         ) : (
           <PauseIcon className="w-full h-full" />
         )

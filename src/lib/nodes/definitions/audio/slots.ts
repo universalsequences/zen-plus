@@ -224,10 +224,10 @@ const compileSlots = async (node: ObjectNode) => {
       break;
     }
   }
-  await sleep(500);
-  console.log("setup post compile for slots...");
 
-  for (let slot of slots) {
+  await sleep(100);
+
+  for (const slot of slots) {
     slot.subpatch?.setupPostCompile(true);
   }
   // wait for completion

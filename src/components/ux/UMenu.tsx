@@ -2,31 +2,39 @@ import React, { useEffect, useCallback, useState } from "react";
 import { useLocked } from "@/contexts/LockedContext";
 import { ObjectNode } from "@/lib/nodes/types";
 import { usePosition } from "@/contexts/PositionContext";
+import { useValue } from "@/contexts/ValueContext";
 
 const UMenu: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { sizeIndex } = usePosition();
-  let { width, height } = objectNode.size || { width: 72, height: 18 };
+  const { width, height } = objectNode.size || { width: 72, height: 18 };
   const { lockedMode } = useLocked();
   let [selectedOption, setSelectedOption] = useState(
     (objectNode.storedMessage as string) || "",
   );
+  let { value: message } = useValue();
+  useEffect(() => {
+    if (message !== null) {
+      setSelectedOption(message as string);
+    }
+  }, [message]);
+
   let options = Array.isArray(objectNode.attributes["options"])
     ? (objectNode.attributes["options"] as number[])
     : typeof objectNode.attributes["options"] === "number"
       ? [objectNode.attributes["options"]]
       : (objectNode.attributes["options"] as string).split(",");
-  if (options.map((x) => parseFloat(x as string)).every((x) => !isNaN(x))) {
-    options = options.map((x) => parseFloat(x as string));
-  }
+  // if (options.map((x) => parseFloat(x as string)).every((x) => !isNaN(x))) {
+  //   options = options.map((x) => parseFloat(x as string));
+  //}
 
   const onChangeOption = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       setSelectedOption(e.target.value);
       objectNode.receive(
         objectNode.inlets[0],
-        isNaN(parseFloat(e.target.value))
-          ? e.target.value
-          : parseFloat(e.target.value),
+        //isNaN(parseFloat(e.target.value))
+        e.target.value,
+        //: parseFloat(e.target.value),
       );
     },
     [setSelectedOption],

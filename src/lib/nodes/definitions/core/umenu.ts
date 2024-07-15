@@ -1,5 +1,6 @@
 import { doc } from "./doc";
 import { ObjectNode, Message } from "../../types";
+import { MutableValue } from "./MutableValue";
 
 doc("divider", {
   numberOfInlets: 0,
@@ -56,6 +57,15 @@ export const umenu = (node: ObjectNode) => {
   if (!node.attributes["options"]) {
     node.attributes["options"] = "";
   }
+
+  let custom: MutableValue;
+  if (!node.custom) {
+    custom = new MutableValue(node, 0);
+    node.custom = custom;
+  } else {
+    custom = node.custom as MutableValue;
+  }
+
   return (message: Message) => {
     if (message === "bang") {
       if (!node.storedMessage) {
@@ -82,6 +92,7 @@ export const umenu = (node: ObjectNode) => {
         : ((node.attributes["options"] as string).split(",") as string[]);
     let indexOf = -1;
     let i = 0;
+    console.log("message=", message, "options=", options, typeof message);
     for (let option of options) {
       if (message === option) {
         indexOf = i;
@@ -92,6 +103,7 @@ export const umenu = (node: ObjectNode) => {
     if (node.onNewValue) {
       node.onNewValue(message);
     }
+    custom.value = message;
     return [message, indexOf];
   };
 };
