@@ -85,15 +85,14 @@ export const umenu = (node: ObjectNode) => {
     }
     node.storedMessage = message;
     node.saveData = message;
-    let options = Array.isArray(node.attributes["options"])
-      ? (node.attributes["options"] as number[])
-      : typeof node.attributes["options"] === "number"
-        ? [node.attributes["options"]]
-        : ((node.attributes["options"] as string).split(",") as string[]);
+    const options = Array.isArray(node.attributes["options"])
+      ? (node.attributes.options as number[])
+      : typeof node.attributes.options === "number"
+        ? [node.attributes.options]
+        : ((node.attributes.options as string).split(",") as string[]);
     let indexOf = -1;
     let i = 0;
-    console.log("message=", message, "options=", options, typeof message);
-    for (let option of options) {
+    for (const option of options) {
       if (message === option) {
         indexOf = i;
       }

@@ -86,18 +86,28 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
         top: coord.y,
         zIndex: selectedPatch === patch ? 100000000000000 : 1000000000,
       }}
-      className="absolute flex flex-col patch-window bg-black select-none shadow-lg border border-zinc-600"
+      className={`${selectedPatch === patch ? " selected-window " : ""} rounded-xl absolute flex flex-col patch-window bg-black select-none shadow-lg border border-zinc-600`}
       ref={ref}
     >
-      <div onMouseDown={onMouseDown} className="h-5 w-full bg-zinc-800 flex">
+      <div
+        onMouseDown={onMouseDown}
+        className={`h-5 w-full rounded-t-xl flex ${selectedPatch === patch ? "bg-zinc-800" : "bg-zinc-950"}`}
+      >
         <GroupIcon
           onClick={() => expand()}
-          className="ml-auto w-3 h-3 mt-1 cursor-pointer"
+          className="z-30 ml-3 w-3 h-3 mt-1 cursor-pointer"
         />
         <Cross2Icon
           onClick={() => removePatchWindow(patch)}
-          className="ml-2 w-4 h-4 mt-0.5 cursor-pointer"
+          className="z-30 ml-2 w-4 h-4 mt-0.5 mr-2 cursor-pointer"
         />
+        <div className="z-0 absolute left-0 w-full flex">
+          <div
+            className={`mx-auto  text-xs py-0.5 text-zinc-${selectedPatch === patch ? 100 : 500}`}
+          >
+            {patch.name}
+          </div>
+        </div>
       </div>
       <PatchWrapper
         index={0}

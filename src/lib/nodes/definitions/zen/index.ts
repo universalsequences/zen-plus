@@ -1,9 +1,9 @@
 import {
   ConnectionType,
-  Lazy,
-  Message,
-  ObjectNode,
-  NodeFunction,
+  type Lazy,
+  type Message,
+  type ObjectNode,
+  type NodeFunction,
 } from "../../types";
 import { loop, loopVariable } from "./loop";
 import { z_click } from "./click";
@@ -14,11 +14,11 @@ import { gate } from "./gate";
 import { condMessage, message } from "./message";
 import {
   toConnectionType,
-  API,
+  type API,
   OperatorContextType,
 } from "@/lib/nodes/context";
 import { functions } from "./functions";
-import { Statement, Operator, CompoundOperator } from "./types";
+import type { Statement, Operator, CompoundOperator } from "./types";
 import { doc } from "./doc";
 import { zen_history } from "./history";
 import { math } from "./math";
@@ -27,7 +27,7 @@ import { filters } from "./filters";
 import { core } from "./core";
 import { data_index } from "./data";
 import SubpatchImpl from "../../Subpatch";
-import { SubPatch } from "../../types";
+import type { SubPatch } from "../../types";
 
 doc("out", {
   description: "output of patch",
@@ -36,12 +36,14 @@ doc("out", {
 });
 
 const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
-  let parentNode = (_node.patch as SubPatch).parentNode;
-  let patchType = (_node.patch as SubPatch).patchType;
-  let isAudio = patchType === OperatorContextType.AUDIO;
+  const parentNode = (_node.patch as SubPatch).parentNode;
+  const patchType = (_node.patch as SubPatch).patchType;
+  const isAudio = patchType === OperatorContextType.AUDIO;
   if (parentNode) {
-    let outputNumber = args[0]() as number;
-    let name: string | undefined = args[1] ? (args[1]() as string) : undefined;
+    const outputNumber = args[0]() as number;
+    const name: string | undefined = args[1]
+      ? (args[1]() as string)
+      : undefined;
 
     while (parentNode && parentNode.outlets.length < outputNumber) {
       parentNode.newOutlet(
@@ -58,7 +60,7 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
       parentNode.outlets[outputNumber - 1].name = name;
     }
   }
-  _node.attributeOptions["io"] = [
+  _node.attributeOptions.io = [
     "trig",
     "velocity",
     "duration",
@@ -274,19 +276,25 @@ doc("zen", {
 
 const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   let noType = false;
-  if (!node.attributes["type"]) {
+  if (!node.attributes.type) {
     noType = true;
-    node.attributes["type"] = "zen";
+    node.attributes.type = "zen";
   }
 
   if (!node.attributes.target) {
     node.attributes.target = "JS";
     node.attributeOptions.target = ["C", "JS"];
   }
-  node.attributeCallbacks["target"] = (
+  node.attributeCallbacks.target = (
     opt: string | number | number[] | boolean,
   ) => {
-    console.log("changing target!");
+    if (node.subpatch?.isZenBase()) {
+      node.subpatch?.recompileGraph();
+    }
+  };
+  node.attributeCallbacks.SIMD = (
+    opt: string | number | number[] | boolean,
+  ) => {
     if (node.subpatch?.isZenBase()) {
       node.subpatch?.recompileGraph();
     }
@@ -296,7 +304,7 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes.SIMD = false;
   }
 
-  let subpatch = node.subpatch || new SubpatchImpl(node.patch, node);
+  const subpatch = node.subpatch || new SubpatchImpl(node.patch, node);
   node.subpatch = subpatch;
   subpatch.clearState();
   if (!node.attributes["moduleType"]) {

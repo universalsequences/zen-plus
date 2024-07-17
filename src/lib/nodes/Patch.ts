@@ -73,6 +73,7 @@ export class PatchImpl implements Patch {
   isRecording: boolean;
   recordingStartedAt?: Date;
   exportedAudioUnit?: ExportedAudioUnit;
+  lockedMode: boolean;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
@@ -87,6 +88,7 @@ export class PatchImpl implements Patch {
     this.type = PatchType.Zen;
     this.objectNodes = [];
     this.messageNodes = [];
+    this.lockedMode = true;
 
     // TODO: ensure that this is base patch...
     this.audioContext = audioContext; //new AudioContext({ sampleRate: 44100 });

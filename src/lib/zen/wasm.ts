@@ -21,9 +21,10 @@ import { determineBlocks } from "./blocks/analyze";
 import { printBlocks, printUserFunction } from "./blocks/printBlock";
 import { printConstantInitializer } from "./blocks/printConstants";
 import { Target } from "./targets";
+import { determineMemorySize } from "./memory/initialize";
 
 export const generateWASM = (graph: ZenGraph) => {
-  const memorySize = graph.context.memory.size;
+  const memorySize = determineMemorySize(graph.context);
 
   const hasSIMD = true;
   const blocks = determineBlocks(...graph.codeFragments);

@@ -1,22 +1,65 @@
-import React from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-// Choose a style theme from the available styles
-import { materialDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import React, { useRef } from "react";
+import { FixedSizeList as List } from "react-window";
 
-import { usePatch } from '@/contexts/PatchContext';
-import { usePatches } from '@/contexts/PatchesContext';
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { materialDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { usePatch } from "@/contexts/PatchContext";
+import { usePatches } from "@/contexts/PatchesContext";
+import { usePosition } from "@/contexts/PositionContext";
+import type { ObjectNode } from "@/lib/nodes/types";
 
-const WasmViewer = () => {
-    const { patch } = usePatch();
-    const { zenCode } = usePatches();
+export const WasmViewer: React.FC<{ objectNode: ObjectNode }> = ({
+  objectNode,
+}) => {
+  const { patch } = usePatch();
+  const { zenCode } = usePatches();
 
-    let text = patch.wasmCode ? patch.wasmCode.slice(patch.wasmCode.indexOf("void process")) : "";
-    return < SyntaxHighlighter
-        showLineNumbers={true}
-        className="overflow-scroll text-white p-2 relative w-full select-text"
-        language="c" style={materialDark}>
-        {patch.wasmCode}
-    </SyntaxHighlighter >
+  const { sizeIndex } = usePosition();
+
+  const { width, height } = objectNode.size || { width: 500, height: 500 };
+  let text = patch.wasmCode
+    ? patch.wasmCode.slice(patch.wasmCode.indexOf("void process"))
+    : "";
+  const lines = patch.wasmCode ? patch.wasmCode.split("\n") : [];
+  // Ref to measure line height
+  const measureRef = useRef(null);
+
+  const Row = ({ index, style }) => (
+    <div className="relative" style={style}>
+      <div className="absolute text-zinc-600 left-2 z-30 left-0 my-auto flex w-16">
+        <div>{index + 1}</div>
+        <div className="w-1 h-full bg-zinc-600"></div>
+      </div>
+      <SyntaxHighlighter
+        language="c"
+        style={materialDark}
+        PreTag="span"
+        customStyle={{
+          display: "inline",
+          paddingLeft: "50px",
+          width: width,
+        }}
+      >
+        {lines[index]}
+      </SyntaxHighlighter>
+    </div>
+  );
+
+  return (
+    <div
+      className="overflow-scroll w-500 h-500 bg-zinc-800"
+      style={{ width, height }}
+    >
+      <List
+        height={height}
+        itemCount={lines.length}
+        itemSize={30} // Adjust this based on line height
+        width={width}
+      >
+        {Row}
+      </List>
+    </div>
+  );
 };
 
 export default WasmViewer;

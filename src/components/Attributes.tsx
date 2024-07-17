@@ -26,7 +26,7 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
         </div>
         <div
           style={{ maxHeight: "78vh" }}
-          className="w-full flex-1 overflow-y-scroll"
+          className="w-full flex-1 overflow-y-scroll pb-72 "
         >
           {attributeNames.map((attribute, i) => (
             <Attribute key={i} attribute={attribute} node={node} />

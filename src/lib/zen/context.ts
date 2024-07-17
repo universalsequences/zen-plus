@@ -16,7 +16,7 @@ import {
   emitOuterHistory,
 } from "./history";
 import { emitArguments, emitFunctions } from "./functions";
-import { Range } from "./loop";
+import type { Range } from "./loop";
 import { Target } from "./targets";
 
 export interface IContext {
@@ -42,7 +42,7 @@ export type MemoizedValues = {
   [id: number]: Generated;
 };
 
-const HEAP_SIZE = 512 * 512 * 128 * 2 * 1;
+const HEAP_SIZE = 512 * 512 * 128 * 128 * 1;
 
 type EmittedVariables = {
   [key: string]: boolean;
@@ -144,8 +144,9 @@ export class Context {
     this.constantArrays = {};
   }
 
+  // used for calling SIMD functions
   useConstantArray(name: string, value: number): string {
-    let [variableName] = this.useVariables(name);
+    const [variableName] = this.useVariables(name);
     this.baseContext.constantArrays[variableName] = value;
     return variableName;
   }
@@ -189,7 +190,7 @@ export class Context {
   }
 
   alloc(size: number): MemoryBlock {
-    let loopContext: LoopContext | null = this.getLoopContextIfAny();
+    const loopContext: LoopContext | null = this.getLoopContextIfAny();
     if (loopContext) {
       return this.loopAlloc(size, loopContext);
     }
@@ -197,9 +198,9 @@ export class Context {
   }
 
   loopAlloc(size: number, context: LoopContext): LoopMemoryBlock {
-    let block: MemoryBlock = this.memory.alloc(size * context.loopSize);
-    let index = this.memory.blocksInUse.indexOf(block);
-    let _block = new LoopMemoryBlock(
+    const block: MemoryBlock = this.memory.alloc(size * context.loopSize);
+    const index = this.memory.blocksInUse.indexOf(block);
+    const _block = new LoopMemoryBlock(
       context,
       block.idx as number,
       block.size,
@@ -228,13 +229,15 @@ export class Context {
   }
 
   postMessage(msg: ContextMessage) {
-    this.worklets.forEach((worklet) => worklet.port.postMessage(msg));
+    for (const worklet of this.worklets) {
+      worklet.port.postMessage(msg);
+    }
   }
 
   onMessage(msg: ContextMessage) {
     // look thru the blocks in use-- are any of them expecting
     // a message of this type?
-    for (let block of this.memory.blocksInUse) {
+    for (const block of this.memory.blocksInUse) {
       if (block.waitingForResponse === msg.type) {
         // if so, respond with the message body
         block.respond(msg.body);
@@ -243,17 +246,16 @@ export class Context {
   }
 
   isVariableEmitted(name: string): boolean {
-    let x = this.emittedVariables[name] === true;
-    return x;
+    return this.emittedVariables[name] === true;
   }
 
   useVariables(...names: string[]): string[] {
-    let idx = this.baseContext.idx++;
+    const idx = this.baseContext.idx++;
     return names.map((name) => `${name}${idx}`);
   }
 
   useCachedVariables(id: number, ...names: string[]): string[] {
-    let key = names.join("+");
+    const key = names.join("+");
     if (this.baseContext.variableNameCache[id]) {
       if (this.baseContext.variableNameCache[id][key]) {
         return this.baseContext.variableNameCache[id][key];
@@ -292,12 +294,12 @@ export class Context {
       floated += ".0";
     }
 
-    let [v] = this.useVariables("constantVector");
+    const [v] = this.useVariables("constantVector");
     return (context: Context) => {
-      let code = `v128_t ${v}= wasm_f32x4_splat(${floated});
+      const code = `v128_t ${v}= wasm_f32x4_splat(${floated});
 `;
 
-      let codeFragment: CodeFragment = {
+      const codeFragment: CodeFragment = {
         variable: v,
         code: code,
         histories: [],
@@ -328,11 +330,11 @@ export class Context {
       variable,
       ...args,
     );
-    let x = {
+    const toEmit = {
       ...ret,
     };
-    this.emittedStatements.push(x);
-    return x;
+    this.emittedStatements.push(toEmit);
+    return toEmit;
   }
 
   emitHelper(
@@ -342,10 +344,10 @@ export class Context {
     ...args: Generated[]
   ): Generated {
     let histories = emitHistory(...args);
-    let outputHistories = emitOutputHistory(...args);
-    let functions = emitFunctions(...args);
-    let functionArguments = emitArguments(...args);
-    let oldOuterHistories = emitOuterHistory(...args);
+    const outputHistories = emitOutputHistory(...args);
+    const functions = emitFunctions(...args);
+    const functionArguments = emitArguments(...args);
+    const oldOuterHistories = emitOuterHistory(...args);
     let outerHistories = Array.from(
       new Set([
         ...oldOuterHistories,

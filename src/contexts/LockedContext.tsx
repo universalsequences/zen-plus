@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useState,
   useContext,
@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from "react";
 import { useMessage } from "./MessageContext";
-import { Message, Node, Patch } from "@/lib/nodes/types";
+import type { Message, Node, Patch } from "@/lib/nodes/types";
 
 interface ILockedContext {
   lockedMode: boolean;
@@ -29,8 +29,12 @@ export const useLocked = (): ILockedContext => {
 };
 
 export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
-  const [lockedMode, setLockedMode] = useState(
-    patch.lockedMode === undefined ? true : patch.lockedMode,
+  const [lockedMode, setLockedMode] = useState<boolean>(
+    patch.lockedMode === true
+      ? true
+      : patch.lockedMode === undefined
+        ? true
+        : patch.lockedMode,
   );
 
   useEffect(() => {
@@ -46,8 +50,6 @@ export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
       setTimeout(() => {
         patch.justExpanded = false;
       }, 100);
-    } else {
-      setLockedMode(false);
     }
   }, [patch]);
 

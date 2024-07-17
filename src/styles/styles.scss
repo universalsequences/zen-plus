@@ -713,8 +713,18 @@ div:active {
     background-color: black;
 }
 
+.patch-window.selected-patch {
+}
 .patch-window {
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px !important;
+
+    .patcher-background {
+        border-bottom-right-radius: 16px;
+        border-bottom-left-radius: 16px;
+        margin-right: 1px;
+    }
     .tile {
+        border-radius: 16px;
         .patcher-background {
             background-color: #121212;
             background-image: none;

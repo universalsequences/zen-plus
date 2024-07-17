@@ -1,12 +1,12 @@
 import { Context } from "./context";
 import { generateWASM } from "./wasm";
 import { Target } from "./targets";
-import { ZenGraph } from "./zen";
+import type { ZenGraph } from "./zen";
 import { replaceAll } from "./replaceAll";
-import { Function, Argument } from "./functions";
+import type { Function, Argument } from "./functions";
 import { fetchWithRetry } from "./fetchWithRetry";
 import { generateJSProcess } from "./javascript";
-import { initMemory } from "./memory/initialize";
+import { determineMemorySize, initMemory } from "./memory/initialize";
 
 export interface ZenWorklet {
   code: string;
@@ -22,24 +22,30 @@ export const createWorklet = (
   name = "Zen",
   onlyCompile = false,
 ): Promise<LazyZenWorklet> => {
-  return new Promise(async (resolve: (x: LazyZenWorklet) => void) => {
+  return new Promise((resolve: (x: LazyZenWorklet) => void) => {
     const { code, wasm } = createWorkletCode(name, graph);
+    console.log(code);
     const workletCode = code;
     const workletBase64 = btoa(workletCode);
     const url = `data:application/javascript;base64,${workletBase64}`;
 
     const onCompilation = (): AudioWorkletNode => {
+      console.log(
+        "graph.numberOfInputs=%s",
+        graph.numberOfInputs,
+        graph.context.numberOfInputs,
+      );
       const workletNode = new AudioWorkletNode(ctxt, name, {
         channelInterpretation: "discrete",
-        numberOfInputs: 1, //graph.context.numberOfInputs,
+        numberOfInputs: graph.context.numberOfInputs,
         numberOfOutputs: 1,
         channelCount: graph.numberOfInputs,
         outputChannelCount: [graph.numberOfOutputs],
       });
 
       workletNode.port.onmessage = (e: MessageEvent) => {
-        let type = e.data.type;
-        let body = e.data.body;
+        const type = e.data.type;
+        const body = e.data.body;
         graph.context.onMessage({
           type,
           body,
@@ -61,7 +67,7 @@ export const createWorklet = (
           headers: { "Content-Type": "text/plain" },
           body: wasm,
         }).then(async (response) => {
-          let wasmBuffer = await response.arrayBuffer();
+          const wasmBuffer = await response.arrayBuffer();
           const wasmModule = await WebAssembly.compile(wasmBuffer);
           workletNode.port.postMessage({ type: "load-wasm", body: wasmBuffer });
         });
@@ -83,13 +89,13 @@ export const createWorklet = (
       return workletNode;
     };
 
-    await ctxt.audioWorklet.addModule(url);
-    if (onlyCompile) {
-      resolve(onCompilation);
-      return;
-    } else {
+    ctxt.audioWorklet.addModule(url).then(() => {
+      if (onlyCompile) {
+        resolve(onCompilation);
+        return;
+      }
       onCompilation();
-    }
+    });
   });
 };
 
@@ -590,7 +596,7 @@ export const genOutputs = (graph: ZenGraph): string => {
 
 export const genMemory = (graph: ZenGraph): string => {
   return `
-            this.memory = new Float64Array(${graph.context.memory.size});
+            this.memory = new Float64Array(${determineMemorySize(graph.context)});
             `;
 };
 

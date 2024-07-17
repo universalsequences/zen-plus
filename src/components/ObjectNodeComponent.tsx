@@ -8,26 +8,26 @@ import { useValue } from "@/contexts/ValueContext";
 import { usePublicClient } from "wagmi";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import {
-  OperatorContext,
+  type OperatorContext,
   OperatorContextType,
   getAllContexts,
   getOperatorContext,
 } from "@/lib/nodes/context";
-import { ContextDefinition } from "@/hooks/useAutoComplete";
+import type { ContextDefinition } from "@/hooks/useAutoComplete";
 import AutoCompletes from "./AutoCompletes";
-import { index, NodeProps } from "./ux/index";
+import { index, type NodeProps } from "./ux/index";
 import Attributes from "./Attributes";
 import { ContextMenu, useThemeContext } from "@radix-ui/themes";
 import {
-  SizeIndex,
+  type SizeIndex,
   usePosition,
-  DraggingNode,
+  type DraggingNode,
 } from "@/contexts/PositionContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { useLocked } from "@/contexts/LockedContext";
 import { useSubPatchLoader } from "@/hooks/useSubPatchLoader";
 import PositionedComponent from "./PositionedComponent";
-import {
+import type {
   ObjectNode,
   Patch,
   Coordinate,
@@ -38,7 +38,6 @@ import { useSelection } from "@/contexts/SelectionContext";
 import { useAutoComplete } from "@/hooks/useAutoComplete";
 import { usePatch } from "@/contexts/PatchContext";
 import CustomSubPatchView from "./CustomSubPatchView";
-import { useMessage } from "@/contexts/MessageContext";
 import { useStorage } from "@/contexts/StorageContext";
 
 const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({
@@ -483,14 +482,22 @@ const InnerObjectNodeComponent: React.FC<{
             Duplicate
           </ContextMenu.Item>
           <ContextMenu.Item
-            onClick={() => setFullscreen(!fullscreen)}
+            onClick={() => setSelectedNodes([objectNode])}
             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
           >
-            Full-Screen
+            Select
           </ContextMenu.Item>
+          {objectNode.name === "wasmviewer" && (
+            <ContextMenu.Item
+              onClick={() => setFullscreen(!fullscreen)}
+              className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
+            >
+              Full-Screen
+            </ContextMenu.Item>
+          )}
         </ContextMenu.Content>
         <ContextMenu.Trigger
-          disabled={isCustomView}
+          //disabled={isCustomView}
           className="ContextMenuTrigger relative"
         >
           <div

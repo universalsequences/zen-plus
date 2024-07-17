@@ -79,7 +79,10 @@ export const input = (inputNumber = 0): UGen => {
   const id = uuid();
   return simdMemo(
     (context: Context) => {
-      const [variable] = context.useCachedVariables(id, `${context.input(inputNumber)}_var`);
+      const [variable] = context.useCachedVariables(
+        id,
+        `${context.baseContext.input(inputNumber)}_var`,
+      );
       if (context.target === Target.Javascript) {
         const code = `
 let ${variable}_index = inputs[0];
@@ -88,7 +91,9 @@ let ${variable} = ${variable}_index && ${variable}_index[${inputNumber}] ? ${var
         return context.emit(code, variable);
       }
       const indexer =
-        context.target === Target.C ? `[128*${inputNumber} + j]` : `[0][${inputNumber}][j]`;
+        context.target === Target.C
+          ? `[128*${inputNumber} + j]`
+          : `[0][${inputNumber}][j]`;
       const code = `
 ${context.varKeyword} ${variable} = inputs${indexer};`;
       return context.emit(code, variable);
@@ -119,11 +124,14 @@ export const zenC = (input: UGen): ZenGraph => {
 };
 
 // The way this works w/o outputs: each output will go in a different argument
-export const zenWithTarget = (target: Target, input: UGen, forceScalar = false): ZenGraph => {
+export const zenWithTarget = (
+  target: Target,
+  input: UGen,
+  forceScalar = false,
+): ZenGraph => {
   const context: Context = new Context(target);
   context.forceScalar = forceScalar;
   const generated: Generated = input(context);
-  console.log("context numberOfInputs=", context.numberOfInputs);
   return {
     ...generated,
     context,

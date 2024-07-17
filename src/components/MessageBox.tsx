@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { usePosition } from "@/contexts/PositionContext";
 import { MessageNode, Message, Coordinate } from "@/lib/nodes/types";
+import { useValue } from "@/contexts/ValueContext";
 
 const MessageBox: React.FC<{
   message: Message;
@@ -22,9 +23,11 @@ const MessageBox: React.FC<{
   let [text, setText] = useState<string>(_value);
   let [editing, setEditing] = useState(false);
 
+  /*
   useEffect(() => {
     setText(_value);
   }, [_value, setText]);
+  */
 
   useEffect(() => {
     if (editing) {
@@ -43,6 +46,7 @@ const MessageBox: React.FC<{
     [setText],
   );
 
+  /*
   useEffect(() => {
     if (fullDiv.current) {
       updateSize(messageNode.id, {
@@ -51,6 +55,7 @@ const MessageBox: React.FC<{
       });
     }
   }, [text]);
+  */
 
   const enter = useCallback(() => {
     if (text) {
@@ -93,6 +98,7 @@ const MessageBox: React.FC<{
             startPosition.current &&
             equalCoordinate(startPosition.current, messageNode.position)
           ) {
+            setText(_value);
             setEditing(true);
           }
         }
@@ -103,9 +109,13 @@ const MessageBox: React.FC<{
       style={{ maxWidth: 500, overflow: "hidden" }}
       className="text-white py-1 px-2 flex-1 relative w-full"
     >
-      <div ref={ref} className="absolute top-0 left-0 invisible">
-        {text && text.slice ? text.slice(0, 400) : ""}
-      </div>
+      {/*<div ref={ref} className="absolute top-0 left-0 invisible">
+        {text && text.slice
+          ? text.length < 400
+            ? text
+            : text.slice(0, 400)
+          : ""}
+          </div>*/}
       {editing ? (
         <input
           ref={inputRef}
