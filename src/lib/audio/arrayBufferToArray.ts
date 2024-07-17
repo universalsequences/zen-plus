@@ -55,17 +55,34 @@ const detectAudioType = (header: Uint8Array): string => {
 };
 
 const workerPool: Worker[] = [];
-const MAX_WORKERS = 4; // Adjust based on your needs
+const taskQueue: (() => void)[] = [];
+const MAX_WORKERS = 2; // Adjust based on your needs
+let activeWorkers = 0;
 
-const getWorker = (): Worker => {
+const createWorker = (): Worker => {
+  const worker = new Worker(
+    new URL("../../workers/mp3Worker", import.meta.url),
+  );
+  workerPool.push(worker);
+  return worker;
+};
+
+const getWorker = (): Worker | null => {
   if (workerPool.length < MAX_WORKERS) {
-    const worker = new Worker(
-      new URL("../../workers/mp3Worker", import.meta.url),
-    );
-    workerPool.push(worker);
-    return worker;
+    return createWorker();
   }
-  return workerPool[Math.floor(Math.random() * workerPool.length)];
+
+  return workerPool.find((worker) => worker) || null;
+};
+
+const processQueue = () => {
+  if (taskQueue.length > 0 && activeWorkers < MAX_WORKERS) {
+    const task = taskQueue.shift();
+    if (task) {
+      activeWorkers++;
+      task();
+    }
+  }
 };
 
 export const arrayBufferToArray = async (
@@ -98,25 +115,33 @@ export const arrayBufferToArray = async (
     }
 
     return new Promise((resolve, reject) => {
-      const worker = getWorker();
+      const task = () => {
+        const worker = getWorker();
 
-      const handleMessage = (e: MessageEvent) => {
-        const { data, id, error } = e.data;
-        if (id !== key) return; // Ignore messages for other requests
+        const handleMessage = (e: MessageEvent) => {
+          const { data, id, error } = e.data;
+          if (id !== key) return; // Ignore messages for other requests
 
-        worker.removeEventListener("message", handleMessage);
+          worker?.removeEventListener("message", handleMessage);
 
-        if (error) {
-          reject(error);
-        } else {
-          const buffer = combineBuffers(data);
-          cache[key] = [buffer, data[0].length];
-          resolve(cache[key]);
-        }
+          activeWorkers--;
+          processQueue(); // Process the next task in the queue
+
+          if (error) {
+            reject(error);
+          } else {
+            const buffer = combineBuffers(data);
+            cache[key] = [buffer, data[0].length];
+            resolve(cache[key]);
+          }
+        };
+
+        worker?.addEventListener("message", handleMessage);
+        worker?.postMessage({ raw, id: key });
       };
 
-      worker.addEventListener("message", handleMessage);
-      worker.postMessage({ raw, id: key });
+      taskQueue.push(task);
+      processQueue();
     });
   }
 

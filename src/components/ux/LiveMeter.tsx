@@ -5,6 +5,7 @@ import { useInterval } from "@/hooks/useInterval";
 import type { ObjectNode } from "@/lib/nodes/types";
 import { TriangleLeftIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+
 const SMOOTHING_FACTOR = 0.8; // Adjust this value to change the meter's responsiveness
 const SCALE_FACTOR = 2.5;
 
@@ -17,6 +18,7 @@ export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({
     </ValueProvider>
   );
 };
+
 const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
   objectNode,
 }) => {
@@ -34,9 +36,10 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
   const refRight = useRef<HTMLDivElement>(null);
   const dataLeft = useRef(new Float32Array(128));
   const dataRight = useRef(new Float32Array(128));
-  const [leftLevel, setLeftLevel] = useState(0);
-  const [rightLevel, setRightLevel] = useState(0);
-  const [normalizedLevel, setNormalizedLevel] = useState(0);
+
+  const normalizedLevel = useRef(0);
+  const leftLevel = useRef(0);
+  const rightLevel = useRef(0);
 
   const getRMS = (data: Float32Array) => {
     let sum = 0;
@@ -68,22 +71,32 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
       const normalizedLoudnessA = normalizeLoudness(rmsA);
       const normalizedLoudnessB = normalizeLoudness(rmsB);
 
-      setNormalizedLevel(normalizedLoudnessA);
+      normalizedLevel.current = normalizedLoudnessA;
+
       // Apply smoothing
-      setLeftLevel(
-        (prevLevel) =>
-          prevLevel * SMOOTHING_FACTOR +
-          2 * normalizedLoudnessA * (1 - SMOOTHING_FACTOR),
-      );
-      setRightLevel(
-        (prevLevel) =>
-          prevLevel * SMOOTHING_FACTOR +
-          2 * normalizedLoudnessB * (1 - SMOOTHING_FACTOR),
-      );
+      leftLevel.current =
+        leftLevel.current * SMOOTHING_FACTOR +
+        2 * normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
+      rightLevel.current =
+        rightLevel.current * SMOOTHING_FACTOR +
+        2 * normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
+
+      if (refLeft.current) {
+        refLeft.current.style.height = `${leftLevel.current * 100}%`;
+        refLeft.current.style.backgroundColor = getMeterColor(
+          normalizedLevel.current * 1.2,
+        );
+      }
+      if (refRight.current) {
+        refRight.current.style.height = `${rightLevel.current * 100}%`;
+        refRight.current.style.backgroundColor = getMeterColor(
+          normalizedLevel.current * 1.2,
+        );
+      }
     }
   }, [objectNode.auxAudioNodes]);
 
-  useInterval(onTick, 30);
+  useInterval(onTick, 40);
 
   const [isDown, setIsDown] = useState(false);
   const down = useRef(false);
@@ -146,22 +159,8 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
           />
         </div>
         <div className="absolute top-0 right-0 w-5 h-full overflow-hidden">
-          <div
-            ref={refLeft}
-            style={{
-              backgroundColor: getMeterColor(normalizedLevel * 1.2),
-              height: `${leftLevel * 100}%`,
-            }}
-            className="absolute bottom-0 left-0 w-2"
-          ></div>
-          <div
-            ref={refRight}
-            style={{
-              backgroundColor: getMeterColor(normalizedLevel * 1.2),
-              height: `${rightLevel * 100}%`,
-            }}
-            className="absolute bottom-0 right-0 w-2"
-          ></div>
+          <div ref={refLeft} className="absolute bottom-0 left-0 w-2"></div>
+          <div ref={refRight} className="absolute bottom-0 right-0 w-2"></div>
         </div>
       </div>
     </div>

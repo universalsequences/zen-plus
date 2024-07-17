@@ -26,9 +26,9 @@ export const live_meter = (node: ObjectNode) => {
   if (!node.audioNode) {
     gainNode = node.patch.audioContext.createGain();
     analyser1 = node.patch.audioContext.createAnalyser();
-    analyser1.fftSize = 128;
+    analyser1.fftSize = 32;
     analyser2 = node.patch.audioContext.createAnalyser();
-    analyser2.fftSize = 128;
+    analyser2.fftSize = 32;
     const merger = node.patch.audioContext.createChannelMerger(2);
     node.merger = merger;
     node.audioNode = gainNode;
