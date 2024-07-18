@@ -9,6 +9,7 @@ import { File } from "@/lib/files/types";
 import { useStorage } from "@/contexts/StorageContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { Node, SerializedPatch, ObjectNode, IOlet } from "@/lib/nodes/types";
+import { uuid } from "@/lib/uuid/IDGenerator";
 
 export const useSubPatchLoader = (objectNode: ObjectNode) => {
   const { registerConnection } = usePatch();
@@ -150,6 +151,10 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
           true,
           serializedSubPatch,
         );
+        objectNode.id = uuid();
+        if (objectNode.subpatch) {
+          objectNode.subpatch.id = uuid();
+        }
 
         const getMatchingIO = (
           ioType: string,

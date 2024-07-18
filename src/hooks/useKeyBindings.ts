@@ -31,7 +31,7 @@ export const useKeyBindings = (
   } = usePosition();
   const { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } =
     usePatch();
-  const { patchWindows } = useWindows();
+  const { patchWindows, setPatchWindows } = useWindows();
   const {
     closePatch,
     goToParentTile,
@@ -189,6 +189,7 @@ export const useKeyBindings = (
         e.preventDefault();
         if (selectedPatch) {
           liftPatchTile(selectedPatch);
+          setPatchWindows([]);
         }
         //if (selectedPatch) {
         //    setPatches([selectedPatch]);

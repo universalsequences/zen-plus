@@ -8,7 +8,13 @@ import type {
   Coordinate,
   SubPatch,
 } from "@/lib/nodes/types";
-import { createContext, useState, useContext, useCallback } from "react";
+import {
+  createContext,
+  useState,
+  useContext,
+  useCallback,
+  useEffect,
+} from "react";
 import { usePatches } from "./PatchesContext";
 
 interface IWindowsContext {
@@ -17,6 +23,7 @@ interface IWindowsContext {
   removePatchWindow: (x: Patch) => void;
   windowPositions: Positions;
   updatePosition: (x: string, y: Coordinate) => void;
+  setPatchWindows: React.Dispatch<React.SetStateAction<Patch[]>>;
 }
 
 interface Props {
@@ -37,19 +44,76 @@ type Positions = {
 };
 
 export const WindowsProvider: React.FC<Props> = ({ children }) => {
-  const { patches, setSelectedPatch } = usePatches();
+  const { selectedPatch, patches, setSelectedPatch } = usePatches();
   const [patchWindows, setPatchWindows] = useState<Patch[]>([]);
   const [windowPositions, setWindowPositions] = useState<Positions>({});
+
+  useEffect(() => {
+    if (!selectedPatch) {
+      return;
+    }
+    setPatchWindows((prev) => {
+      const p = [...prev].filter((x) => x !== selectedPatch);
+      if (prev.includes(selectedPatch)) {
+        return [...p, selectedPatch];
+      }
+      return p;
+    });
+  }, [selectedPatch]);
 
   const getPatchSize = (patch: Patch) => {
     return (patch as SubPatch).parentNode.size || { width: 200, height: 200 };
   };
 
+  const findNextAvailablePosition = useCallback(
+    (size: { width: number; height: number }) => {
+      const padding = 50; // Padding between windows
+      let position: Coordinate = { x: 0, y: 0 };
+
+      while (true) {
+        let overlapping = false;
+        for (const key in windowPositions) {
+          const pos = windowPositions[key];
+          const patchWindow = patchWindows.find((patch) => patch.id === key);
+          if (!patchWindow) continue;
+          const existingPatchSize = getPatchSize(patchWindow);
+
+          if (
+            position.x < pos.x + existingPatchSize.width + padding &&
+            position.x + size.width + padding > pos.x &&
+            position.y < pos.y + existingPatchSize.height + padding &&
+            position.y + size.height + padding > pos.y
+          ) {
+            overlapping = true;
+            position.x = pos.x + existingPatchSize.width + padding;
+            if (position.x + size.width > window.innerWidth) {
+              position.x = 0;
+              position.y = pos.y + existingPatchSize.height + padding;
+            }
+            break;
+          }
+        }
+        if (!overlapping) break;
+      }
+
+      return {
+        x: position.x,
+        y: position.y + 100,
+      };
+    },
+    [windowPositions, patchWindows],
+  );
+
   const addPatchWindow = useCallback(
     (patch: Patch) => {
-      setPatchWindows([...patchWindows, patch]);
+      const patchSize = getPatchSize(patch);
+      const newPosition = findNextAvailablePosition(patchSize);
+
+      setPatchWindows((prev) => [...prev, patch]);
+      //updatePosition(patch.id, newPosition);
+      setWindowPositions((prev) => ({ ...prev, [patch.id]: newPosition }));
     },
-    [patchWindows],
+    [findNextAvailablePosition],
   );
 
   const removePatchWindow = useCallback(
@@ -60,12 +124,9 @@ export const WindowsProvider: React.FC<Props> = ({ children }) => {
     [patches, patchWindows, setSelectedPatch],
   );
 
-  const updatePosition = useCallback(
-    (id: string, position: Coordinate) => {
-      setWindowPositions({ ...windowPositions, [id]: position });
-    },
-    [windowPositions],
-  );
+  const updatePosition = useCallback((id: string, position: Coordinate) => {
+    setWindowPositions((prev) => ({ ...prev, [id]: position }));
+  }, []);
 
   return (
     <WindowsContext.Provider
@@ -75,6 +136,7 @@ export const WindowsProvider: React.FC<Props> = ({ children }) => {
         patchWindows,
         windowPositions,
         updatePosition,
+        setPatchWindows,
       }}
     >
       {children}

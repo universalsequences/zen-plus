@@ -55,6 +55,14 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
     [patch, updatePosition],
   );
 
+  const [baseName, setBaseName] = useState("");
+  useEffect(() => {
+    const p = (patch as SubPatch).parentNode.patch;
+    if (p) {
+      setBaseName((p as SubPatch).name || "");
+    }
+  }, [patch]);
+
   const onMouseUp = useCallback(() => {
     down.current = null;
   }, []);
@@ -108,6 +116,9 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
           >
             {patch.name}
           </div>
+        </div>
+        <div className="absolute right-3 text-xs text-zinc-500 py-0.5">
+          {baseName}
         </div>
       </div>
       <PatchWrapper

@@ -114,7 +114,13 @@ export const slots = (node: ObjectNode) => {
 
       for (let j = 0; j < a.outlets.length; j++) {
         if (b.inlets[j]) {
-          a.connect(b, b.inlets[j], a.outlets[j], false);
+          if (
+            (a.audioNode as AudioWorkletNode)?.port ||
+            !(a.audioNode as ChannelMergerNode)?.channelCount ||
+            (a.audioNode as ChannelMergerNode)?.channelCount >= j + 1
+          ) {
+            a.connect(b, b.inlets[j], a.outlets[j], false);
+          }
         }
       }
     }
@@ -207,7 +213,6 @@ export const deserializedSlots = async (
 
 const compileSlots = async (node: ObjectNode) => {
   let slots = node.slots;
-  console.log("compile slots called...");
   if (!slots) {
     return;
   }
@@ -216,16 +221,16 @@ const compileSlots = async (node: ObjectNode) => {
   }
 
   let i = 0;
-  while (slots.some((x) => !x.audioNode)) {
-    await sleep(10);
+  while (slots.some((x) => !x.audioNode || x.subpatch?.skipRecompile)) {
+    await sleep(50);
     i++;
-    if (i > 50) {
+    if (i > 150) {
       // max wwait time of 500 ms
       break;
     }
   }
 
-  await sleep(100);
+  await sleep(200);
 
   for (const slot of slots) {
     slot.subpatch?.setupPostCompile(true);
