@@ -82,7 +82,7 @@ export const simdMemo = (
   // happens to match one of the downstream histories, we can know to properly re-evaluate
   let downstreamHistories: Set<string>;
   let memoized: Generated;
-  let id = uuid();
+  const id = uuid();
 
   let evaluations = 0;
 
@@ -264,12 +264,7 @@ export const simdMemo = (
         // no need to re-calculate
         return memoizationResult.memoization;
       }
-
-      //if (context.forceScalar && context !== memoizationResult.context) {
-      //    console.log("FORCE SCALAR THINGY!", memoized);
-      //} else {
       context = memoizationResult.context;
-      // }
       skipSIMD = memoizationResult.skipSIMD;
     }
 
@@ -287,10 +282,10 @@ export const simdMemo = (
         // this means we detected a history thats being written to in the args
         // and we must fall back on the scalar-version of this operation-- AND
         // use that history's context
-        return emit(
-          result.context,
-          scalarGen(result.context, ...result.evaluatedArgs),
-        );
+        const _context = result.context.isSIMD
+          ? result.context.useContext(false)
+          : result.context;
+        return emit(_context, scalarGen(_context, ...result.evaluatedArgs));
       } else {
         // no circular histories detected.
         // this means we can simply try out the SIMD version
@@ -359,7 +354,7 @@ const getContextsWithHistory = (
   history: string,
   context: Context,
 ): Context[] => {
-  let contexts: Context[] = [];
+  const contexts: Context[] = [];
   if (context.historiesEmitted.has(history)) {
     contexts.push(context);
   }

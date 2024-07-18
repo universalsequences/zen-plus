@@ -21,10 +21,10 @@ export const createWorklet = (
   graph: ZenGraph,
   name = "Zen",
   onlyCompile = false,
-): Promise<LazyZenWorklet> => {
-  return new Promise((resolve: (x: LazyZenWorklet) => void) => {
+): Promise<ZenWorklet> => {
+  return new Promise((resolve: (x: ZenWorklet) => void) => {
     const { code, wasm } = createWorkletCode(name, graph);
-    console.log(code);
+    console.log("worklet printed");
     const workletCode = code;
     const workletBase64 = btoa(workletCode);
     const url = `data:application/javascript;base64,${workletBase64}`;
@@ -90,10 +90,12 @@ export const createWorklet = (
     };
 
     ctxt.audioWorklet.addModule(url).then(() => {
+      /*
       if (onlyCompile) {
         resolve(onCompilation);
         return;
       }
+      */
       onCompilation();
     });
   });
@@ -449,7 +451,7 @@ process(inputs, outputs, parameters) {
     let outputChannel = outputs[0];
 
     if (this.messageCounter % 32 === 0) {
-      this.flushWASMMessages();
+      // this.flushWASMMessages();
     }
     this.messageCounter++;
 

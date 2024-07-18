@@ -21,7 +21,7 @@ export const op = (
     let id = uuid();
     return simdMemo(
       (context: Context, ..._ins: Generated[]): Generated => {
-        let [opVar] = context.useCachedVariables(id, name + "Val");
+        const [opVar] = context.useCachedVariables(id, name + "Val");
         let code = `${context.varKeyword} ${opVar} = ${_ins.map((x) => x.variable).join(" " + operator + " ")};`;
         if (operator === "%") {
           if (context.target === Target.C) {

@@ -13,12 +13,14 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import PatchTile from "./PatchTile";
 import { useTilesContext } from "@/contexts/TilesContext";
+import { useWindows } from "@/contexts/WindowsContext";
 
 const PatchesComponent: React.FC<{
   fileToOpen: any | null;
   setFileToOpen: (x: any | null) => void;
 }> = ({ fileToOpen, setFileToOpen }) => {
-  let { rootTile, patchWindows, selectedPatch, patches } = usePatches();
+  const { patchWindows } = useWindows();
+  let { rootTile, selectedPatch, patches } = usePatches();
   let { gridTemplate } = useTilesContext();
 
   let {

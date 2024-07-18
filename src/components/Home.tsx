@@ -18,22 +18,38 @@ import { PatchesProvider } from "@/contexts/PatchesContext";
 import { SelectionProvider } from "@/contexts/SelectionContext";
 import PatchesComponent from "@/components/PatchesComponent";
 import { Theme } from "@radix-ui/themes";
-import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from "@/lib/nodes/types";
+import {
+  Patch,
+  IOlet,
+  MessageNode,
+  IOConnection,
+  ObjectNode,
+  Coordinate,
+} from "@/lib/nodes/types";
 import { PatchImpl } from "@/lib/nodes/Patch";
 import "@/styles/radix.scss";
 import "@rainbow-me/rainbowkit/styles.css";
 
-import { getDefaultWallets, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
+import {
+  getDefaultWallets,
+  RainbowKitProvider,
+  darkTheme,
+} from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { zoraSepolia } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { infuraProvider } from "wagmi/providers/infura";
 import { publicProvider } from "wagmi/providers/public";
 import { WorkerProvider } from "@/contexts/WorkerContext";
+import PatchWindow from "./PatchWindow";
+import { WindowsProvider } from "@/contexts/WindowsContext";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia],
-  [infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }), publicProvider()],
+  [
+    infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
+    publicProvider(),
+  ],
 );
 
 const { connectors } = getDefaultWallets({
@@ -126,13 +142,18 @@ export default function App(props: Props) {
       <MessageProvider>
         <SelectionProvider>
           <PatchesProvider basePatch={basePatch}>
-            <WorkerProvider patch={basePatch}>
-              <TilesProvider>
-                <main className="flex min-h-screen flex-col h-full w-full">
-                  <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
-                </main>
-              </TilesProvider>
-            </WorkerProvider>
+            <WindowsProvider>
+              <WorkerProvider patch={basePatch}>
+                <TilesProvider>
+                  <main className="flex min-h-screen flex-col h-full w-full">
+                    <PatchesComponent
+                      fileToOpen={fileToOpen}
+                      setFileToOpen={setFileToOpen}
+                    />
+                  </main>
+                </TilesProvider>
+              </WorkerProvider>
+            </WindowsProvider>
           </PatchesProvider>
         </SelectionProvider>
       </MessageProvider>

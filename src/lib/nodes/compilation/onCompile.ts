@@ -1,12 +1,24 @@
 import { replaceAll } from "@/lib/zen/replaceAll";
 
-import { Operator, Statement } from "../definitions/zen/types";
-import { ConnectionType, Node, ObjectNode, Patch, SubPatch } from "../types";
+import type { Operator, Statement } from "../definitions/zen/types";
+import {
+  ConnectionType,
+  type Node,
+  type ObjectNode,
+  type Patch,
+  type SubPatch,
+} from "../types";
 import { compileStatement } from "../definitions/zen/AST";
 import { printStatement } from "../definitions/zen/AST";
-import { Arg, createWorklet, UGen, ZenGraph, zenWithTarget } from "@/lib/zen";
-import { ZenWorklet } from "@/lib/zen/worklet";
-import { PatchImpl } from "../Patch";
+import {
+  type Arg,
+  createWorklet,
+  type UGen,
+  type ZenGraph,
+  zenWithTarget,
+} from "@/lib/zen";
+import type { ZenWorklet } from "@/lib/zen/worklet";
+import type { PatchImpl } from "../Patch";
 import { publish } from "@/lib/messaging/queue";
 import { getRootPatch, traverseForwards } from "../traverse";
 import { Target } from "@/lib/zen/targets";
@@ -17,6 +29,7 @@ import { waitForBuffers } from "./wait";
 import { initMemory } from "@/lib/zen/memory/initialize";
 import { exportParameters, exportToAudioUnit } from "./export";
 import { sortHistories } from "./histories";
+import { isTrivialGraph } from "./trivialGraph";
 
 const constructStatements = (patch: PatchImpl, statement: Statement) => {
   const historyDependencies = patch.historyDependencies.filter((x) =>
@@ -74,9 +87,10 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
 
 export const onCompile = (
   patch: PatchImpl,
-  statement: Statement,
+  inputStatement: Statement,
   outputNumber?: number,
 ) => {
+  let statement = inputStatement;
   if (outputNumber !== undefined) {
     patch.outputStatements[outputNumber - 1] = statement;
     const numOutputs = patch.objectNodes.filter((x) => x.name === "out").length;
@@ -107,29 +121,45 @@ export const onCompile = (
       return;
     }
     if (patch.skipRecompile) {
-      console.log("still compiling..");
       return;
     }
 
     if (patch.isZenBase()) {
       patch.isCompiling = false;
     }
+
+    const parentNode = (patch as Patch as SubPatch).parentNode;
+
+    const trivialInputs = isTrivialGraph(statement);
+    if (trivialInputs > 0) {
+      patch.disconnectGraph();
+      // then we need to create a 2 channel gain node and connect it to the merger;
+      const nodes: AudioNode[] = [];
+      console.log("creating merger for trivial graph= ", trivialInputs);
+      const merger = patch.audioContext.createChannelMerger(trivialInputs);
+      for (let i = 0; i < trivialInputs; i++) {
+        const gain = patch.audioContext.createGain();
+        gain.gain.value = 1;
+        nodes.push(gain);
+        gain.connect(merger, 0, i);
+      }
+      parentNode.useAudioNode(merger);
+      return;
+    }
     const prepared = prepareAndCompile(patch, statement);
 
     const zenGraph = prepared.zenGraph;
     statement = prepared.statement;
 
-    const parentNode = (patch as Patch as SubPatch).parentNode;
     const parentId = parentNode ? parentNode.id : patch.id;
-    const workletId = "zen" + parentId + "_" + id + new Date().getTime();
+    const workletId = `zen${parentId}_${id}_${new Date().getTime()}`;
     patch.zenGraph = zenGraph;
     waitForBuffers(patch).then(() => {
       const exportedParameters = exportParameters(zenGraph);
       createWorklet(patch.audioContext, zenGraph, workletId)
-        .then((ret) => {
-          ret = ret as ZenWorklet;
+        .then((ret: ZenWorklet) => {
           patch.audioNode = ret.workletNode;
-          let worklet = ret.workletNode;
+          const worklet = ret.workletNode;
           if (ret.wasm) {
             patch.wasmCode = ret.wasm;
             patch.exportedAudioUnit = exportToAudioUnit(
@@ -145,12 +175,12 @@ export const onCompile = (
               console.log("sending attributes and messages...");
               patch.sendAttributeMessages();
               patch.sendNumberMessages(true);
-              let matricesAndBuffers = patch.objectNodes.filter(
+              const matricesAndBuffers = patch.objectNodes.filter(
                 (x) => x.name === "matrix" || x.name === "buffer",
               );
-              matricesAndBuffers.forEach((matrix) =>
-                matrix.receive(matrix.inlets[0], "bang"),
-              );
+              for (const matrix of matricesAndBuffers) {
+                matrix.receive(matrix.inlets[0], "bang");
+              }
 
               patch.skipRecompile = false;
               console.log("finished");
@@ -232,11 +262,11 @@ export const onCompile = (
           }
 
           /*
-          patch.zenCode = printAndMinify(statement);
-          if (patch.setZenCode) {
-            patch.setZenCode(patch.zenCode);
-          }
-          */
+        patch.zenCode = printAndMinify(statement);
+        if (patch.setZenCode) {
+          patch.setZenCode(patch.zenCode);
+        }
+        */
         })
         .catch(() => {});
     });

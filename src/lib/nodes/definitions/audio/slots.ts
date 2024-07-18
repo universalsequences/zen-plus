@@ -195,9 +195,9 @@ export const deserializedSlots = async (
   node: ObjectNode,
   y: SerializedObjectNode[],
 ) => {
-  let slots: Slot[] = [];
-  for (let serialized of y) {
-    let _node = newPatch(node);
+  const slots: Slot[] = [];
+  for (const serialized of y) {
+    const _node = newPatch(node);
     _node.fromJSON(serialized);
     slots.push(_node);
   }

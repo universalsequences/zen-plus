@@ -63,14 +63,15 @@ export const determineMemoization = (
       memoization: undefined,
       skipSIMD: false,
     };
-  } else if (context !== memoized.context) {
+  }
+  if (context !== memoized.context) {
     // let historiesBeingWrittenToB = getHistoriesBeingWrittenTo(context);
-    let matchingDownstreamHistoriesA = downstreamHistories.filter((h) =>
+    const matchingDownstreamHistoriesA = downstreamHistories.filter((h) =>
       historiesBeingWrittenTo.has(h),
     );
-    let matchingDownstreamHistories = matchingDownstreamHistoriesA.length > 0;
+    const matchingDownstreamHistories = matchingDownstreamHistoriesA.length > 0;
 
-    let caseA =
+    const caseA =
       !getParentContexts(context).has(memoized.context) &&
       matchingDownstreamHistories;
 
@@ -118,91 +119,94 @@ export const determineMemoization = (
         context: context,
         skipSIMD: false,
       };
-    } else if (!getParentContexts(context).has(memoized.context)) {
+    }
+
+    if (!getParentContexts(context).has(memoized.context)) {
       return {
         memoization: memoized,
         context: memoized.context,
         skipSIMD: false,
       };
-    } else {
-      // a series of hellish if statements (found experimentally) that try to memoize w/o breaking
-      // "correctness"
+    }
+    // a series of hellish if statements (found experimentally) that try to memoize w/o breaking
+    // "correctness"
+    if (
+      memoized.incomingContext === memoized.context &&
+      memoized.context.context === memoized.context.baseContext
+    ) {
+      count(3);
+      return {
+        memoization: memoized,
+        context: memoized.context,
+        skipSIMD: false,
+      };
+    }
+
+    if (memoized.incomingContext === context) {
       if (
-        memoized.incomingContext === memoized.context &&
-        memoized.context.context === memoized.context.baseContext
+        lastHistoriesWritten === historiesBeingWrittenTo.size ||
+        !matchingDownstreamHistories
       ) {
-        count(3);
+        count(4);
         return {
           memoization: memoized,
           context: memoized.context,
           skipSIMD: false,
         };
-      }
-
-      if (memoized.incomingContext === context) {
-        if (
-          lastHistoriesWritten === historiesBeingWrittenTo.size ||
-          !matchingDownstreamHistories
-        ) {
-          count(4);
-          return {
-            memoization: memoized,
-            context: memoized.context,
-            skipSIMD: false,
-          };
-        }
-      }
-
-      if (historiesBeingWrittenTo.size === lastHistoriesWritten) {
-        if (memoized.context.context === memoized.context.baseContext) {
-          count(6);
-          return {
-            memoization: memoized,
-            context: memoized.context,
-            skipSIMD: false,
-          };
-        }
-      }
-
-      if (historiesBeingWrittenTo.size === 0) {
-        count(7);
-        return {
-          memoization: memoized,
-          context: memoized.context,
-          skipSIMD: false,
-        };
-      }
-
-      if (memoized.context.isSIMD) {
-        count(8);
-        return {
-          memoization: memoized,
-          context: memoized.context,
-          skipSIMD: false,
-        };
-      } else {
-        if (
-          (memoized.context.id === 1 ||
-            (memoized.incomingContext === context && context.isSIMD)) &&
-          historiesBeingWrittenTo.size - lastHistoriesWritten <=
-            (memoized.context.id === 1
-              ? matchingDownstreamHistories &&
-                (memoized.incomingContext === context || context.isSIMD)
-                ? 4
-                : 1
-              : 1)
-        ) {
-          return {
-            context: memoized.context,
-            memoization: memoized,
-            skipSIMD: false,
-          };
-        }
-        count(11);
-        // let matchingDownstreamHistoriesB = downstreamHistories.some(h => getHistoriesBeingWrittenTo(context).has(h));
-        // console.log("id=%s PASS THRU CASE last=%s current=%s matchingA=%s matchingB=%s", memoized.codeFragments[0].id, lastHistoriesWritten, historiesBeingWrittenTo.size, matchingDownstreamHistories, matchingDownstreamHistoriesB, memoized.context, memoized.incomingContext, context, downstreamHistories, historiesBeingWrittenTo, memoized.codeFragments);
       }
     }
+
+    if (historiesBeingWrittenTo.size === lastHistoriesWritten) {
+      if (memoized.context.context === memoized.context.baseContext) {
+        count(6);
+        return {
+          memoization: memoized,
+          context: memoized.context,
+          skipSIMD: false,
+        };
+      }
+    }
+
+    if (historiesBeingWrittenTo.size === 0) {
+      count(7);
+      return {
+        memoization: memoized,
+        context: memoized.context,
+        skipSIMD: false,
+      };
+    }
+
+    if (memoized.context.isSIMD) {
+      count(8);
+      return {
+        memoization: memoized,
+        context: memoized.context,
+        skipSIMD: false,
+      };
+    }
+
+    // extreme ugly hack to avoid circular dependency loop and speed up
+    if (
+      (memoized.context.id === 1 ||
+        (memoized.incomingContext === context && context.isSIMD)) &&
+      historiesBeingWrittenTo.size - lastHistoriesWritten <=
+        (memoized.context.id === 1
+          ? matchingDownstreamHistories &&
+            (memoized.incomingContext === context || context.isSIMD)
+            ? 4
+            : 1
+          : 1)
+    ) {
+      console.log("RETURNING BUT MIGHT NOT NEED!");
+      return {
+        context: memoized.context,
+        memoization: memoized,
+        skipSIMD: false,
+      };
+    }
+    count(11);
+    // let matchingDownstreamHistoriesB = downstreamHistories.some(h => getHistoriesBeingWrittenTo(context).has(h));
+    // console.log("id=%s PASS THRU CASE last=%s current=%s matchingA=%s matchingB=%s", memoized.codeFragments[0].id, lastHistoriesWritten, historiesBeingWrittenTo.size, matchingDownstreamHistories, matchingDownstreamHistoriesB, memoized.context, memoized.incomingContext, context, downstreamHistories, historiesBeingWrittenTo, memoized.codeFragments);
   } else if (context === memoized.context) {
     count(9);
     return {

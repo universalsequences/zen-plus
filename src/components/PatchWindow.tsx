@@ -10,13 +10,13 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import PatchWrapper from "./PatchWrapper";
+import { useWindows } from "@/contexts/WindowsContext";
 
 const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [coord, setCoord] = useState({ x: 500, y: 300 });
 
-  const { removePatchWindow, expandPatch, selectedPatch, setSelectedPatch } =
-    usePatches();
+  const { removePatchWindow, updatePosition, windowPositions } = useWindows();
+  const { expandPatch, selectedPatch, setSelectedPatch } = usePatches();
   const size = (patch as Subpatch).parentNode.size;
   const width = size ? size.width : 500;
   const height = size ? size.height : 500;
@@ -41,19 +41,19 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
     setSelectedPatch(patch);
   }, [patch, setSelectedPatch]);
 
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    if (!down.current || !ref.current) {
-      return;
-    }
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!down.current || !ref.current) {
+        return;
+      }
 
-    const x = e.clientX;
-    const y = e.clientY;
+      const x = e.clientX - down.current.x;
+      const y = e.clientY - down.current.y;
 
-    setCoord({
-      x: x - down.current.x,
-      y: y - down.current.y,
-    });
-  }, []);
+      updatePosition(patch.id, { x, y });
+    },
+    [patch, updatePosition],
+  );
 
   const onMouseUp = useCallback(() => {
     down.current = null;
@@ -77,6 +77,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
     setSelectedPatch(patch);
   }, [expandPatch, removePatchWindow, patch]);
 
+  const coord = windowPositions[patch.id] || { x: 500, y: 300 };
   return (
     <div
       style={{

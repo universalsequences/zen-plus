@@ -16,7 +16,7 @@ export const message = (name: string, subType: Arg, value: Arg) => {
       if (context.target === Target.C) {
         code += `
         if ((message_checker++) % 97 == 0) {
-new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, 0.0);
+//new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, 0.0);
          }
 `;
       } else {

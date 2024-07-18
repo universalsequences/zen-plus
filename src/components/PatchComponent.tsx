@@ -834,7 +834,9 @@ const PatchComponent: React.FC<{
                     setSelectedPatch(patch)}
                     */
           onDragOver={() => {
-            setDraggingOver(true);
+            if (patchDragging) {
+              setDraggingOver(true);
+            }
           }}
           onDragLeave={() => {
             setDraggingOver(false);

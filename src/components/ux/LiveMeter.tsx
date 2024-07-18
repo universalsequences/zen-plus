@@ -65,8 +65,8 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
       a.getFloatTimeDomainData(dataLeft.current);
       b.getFloatTimeDomainData(dataRight.current);
 
-      const rmsA = getRMS(dataLeft.current) * 2;
-      const rmsB = getRMS(dataRight.current) * 2;
+      const rmsA = getRMS(dataLeft.current);
+      const rmsB = getRMS(dataRight.current);
 
       const normalizedLoudnessA = normalizeLoudness(rmsA);
       const normalizedLoudnessB = normalizeLoudness(rmsB);
@@ -76,10 +76,10 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
       // Apply smoothing
       leftLevel.current =
         leftLevel.current * SMOOTHING_FACTOR +
-        2 * normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
+        normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
       rightLevel.current =
         rightLevel.current * SMOOTHING_FACTOR +
-        2 * normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
+        normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
 
       if (refLeft.current) {
         refLeft.current.style.height = `${leftLevel.current * 100}%`;
@@ -96,7 +96,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
     }
   }, [objectNode.auxAudioNodes]);
 
-  useInterval(onTick, 40);
+  useInterval(onTick, 140);
 
   const [isDown, setIsDown] = useState(false);
   const down = useRef(false);

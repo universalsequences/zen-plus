@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { getTime } from "@/components/ProjectOption";
+import { useWindows } from "@/contexts/WindowsContext";
 import type { File } from "@/lib/files/types";
 import {
   OperatorContext,
@@ -32,14 +33,9 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     objectNode.subpatch && objectNode.subpatch.name
       ? objectNode.subpatch.name
       : objectNode.text;
-  const {
-    closePatch,
-    expandPatch,
-    removePatchWindow,
-    patchWindows,
-    addPatchWindow,
-    patches,
-  } = usePatches();
+  const { removePatchWindow, patchWindows, addPatchWindow } = useWindows();
+
+  const { closePatch, expandPatch, patches } = usePatches();
   const { registerConnection, newObjectNode } = usePatch();
   const { fetchSubPatchForDoc, onchainSubPatches } = useStorage();
   const { updatePosition } = usePosition();

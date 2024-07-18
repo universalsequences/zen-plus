@@ -1,4 +1,6 @@
 import { doc } from "./doc";
+import { gate } from "./gate";
+import { route } from "./route";
 import { slots } from "./slots";
 import { live_meter } from "./meter";
 import { receive, publishPatchSignals, send } from "./pubsub";
@@ -102,6 +104,8 @@ export const createWorklet = async (
 export const api: API = {
   "live.meter~": live_meter,
   "slots~": slots,
+  "gate~": gate,
+  "route~": route,
   "speakers~": speakers,
   "number~": number_tilde,
   "scope~": scope_tilde,

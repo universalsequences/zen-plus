@@ -7,6 +7,7 @@ import { usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePosition } from "@/contexts/PositionContext";
 import type { ObjectNode } from "@/lib/nodes/types";
+import { CopyIcon } from "@radix-ui/react-icons";
 
 export const WasmViewer: React.FC<{ objectNode: ObjectNode }> = ({
   objectNode,
@@ -50,6 +51,14 @@ export const WasmViewer: React.FC<{ objectNode: ObjectNode }> = ({
       className="overflow-scroll w-500 h-500 bg-zinc-800"
       style={{ width, height }}
     >
+      <CopyIcon
+        color="white"
+        onClick={() => {
+          // copy text to clipboard
+          navigator.clipboard.writeText(patch.wasmCode as string);
+        }}
+        className="z-30 absolute top-5 right-5 cursor-pointer active:scale-105 transition-all"
+      />
       <List
         height={height}
         itemCount={lines.length}

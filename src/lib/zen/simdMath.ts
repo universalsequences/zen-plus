@@ -1,9 +1,8 @@
-import { SIMDContext, Context } from "./context";
-import { zen_let } from "./let";
-import { UGen, Generated, Arg } from "./zen";
+import type { SIMDContext, Context } from "./context";
+import type { UGen, Generated, Arg } from "./zen";
 import { genInputs } from "./worklet";
 import { CodeFragment } from "./emitter";
-import { memo, simdMemo, SIMDOutput } from "./memo";
+import { simdMemo, type SIMDOutput } from "./memo";
 import { cKeywords, isComparisonOperator } from "./math";
 import { Target } from "./targets";
 import { SIMD_OPERATIONS, SIMD_FUNCTIONS } from "./simd";
@@ -33,7 +32,7 @@ export const simdOp = (
     const id = uuid();
     return simdMemo(
       (context: Context, ...evaluatedArgs: Generated[]): Generated => {
-        const [opVar] = context.useCachedVariables(id, name + "Val");
+        const [opVar] = context.useCachedVariables(id, `${name}Val`);
         if (evaluatedArgs.every((x) => x.scalar !== undefined) && evaluator) {
           // every argument is a number (scalar) so we just evaluate it directly
           const numbers = evaluatedArgs.map((x) => x.scalar) as number[];
@@ -45,7 +44,7 @@ export const simdOp = (
         }
 
         // otherwise we need to generate code to evaluate the op
-        let code = `${context.varKeyword} ${opVar} = ${evaluatedArgs.map((x) => x.variable).join(" " + operator + " ")};`;
+        let code = `${context.varKeyword} ${opVar} = ${evaluatedArgs.map((x) => x.variable).join(` ${operator} `)};`;
         if (operator === "%") {
           if (context.target === Target.C) {
             code = `${context.varKeyword} ${opVar} = fmod(${evaluatedArgs[0].variable}, ${evaluatedArgs[1].variable});`;
@@ -77,17 +76,17 @@ export const simdOp = (
           };
         }
 
-        let [opVar] = context.useCachedVariables(id, name + "Val");
+        const [opVar] = context.useCachedVariables(id, `${name}Val`);
 
         // otherwise we attempt to do this as SIMD
-        let inVariables = evaluatedArgs.map((x) => x.variable);
+        const inVariables = evaluatedArgs.map((x) => x.variable);
         // otherwise, we're in SIMD land
         let i = 0;
         let code = "";
-        for (let input of evaluatedArgs) {
+        for (const input of evaluatedArgs) {
           if (input.scalar !== undefined) {
             // we need to create a constant SIMD vector (via splatting)
-            let [v] = context.useCachedVariables(
+            const [v] = context.useCachedVariables(
               id + i * 78932,
               "constantVector",
             );
@@ -98,7 +97,7 @@ export const simdOp = (
             if (input.codeFragments[0].context !== context) {
               // the dependency exists in a previous block so we simply need to note that
               // we need this dependency (i.e. pass the needed variable to context.emitSIMD)
-              let variable = input.variable;
+              const variable = input.variable;
               inVariables[i] = variable;
             } else {
               inVariables[i] = input.variable;
@@ -110,7 +109,8 @@ export const simdOp = (
 
         if (isComparisonOperator(operator)) {
           // comparisons in SIMD need a few extra steps to convert them to usable values (1/0)
-          let [bitmask, trueVec, falseVec] = context.useCachedVariables(
+          // TODO - move to helper function
+          const [bitmask, trueVec, falseVec] = context.useCachedVariables(
             id,
             "bitmask",
             "trueVec",
@@ -130,7 +130,7 @@ v128_t ${opVar} = wasm_v128_bitselect(${trueVec}, ${falseVec}, ${bitmask});
 
         // emit SIMD based on the ins
         // if all the ins are also SIMD then we will have them all share the same SIMD block
-        let generated: Generated = context.emitSIMD(
+        const generated: Generated = context.emitSIMD(
           code,
           opVar,
           ...evaluatedArgs,

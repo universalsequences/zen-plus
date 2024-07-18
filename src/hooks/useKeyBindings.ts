@@ -13,6 +13,7 @@ import { useLocked } from "@/contexts/LockedContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { useSelection } from "@/contexts/SelectionContext";
+import { useWindows } from "@/contexts/WindowsContext";
 
 export const useKeyBindings = (
   scrollRef: React.MutableRefObject<HTMLDivElement | null>,
@@ -28,10 +29,10 @@ export const useKeyBindings = (
     presentationMode,
     setPresentationMode,
   } = usePosition();
-  let { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } =
+  const { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } =
     usePatch();
-  let {
-    patchWindows,
+  const { patchWindows } = useWindows();
+  const {
     closePatch,
     goToParentTile,
     splitTile,

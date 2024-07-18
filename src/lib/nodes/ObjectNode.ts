@@ -971,7 +971,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     };
 
     if (this.slots) {
-      json.slots = this.slots.map((x: ObjectNode) => x.getJSON());
+      json.slots = this.slots.map((x: ObjectNode) => x.getJSON()).slice(0, 4);
     }
 
     if (this.custom) {
