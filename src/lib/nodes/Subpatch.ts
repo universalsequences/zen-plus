@@ -150,21 +150,27 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
   processMessageForParam(message: Message) {
     if (typeof message === "string") {
-      let tokens = message.split(" ").filter((x) => x.length > 0);
-      let paramName = tokens[0];
-      let paramValue: number = parseFloat(tokens[1]);
-      if (isNaN(paramValue)) {
+      const tokens = message.split(" ").filter((x) => x.length > 0);
+      const paramName = tokens[0];
+      const paramValue: number = Number.parseFloat(tokens[1]);
+      if (Number.isNaN(paramValue)) {
         return false;
       }
 
-      let time: number | undefined = tokens[2] !== undefined ? parseFloat(tokens[2]) : undefined;
+      const time: number | undefined =
+        tokens[2] !== undefined ? Number.parseFloat(tokens[2]) : undefined;
 
       // look for parameters in this patch
-      let nodes = this.getAllNodes().filter((x) => x.name === "param" || x.name === "uniform");
-      let params = nodes.filter((x) => x.arguments[0] === paramName);
-      params.forEach((x) =>
-        x.receive(x.inlets[0], time !== undefined ? [paramValue, time] : paramValue),
+      const nodes = this.getAllNodes().filter(
+        (x) => x.name === "param" || x.name === "uniform",
       );
+      const params = nodes.filter((x) => x.arguments[0] === paramName);
+      for (const x of params) {
+        x.receive(
+          x.inlets[0],
+          time !== undefined ? [paramValue, time] : paramValue,
+        );
+      }
       if (params.length > 0) {
         return true;
       }

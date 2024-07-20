@@ -543,8 +543,7 @@ export class PatchImpl implements Patch {
     const compiled: Patch[] = [];
     for (const node of this.objectNodes) {
       if (
-        node.subpatch &&
-        node.subpatch.isZenBase() &&
+        node.subpatch?.isZenBase() &&
         node.subpatch.patchType !== OperatorContextType.AUDIO &&
         node.subpatch.patchType !== OperatorContextType.CORE
       ) {

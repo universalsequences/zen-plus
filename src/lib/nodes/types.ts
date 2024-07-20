@@ -11,7 +11,11 @@ import type { Connections } from "@/contexts/PatchContext";
 import type { Statement } from "./definitions/zen/types";
 import type { Slot } from "./definitions/audio/slots";
 import type { BaseNode } from "./BaseNode";
-import { ExportedAudioUnit, ParameterData } from "./compilation/export";
+import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
+import {
+  GenericStepData,
+  StepDataSchema,
+} from "./definitions/core/zequencer/types";
 
 export interface Size {
   width: number;
@@ -45,6 +49,7 @@ export type MessageObject = {
 export type Message =
   | string
   | number
+  | boolean
   | string[]
   | number[]
   | Statement
@@ -72,7 +77,10 @@ export type Lazy = () => Message;
 
 export type InstanceFunction = (x: Message) => Message[];
 
-export type NodeFunction = (node: ObjectNode, ...args: Lazy[]) => InstanceFunction;
+export type NodeFunction = (
+  node: ObjectNode,
+  ...args: Lazy[]
+) => InstanceFunction;
 
 // a node has inlets and outlets
 
@@ -146,8 +154,17 @@ export type Node = Identifiable &
     outlets: IOlet[];
     newInlet: (name?: string, type?: ConnectionType) => void;
     newOutlet: (name?: string, type?: ConnectionType) => void;
-    connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
-    disconnect: (connection: IOConnection, compile: boolean, ignoreAudio?: boolean) => void;
+    connect: (
+      destination: Node,
+      inlet: IOlet,
+      outlet: IOlet,
+      compile: boolean,
+    ) => IOConnection;
+    disconnect: (
+      connection: IOConnection,
+      compile: boolean,
+      ignoreAudio?: boolean,
+    ) => void;
     disconnectAll: () => void;
     connectAudioNode: (connection: IOConnection) => void;
     disconnectAudioNode: (connection: IOConnection) => void;
@@ -192,6 +209,8 @@ export type ObjectNode = Positioned &
     signalOptions?: SignalOption[];
     slots?: Slot[];
     parentSlots?: ObjectNode;
+    steps?: GenericStepData[];
+    stepsSchema?: StepDataSchema;
   };
 
 export interface SerializableCustom {
@@ -257,7 +276,12 @@ export type Patch = Identifiable & {
   isSelected?: boolean;
   setupPostCompile: (x: boolean) => void;
   registerNewNode?: (node: BaseNode) => void;
-  registerConnect?: (fromNode: BaseNode, toNode: BaseNode, inlet: number, outlet: number) => void;
+  registerConnect?: (
+    fromNode: BaseNode,
+    toNode: BaseNode,
+    inlet: number,
+    outlet: number,
+  ) => void;
   registerReceive?: (node: BaseNode, message: Message, inlet: IOlet) => void;
   storedStatement?: Statement;
   waiting?: boolean;

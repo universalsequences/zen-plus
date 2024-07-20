@@ -32,16 +32,18 @@ import {
   type SerializedObjectNode,
   type SubPatch,
 } from "./types";
-import { Slot, deserializedSlots } from "./definitions/audio/slots";
+import { type Slot, deserializedSlots } from "./definitions/audio/slots";
 
 interface Constants {
-  [x: string]: number;
+  [x: string]: number | boolean;
 }
 
 const CONSTANTS: Constants = {
   twopi: 2 * Math.PI,
   halfpi: 0.5 * Math.PI,
   pi: Math.PI,
+  false: false,
+  true: true,
 };
 
 export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
@@ -168,12 +170,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     const definition: Definition | null = context.lookupDoc(name);
 
-    if (definition && definition.name) {
+    if (definition?.name) {
       name = definition.name;
       this.definition = definition;
     }
 
-    if (definition && definition.attributeOptions) {
+    if (definition?.attributeOptions) {
       for (const opt in definition.attributeOptions) {
         if (!this.attributeOptions[opt]) {
           this.attributeOptions[opt] = [];
@@ -495,8 +497,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     for (let i = 0; i < Math.max(tokens.length, numberOfInlets); i++) {
       let parsed: Message =
-        CONSTANTS[tokens[i]] || Number.parseFloat(tokens[i]);
-      if (tokens[i] !== undefined && isNaN(parsed)) {
+        CONSTANTS[tokens[i]] !== undefined
+          ? CONSTANTS[tokens[i]]
+          : Number.parseFloat(tokens[i]);
+      if (tokens[i] !== undefined && Number.isNaN(parsed)) {
         parsed = tokens[i];
       }
       this.arguments[i] = i < tokens.length ? parsed : defaultArgument;
@@ -505,7 +509,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     return otherArguments;
   }
 
-  pipeSubPatch(inlet: IOlet, message: Message, fromNode?: Node) {
+  pipeSubPatch(inlet: IOlet, _message: Message, fromNode?: Node) {
+    let message = _message;
     const subpatch = this.subpatch;
     if (!subpatch) {
       return;
@@ -514,20 +519,20 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     const inputNumber = this.inlets.indexOf(inlet) + 1;
     if (message !== undefined) {
       const inputNode = inputNodes.find((x) => x.arguments[0] === inputNumber);
-      if (inputNode && inputNode.outlets[0]) {
+      if (inputNode?.outlets[0]) {
         const ogType = (message as Statement).type;
-        if (inputNode.attributes["min"] !== undefined) {
+        if (inputNode.attributes.min !== undefined) {
           message = [
             "max" as Operator,
-            inputNode.attributes["min"] as number,
+            inputNode.attributes.min as number,
             message as Statement,
           ];
           (message as Statement).type = ogType;
         }
-        if (inputNode.attributes["max"] !== undefined) {
+        if (inputNode.attributes.max !== undefined) {
           message = [
             "min" as Operator,
-            inputNode.attributes["max"] as number,
+            inputNode.attributes.max as number,
             message as Statement,
           ];
           (message as Statement).type = ogType;
@@ -585,7 +590,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       const attributesValue = tokens[1];
 
       if (
-        !isNaN(Number.parseFloat(attributesValue)) &&
+        !Number.isNaN(Number.parseFloat(attributesValue)) &&
         !attributesValue.includes(",")
       ) {
         this.setAttribute(attributeName, Number.parseFloat(attributesValue));
@@ -717,7 +722,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.operatorContextType === OperatorContextType.ZEN ||
       this.operatorContextType === OperatorContextType.GL;
     let isCompiling =
-      (zenBase && zenBase.isCompiling && isCompilable) ||
+      (zenBase?.isCompiling && isCompilable) ||
       (this.patch.skipRecompile && isCompilable);
     if (Array.isArray(message) && (message as Statement).node) {
       isCompiling = true;
