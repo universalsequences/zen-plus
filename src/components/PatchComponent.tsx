@@ -781,11 +781,12 @@ const PatchComponent: React.FC<{
         let parentNode = (parent as SubPatch).parentNode;
         //if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
         isFloatingCustom = lockedMode;
+        const size = node.size || { width: 90, height: 90 };
         style = {
-          width: node.size.width + "px",
-          height: node.size.height + "px",
-          maxWidth: node.size.width + "px",
-          maxHeight: node.size.height + "px",
+          width: size.width + "px",
+          height: size.height + "px",
+          maxWidth: size.width + "px",
+          maxHeight: size.height + "px",
           overflow: "hidden",
           margin: "auto",
         };

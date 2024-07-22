@@ -88,7 +88,7 @@ export class PatchImpl implements Patch {
     this.type = PatchType.Zen;
     this.objectNodes = [];
     this.messageNodes = [];
-    this.lockedMode = true;
+    this.lockedMode = false;
 
     // TODO: ensure that this is base patch...
     this.audioContext = audioContext; //new AudioContext({ sampleRate: 44100 });
@@ -143,6 +143,7 @@ export class PatchImpl implements Patch {
   }
 
   startRecording() {
+    console.log("start recording worklet", this.recorderWorklet);
     this.recorderWorklet?.port.postMessage({ message: "clear" });
     this.recorderWorklet?.port.postMessage({ message: "record" });
     this.isRecording = true;

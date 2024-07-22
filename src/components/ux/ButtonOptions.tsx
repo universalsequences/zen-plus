@@ -9,38 +9,44 @@ const ButtonOptions: React.FC<{ objectNode: ObjectNode }> = ({
   objectNode,
 }) => {
   const { sizeIndex } = usePosition();
-  let { width, height } = objectNode.size || { width: 72, height: 18 };
+  const { width, height } = objectNode.size || { width: 72, height: 18 };
   const { lockedMode } = useLocked();
   const { attributesIndex } = useSelection();
-  let [selectedOption, setSelectedOption] = useState(
+  const [selectedOption, setSelectedOption] = useState(
     (objectNode.storedMessage as string) || "",
   );
-  let options = Array.isArray(objectNode.attributes["options"])
-    ? (objectNode.attributes["options"] as number[])
-    : typeof objectNode.attributes["options"] === "number"
-      ? [objectNode.attributes["options"]]
-      : (objectNode.attributes["options"] as string).split(",");
+  let options = Array.isArray(objectNode.attributes.options)
+    ? (objectNode.attributes.options as number[])
+    : typeof objectNode.attributes.options === "number"
+      ? [objectNode.attributes.options]
+      : (objectNode.attributes.options as string).split(",");
 
-  if (options.map((x) => parseFloat(x as string)).every((x) => !isNaN(x))) {
-    options = options.map((x) => parseFloat(x as string));
+  if (
+    options
+      .map((x) => Number.parseFloat(x as string))
+      .every((x) => !Number.isNaN(x))
+  ) {
+    options = options.map((x) => Number.parseFloat(x as string));
   }
-  let { value: message } = useValue();
+  const { value: message } = useValue();
 
   useEffect(() => {
     if (message !== null) {
       setSelectedOption(message as string);
     }
-  }, [message, setSelectedOption]);
+  }, [message]);
 
   const onChangeValue = useCallback(
     (value: string) => {
       setSelectedOption(value);
       objectNode.receive(
         objectNode.inlets[0],
-        isNaN(parseFloat(value)) ? value : parseFloat(value),
+        Number.isNaN(Number.parseFloat(value))
+          ? value
+          : Number.parseFloat(value),
       );
     },
-    [setSelectedOption],
+    [objectNode],
   );
 
   return (
@@ -57,6 +63,7 @@ const ButtonOptions: React.FC<{ objectNode: ObjectNode }> = ({
     >
       {options.map((opt) => (
         <div
+          key={opt}
           onClick={() => {
             if (lockedMode) {
               onChangeValue(opt as string);

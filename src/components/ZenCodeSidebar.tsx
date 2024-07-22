@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { useNetwork } from "wagmi";
 import { parseEther } from "viem";
-import { minify } from "@/lib/nodes/compilation/onCompile";
+import { minify } from "@/lib/nodes/compilation/minify";
 import { db } from "@/lib/db/firebase";
 import {
   documentId,
@@ -21,7 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import MintSound from "./MintSound";
 import { usePatches } from "@/contexts/PatchesContext";
 import Attributes from "./Attributes";
-import { SubPatch, Patch, ObjectNode } from "@/lib/nodes/types";
+import type { SubPatch, Patch, ObjectNode } from "@/lib/nodes/types";
 import { useSwitchNetwork } from "wagmi";
 import { CameraIcon, Cross2Icon, Share1Icon } from "@radix-ui/react-icons";
 import { useSelection } from "@/contexts/SelectionContext";
@@ -56,7 +56,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
   const [screenshot, setScreenshot] = useState<string | null>(null);
 
   const [compressedDSP, setCompressedDSP] = useState<string | null>(null);
-  const [compressedVisuals, setCompressedVisuals] = useState<string | null>(null);
+  const [compressedVisuals, setCompressedVisuals] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     fetch("/api/deflate", {
@@ -103,7 +105,17 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
       };
       addDoc(collection(db, "drops"), document).then((snap) => {});
     }
-  }, [user, chain, dropAddress, name, description, price, numEditions, patches, screenshot]);
+  }, [
+    user,
+    chain,
+    dropAddress,
+    name,
+    description,
+    price,
+    numEditions,
+    patches,
+    screenshot,
+  ]);
 
   useEffect(() => {
     if (!screenshot) {
@@ -135,7 +147,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
         patch = (patch as SubPatch).parentPatch;
       }
     }
-    let params = patch.getAllNodes().filter((x) => (x as ObjectNode).name === "param");
+    let params = patch
+      .getAllNodes()
+      .filter((x) => (x as ObjectNode).name === "param");
     let names = [];
     let minValues = [];
     let maxValues = [];
@@ -170,7 +184,10 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
     }
     return (
       <div className="w-96 relative">
-        <Cross2Icon onClick={hide} className="absolute top-0 cursor-pointer right-3" />
+        <Cross2Icon
+          onClick={hide}
+          className="absolute top-0 cursor-pointer right-3"
+        />
 
         {dropAddress && (
           <div className="h-32">
@@ -189,7 +206,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
               onClick={() => switchNetwork(goerli.id)}
               className={
                 "cursor-pointer " +
-                (chain.id === goerli.id ? "border-bottom text-white " : " text-zinc-400")
+                (chain.id === goerli.id
+                  ? "border-bottom text-white "
+                  : " text-zinc-400")
               }
             >
               goerli
@@ -198,7 +217,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
               onClick={() => switchNetwork(zoraSepolia.id)}
               className={
                 "cursor-pointer " +
-                (chain.id === zoraSepolia.id ? "border-bottom text-white " : " text-zinc-400")
+                (chain.id === zoraSepolia.id
+                  ? "border-bottom text-white "
+                  : " text-zinc-400")
               }
             >
               zora testnet
@@ -207,7 +228,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
               onClick={() => switchNetwork(zora.id)}
               className={
                 "cursor-pointer ml-5 " +
-                (chain.id === zora.id ? "border-bottom text-white " : " text-zinc-400")
+                (chain.id === zora.id
+                  ? "border-bottom text-white "
+                  : " text-zinc-400")
               }
             >
               zora network
@@ -253,7 +276,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
             <input
               style={{ borderBottom: "1px solid #2d2d2d" }}
               value={name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setName(e.target.value)
+              }
               placeholder="Name for work"
               className="px-2 outline-none w-full mb-1 bg-black-clear "
             />
@@ -272,7 +297,11 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 value={price}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   let float = parseFloat(e.target.value);
-                  if (e.target.value === "." || e.target.value === "0." || e.target.value === "") {
+                  if (
+                    e.target.value === "." ||
+                    e.target.value === "0." ||
+                    e.target.value === ""
+                  ) {
                     float = 0;
                   }
                   if (!isNaN(float) && float >= 0) {
@@ -282,7 +311,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 placeholder="Price"
                 className="px-2 outline-none"
               />
-              <div className="absolute bottom-1 text-zinc-400 text-xs right-5 z-30">eth</div>
+              <div className="absolute bottom-1 text-zinc-400 text-xs right-5 z-30">
+                eth
+              </div>
             </div>
             <div className="relative">
               <input
@@ -297,7 +328,9 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
                 placeholder="Editions"
                 className="px-2 outline-none"
               />
-              <div className="absolute text-zinc-400 bottom-1 text-xs right-5 z-30">editions</div>
+              <div className="absolute text-zinc-400 bottom-1 text-xs right-5 z-30">
+                editions
+              </div>
             </div>
             <button
               onClick={() => {
@@ -308,7 +341,8 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
               className={
                 (name === "" || description === ""
                   ? "opacity-80 blur-sm  pointer-events-none"
-                  : "") + " bg-clear-button px-2 py-1  cursor-pointer z-30 active:bg-red-500 mt-3"
+                  : "") +
+                " bg-clear-button px-2 py-1  cursor-pointer z-30 active:bg-red-500 mt-3"
               }
             >
               Mint Onchain
@@ -318,8 +352,8 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
           <div className="flex">
             <ul>
               <li>
-                missing something screenshot && minting && parameters && visualsCode && zenCode &&
-                chain
+                missing something screenshot && minting && parameters &&
+                visualsCode && zenCode && chain
                 {!visualsCode && <div>missing visuals</div>}
                 {!screenshot && <div>missing screenshot</div>}
                 {!parameters && <div>missing parameters</div>}

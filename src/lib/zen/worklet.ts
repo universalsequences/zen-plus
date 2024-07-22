@@ -256,7 +256,6 @@ this.port.postMessage({type: "ack",body: "yo"});
          let {idx, value, time} = e.data.body;
          this.events.push(e.data.body);
        } else if (e.data.type === "init-memory") {
-       console.log('init memory...');
          let {idx, data, time} = e.data.body;
          if (this.wasmModule) {
           if (time) {

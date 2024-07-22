@@ -11,11 +11,11 @@ doc("dict", {
 
 export const dict = (_node: ObjectNode, ...args: Lazy[]) => {
   return (_x: Message) => {
-    let obj: any = typeof _x === "object" ? { ..._x } : {};
+    const obj: any = typeof _x === "object" ? { ..._x } : {};
 
     for (let i = 0; i < args.length - 1; i += 2) {
-      let name = args[i]() as string;
-      let value = args[i + 1]() as any;
+      const name = args[i]() as string;
+      const value = args[i + 1]() as any;
       obj[name] = value;
     }
     return [obj];
@@ -33,6 +33,9 @@ export const dict_get = (_node: ObjectNode, ...indices: Lazy[]) => {
   _node.inlets.forEach((x) => (x.hidden = false));
   return (dict: Message) => {
     let ret = indices.map((index) => (dict as any)[index() as string]);
+    if (ret.every((x) => x === undefined)) {
+      return [];
+    }
     return ret;
   };
 };

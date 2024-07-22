@@ -497,7 +497,7 @@ const InnerObjectNodeComponent: React.FC<{
           )}
         </ContextMenu.Content>
         <ContextMenu.Trigger
-          //disabled={isCustomView}
+          disabled={isCustomView}
           className="ContextMenuTrigger relative"
         >
           <div

@@ -57,7 +57,7 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({
   );
 };
 
-function interpolateHexColors(
+export function interpolateHexColors(
   color1: string,
   color2: string,
   ratio: number,

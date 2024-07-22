@@ -275,9 +275,7 @@ const PatchInner: React.FC<{
                 <ContextMenu.Content
                   color="indigo"
                   className="object-context p-2 rounded-md text-white text-xs"
-                  onMouseDown={(e: React.MouseEvent<ContextMenu.Context>) =>
-                    e.stopPropagation()
-                  }
+                  onMouseDown={(e: any) => e.stopPropagation()}
                 >
                   <ContextMenu.Item
                     onClick={createObjectNode}

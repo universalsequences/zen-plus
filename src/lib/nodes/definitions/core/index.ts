@@ -6,7 +6,7 @@ import { select, route, filterselect } from "./select";
 import { dict, dict_get, dictpack } from "./json";
 import { toggle } from "./toggle";
 import { print } from "./print";
-import { zequencer } from "./zequencer/core";
+import { zequencer_index } from "./zequencer/index";
 import {
   identity,
   filter_neq,
@@ -78,7 +78,7 @@ export const api: API = {
   print,
   dict,
   identity,
-  zequencer,
+  ...zequencer_index,
   fetch: zfetch,
   toggle,
   "key.down": keydown,

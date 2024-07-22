@@ -12,8 +12,10 @@ import type { Statement } from "./definitions/zen/types";
 import type { Slot } from "./definitions/audio/slots";
 import type { BaseNode } from "./BaseNode";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
-import {
+import type {
+  FieldSchema,
   GenericStepData,
+  ParameterLock,
   StepDataSchema,
 } from "./definitions/core/zequencer/types";
 
@@ -63,24 +65,34 @@ export type Message =
   | ObjectNode
   | Message[]
   | MessageObject
-  | MessageObject[];
+  | MessageObject[]
+  | ParameterLock;
 
 export type Lazy = () => Message;
 
 /**
-   A NodeFunction takes a ZObject (node) and some "lazy" args (i.e. the messages
+ * The core logic for an operator
+ */
+export type InstanceFunction = (x: Message) => (Message | undefined)[];
+
+export type BasicNodeFunction = (
+  node: ObjectNode,
+  ...args: Lazy[]
+) => InstanceFunction;
+
+/**
+   A NodeFunction takes an ObjectNode and some "lazy" args (i.e. the messages
    received in the inlets).
    It returns an InstanceFunction, which process "messages" coming in from the "main inlet"
    The InstanceFunction processes these message and returns a list of messages (which are
    routed through the outlet)
 */
-
-export type InstanceFunction = (x: Message) => Message[];
-
-export type NodeFunction = (
-  node: ObjectNode,
-  ...args: Lazy[]
-) => InstanceFunction;
+export type NodeFunction =
+  | BasicNodeFunction
+  | (<Schemas extends readonly FieldSchema[]>(
+      node: ObjectNode,
+      ...args: Lazy[]
+    ) => InstanceFunction);
 
 // a node has inlets and outlets
 
@@ -330,6 +342,7 @@ export type SerializedObjectNode = Identifiable & {
   saveData?: any;
   custom?: any;
   slots?: SerializedObjectNode[];
+  steps?: GenericStepData[];
 };
 
 export type SerializedPatch = Identifiable & {

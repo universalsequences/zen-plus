@@ -6,6 +6,7 @@ import { live_meter } from "./meter";
 import { receive, publishPatchSignals, send } from "./pubsub";
 import type { API } from "@/lib/nodes/context";
 import { type ObjectNode, type Message, ConnectionType } from "../../types";
+import { getRootPatch } from "../../traverse";
 
 doc("speakers~", {
   description: "represents the speakers with outlets per output channel",
@@ -44,12 +45,17 @@ export const speakers = (node: ObjectNode) => {
     );
     node.audioNode = splitter; //node.patch.audioContext.destination;
     splitter.connect(ctxt.destination);
-    if (node.patch.recorderWorklet) {
-      splitter.connect(node.patch.recorderWorklet);
+    const root = getRootPatch(node.patch);
+    if (root.recorderWorklet) {
+      console.log("conecting to worklet");
+      splitter.connect(root.recorderWorklet);
     } else {
       setTimeout(() => {
-        if (node.patch.recorderWorklet) {
-          splitter.connect(node.patch.recorderWorklet);
+        if (root.recorderWorklet) {
+          console.log("connecting to worklet!");
+          splitter.connect(root.recorderWorklet);
+        } else {
+          console.log("no worklet...");
         }
       }, 1000);
     }

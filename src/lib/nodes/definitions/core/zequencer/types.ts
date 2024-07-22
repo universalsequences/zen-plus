@@ -30,8 +30,15 @@ export const TickSchema = v.object({
 
 export type TickMessage = v.InferInput<typeof TickSchema>;
 
+export interface ParameterLock {
+  id: string;
+  value: number;
+}
+
 export interface BaseStepData {
   on: boolean;
+  stepNumber: number;
+  parameterLocks: ParameterLock[];
 }
 
 export const SetFieldForStepSchema = v.object({
@@ -45,3 +52,43 @@ export type SetFieldForStepMessage = v.InferInput<typeof SetFieldForStepSchema>;
 export type GenericStepData = BaseStepData & {
   [key: string]: boolean | number;
 };
+
+export const MoveStepSchema = v.object({
+  fromStepNumber: v.number(),
+  toStepNumber: v.number(),
+  selectedSteps: v.optional(v.array(v.number())),
+});
+
+export type MoveStepMessage = v.InferInput<typeof MoveStepSchema>;
+
+export const DeleteStepSchema = v.object({
+  stepsToDelete: v.array(v.number()),
+});
+
+export type DeleteStepMessage = v.InferInput<typeof DeleteStepSchema>;
+
+// Define the schema for the toggle step message
+export const ToggleStepSchema = v.object({
+  stepNumberToToggle: v.number(),
+});
+
+// Define the type for the toggle step message
+export type ToggleStepMessage = v.InferInput<typeof ToggleStepSchema>;
+
+// Define the schema for the toggle step message
+export const MultiplyPatternLengthSchema = v.object({
+  patternLengthMultiple: v.number(),
+});
+
+// Define the type for the toggle step message
+export type MultiplyPatternLengthMessage = v.InferInput<
+  typeof MultiplyPatternLengthSchema
+>;
+
+// Define the schema for the legato steps message
+export const LegatoStepsSchema = v.object({
+  stepsToLegato: v.array(v.number()),
+});
+
+// Define the type for the legato steps message
+export type LegatoStepsMessage = v.InferOutput<typeof LegatoStepsSchema>;

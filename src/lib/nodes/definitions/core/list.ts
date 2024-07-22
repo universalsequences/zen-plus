@@ -1,3 +1,4 @@
+import { API } from "../../context";
 import type { Lazy, Message, ObjectNode } from "../../types";
 import { doc } from "./doc";
 
@@ -110,9 +111,9 @@ export const list_nth = (node: ObjectNode, list: Lazy) => {
     const nth = message as number;
     const _list = list() as Message[];
     if (Array.isArray(list()) || ArrayBuffer.isView(list())) {
-      let x = [_list[nth] as Message];
-      return x;
+      return [_list[nth] as Message];
     }
+    return [];
   };
 };
 
@@ -152,9 +153,8 @@ export const collect = (node: ObjectNode) => {
       const collected = list;
       list = [];
       return [collected];
-    } else {
-      list.push(_trig);
     }
+    list.push(_trig);
     return [];
   };
 };
@@ -167,8 +167,8 @@ doc("list.max", {
 });
 
 export const list_max = (node: ObjectNode) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (list: Message) => {
     if (!Array.isArray(list)) {
@@ -176,23 +176,22 @@ export const list_max = (node: ObjectNode) => {
     }
 
     let max = Number.NEGATIVE_INFINITY;
-    let maxElement = undefined;
+    let maxElement: Message | undefined = undefined;
     for (const element of list) {
       const el =
-        node.attributes["field"] !== ""
+        node.attributes.field !== ""
           ? (element as any)[node.attributes["field"] as string]
           : element;
 
       if (el > max) {
-        maxElement = element;
+        maxElement = element as Message;
         max = el;
       }
     }
-    if (maxElement) {
+    if (maxElement !== undefined) {
       return [maxElement];
-    } else {
-      return [];
     }
+    return [];
   };
 };
 
@@ -255,12 +254,14 @@ doc("list.duplicate", {
 
 export const list_duplicate = (node: ObjectNode, list: Lazy) => {
   return (trig: Message) => {
-    const _list = list();
+    const _list = list() as Message[];
     if (Array.isArray(_list)) {
       const newList = [];
       for (let j = 0; j < 2; j++) {
         for (let i = 0; i < _list.length; i++) {
-          newList.push(_list[i]);
+          if (_list[i] !== undefined) {
+            newList.push(_list[i]);
+          }
         }
       }
       return [newList];
@@ -269,7 +270,7 @@ export const list_duplicate = (node: ObjectNode, list: Lazy) => {
   };
 };
 
-export const lists = {
+export const lists: API = {
   collect,
   "string.split": string_split,
   "list.set": list_set,

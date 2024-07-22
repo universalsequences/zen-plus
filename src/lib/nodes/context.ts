@@ -17,41 +17,41 @@ import * as onchain_api from "@/lib/nodes/definitions/onchain/index";
 import * as svg_docs from "@/lib/nodes/definitions/svg/doc";
 import * as svg_api from "@/lib/nodes/definitions/svg/index";
 
-import * as docs from "@/lib/docs/docs";
+import type * as docs from "@/lib/docs/docs";
 
 export type API = {
   [x: string]: NodeFunction;
 };
 
 export enum OperatorContextType {
-  ZEN,
-  AUDIO,
-  CORE,
-  WEBGPU,
-  SVG,
-  ONCHAIN,
-  GL,
-  NUMBER,
+  ZEN = 0,
+  AUDIO = 1,
+  CORE = 2,
+  WEBGPU = 3,
+  SVG = 4,
+  ONCHAIN = 5,
+  GL = 6,
+  NUMBER = 7,
 }
 
 export const getAllAPIs = (): API[] => {
-  let zen = getOperatorContext(OperatorContextType.ZEN);
-  let audio = getOperatorContext(OperatorContextType.AUDIO);
-  let core = getOperatorContext(OperatorContextType.CORE);
-  let gpu = getOperatorContext(OperatorContextType.WEBGPU);
-  let svg = getOperatorContext(OperatorContextType.SVG);
-  let gl = getOperatorContext(OperatorContextType.GL);
+  const zen = getOperatorContext(OperatorContextType.ZEN);
+  const audio = getOperatorContext(OperatorContextType.AUDIO);
+  const core = getOperatorContext(OperatorContextType.CORE);
+  const gpu = getOperatorContext(OperatorContextType.WEBGPU);
+  const svg = getOperatorContext(OperatorContextType.SVG);
+  const gl = getOperatorContext(OperatorContextType.GL);
   return [zen.api, audio.api, core.api, gpu.api, svg.api, gl.api];
 };
 
 export const getAllDefinitions = (): docs.API[] => {
-  let zen = getOperatorContext(OperatorContextType.ZEN);
-  let audio = getOperatorContext(OperatorContextType.AUDIO);
-  let core = getOperatorContext(OperatorContextType.CORE);
-  let gpu = getOperatorContext(OperatorContextType.WEBGPU);
-  let svg = getOperatorContext(OperatorContextType.SVG);
-  let onchain = getOperatorContext(OperatorContextType.ONCHAIN);
-  let gl = getOperatorContext(OperatorContextType.GL);
+  const zen = getOperatorContext(OperatorContextType.ZEN);
+  const audio = getOperatorContext(OperatorContextType.AUDIO);
+  const core = getOperatorContext(OperatorContextType.CORE);
+  const gpu = getOperatorContext(OperatorContextType.WEBGPU);
+  const svg = getOperatorContext(OperatorContextType.SVG);
+  const onchain = getOperatorContext(OperatorContextType.ONCHAIN);
+  const gl = getOperatorContext(OperatorContextType.GL);
   return [
     zen.definitions,
     audio.definitions,
@@ -64,14 +64,14 @@ export const getAllDefinitions = (): docs.API[] => {
 };
 
 export const getAllContexts = (): OperatorContext[] => {
-  let zen = getOperatorContext(OperatorContextType.ZEN);
-  let audio = getOperatorContext(OperatorContextType.AUDIO);
-  let core = getOperatorContext(OperatorContextType.CORE);
-  let gpu = getOperatorContext(OperatorContextType.WEBGPU);
-  let svg = getOperatorContext(OperatorContextType.SVG);
-  let onchain = getOperatorContext(OperatorContextType.ONCHAIN);
-  let gl = getOperatorContext(OperatorContextType.GL);
-  let contexts = [zen, audio, core, gpu, svg, onchain, gl];
+  const zen = getOperatorContext(OperatorContextType.ZEN);
+  const audio = getOperatorContext(OperatorContextType.AUDIO);
+  const core = getOperatorContext(OperatorContextType.CORE);
+  const gpu = getOperatorContext(OperatorContextType.WEBGPU);
+  const svg = getOperatorContext(OperatorContextType.SVG);
+  const onchain = getOperatorContext(OperatorContextType.ONCHAIN);
+  const gl = getOperatorContext(OperatorContextType.GL);
+  const contexts = [zen, audio, core, gpu, svg, onchain, gl];
   return contexts;
 };
 

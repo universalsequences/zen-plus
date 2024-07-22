@@ -1,4 +1,4 @@
-import { LoopContext, Context, Arg, Generated, UGen } from "./index";
+import type { LoopContext, Context, Arg, Generated } from "./index";
 import { simdMemo } from "./memo-simd";
 import { uuid } from "./uuid";
 import { memo } from "./memo";
@@ -16,7 +16,7 @@ export const message = (name: string, subType: Arg, value: Arg) => {
       if (context.target === Target.C) {
         code += `
         if ((message_checker++) % 97 == 0) {
-//new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, 0.0);
+new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, 0.0);
          }
 `;
       } else {

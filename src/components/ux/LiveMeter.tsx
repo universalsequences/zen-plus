@@ -207,7 +207,7 @@ function getMeterColor(normalizedValue: number): string {
   return `rgb(${color.r}, ${color.g}, ${color.b})`;
 }
 
-function interpolateColor(
+export function interpolateColor(
   color1: { r: number; g: number; b: number },
   color2: { r: number; g: number; b: number },
   ratio: number,

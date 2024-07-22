@@ -1,4 +1,4 @@
-import { ObjectNode, Message, MessageObject } from "../../types";
+import { ObjectNode, Message, MessageObject, NodeFunction } from "../../types";
 import { publish } from "@/lib/messaging/queue";
 import { doc } from "./doc";
 
@@ -42,7 +42,7 @@ export class Matrix {
   }
 
   fromJSON(x: any) {
-    let _type = this.objectNode.attributes.type;
+    const _type = this.objectNode.attributes.type;
     this.buffer =
       _type === "uint8"
         ? new Uint8Array(x.buffer)
@@ -50,7 +50,7 @@ export class Matrix {
           ? (x.buffer as MessageObject[])
           : new Float32Array(x.buffer);
 
-    let _node = this.objectNode;
+    const _node = this.objectNode;
     _node.buffer = this.buffer;
     _node.send(_node.outlets[0], _node.buffer);
     if (_node.onNewValue) {
@@ -59,56 +59,56 @@ export class Matrix {
   }
 }
 
-export const matrix = (_node: ObjectNode) => {
+const setupMatrixAttributes = (_node: ObjectNode) => {
   let columns = (_node.attributes.columns || 4) as number;
   let rows = (_node.attributes.rows || 4) as number;
 
-  if (!_node.attributes["fillColor"]) {
-    _node.attributes["fillColor"] = "#2ad4bf";
+  if (!_node.attributes.fillColor) {
+    _node.attributes.fillColor = "#2ad4bf";
   }
 
-  if (!_node.attributes["showValue"]) {
-    _node.attributes["showValue"] = false;
+  if (!_node.attributes.showValue) {
+    _node.attributes.showValue = false;
   }
 
-  if (!_node.attributes["fields"]) {
-    _node.attributes["fields"] = "";
+  if (!_node.attributes.fields) {
+    _node.attributes.fields = "";
   }
 
-  if (!_node.attributes["selectedField"]) {
-    _node.attributes["selectedField"] = "";
+  if (!_node.attributes.selectedField) {
+    _node.attributes.selectedField = "";
   }
 
   _node.newAttribute("options", "");
 
   _node.newAttribute("round", false);
 
-  if (!_node.attributes["unit"]) {
-    _node.attributes["unit"] = "";
+  if (!_node.attributes.unit) {
+    _node.attributes.unit = "";
   }
 
-  _node.attributeOptions["type"] = ["float", "uint8", "boolean", "object"];
+  _node.attributeOptions.type = ["float", "uint8", "boolean", "object"];
 
-  if (!_node.attributes["type"]) {
-    _node.attributes["type"] = "float";
+  if (!_node.attributes.type) {
+    _node.attributes.type = "float";
   }
 
-  _node.attributeOptions["type"] = ["float", "uint8", "boolean", "object"];
-  if (!_node.attributes["cornerRadius"]) {
-    _node.attributes["cornerRadius"] = "full";
+  _node.attributeOptions.type = ["float", "uint8", "boolean", "object"];
+  if (!_node.attributes.cornerRadius) {
+    _node.attributes.cornerRadius = "full";
   }
 
-  _node.attributeCallbacks["columns"] = (cols) => {
-    let total = (cols as number) * (_node.attributes.rows as number);
+  _node.attributeCallbacks.columns = (cols) => {
+    const total = (cols as number) * (_node.attributes.rows as number);
     _node.buffer =
-      _node.attributes["type"] === "uint8"
+      _node.attributes.type === "uint8"
         ? new Uint8Array(total)
-        : _node.attributes["type"] === "object"
+        : _node.attributes.type === "object"
           ? newObjectList(_node.buffer as MessageObject[], total)
           : changeLength(_node.buffer as Float32Array, total);
   };
 
-  _node.attributeCallbacks["type"] = (type) => {
+  _node.attributeCallbacks.type = (type) => {
     _node.buffer =
       type === "uint8"
         ? new Uint8Array(columns * rows)
@@ -123,22 +123,22 @@ export const matrix = (_node: ObjectNode) => {
   _node.newAttribute("show", "all");
   _node.newAttribute("disabledColumns", "");
 
-  _node.attributeOptions["ux"] = ["circle", "line"];
+  _node.attributeOptions.ux = ["circle", "line"];
 
-  _node.attributeOptions["show"] = ["all", "row", "column"];
+  _node.attributeOptions.show = ["all", "row", "column"];
 
-  if (!_node.attributes["rowToShow"]) {
-    _node.attributes["rowToShow"] = 0;
+  if (!_node.attributes.rowToShow) {
+    _node.attributes.rowToShow = 0;
   }
 
-  if (!_node.attributes["toggle"]) {
-    _node.attributes["toggle"] = false;
+  if (!_node.attributes.toggle) {
+    _node.attributes.toggle = false;
   }
 
   if (!_node.buffer) {
-    _node.attributes["columns"] = columns;
-    _node.attributes["rows"] = rows;
-    let _type = _node.attributes.type;
+    _node.attributes.columns = columns;
+    _node.attributes.rows = rows;
+    const _type = _node.attributes.type;
     _node.buffer =
       _type === "uint8"
         ? new Uint8Array(columns * rows)
@@ -153,36 +153,41 @@ export const matrix = (_node: ObjectNode) => {
     _node.custom = new Matrix(_node, _node.buffer);
   }
 
-  if (!_node.attributes["min"]) {
-    _node.attributes["min"] = 0;
+  if (!_node.attributes.min) {
+    _node.attributes.min = 0;
   }
-  if (!_node.attributes["max"]) {
-    _node.attributes["max"] = 1;
+  if (_node.attributes.max === undefined) {
+    _node.attributes.max = 1;
   }
 
-  _node.attributeOptions["cornerRadius"] = ["sm", "lg", "full"];
+  _node.attributeOptions.cornerRadius = ["sm", "lg", "full"];
 
+  return { columns, rows };
+};
+
+export const matrix = (_node: ObjectNode) => {
+  let { columns, rows } = setupMatrixAttributes(_node);
   /**
    * format for messages is [rowIndex, columnIndex, value]
    * a message like [0, 2, 1] -> will replace the 0th row 2nd column w/ 1
    */
   let counter = 0;
   return (message: Message) => {
-    if (_node.attributes["columns"] !== columns) {
-      columns = _node.attributes["columns"] as number;
+    if (_node.attributes.columns !== columns) {
+      columns = _node.attributes.columns as number;
       _node.buffer =
-        _node.attributes["type"] === "uint8"
+        _node.attributes.type === "uint8"
           ? new Uint8Array(columns * rows)
-          : _node.attributes["type"] === "object"
+          : _node.attributes.type === "object"
             ? newObjectList(_node.buffer as MessageObject[], columns * rows)
             : new Float32Array(columns * rows);
     }
-    if (_node.attributes["rows"] !== rows) {
-      rows = _node.attributes["rows"] as number;
+    if (_node.attributes.rows !== rows) {
+      rows = _node.attributes.rows as number;
       _node.buffer =
-        _node.attributes["type"] === "uint8"
+        _node.attributes.type === "uint8"
           ? new Uint8Array(columns * rows)
-          : _node.attributes["type"] === "object"
+          : _node.attributes.type === "object"
             ? newObjectList(_node.buffer as MessageObject[], columns * rows)
             : new Float32Array(columns * rows);
     }
@@ -199,45 +204,44 @@ export const matrix = (_node: ObjectNode) => {
         _node.buffer[i] = 0;
       }
     }
+
     // this will convert to float32array ...
     let skipReturn = false;
     if (isOperation(message, "select")) {
-      let tokens = (message as string).split(" ");
-      let selected = parseInt(tokens[1]);
+      const tokens = (message as string).split(" ");
+      const selected = Number.parseInt(tokens[1]);
       _node.saveData = selected;
       skipReturn = true;
     }
 
     if (isOperation(message, "get")) {
-      let tokens = (message as string).split(" ");
-      let num = parseInt(tokens[1]);
+      const tokens = (message as string).split(" ");
+      const num = Number.parseInt(tokens[1]);
+      if (_node.buffer[num] === undefined) {
+        return [];
+      }
       return [undefined, undefined, _node.buffer[num]];
     }
 
     if (isOperation(message, "column")) {
-      let tokens = (message as string).split(" ");
-      let col = parseInt(tokens[1]);
-      let list = [];
+      const tokens = (message as string).split(" ");
+      const col = Number.parseInt(tokens[1]);
+      const list = [];
       for (let i = 0; i < rows; i++) {
-        let idx = i * columns + col;
+        const idx = i * columns + col;
         list.push(_node.buffer[idx]);
       }
       return [undefined, undefined, list];
     }
 
     if (isOperation(message, "set-field")) {
-      let tokens = (message as string).split(" ");
-      let [_op, field, idx, val] = tokens;
-      let _idx = parseInt(idx);
-      let _value = parseFloat(val);
+      const tokens = (message as string).split(" ");
+      const [_op, field, idx, val] = tokens;
+      const _idx = Number.parseInt(idx);
+      const _value = Number.parseFloat(val);
       if (typeof _node.buffer[_idx] === "object") {
         (_node.buffer[_idx] as MessageObject)[field] = _value;
-        console.log(
-          "setting to value=%s",
-          _value,
-          _node.buffer[_idx],
-          _node.buffer,
-        );
+
         (_node.buffer[_idx] as MessageObject) = {
           ...(_node.buffer[_idx] as MessageObject),
         };
@@ -251,14 +255,15 @@ export const matrix = (_node: ObjectNode) => {
 
     let idx = undefined;
     let _value = undefined;
-    let rowChange = undefined;
     let colChange = undefined;
 
     if (Array.isArray(message) && _node.buffer) {
       if (message.length > 3) {
         // replacing the full buffer
         for (let idx = 0; idx < _node.buffer.length; idx++) {
-          _node.buffer[idx] = message[idx] as number;
+          if (message[idx] !== undefined) {
+            _node.buffer[idx] = message[idx] as number;
+          }
         }
       } else {
         // setting the buffer by index
@@ -266,24 +271,28 @@ export const matrix = (_node: ObjectNode) => {
         let [column, row, value] = message as number[];
         _value = value;
         idx = row * (columns as number) + column;
-        if (message.length == 2) {
+        if (message.length === 2) {
           idx = message[0] as number;
           value = message[1] as number;
           _value = value as number;
         }
 
         if (_node.attributes.type === "object") {
-          let selectedField = _node.attributes.selectedField as string;
-          let buffer = _node.buffer as MessageObject[];
+          const selectedField = _node.attributes.selectedField as string;
+          const buffer = _node.buffer as MessageObject[];
           buffer[idx] = { ...buffer[idx] };
-          buffer[idx][selectedField] = value;
+          if (value !== undefined) {
+            buffer[idx][selectedField] = value;
+          }
         } else {
-          _node.buffer[idx] = value;
+          if (value !== undefined) {
+            _node.buffer[idx] = value;
+          }
         }
 
         colChange = [];
         for (let _row = 0; _row < rows; _row++) {
-          let idx = _row * (columns as number) + column;
+          const idx = _row * (columns as number) + column;
           colChange.push(_node.buffer[idx]);
         }
       }
@@ -293,15 +302,14 @@ export const matrix = (_node: ObjectNode) => {
     if (_node.onNewValue) {
       _node.onNewValue(counter++);
     }
-    if (!skipReturn) {
+    if (!skipReturn && _node.buffer) {
       if (idx !== undefined && _value !== undefined && colChange) {
         return [_node.buffer, [idx, _value, colChange]];
-      } else {
-        return [_node.buffer];
       }
-    } else {
-      return [];
+      return [_node.buffer];
     }
+
+    return [];
   };
 };
 
@@ -314,11 +322,11 @@ doc("button", {
 
 export const button = (node: ObjectNode) => {
   node.newAttribute("label", "");
-  if (!node.attributes["fillColor"]) {
-    node.attributes["fillColor"] = "#2f2f2f";
+  if (!node.attributes.fillColor) {
+    node.attributes.fillColor = "#2f2f2f";
   }
-  if (!node.attributes["backgroundColor"]) {
-    node.attributes["backgroundColor"] = "#2f2f2f";
+  if (!node.attributes.backgroundColor) {
+    node.attributes.backgroundColor = "#2f2f2f";
   }
 
   let counter = 0;
@@ -335,9 +343,9 @@ export const button = (node: ObjectNode) => {
 };
 
 const changeLength = (list: Float32Array, size: number): Float32Array => {
-  let newList = new Float32Array(size);
+  const newList = new Float32Array(size);
   for (let i = 0; i < size; i++) {
-    let idx = i % list.length;
+    const idx = i % list.length;
     if (idx < list.length) {
       newList[i] = list[idx];
     }
@@ -349,9 +357,9 @@ const newObjectList = (
   list: MessageObject[],
   size: number,
 ): MessageObject[] => {
-  let newList = new Array(size).fill({} as MessageObject);
+  const newList = new Array(size).fill({} as MessageObject);
   for (let i = 0; i < size; i++) {
-    let idx = i % list.length;
+    const idx = i % list.length;
     if (list[idx]) {
       newList[i] = { ...list[idx] };
     }

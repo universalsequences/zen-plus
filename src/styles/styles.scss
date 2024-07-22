@@ -89,6 +89,9 @@
 .node-component.context-type-1 {
     background-color: #d2ff00;
 }
+.node-component.context-type-1 {
+    background-color: #d2ff00;
+}
 .node-component.context-type-7 {
     background-color: #ffffff;
 }
@@ -308,15 +311,15 @@ body {
         //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
         background-image: radial-gradient(
                 circle at center center,
-                rgba(68, 67, 67, 0.51) 0%,
+                #cbcbcb82 0%,
                 rgba(61, 58, 58, 0.05) 11%,
                 transparent 11%,
                 transparent 100%
             ),
             linear-gradient(
                 90deg,
-                rgb(179 174 174 / 89%),
-                rgb(165 158 158 / 99%)
+                rgba(11, 11, 11, 0.69),
+                rgba(11, 11, 11, 0.69)
             );
     }
 
@@ -674,8 +677,8 @@ div:active {
     //background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf0,#0b0b0bf2);
     background-image: radial-gradient(
             circle at center center,
-            rgb(68 67 67 / 51%) 0%,
-            rgb(61 58 58 / 5%) 11%,
+            #cbcbcb42 0%,
+            rgba(61, 58, 58, 0.05) 11%,
             transparent 11%,
             transparent 100%
         ),

@@ -15,16 +15,17 @@ import Slider from "./Slider";
 import Knob from "./Knob";
 import UMenu from "./UMenu";
 import AttrUI from "./AttrUI";
-import React from "react";
+import type React from "react";
 import NumberTilde from "./NumberTilde";
 import ScopeTilde from "./ScopeTilde";
-import { ObjectNode } from "@/lib/nodes/types";
+import type { ObjectNode } from "@/lib/nodes/types";
 import Audio from "./Audio";
 import Comment from "./Comment";
 import HTMLViewer from "./HTMLViewer";
 import WasmViewer from "./WasmViewer";
 import { LiveMeter } from "./LiveMeter";
 import { Toggle } from "./Toggle";
+import { ZequencerUI } from "./zequencer/ZequencerUI";
 
 export interface NodeProps {
   objectNode: ObjectNode;
@@ -43,6 +44,7 @@ export const index: ComponentIndex = {
   "number~": NumberTilde,
   "scope~": ScopeTilde,
   "slots~": Slots,
+  "zequencer.ui": ZequencerUI,
   ast: ASTViewer,
   buffer: Audio,
   attrui: AttrUI,

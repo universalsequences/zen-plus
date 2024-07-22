@@ -33,7 +33,7 @@ export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
     patch.lockedMode === true
       ? true
       : patch.lockedMode === undefined
-        ? true
+        ? patch.objectNodes.length > 8
         : patch.lockedMode,
   );
 

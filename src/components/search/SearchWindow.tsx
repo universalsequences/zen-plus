@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from "react";
+import type { File } from "@/lib/files/types";
 import { useRevisions } from "@/hooks/useRevisions";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import {
@@ -18,20 +19,21 @@ import { BoxModelIcon, CubeIcon } from "@radix-ui/react-icons";
 import SubPatchImpl from "@/lib/nodes/Subpatch";
 import { usePatches } from "@/contexts/PatchesContext";
 import Tree from "./Tree";
+import type { Patch } from "@/lib/nodes/types";
 
 const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const revisionsRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLInputElement>(null);
   let { basePatch } = usePatches();
-  let [text, setText] = useState("");
-  let [cursor, setCursor] = useState(0);
-  let { fetchPatch } = useStorage();
+  const [text, setText] = useState("");
+  const [cursor, setCursor] = useState(0);
+  const { fetchPatch } = useStorage();
 
   useEffect(() => {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [cursor, setCursor]);
+  }, [cursor]);
 
   useEffect(() => {
     if (ref.current) {
@@ -44,7 +46,7 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
 
   const [revisions, setRevisions] = useState<File[] | null>(null);
   const { fetchRevisions } = useRevisions();
-  let originalBasePatch = basePatch;
+  const originalBasePatch = basePatch;
   if (patchOpened) {
     basePatch = patchOpened;
   }
@@ -58,7 +60,7 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
     setDragging(null);
   }, [setDragging]);
   let counter = 0;
-  let trees = [
+  const trees = [
     <Tree
       dragging={dragging}
       setDragging={setDragging}

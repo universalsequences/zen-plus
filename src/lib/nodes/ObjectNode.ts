@@ -33,6 +33,7 @@ import {
   type SubPatch,
 } from "./types";
 import { type Slot, deserializedSlots } from "./definitions/audio/slots";
+import { GenericStepData } from "./definitions/core/zequencer/types";
 
 interface Constants {
   [x: string]: number | boolean;
@@ -73,6 +74,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   custom?: SerializableCustom;
   definition?: Definition;
   slots?: Slot[];
+  steps?: GenericStepData[];
 
   constructor(patch: Patch, id?: string) {
     super(patch);
@@ -146,11 +148,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
    * @param {string} text - The text input by the user to parse
    */
   parse(
-    text: string,
+    _text: string,
     contextType: OperatorContextType = this.operatorContextType,
     compile = true,
     patchPreset?: SerializedPatch,
   ): boolean {
+    let text = _text;
     const context: OperatorContext = getOperatorContext(contextType);
     this.lastSentMessage = undefined;
     this.operatorContextType = contextType;
@@ -209,7 +212,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
         this.text = name;
 
-        this.setupStaticNumberObject(parsed, compile);
+        this.setupStaticNumberObject(parsed as number, compile);
         return true;
       }
       return false;
@@ -641,16 +644,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         this.operatorContextType === OperatorContextType.ZEN ||
         this.operatorContextType === OperatorContextType.GL
       ) {
-        if (
-          (message as Statement).node &&
-          (message as Statement).node!.id.includes("history")
-        ) {
+        if ((message as Statement).node?.id.includes("history")) {
           return message;
         }
-        if (
-          (lastMessage as Statement).node &&
-          (lastMessage as Statement).node!.id.includes("history")
-        ) {
+        if ((lastMessage as Statement).node?.id.includes("history")) {
           return message;
         }
         // go thru the market messages and this message and add them
@@ -680,7 +677,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
           const newId = Math.round(Math.random() * 1000000);
           statement.node = {
             ...this,
-            id: newId + "_sumation", //(message as Statement).node ? (message as Statement).node!.id + '_sumation' : newId + '_sumation'
+            id: `${newId}_sumation`,
           };
         }
         if (typeof statement === "number") {
@@ -689,7 +686,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         const newId = Math.round(Math.random() * 1000000);
         statement.node = {
           ...this,
-          id: newId + "_sumation",
+          id: `${newId}_sumation`,
         };
 
         this.lastSentMessage = undefined;
@@ -975,6 +972,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       operatorContextType: this.operatorContextType,
     };
 
+    if (this.steps) {
+      json.steps = this.steps;
+    }
+
     if (this.slots) {
       json.slots = this.slots.map((x: ObjectNode) => x.getJSON()).slice(0, 4);
     }
@@ -1035,6 +1036,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
           : _type === "object"
             ? (json.buffer as MessageObject[])
             : new Float32Array(json.buffer as number[]);
+    }
+
+    if (json.steps) {
+      this.steps = json.steps;
     }
 
     if (json.slots) {
