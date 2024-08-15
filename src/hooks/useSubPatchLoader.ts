@@ -1,40 +1,26 @@
 import React, { useCallback } from "react";
-import {
-  OperatorContext,
-  OperatorContextType,
-  getAllContexts,
-  getOperatorContext,
-} from "@/lib/nodes/context";
-import { File } from "@/lib/files/types";
-import { useStorage } from "@/contexts/StorageContext";
+import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatch } from "@/contexts/PatchContext";
 import { Node, SerializedPatch, ObjectNode, IOlet } from "@/lib/nodes/types";
 import { uuid } from "@/lib/uuid/IDGenerator";
 
 export const useSubPatchLoader = (objectNode: ObjectNode) => {
   const { registerConnection } = usePatch();
-  let { fetchSubPatchForDoc, onchainSubPatches } = useStorage();
   const loadSubPatch = useCallback(
     async (serializedSubPatch: SerializedPatch, name: string) => {
-      //let serializedSubPatch = await fetchSubPatchForDoc(id);
       if (serializedSubPatch) {
         if (serializedSubPatch.attributes) {
           if (serializedSubPatch.attributes["type"]) {
-            objectNode.attributes["type"] =
-              serializedSubPatch.attributes["type"];
-            objectNode.subpatch?.setupPatchType(
-              objectNode.attributes.type as string,
-            );
+            objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
+            objectNode.subpatch?.setupPatchType(objectNode.attributes.type as string);
           } else {
             objectNode.attributes["type"] = "zen";
           }
           if (serializedSubPatch.attributes["moduleType"]) {
-            objectNode.attributes["moduleType"] =
-              serializedSubPatch.attributes["moduleType"];
+            objectNode.attributes["moduleType"] = serializedSubPatch.attributes["moduleType"];
           }
           if (serializedSubPatch.attributes["slotview"]) {
-            objectNode.attributes["slotview"] =
-              serializedSubPatch.attributes["slotview"];
+            objectNode.attributes["slotview"] = serializedSubPatch.attributes["slotview"];
           }
         }
 
@@ -71,10 +57,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
           io: string | null;
         }
         // we need to know what "subpatches" are going into and out of this node
-        const getAdjacentNodes = (
-          iolets: IOlet[],
-          isInput: boolean,
-        ): ObjectNode[] => {
+        const getAdjacentNodes = (iolets: IOlet[], isInput: boolean): ObjectNode[] => {
           return iolets.flatMap((iolet) =>
             iolet.connections
               .filter(
@@ -107,18 +90,8 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                   ? y.source.outlets.indexOf(y.sourceOutlet)
                   : objectNode.outlets.indexOf(y.sourceOutlet),
                 io:
-                  getIO(
-                    objectNode,
-                    "in",
-                    y.destinationInlet,
-                    objectNode.inlets,
-                  ) ||
-                  getIO(
-                    y.source as ObjectNode,
-                    "out",
-                    y.sourceOutlet,
-                    y.source.outlets,
-                  ) ||
+                  getIO(objectNode, "in", y.destinationInlet, objectNode.inlets) ||
+                  getIO(y.source as ObjectNode, "out", y.sourceOutlet, y.source.outlets) ||
                   "other",
               };
               y.source.disconnect(y, false);
@@ -127,16 +100,8 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
           );
         };
 
-        let inletConnections = disconnectIO(
-          objectNode,
-          objectNode.inlets,
-          true,
-        );
-        let outletConnections = disconnectIO(
-          objectNode,
-          objectNode.outlets,
-          false,
-        );
+        let inletConnections = disconnectIO(objectNode, objectNode.inlets, true);
+        let outletConnections = disconnectIO(objectNode, objectNode.outlets, false);
 
         if (objectNode.subpatch) {
           objectNode.subpatch.objectNodes = [];
@@ -145,22 +110,13 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
         objectNode.inlets = [];
         objectNode.outlets = [];
 
-        objectNode.parse(
-          name,
-          OperatorContextType.ZEN,
-          true,
-          serializedSubPatch,
-        );
-        objectNode.id = uuid();
+        objectNode.parse(name, OperatorContextType.ZEN, true, serializedSubPatch);
+        //objectNode.id = uuid();
         if (objectNode.subpatch) {
           objectNode.subpatch.id = uuid();
         }
 
-        const getMatchingIO = (
-          ioType: string,
-          node: ObjectNode,
-          name: string,
-        ): ObjectNode[] => {
+        const getMatchingIO = (ioType: string, node: ObjectNode, name: string): ObjectNode[] => {
           if (!node.subpatch) return [];
           return node.subpatch.objectNodes.filter(
             (x) => x.name === name && x.attributes.io === ioType,
@@ -200,9 +156,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                   );
                   let secondaryMatches = matchingIONodes.filter((x) => {
                     let ionumber = (x.arguments[0] as number) - 1;
-                    return !ioletsMatched.includes(
-                      objectNode.outlets[ionumber],
-                    );
+                    return !ioletsMatched.includes(objectNode.outlets[ionumber]);
                   });
 
                   for (let match of [...exactMatches, ...matchingIONodes]) {
@@ -279,11 +233,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                 if (ioNode) {
                   io = ioNode.attributes.io as string;
                 }
-                let matchingIONodes = getMatchingIO(
-                  io,
-                  node as ObjectNode,
-                  "out",
-                );
+                let matchingIONodes = getMatchingIO(io, node as ObjectNode, "out");
                 for (let match of matchingIONodes) {
                   // possible match: "in 5 @io goal_type"
                   let outletNumber = (match.arguments[0] as number) - 1;
@@ -305,11 +255,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                 if (ioNode) {
                   io = ioNode.attributes.io as string;
                 }
-                let matchingIONodes = getMatchingIO(
-                  io,
-                  node as ObjectNode,
-                  "in",
-                );
+                let matchingIONodes = getMatchingIO(io, node as ObjectNode, "in");
                 for (let match of matchingIONodes) {
                   // possible match: "in 5 @io goal_type"
                   let inletNumber = (match.arguments[0] as number) - 1;
@@ -333,8 +279,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
           for (let i = 0; i < iolets.length; i++) {
             let iolet = iolets[i];
             let ioNode = objectNode.subpatch!.objectNodes.find(
-              (x) =>
-                x.name === (isInput ? "in" : "out") && x.arguments[0] === i + 1,
+              (x) => x.name === (isInput ? "in" : "out") && x.arguments[0] === i + 1,
             );
             if (!ioNode) {
               continue;
@@ -346,11 +291,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
             for (let node of adjacent) {
               let foundMatch = false;
               if (isInput) {
-                let matchingIONodes = getMatchingIO(
-                  io,
-                  node as ObjectNode,
-                  "out",
-                );
+                let matchingIONodes = getMatchingIO(io, node as ObjectNode, "out");
                 for (let match of matchingIONodes) {
                   // possible match: "in 5 @io goal_type"
                   let outletNumber = (match.arguments[0] as number) - 1;
@@ -369,11 +310,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
                   }
                 }
               } else {
-                let matchingIONodes = getMatchingIO(
-                  io,
-                  node as ObjectNode,
-                  "in",
-                );
+                let matchingIONodes = getMatchingIO(io, node as ObjectNode, "in");
                 for (let match of matchingIONodes) {
                   // possible match: "in 5 @io goal_type"
                   let inletNumber = (match.arguments[0] as number) - 1;

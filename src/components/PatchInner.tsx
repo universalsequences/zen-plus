@@ -129,7 +129,8 @@ const PatchInner: React.FC<{
     useEffect(() => {
       if (lockedMode) {
         setDraggingNode(null);
-        setSelectedNodes([]);
+        console.log("inner set selected nodes...");
+        //setSelectedNodes([]);
       }
     }, [lockedMode, setSelectedNodes, setDraggingNode]);
 

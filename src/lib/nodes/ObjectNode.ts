@@ -3,17 +3,9 @@ import { registerUUID, uuid } from "@/lib/uuid/IDGenerator";
 import pako from "pako";
 import type { Definition } from "../docs/docs";
 import { BaseNode } from "./BaseNode";
-import {
-  type OperatorContext,
-  OperatorContextType,
-  getOperatorContext,
-} from "./context";
+import { type OperatorContext, OperatorContextType, getOperatorContext } from "./context";
 import { createGLFunction } from "./definitions/create";
-import type {
-  CompoundOperator,
-  Operator,
-  Statement,
-} from "./definitions/zen/types";
+import type { CompoundOperator, Operator, Statement } from "./definitions/zen/types";
 import type { MessageNode } from "./types";
 import type { Node, SerializableCustom, SerializedPatch, Size } from "./types";
 
@@ -50,6 +42,7 @@ const CONSTANTS: Constants = {
 export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   id: Identifier;
   isSpecialCase?: boolean;
+
   created?: boolean;
   isInletSumSpecialCase?: boolean;
   needsLoad?: boolean;
@@ -163,7 +156,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     let name = tokens[0];
     const argumentTokens = tokens.slice(1);
 
-    // let patchPreset: SerializedPatch | null = this.getPatchPresetIfAny(name);
     if (patchPreset) {
       text = text.replace(name, "zen");
       name = "zen";
@@ -184,10 +176,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
           this.attributeOptions[opt] = [];
         }
         this.attributeOptions[opt] = Array.from(
-          new Set([
-            ...this.attributeOptions[opt],
-            ...definition.attributeOptions[opt],
-          ]),
+          new Set([...this.attributeOptions[opt], ...definition.attributeOptions[opt]]),
         );
       }
     }
@@ -200,10 +189,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       if (name in CONSTANTS || !Number.isNaN(Number.parseFloat(name))) {
         const parsed = CONSTANTS[name] || Number.parseFloat(name);
         // an object with just a number becomes a static number object (all it does is send its number along)
-        if (
-          tokens.length > 1 &&
-          tokens.every((x) => !Number.isNaN(Number.parseFloat(x)))
-        ) {
+        if (tokens.length > 1 && tokens.every((x) => !Number.isNaN(Number.parseFloat(x)))) {
           const array: number[] = tokens.map((x) => Number.parseFloat(x));
           this.text = text;
           this.setupStaticListObject(array, compile);
@@ -218,10 +204,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       return false;
     }
 
-    if (
-      !context.api[name] &&
-      this.operatorContextType !== OperatorContextType.GL
-    ) {
+    if (!context.api[name] && this.operatorContextType !== OperatorContextType.GL) {
       return false;
     }
 
@@ -251,11 +234,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       definition.defaultValue as number | undefined,
     );
 
-    const lazyArgs: Lazy[] = this.generateIO(
-      definition,
-      parsedArguments,
-      argumentTokens.length,
-    );
+    const lazyArgs: Lazy[] = this.generateIO(definition, parsedArguments, argumentTokens.length);
     let nodeFunction: NodeFunction = context.api[name];
 
     if (!nodeFunction && this.operatorContextType === OperatorContextType.GL) {
@@ -288,10 +267,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.subpatch.objectNodes = [];
       if ((patchPreset as any).compressed) {
         // Convert the Base64 string back to a binary buffer
-        const binaryBuffer = Buffer.from(
-          (patchPreset as any).compressed,
-          "base64",
-        );
+        const binaryBuffer = Buffer.from((patchPreset as any).compressed, "base64");
         // Decompress the data using Pako
         const decompressed = pako.inflate(binaryBuffer, { to: "string" });
         const json = JSON.parse(decompressed);
@@ -339,11 +315,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.isInletSumSpecialCase = false;
     }
 
-    if (
-      this.needsLoad &&
-      this.inlets[0] &&
-      this.operatorContextType === OperatorContextType.CORE
-    ) {
+    if (this.needsLoad && this.inlets[0] && this.operatorContextType === OperatorContextType.CORE) {
       // need to ensure things are straight with this
       this.receive(this.inlets[0], "bang");
     }
@@ -380,8 +352,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     parsedArguments: (Message | undefined)[],
     numberOfParsedArguments: number,
   ): Lazy[] {
-    const { numberOfInlets, numberOfOutlets, outletNames, inletNames } =
-      definition;
+    const { numberOfInlets, numberOfOutlets, outletNames, inletNames } = definition;
     const _numberOfOutlets =
       typeof numberOfOutlets === "function"
         ? numberOfOutlets(numberOfParsedArguments + 1)
@@ -443,9 +414,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       if (!this.outlets[i]) {
         // no inlet yet, so we need to create one
         const outletType =
-          this.name === "zen" && !this.patch.isZen
-            ? ConnectionType.AUDIO
-            : definition.outletType;
+          this.name === "zen" && !this.patch.isZen ? ConnectionType.AUDIO : definition.outletType;
         if (outletNames && outletNames[i]) {
           this.newOutlet(outletNames[i], outletType);
         } else {
@@ -500,9 +469,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     for (let i = 0; i < Math.max(tokens.length, numberOfInlets); i++) {
       let parsed: Message =
-        CONSTANTS[tokens[i]] !== undefined
-          ? CONSTANTS[tokens[i]]
-          : Number.parseFloat(tokens[i]);
+        CONSTANTS[tokens[i]] !== undefined ? CONSTANTS[tokens[i]] : Number.parseFloat(tokens[i]);
       if (tokens[i] !== undefined && Number.isNaN(parsed)) {
         parsed = tokens[i];
       }
@@ -525,19 +492,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       if (inputNode?.outlets[0]) {
         const ogType = (message as Statement).type;
         if (inputNode.attributes.min !== undefined) {
-          message = [
-            "max" as Operator,
-            inputNode.attributes.min as number,
-            message as Statement,
-          ];
+          message = ["max" as Operator, inputNode.attributes.min as number, message as Statement];
           (message as Statement).type = ogType;
         }
         if (inputNode.attributes.max !== undefined) {
-          message = [
-            "min" as Operator,
-            inputNode.attributes.max as number,
-            message as Statement,
-          ];
+          message = ["min" as Operator, inputNode.attributes.max as number, message as Statement];
           (message as Statement).type = ogType;
         }
         const outlet = inputNode.outlets[0];
@@ -551,6 +510,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
   newInlet(name?: string, c?: ConnectionType) {
     const t = this.operatorContextType;
+
     const calculated: ConnectionType =
       t === OperatorContextType.AUDIO
         ? ConnectionType.AUDIO
@@ -592,10 +552,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       }
       const attributesValue = tokens[1];
 
-      if (
-        !Number.isNaN(Number.parseFloat(attributesValue)) &&
-        !attributesValue.includes(",")
-      ) {
+      if (!Number.isNaN(Number.parseFloat(attributesValue)) && !attributesValue.includes(",")) {
         this.setAttribute(attributeName, Number.parseFloat(attributesValue));
       } else {
         this.setAttribute(attributeName, attributesValue || "");
@@ -611,10 +568,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     if (typeof message === "string") {
       return message;
     }
-    if (
-      (this.name === "accum" && this.inlets.indexOf(inlet) >= 2) ||
-      this.isInletSumSpecialCase
-    ) {
+    if ((this.name === "accum" && this.inlets.indexOf(inlet) >= 2) || this.isInletSumSpecialCase) {
       return message;
     }
 
@@ -656,8 +610,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
           nodes.add(fromNode);
         }
         let statement = message as Statement;
-        const operator =
-          this.operatorContextType === OperatorContextType.GL ? "+" : "add";
+        const operator = this.operatorContextType === OperatorContextType.GL ? "+" : "add";
         for (const markedMessage of inlet.markedMessages || []) {
           const node = markedMessage.node;
           if (node && nodes.has(node)) {
@@ -666,13 +619,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
           if (node) {
             nodes.add(node);
           }
-          const type =
-            statement.type || (markedMessage.message as Statement).type;
-          statement = [
-            operator as Operator,
-            statement,
-            markedMessage.message as Statement,
-          ];
+          const type = statement.type || (markedMessage.message as Statement).type;
+          statement = [operator as Operator, statement, markedMessage.message as Statement];
           statement.type = type;
           const newId = Math.round(Math.random() * 1000000);
           statement.node = {
@@ -719,8 +667,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.operatorContextType === OperatorContextType.ZEN ||
       this.operatorContextType === OperatorContextType.GL;
     let isCompiling =
-      (zenBase?.isCompiling && isCompilable) ||
-      (this.patch.skipRecompile && isCompilable);
+      (zenBase?.isCompiling && isCompilable) || (this.patch.skipRecompile && isCompilable);
     if (Array.isArray(message) && (message as Statement).node) {
       isCompiling = true;
     }
@@ -730,10 +677,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.operatorContextType === OperatorContextType.ZEN ||
       this.operatorContextType === OperatorContextType.GL
     ) {
-      if (
-        typeof message === "number" ||
-        (this.name !== "zen" && this.name !== "out")
-      ) {
+      if (typeof message === "number" || (this.name !== "zen" && this.name !== "out")) {
         isCompiling = true;
       }
 
@@ -792,10 +736,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
           ).length,
       );
       if (typeof message !== "string" && _inlets.length > 0) {
-        if (
-          (this.name === "accum" && indexOf >= 2) ||
-          this.isInletSumSpecialCase
-        ) {
+        if ((this.name === "accum" && indexOf >= 2) || this.isInletSumSpecialCase) {
         } else {
           return true;
         }
@@ -820,18 +761,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       return;
     }
 
-    if (
-      this.operatorContextType === OperatorContextType.CORE &&
-      this.name !== "attrui"
-    ) {
+    if (this.operatorContextType === OperatorContextType.CORE && this.name !== "attrui") {
       const zenBase = this.patch.getZenBase();
       if (zenBase && zenBase.isCompiling) {
-        if (
-          this.name === "*" ||
-          this.name === "+" ||
-          this.name === "/" ||
-          this.name === "-"
-        ) {
+        if (this.name === "*" || this.name === "+" || this.name === "/" || this.name === "-") {
           // return;
         }
       }
@@ -868,11 +801,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.arguments[argumentNumber] = message;
     }
 
-    if (
-      this.definition &&
-      !this.definition.isHot &&
-      this.inlets.indexOf(inlet) > 0
-    ) {
+    if (this.definition && !this.definition.isHot && this.inlets.indexOf(inlet) > 0) {
       return;
     }
 
@@ -902,15 +831,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       const ret: Message[] = this.fn(message);
       const b = new Date().getTime();
       if (b - a > 25) {
-        console.log(
-          "function %s id=%s took %s ms",
-          this.name,
-          this.id,
-          b - a,
-          a,
-          b,
-          this,
-        );
+        console.log("function %s id=%s took %s ms", this.name, this.id, b - a, a, b, this);
       }
 
       for (let i = 0; i < ret.length; i++) {
@@ -1068,18 +989,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     if (json.subpatch) {
       this.parse(
-        json.text.includes("zen") && json.text.includes("@type")
-          ? json.text
-          : "zen",
+        json.text.includes("zen") && json.text.includes("@type") ? json.text : "zen",
         OperatorContextType.ZEN,
         false,
       );
     } else {
-      this.parse(
-        json.text,
-        json.operatorContextType || OperatorContextType.ZEN,
-        false,
-      );
+      this.parse(json.text, json.operatorContextType || OperatorContextType.ZEN, false);
     }
     if (json.numberOfOutlets) {
       for (let i = 0; i < json.numberOfOutlets; i++) {

@@ -18,31 +18,19 @@ import AutoCompletes from "./AutoCompletes";
 import { index, type NodeProps } from "./ux/index";
 import Attributes from "./Attributes";
 import { ContextMenu, useThemeContext } from "@radix-ui/themes";
-import {
-  type SizeIndex,
-  usePosition,
-  type DraggingNode,
-} from "@/contexts/PositionContext";
+import { type SizeIndex, usePosition, type DraggingNode } from "@/contexts/PositionContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { useLocked } from "@/contexts/LockedContext";
 import { useSubPatchLoader } from "@/hooks/useSubPatchLoader";
 import PositionedComponent from "./PositionedComponent";
-import type {
-  ObjectNode,
-  Patch,
-  Coordinate,
-  Size,
-  MessageNode,
-} from "@/lib/nodes/types";
+import type { ObjectNode, Patch, Coordinate, Size, MessageNode } from "@/lib/nodes/types";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useAutoComplete } from "@/hooks/useAutoComplete";
 import { usePatch } from "@/contexts/PatchContext";
 import CustomSubPatchView from "./CustomSubPatchView";
 import { useStorage } from "@/contexts/StorageContext";
 
-const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { setSelection, selectedNodes, setSelectedNodes } = useSelection();
   const { updatePosition, sizeIndexRef } = usePosition();
 
@@ -50,14 +38,24 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({
   const { lockedMode } = useLocked();
   const lockedModeRef = useRef(lockedMode);
   const errorMessage =
-    objectNode.operatorContextType === OperatorContextType.CORE
-      ? undefined
-      : value;
+    objectNode.operatorContextType === OperatorContextType.CORE ? undefined : value;
   useEffect(() => {
     lockedModeRef.current = lockedMode;
   }, [lockedMode]);
 
   let isSelected = selectedNodes.includes(objectNode);
+
+  useEffect(() => {
+    if (isSelected) {
+      const nodes = objectNode.subpatch?.objectNodes.filter((x) => x.name === "onPatchSelect");
+      if (nodes) {
+        for (const n of nodes) {
+          n.receive(n.inlets[0], "bang");
+        }
+      }
+    }
+  }, [isSelected, objectNode]);
+
   let out = React.useMemo(() => {
     return (
       <InnerObjectNodeComponent
@@ -72,14 +70,7 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({
         typeError={errorMessage as TypeError | undefined}
       />
     );
-  }, [
-    objectNode,
-    setSelectedNodes,
-    isSelected,
-    setSelection,
-    errorMessage,
-    objectNode.size,
-  ]);
+  }, [objectNode, setSelectedNodes, isSelected, setSelection, errorMessage, objectNode.size]);
 
   return out;
 };
@@ -92,9 +83,7 @@ const InnerObjectNodeComponent: React.FC<{
   lockedModeRef: React.MutableRefObject<boolean>;
   sizeIndexRef: React.MutableRefObject<SizeIndex>;
   updatePosition: (id: string, position: Coordinate) => void;
-  setSelectedNodes: React.Dispatch<
-    React.SetStateAction<(ObjectNode | MessageNode)[]>
-  >;
+  setSelectedNodes: React.Dispatch<React.SetStateAction<(ObjectNode | MessageNode)[]>>;
   objectNode: ObjectNode;
 }> = ({
   typeError,
@@ -136,11 +125,7 @@ const InnerObjectNodeComponent: React.FC<{
     }
   }, [objectNode]);
 
-  const { setAutoCompletes, autoCompletes } = useAutoComplete(
-    text,
-    objectNode,
-    editing,
-  );
+  const { setAutoCompletes, autoCompletes } = useAutoComplete(text, objectNode, editing);
 
   const onChange = useCallback(
     (value: string) => {
@@ -157,25 +142,9 @@ const InnerObjectNodeComponent: React.FC<{
       }
       let success = true;
       if (file) {
-        //let serializedSubPatch = await fetchSubPatchForDoc(id);
         let serializedSubPatch = await fetchSubPatchForDoc(file.id);
         if (serializedSubPatch) {
           await loadSubPatch(serializedSubPatch, file.name);
-          /*
-                    if (serializedSubPatch.attributes && serializedSubPatch.attributes["type"]) {
-                        objectNode.attributes["type"] = serializedSubPatch.attributes["type"];
-                    }
-                    if (serializedSubPatch.attributes && serializedSubPatch.attributes["moduleType"]) {
-                        objectNode.attributes["moduleType"] = serializedSubPatch.attributes["moduleType"];
-                    }
-                    if (serializedSubPatch.attributes && serializedSubPatch.attributes["slotview"]) {
-                        objectNode.attributes["slotview"] = serializedSubPatch.attributes["slotview"];
-                    }
-                    success = objectNode.parse(text, context.type, true, serializedSubPatch);
-                    if (objectNode.subpatch) {
-                        objectNode.subpatch.recompileGraph();
-                    }
-                    */
         } else {
           success = false;
         }
@@ -221,11 +190,7 @@ const InnerObjectNodeComponent: React.FC<{
           if (objectNode.text.split(" ")[0] === name) {
             name = objectNode.text;
           }
-          enterText(
-            name,
-            autoCompletes[selected].context,
-            autoCompletes[selected].definition.file,
-          );
+          enterText(name, autoCompletes[selected].context, autoCompletes[selected].definition.file);
         } else {
           enterText(text);
         }
@@ -271,28 +236,16 @@ const InnerObjectNodeComponent: React.FC<{
     if (objectNode.name === "zen") {
       let attr = "";
 
-      if (
-        objectNode.subpatch &&
-        objectNode.subpatch.patchType === OperatorContextType.ZEN
-      ) {
+      if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.ZEN) {
         attr = " @type zen";
       }
-      if (
-        objectNode.subpatch &&
-        objectNode.subpatch.patchType === OperatorContextType.GL
-      ) {
+      if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.GL) {
         attr = " @type gl";
       }
-      if (
-        objectNode.subpatch &&
-        objectNode.subpatch.patchType === OperatorContextType.CORE
-      ) {
+      if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.CORE) {
         attr = " @type core";
       }
-      if (
-        objectNode.subpatch &&
-        objectNode.subpatch.patchType === OperatorContextType.AUDIO
-      ) {
+      if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.AUDIO) {
         attr = " @type audio";
       }
       copied.parse("zen" + attr);
@@ -313,8 +266,7 @@ const InnerObjectNodeComponent: React.FC<{
         copied.size = { ...size };
       }
     }
-    copied.position.x =
-      objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
+    copied.position.x = objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
     copied.position.y = objectNode.position.y;
     newObjectNode(copied, copied.position);
     updatePosition(copied.id, copied.position);
@@ -324,11 +276,7 @@ const InnerObjectNodeComponent: React.FC<{
   useEffect(() => {
     // TODO: dont set timeout... this is a hack
     setTimeout(() => {
-      if (
-        inputRef.current &&
-        editing &&
-        (clicked.current || objectNode.created)
-      ) {
+      if (inputRef.current && editing && (clicked.current || objectNode.created)) {
         inputRef.current.focus();
         inputRef.current.select();
         objectNode.created = false;
@@ -381,6 +329,7 @@ const InnerObjectNodeComponent: React.FC<{
             clicked.current = true;
             setEditing(true);
           }
+          console.log('setSelectedNodes([])')
           setSelectedNodes([]);
         }
       } else {
@@ -407,16 +356,7 @@ const InnerObjectNodeComponent: React.FC<{
         }
       }
     },
-    [
-      editing,
-      objectNode,
-      isSelected,
-      setSelectedNodes,
-      setEditing,
-      setPatch,
-      setPatches,
-      patches,
-    ],
+    [editing, objectNode, isSelected, setSelectedNodes, setEditing, setPatch, setPatches, patches],
   );
 
   let CustomComponent = (objectNode.name
@@ -439,10 +379,7 @@ const InnerObjectNodeComponent: React.FC<{
       text={parsedText}
       lockedModeRef={lockedModeRef}
       isError={
-        (!CustomComponent &&
-          typeError &&
-          !(typeError as TypeSuccess).success) ||
-        error !== null
+        (!CustomComponent && typeError && !(typeError as TypeSuccess).success) || error !== null
       }
       skipOverflow={
         ux !== undefined ||
@@ -496,10 +433,7 @@ const InnerObjectNodeComponent: React.FC<{
             </ContextMenu.Item>
           )}
         </ContextMenu.Content>
-        <ContextMenu.Trigger
-          disabled={isCustomView}
-          className="ContextMenuTrigger relative"
-        >
+        <ContextMenu.Trigger disabled={isCustomView} className="ContextMenuTrigger relative">
           <div
             ref={ref}
             onMouseDown={onMouseDown}
@@ -551,8 +485,7 @@ const InnerObjectNodeComponent: React.FC<{
                     selected={selected}
                     autoCompletes={autoCompletes}
                     selectOption={(x: ContextDefinition) => {
-                      let name = (x.definition.alias ||
-                        x.definition.name) as string;
+                      let name = (x.definition.alias || x.definition.name) as string;
                       if (text.split(" ")[0] === name) {
                         name = text;
                       }
@@ -562,8 +495,7 @@ const InnerObjectNodeComponent: React.FC<{
                     }}
                   />
                 )}
-                {((typeError && !(typeError as TypeSuccess).success) ||
-                  (editing && error)) && (
+                {((typeError && !(typeError as TypeSuccess).success) || (editing && error)) && (
                   <div
                     style={{ left: "0px", bottom: "-20px" }}
                     className="absolute bg-red-500 text-white rounded-lg px-2"

@@ -1,7 +1,7 @@
 "use client";
 import Skeleton from "./files/Skeleton";
 import Files from "@/components/files/Files";
-import { File } from "@/lib/files/types";
+import type { File } from "@/lib/files/types";
 import { NavOption, useNav } from "@/contexts/NavContext";
 import { Landing } from "./landing/Landing";
 import Image from "next/image";
@@ -18,7 +18,7 @@ import { PatchesProvider } from "@/contexts/PatchesContext";
 import { SelectionProvider } from "@/contexts/SelectionContext";
 import PatchesComponent from "@/components/PatchesComponent";
 import { Theme } from "@radix-ui/themes";
-import {
+import type {
   Patch,
   IOlet,
   MessageNode,
@@ -30,11 +30,7 @@ import { PatchImpl } from "@/lib/nodes/Patch";
 import "@/styles/radix.scss";
 import "@rainbow-me/rainbowkit/styles.css";
 
-import {
-  getDefaultWallets,
-  RainbowKitProvider,
-  darkTheme,
-} from "@rainbow-me/rainbowkit";
+import { getDefaultWallets, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { zoraSepolia } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
@@ -46,10 +42,7 @@ import { WindowsProvider } from "@/contexts/WindowsContext";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia],
-  [
-    infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
-    publicProvider(),
-  ],
+  [infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }), publicProvider()],
 );
 
 const { connectors } = getDefaultWallets({
@@ -69,10 +62,11 @@ interface Props {
 }
 
 export default function App(props: Props) {
-  let [basePatch, setBasePatch] = useState<Patch | null>(null);
-  let [fileToOpen, setFileToOpen] = useState<any | null>(null);
-  let [fileOpened, setFileOpened] = useState<any | null>(null);
+  const [basePatch, setBasePatch] = useState<Patch | null>(null);
+  const [fileToOpen, setFileToOpen] = useState<any | null>(null);
+  const [fileOpened, setFileOpened] = useState<any | null>(null);
   const { fetchProject } = useStorage();
+
   useEffect(() => {
     setBasePatch(new PatchImpl(new AudioContext({ sampleRate: 44100 })));
   }, [setBasePatch]);
@@ -146,16 +140,14 @@ export default function App(props: Props) {
               <WorkerProvider patch={basePatch}>
                 <TilesProvider>
                   <main className="flex min-h-screen flex-col h-full w-full">
-                    <PatchesComponent
-                      fileToOpen={fileToOpen}
-                      setFileToOpen={setFileToOpen}
-                    />
+                    <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
                   </main>
                 </TilesProvider>
               </WorkerProvider>
             </WindowsProvider>
           </PatchesProvider>
         </SelectionProvider>
+
       </MessageProvider>
     </SettingsProvider>
   );

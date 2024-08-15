@@ -1,12 +1,7 @@
 import { usePatches } from "@/contexts/PatchesContext";
 import type Subpatch from "@/lib/nodes/Subpatch";
 import type { Coordinate, Patch, SubPatch } from "@/lib/nodes/types";
-import {
-  CodeIcon,
-  Cross2Icon,
-  CubeIcon,
-  GroupIcon,
-} from "@radix-ui/react-icons";
+import { CodeIcon, Cross2Icon, CubeIcon, GroupIcon } from "@radix-ui/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import PatchWrapper from "./PatchWrapper";
@@ -38,7 +33,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
   );
 
   useEffect(() => {
-    setSelectedPatch(patch);
+    // setSelectedPatch(patch);
   }, [patch, setSelectedPatch]);
 
   const onMouseMove = useCallback(
@@ -91,23 +86,23 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
       style={{
         width: width + 8,
         height: Math.max(32, height) + 22,
-        left: coord.x,
-        top: coord.y,
+        //left: coord.x,
+        //top: coord.y,
         zIndex: selectedPatch === patch ? 100000000000000 : 1000000000,
       }}
-      className={`${selectedPatch === patch ? " selected-window " : ""} rounded-xl absolute flex flex-col patch-window bg-black select-none shadow-lg border border-zinc-600`}
+      className={`${selectedPatch === patch ? " selected-window " : ""} rounded-xl flex-shrink-0 absolutexy relative flex flex-col patch-window bg-black select-none shadow-lg border border-zinc-600`}
       ref={ref}
     >
       <div
         onMouseDown={onMouseDown}
         className={`h-5 w-full rounded-t-xl flex ${selectedPatch === patch ? "bg-zinc-800" : "bg-zinc-950"}`}
       >
-        <GroupIcon
-          onClick={() => expand()}
-          className="z-30 ml-3 w-3 h-3 mt-1 cursor-pointer"
-        />
+        <GroupIcon onClick={() => expand()} className="z-30 ml-3 w-3 h-3 mt-1 cursor-pointer" />
         <Cross2Icon
-          onClick={() => removePatchWindow(patch)}
+          onMouseDown={(e: any) => {
+            e.stopPropagation();
+            removePatchWindow(patch);
+          }}
           className="z-30 ml-2 w-4 h-4 mt-0.5 mr-2 cursor-pointer"
         />
         <div className="z-0 absolute left-0 w-full flex">
@@ -117,9 +112,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
             {patch.name}
           </div>
         </div>
-        <div className="absolute right-3 text-xs text-zinc-500 py-0.5">
-          {baseName}
-        </div>
+        <div className="absolute right-3 text-xs text-zinc-500 py-0.5">{baseName}</div>
       </div>
       <PatchWrapper
         index={0}

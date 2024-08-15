@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useState,
-  useContext,
-  useRef,
-  useCallback,
-  useEffect,
-} from "react";
+import { createContext, useState, useContext, useRef, useCallback, useEffect } from "react";
 import type React from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
@@ -27,8 +20,7 @@ const ValueContext = createContext<IValueContext | undefined>(undefined);
 
 export const useValue = (): IValueContext => {
   const context = useContext(ValueContext);
-  if (!context)
-    throw new Error("useValueHandler must be used within ValueProvider");
+  if (!context) throw new Error("useValueHandler must be used within ValueProvider");
   return context;
 };
 
@@ -41,17 +33,8 @@ export const ValueProvider: React.FC<Props> = ({ node, children }) => {
   const { presentationMode } = usePosition();
 
   useEffect(() => {
-    if (selectedPatch === patch || isCustomView) {
-      nodeToWatch.onNewValue = setValue;
-    }
-  }, [
-    nodeToWatch,
-    patches,
-    selectedPatch,
-    patch,
-    isCustomView,
-    presentationMode,
-  ]);
+    nodeToWatch.onNewValue = setValue;
+  }, [nodeToWatch, patches, selectedPatch, patch, isCustomView, presentationMode]);
 
   return (
     <ValueContext.Provider

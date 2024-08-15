@@ -1,22 +1,10 @@
 import { replaceAll } from "@/lib/zen/replaceAll";
 
 import type { Operator, Statement } from "../definitions/zen/types";
-import {
-  ConnectionType,
-  type Node,
-  type ObjectNode,
-  type Patch,
-  type SubPatch,
-} from "../types";
+import { ConnectionType, type Node, type ObjectNode, type Patch, type SubPatch } from "../types";
 import { compileStatement } from "../definitions/zen/AST";
 import { printStatement } from "../definitions/zen/AST";
-import {
-  type Arg,
-  createWorklet,
-  type UGen,
-  type ZenGraph,
-  zenWithTarget,
-} from "@/lib/zen";
+import { type Arg, createWorklet, type UGen, type ZenGraph, zenWithTarget } from "@/lib/zen";
 import type { ZenWorklet } from "@/lib/zen/worklet";
 import type { PatchImpl } from "../Patch";
 import { publish } from "@/lib/messaging/queue";
@@ -32,9 +20,7 @@ import { sortHistories } from "./histories";
 import { isTrivialGraph } from "./trivialGraph";
 
 const constructStatements = (patch: PatchImpl, statement: Statement) => {
-  const historyDependencies = patch.historyDependencies.filter((x) =>
-    notInFunction(x),
-  );
+  const historyDependencies = patch.historyDependencies.filter((x) => notInFunction(x));
   const _statement = ["s" as Operator];
   for (const dependency of historyDependencies) {
     if (dependency.node && dependency.node.name === "param") {
@@ -52,23 +38,18 @@ const constructStatements = (patch: PatchImpl, statement: Statement) => {
       _statement.push(dependency as any);
     }
   }
-  const __statement: Statement[] = sortHistories(
-    _statement as Statement[],
-  ) as Statement[];
+  const __statement: Statement[] = sortHistories(_statement as Statement[]) as Statement[];
   __statement.push(statement as Statement);
   return __statement as Statement;
 };
 
 export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
   const statement =
-    patch.historyDependencies.length > 0
-      ? constructStatements(patch, _statement)
-      : _statement;
+    patch.historyDependencies.length > 0 ? constructStatements(patch, _statement) : _statement;
 
   const parentNode = (patch as Patch as SubPatch).parentNode;
   const ast = compileStatement(statement);
-  const target =
-    parentNode.attributes.target === "C" ? Target.C : Target.Javascript;
+  const target = parentNode.attributes.target === "C" ? Target.C : Target.Javascript;
   const forceScalar = !parentNode.attributes.SIMD;
 
   const a = new Date().getTime();
@@ -85,18 +66,12 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
   };
 };
 
-export const onCompile = (
-  patch: PatchImpl,
-  inputStatement: Statement,
-  outputNumber?: number,
-) => {
+export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNumber?: number) => {
   let statement = inputStatement;
   if (outputNumber !== undefined) {
     patch.outputStatements[outputNumber - 1] = statement;
     const numOutputs = patch.objectNodes.filter((x) => x.name === "out").length;
-    const numFound = patch.outputStatements.filter(
-      (x) => x !== undefined,
-    ).length;
+    const numFound = patch.outputStatements.filter((x) => x !== undefined).length;
     if (numFound === numOutputs) {
       statement = ["s" as Operator, ...patch.outputStatements];
     }
@@ -130,20 +105,20 @@ export const onCompile = (
 
     const parentNode = (patch as Patch as SubPatch).parentNode;
 
-    const trivialInputs = isTrivialGraph(statement);
+    const trivialInputs = 0; //isTrivialGraph(statement);
     if (trivialInputs > 0) {
       patch.disconnectGraph();
       // then we need to create a 2 channel gain node and connect it to the merger;
       const nodes: AudioNode[] = [];
       console.log("creating merger for trivial graph= ", trivialInputs);
-      const merger = patch.audioContext.createChannelMerger(trivialInputs);
-      for (let i = 0; i < trivialInputs; i++) {
-        const gain = patch.audioContext.createGain();
-        gain.gain.value = 1;
-        nodes.push(gain);
-        gain.connect(merger, 0, i);
-      }
-      parentNode.useAudioNode(merger);
+      const mergerIn = patch.audioContext.createChannelMerger(trivialInputs);
+      const mergerOut = patch.audioContext.createChannelSplitter(trivialInputs);
+      mergerIn.connect(mergerOut);
+      console.log("mergerIn= ", mergerIn);
+      console.log("mergerOut= ", mergerOut);
+      parentNode.merger = mergerIn;
+      mergerOut.connect(patch.audioContext.destination);
+      parentNode.useAudioNode(mergerOut);
       return;
     }
     const prepared = prepareAndCompile(patch, statement);
@@ -162,10 +137,7 @@ export const onCompile = (
           const worklet = ret.workletNode;
           if (ret.wasm) {
             patch.wasmCode = ret.wasm;
-            patch.exportedAudioUnit = exportToAudioUnit(
-              exportedParameters,
-              ret.wasm,
-            );
+            patch.exportedAudioUnit = exportToAudioUnit(exportedParameters, ret.wasm);
           }
           ret.workletNode.port.onmessage = (e) => {
             if (e.data.type === "wasm-ready") {
@@ -188,30 +160,20 @@ export const onCompile = (
             const data = e.data.time
               ? [
                   e.data.subType,
-                  e.data.body === true
-                    ? 1
-                    : e.data.body === false
-                      ? 0
-                      : e.data.body,
+                  e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body,
                   patch,
                   e.data.time,
                 ]
               : [
                   e.data.subType,
-                  e.data.body === true
-                    ? 1
-                    : e.data.body === false
-                      ? 0
-                      : e.data.body,
+                  e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body,
                   patch,
                 ];
             publish(e.data.type, data);
           };
 
           patch.disconnectGraph();
-          const merger = patch.audioContext.createChannelMerger(
-            zenGraph.numberOfInputs,
-          );
+          const merger = patch.audioContext.createChannelMerger(zenGraph.numberOfInputs);
           const parentNode = (patch as Patch as SubPatch).parentNode;
           console.log("connecting new worklet now", ret.workletNode);
           if (parentNode) {
@@ -249,11 +211,7 @@ export const onCompile = (
           patch.sendNumberMessages();
           patch.sendAttributeMessages();
 
-          mapReceive(
-            patch.objectNodes.filter(
-              (x) => x.name === "matrix" || x.name === "buffer",
-            ),
-          );
+          mapReceive(patch.objectNodes.filter((x) => x.name === "matrix" || x.name === "buffer"));
 
           patch.skipRecompile = false;
 

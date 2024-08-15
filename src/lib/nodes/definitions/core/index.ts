@@ -1,4 +1,7 @@
 import type { API } from "@/lib/nodes/context";
+import { onPatchSelect } from "./hooks/onSelect";
+import { setPatchWindows } from "./hooks/windows";
+import { getSlotNodes } from "./hooks/slots";
 import { dedupe } from "./dedupe";
 import { keydown } from "./keys";
 import { currenttime, converttime } from "./time";
@@ -81,6 +84,9 @@ export const api: API = {
   ...zequencer_index,
   fetch: zfetch,
   toggle,
+  onPatchSelect,
+  getSlotNodes,
+  setPatchWindows,
   "key.down": keydown,
   ...strings,
 };

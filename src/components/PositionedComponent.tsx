@@ -66,17 +66,10 @@ const PositionedComponent: React.FC<{
 
   useEffect(() => {
     let name = (node as ObjectNode).name;
-    if (
-      ((node as MessageNode).message === undefined && name === undefined) ||
-      name == "divider"
-    ) {
+    if (((node as MessageNode).message === undefined && name === undefined) || name == "divider") {
       return;
     }
-    if (
-      !isCustomView &&
-      ref.current &&
-      !(node as ObjectNode).attributes["Custom Presentation"]
-    ) {
+    if (!isCustomView && ref.current && !(node as ObjectNode).attributes["Custom Presentation"]) {
       if (
         ((node as ObjectNode).isResizable ||
           (node as ObjectNode).name === "scope~" ||
@@ -112,10 +105,7 @@ const PositionedComponent: React.FC<{
   }, [node.attributes, text]);
 
   const startResizing = useCallback(
-    (
-      e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-      orientation: Orientation,
-    ) => {
+    (e: React.MouseEvent<HTMLDivElement, MouseEvent>, orientation: Orientation) => {
       e.stopPropagation();
       let divRect = ref.current?.getBoundingClientRect();
       if (divRect) {
@@ -136,9 +126,7 @@ const PositionedComponent: React.FC<{
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       if (isCustomView) {
-        return;
-      }
-      if (lockedModeRef.current) {
+        //e.stopPropagation();
         return;
       }
       e.stopPropagation();
@@ -147,12 +135,17 @@ const PositionedComponent: React.FC<{
         let x = e.clientX - divRect.left;
         let y = e.clientY - divRect.top;
 
+        if (
+          lockedModeRef.current &&
+          !node.subpatch?.objectNodes.some((x) => x.name === "onPatchSelect")
+        ) {
+          return;
+        }
+
         if (!selectedNodes.includes(node)) {
           if (e.shiftKey) {
             setSelectedNodes((prev) =>
-              prev.includes(node)
-                ? prev.filter((x) => x !== node)
-                : [...prev, node],
+              prev.includes(node) ? prev.filter((x) => x !== node) : [...prev, node],
             );
           } else {
             setSelectedNodes([node]);
@@ -160,6 +153,10 @@ const PositionedComponent: React.FC<{
           setSelectedPatch(patch);
         }
 
+        if (lockedModeRef.current) {
+          e.stopPropagation();
+          return;
+        }
         initialPosition.current = { ...node.position };
 
         setDraggingNode({
@@ -194,8 +191,7 @@ const PositionedComponent: React.FC<{
     }
     const isCustom = index[(node as ObjectNode).name || ""] !== undefined;
     let _skipOverflow =
-      node.attributes["scripting name"] !== undefined &&
-      node.attributes["scripting name"] !== "";
+      node.attributes["scripting name"] !== undefined && node.attributes["scripting name"] !== "";
     if (skipOverflow) {
       _skipOverflow = true;
     }
@@ -320,11 +316,7 @@ const PositionedComponent: React.FC<{
               onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
                 startResizing(e, Orientation.XY)
               }
-              style={
-                allowSize
-                  ? { width: 10, height: 10 }
-                  : { maxWidth: 25, maxHeight: 25 }
-              }
+              style={allowSize ? { width: 10, height: 10 } : { maxWidth: 25, maxHeight: 25 }}
               className="absolute bottom-0 right-0 w-1 h-1 bg-zinc-300 cursor-se-resize z-30"
             />
             <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 " />
@@ -334,9 +326,9 @@ const PositionedComponent: React.FC<{
               (allowSize || isCustom) && (
                 <div
                   onClick={(e: any) => e.stopPropagation()}
-                  onMouseDown={(
-                    e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-                  ) => startResizing(e, Orientation.Y)}
+                  onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
+                    startResizing(e, Orientation.Y)
+                  }
                   className={
                     "absolute bottom-0 left-0 h-0.5 w-full cursor-ns-resize z-10 " +
                     (isCustom ? "" : "")
@@ -347,9 +339,9 @@ const PositionedComponent: React.FC<{
               node.attributes["orientation"] === "horizontal") && (
               <div
                 onClick={(e: any) => e.stopPropagation()}
-                onMouseDown={(
-                  e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-                ) => startResizing(e, Orientation.X)}
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
+                  startResizing(e, Orientation.X)
+                }
                 className={
                   "absolute top-0 right-0 w-0.5 h-full  cursor-ew-resize z-10 " +
                   (isCustom ? "" : "")

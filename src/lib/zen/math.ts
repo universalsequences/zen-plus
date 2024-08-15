@@ -1,14 +1,10 @@
-import { UGen, Arg, genArg, Generated, float } from "./zen";
-import { History } from "./history";
+import { UGen, Arg, Generated } from "./zen";
 import { Target } from "./targets";
-import { Memoized, memo, simdMemo } from "./memo";
+import { simdMemo } from "./memo";
 import { zswitch } from "./switch";
-import { SIMDBlock, SIMD_OPERATIONS } from "./simd";
 import { uuid } from "./uuid";
-import { SIMDContext, Context } from "./context";
+import { Context } from "./context";
 import { zen_let } from "./let";
-import { genInputs } from "./worklet";
-import { CodeFragment } from "./emitter";
 import { simdOp, simdFunc } from "./simdMath";
 
 export const op = (
@@ -41,23 +37,17 @@ export const op = (
         // see if we are just dealing with constants or evaluated constants (if so we simply add it directly here to
         // avoid needless computation)
         if (
-          _ins.every(
-            (x, i) => typeof ins[i] === "number" || x.scalar !== undefined,
-          ) &&
+          _ins.every((x, i) => typeof ins[i] === "number" || x.scalar !== undefined) &&
           evaluator
         ) {
           let total =
             first === undefined
               ? _ins
-                  .map((x, i) =>
-                    typeof ins[i] === "number" ? ins[i] : x.scalar,
-                  )
+                  .map((x, i) => (typeof ins[i] === "number" ? ins[i] : x.scalar))
                   .map((x) => x as number)
                   .reduce(evaluator)
               : _ins
-                  .map((x, i) =>
-                    typeof ins[i] === "number" ? ins[i] : x.scalar,
-                  )
+                  .map((x, i) => (typeof ins[i] === "number" ? ins[i] : x.scalar))
                   .map((x) => x as number)
                   .reduce(evaluator, first);
 
@@ -71,10 +61,7 @@ export const op = (
             scalar: total,
           };
         }
-        if (
-          ins.every((x) => typeof x === "number") &&
-          evaluator !== undefined
-        ) {
+        if (ins.every((x) => typeof x === "number") && evaluator !== undefined) {
           let total =
             first === undefined
               ? ins.map((x) => x as number).reduce(evaluator)
@@ -93,10 +80,6 @@ export const op = (
       ...ins,
     );
   };
-};
-
-const fixFloat = (x: Generated) => {
-  return x;
 };
 
 type Keywords = {
@@ -125,11 +108,7 @@ export const cKeywords: Keywords = {
   "Math.max": "fmax",
 };
 
-export const func = (
-  func: string,
-  name: string,
-  jsFunc?: (...x: number[]) => number,
-) => {
+export const func = (func: string, name: string, jsFunc?: (...x: number[]) => number) => {
   return (...ins: Arg[]): UGen => {
     let id = uuid();
     return simdMemo(
@@ -155,8 +134,7 @@ export const func = (
   };
 };
 
-export const isComparisonOperator = (op: string) =>
-  ["<", ">", ">=", "<=", "==", "!="].includes(op);
+export const isComparisonOperator = (op: string) => ["<", ">", ">=", "<=", "==", "!="].includes(op);
 
 export const add = simdOp("+", "add", (a, b) => a + b, 0);
 export const shiftLeft = simdOp("<<", "shiftLeft", (a, b) => a << b, 0);
@@ -203,22 +181,13 @@ export const wrap = (input: Arg, min: Arg, max: Arg): UGen => {
   let range = sub(max, min);
   let normalized = mod(sub(input, min), range);
   //return add(normalized, min);
-  return zswitch(
-    gte(normalized, 0),
-    add(normalized, min),
-    add(range, add(normalized, min)),
-  );
+  return zswitch(gte(normalized, 0), add(normalized, min), add(range, add(normalized, min)));
 };
 
 export const _wrap = (input: Arg, min: Arg, max: Arg): UGen => {
   let id = uuid();
   return simdMemo(
-    (
-      context: Context,
-      _input: Generated,
-      _min: Generated,
-      _max: Generated,
-    ): Generated => {
+    (context: Context, _input: Generated, _min: Generated, _max: Generated): Generated => {
       let diff = `(${_max.variable} - ${_min.variable})`;
       let [wrapName, range, normalized] = context.useCachedVariables(
         id,
@@ -227,13 +196,6 @@ export const _wrap = (input: Arg, min: Arg, max: Arg): UGen => {
         "normalized",
       );
 
-      //let mod1 = context.target === Target.C ? `fmod(${wrapName}, ${diff})` : `${wrapName} % ${diff}`;
-      let mod2 =
-        context.target === Target.C
-          ? `fmod(${wrapName} - ${_min.variable}, ${diff})`
-          : `(${wrapName} - ${_min.variable}) % ${diff}`;
-      let _floor =
-        context.target === Target.C ? cKeywords["Math.floor"] : "Math.floor";
       const _mod = (x: string, y: string) =>
         context.target === Target.C ? `fmod(${x}, ${y})` : `((${x})%(${y}))`;
       let code = `
@@ -258,12 +220,7 @@ export const clamp = (input: Arg, _min: Arg, _max: Arg): UGen => {
 export const _clamp = (input: Arg, min: Arg, max: Arg): UGen => {
   let id = uuid();
   return simdMemo(
-    (
-      context: Context,
-      _input: Generated,
-      _min: Generated,
-      _max: Generated,
-    ): Generated => {
+    (context: Context, _input: Generated, _min: Generated, _max: Generated): Generated => {
       let [clampName] = context.useCachedVariables(id, "clampVal");
 
       let code = `
@@ -281,18 +238,6 @@ else if(${clampName} > ${_max.variable}) ${clampName} = ${_max.variable};`;
 };
 
 export const reciprical = (input: Arg): UGen => div(1, input);
-/*
-export const reciprical = (input: Arg): UGen => {
-    let id = uuid();
-    return simdMemo((context: Context, _input: Generated): Generated => {
-        let [recipricalName] = context.useCachedVariables(id, "recipricalValue");
-
-        let code = `${context.varKeyword} ${recipricalName} = ${_input.variable} == 0 ? 0 : 1.0/${_input.variable};`
-
-        return context.emit(code, recipricalName, _input);
-    }, undefined, input);
-};
-*/
 
 export const not_sub = (input: Arg, sec?: Arg): UGen => {
   return sub(sec || 1, input);
@@ -344,26 +289,16 @@ ${context.varKeyword} ${div} = ${num.variable} / ${multiple.variable};
       let rounder = "";
       switch (mode) {
         case "ceil":
-          rounder =
-            context.target === Target.C ? cKeywords["Math.ceil"] : "Math.ceil";
+          rounder = context.target === Target.C ? cKeywords["Math.ceil"] : "Math.ceil";
           break;
         case "trunc":
-          rounder =
-            context.target === Target.C
-              ? cKeywords["Math.trunc"]
-              : "Math.trunc";
+          rounder = context.target === Target.C ? cKeywords["Math.trunc"] : "Math.trunc";
           break;
         case "floor":
-          rounder =
-            context.target === Target.C
-              ? cKeywords["Math.floor"]
-              : "Math.floor";
+          rounder = context.target === Target.C ? cKeywords["Math.floor"] : "Math.floor";
           break;
         case "nearest":
-          rounder =
-            context.target === Target.C
-              ? cKeywords["Math.round"]
-              : "Math.round";
+          rounder = context.target === Target.C ? cKeywords["Math.round"] : "Math.round";
       }
 
       out += `

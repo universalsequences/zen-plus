@@ -1,4 +1,5 @@
 "use client";
+import {PatchWindows} from "./PatchWindows";
 import AssistantSidebar from "./AssistantSidebar";
 import PatchWindow from "./PatchWindow";
 import { Landing } from "./landing/Landing";
@@ -101,9 +102,7 @@ const PatchesComponent: React.FC<{
             "flex w-full h-full min-h-screen " + (lightMode ? "light-mode" : "")
           }
         >
-          {patchWindows.map((patch) => (
-            <PatchWindow key={patch.id} patch={patch} />
-          ))}
+        <PatchWindows/>
           <div className="flex flex-col w-full mt-5">
             <div
               //style={patches.length > 1 ? { gridTemplateColumns: gridTemplate } : {}}

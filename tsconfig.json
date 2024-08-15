@@ -16,7 +16,7 @@
     "moduleResolution":"node",
     "isolatedModules": true,
     "jsx": "preserve",
-      "types": ["@webgpu/types"],
+    "types": ["@webgpu/types"],
     "incremental": true,
     "plugins": [
       {

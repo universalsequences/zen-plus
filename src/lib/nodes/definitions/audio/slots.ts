@@ -22,7 +22,7 @@ export type Slot = ObjectNode;
 export const slots = (node: ObjectNode) => {
   node.needsLoad = true;
 
-  // note: what the fuck is a hijack lol
+  // note: what the fuck is a "hijack" lol.
   const getHijacks = (x: AttributeValue) => {
     const nums = Array.isArray(x)
       ? x
@@ -35,13 +35,11 @@ export const slots = (node: ObjectNode) => {
   };
   const handleHijack = (x: AttributeValue) => {
     const nums = getHijacks(x);
-    console.log("handle hijack", nums);
     for (let i = node.outlets.length; i < 2 + nums.length; i++) {
       node.newOutlet(`slot #${nums[i - 2]} messages`, ConnectionType.CORE);
     }
   };
 
-  console.log("NODE SLOTS =", node.attributes);
   if (node.attributes.hijack !== undefined) {
     handleHijack(node.attributes.hijack as AttributeValue);
   }
@@ -76,15 +74,14 @@ export const slots = (node: ObjectNode) => {
     };
   }
 
+  const ctxt = node.patch.audioContext;
   if (!node.audioNode) {
     // need to create an audio node that connects to speakers
-    let ctxt = node.patch.audioContext;
-    let splitter = ctxt.createChannelMerger(2);
+    const splitter = ctxt.createChannelMerger(2);
     node.audioNode = splitter; //node.patch.audioContext.destination;
   }
 
   if (!node.merger) {
-    let ctxt = node.patch.audioContext;
     const merger = ctxt.createChannelMerger(2);
     node.merger = merger;
   }
@@ -115,11 +112,15 @@ export const slots = (node: ObjectNode) => {
       for (let j = 0; j < a.outlets.length; j++) {
         if (b.inlets[j]) {
           if (
-            (a.audioNode as AudioWorkletNode)?.port ||
+            true ||
             !(a.audioNode as ChannelMergerNode)?.channelCount ||
             (a.audioNode as ChannelMergerNode)?.channelCount >= j + 1
           ) {
+            if ((b.merger as ChannelMergerNode)?.numberOfInputs < j + 1) {
+              continue;
+            }
             a.connect(b, b.inlets[j], a.outlets[j], false);
+          } else {
           }
         }
       }
@@ -197,10 +198,7 @@ const newPatch = (node: ObjectNode): ObjectNode => {
   return objectNode;
 };
 
-export const deserializedSlots = async (
-  node: ObjectNode,
-  y: SerializedObjectNode[],
-) => {
+export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
   const slots: Slot[] = [];
   for (const serialized of y) {
     const _node = newPatch(node);

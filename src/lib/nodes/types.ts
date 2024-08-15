@@ -1,4 +1,5 @@
 import type { BlockGen } from "../zen";
+import React from "react";
 import type { StateChange } from "@/lib/nodes/definitions/core/preset";
 import type Assistant from "@/lib/openai/assistant";
 import type { TypeSuccess, TypeError } from "./typechecker";
@@ -66,6 +67,7 @@ export type Message =
   | Message[]
   | MessageObject
   | MessageObject[]
+| ObjectNode
   | ParameterLock;
 
 export type Lazy = () => Message;
@@ -75,10 +77,7 @@ export type Lazy = () => Message;
  */
 export type InstanceFunction = (x: Message) => (Message | undefined)[];
 
-export type BasicNodeFunction = (
-  node: ObjectNode,
-  ...args: Lazy[]
-) => InstanceFunction;
+export type BasicNodeFunction = (node: ObjectNode, ...args: Lazy[]) => InstanceFunction;
 
 /**
    A NodeFunction takes an ObjectNode and some "lazy" args (i.e. the messages
@@ -166,17 +165,8 @@ export type Node = Identifiable &
     outlets: IOlet[];
     newInlet: (name?: string, type?: ConnectionType) => void;
     newOutlet: (name?: string, type?: ConnectionType) => void;
-    connect: (
-      destination: Node,
-      inlet: IOlet,
-      outlet: IOlet,
-      compile: boolean,
-    ) => IOConnection;
-    disconnect: (
-      connection: IOConnection,
-      compile: boolean,
-      ignoreAudio?: boolean,
-    ) => void;
+    connect: (destination: Node, inlet: IOlet, outlet: IOlet, compile: boolean) => IOConnection;
+    disconnect: (connection: IOConnection, compile: boolean, ignoreAudio?: boolean) => void;
     disconnectAll: () => void;
     connectAudioNode: (connection: IOConnection) => void;
     disconnectAudioNode: (connection: IOConnection) => void;
@@ -288,12 +278,7 @@ export type Patch = Identifiable & {
   isSelected?: boolean;
   setupPostCompile: (x: boolean) => void;
   registerNewNode?: (node: BaseNode) => void;
-  registerConnect?: (
-    fromNode: BaseNode,
-    toNode: BaseNode,
-    inlet: number,
-    outlet: number,
-  ) => void;
+  registerConnect?: (fromNode: BaseNode, toNode: BaseNode, inlet: number, outlet: number) => void;
   registerReceive?: (node: BaseNode, message: Message, inlet: IOlet) => void;
   storedStatement?: Statement;
   waiting?: boolean;
@@ -305,6 +290,7 @@ export type Patch = Identifiable & {
   recordingStartedAt?: Date;
   audioNode?: AudioNode;
   exportedAudioUnit?: ExportedAudioUnit;
+  setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
 };
 
 export type SubPatch = Patch & {

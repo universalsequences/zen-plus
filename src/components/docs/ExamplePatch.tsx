@@ -8,6 +8,7 @@ import { NavProvider } from '@/contexts/NavContext';;
 import { TilesProvider } from '@/contexts/TilesContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { StorageProvider } from '@/contexts/StorageContext';
+
 import { PatchesProvider } from '@/contexts/PatchesContext';
 import { SelectionProvider } from '@/contexts/SelectionContext';
 import PatchesComponent from '@/components/PatchesComponent';

@@ -9,9 +9,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 const SMOOTHING_FACTOR = 0.8; // Adjust this value to change the meter's responsiveness
 const SCALE_FACTOR = 2.5;
 
-export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   return (
     <ValueProvider node={objectNode}>
       <LiveMeterInner objectNode={objectNode} />
@@ -19,9 +17,7 @@ export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({
   );
 };
 
-const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
   useValue();
   const { lockedMode } = useLocked();
@@ -75,28 +71,22 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
 
       // Apply smoothing
       leftLevel.current =
-        leftLevel.current * SMOOTHING_FACTOR +
-        normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
+        leftLevel.current * SMOOTHING_FACTOR + normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
       rightLevel.current =
-        rightLevel.current * SMOOTHING_FACTOR +
-        normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
+        rightLevel.current * SMOOTHING_FACTOR + normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
 
       if (refLeft.current) {
-        refLeft.current.style.height = `${leftLevel.current * 100}%`;
-        refLeft.current.style.backgroundColor = getMeterColor(
-          normalizedLevel.current * 1.2,
-        );
+        refLeft.current.style.height = `${leftLevel.current * 200}%`;
+        refLeft.current.style.backgroundColor = getMeterColor(normalizedLevel.current * 1.2);
       }
       if (refRight.current) {
-        refRight.current.style.height = `${rightLevel.current * 100}%`;
-        refRight.current.style.backgroundColor = getMeterColor(
-          normalizedLevel.current * 1.2,
-        );
+        refRight.current.style.height = `${rightLevel.current * 200}%`;
+        refRight.current.style.backgroundColor = getMeterColor(normalizedLevel.current * 1.2);
       }
     }
   }, [objectNode.auxAudioNodes]);
 
-  useInterval(onTick, 140);
+  useInterval(onTick, 60);
 
   const [isDown, setIsDown] = useState(false);
   const down = useRef(false);
@@ -118,7 +108,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
       let rect = containerRef.current.getBoundingClientRect();
       let y = e.clientY - rect.top;
       let h = containerRef.current.offsetHeight;
-      let yy = h - y - 10;
+      let yy = h - y + 0;
       let yyy = Math.max(0, Math.min(1, yy / h));
       setValue(yyy);
 
@@ -144,11 +134,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
 
   return (
     <div style={{ width, height }} className="flex flex-col relative">
-      <div
-        onMouseDown={onMouseDown}
-        ref={containerRef}
-        className="w-5 h-full bg-zinc-600 relative"
-      >
+      <div onMouseDown={onMouseDown} ref={containerRef} className="w-5 h-full bg-zinc-600 relative">
         <div
           style={{ bottom: `${value * 100}%` }}
           className="translate-y-3 absolute w-10 h-10 -right-4 flex  z-10 "
@@ -174,11 +160,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({
  * @param dBMax - The maximum decibel value (e.g., 0 dB)
  * @returns The normalized value between 0 and 1
  */
-function normalizeDecibel(
-  dBValue: number,
-  dBMin: number = -100,
-  dBMax: number = 0,
-): number {
+function normalizeDecibel(dBValue: number, dBMin: number = -100, dBMax: number = 0): number {
   if (dBMax === dBMin) {
     throw new Error("Decibel max and min values cannot be the same");
   }

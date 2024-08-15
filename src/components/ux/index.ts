@@ -3,6 +3,7 @@ import { Waveform } from "./Waveform";
 import { ASTViewer } from "./ASTViewer";
 import ButtonOptions from "./ButtonOptions";
 import Color from "./Color";
+import OscilloscopeTilde from "./OscilloscopeTilde";
 import SignalReceive from "./SignalReceive";
 import { Slots } from "./Slots";
 import Button from "./Button";
@@ -43,6 +44,7 @@ export const index: ComponentIndex = {
   toggle: Toggle,
   "number~": NumberTilde,
   "scope~": ScopeTilde,
+  "oscilloscope~": OscilloscopeTilde,
   "slots~": Slots,
   "zequencer.ui": ZequencerUI,
   ast: ASTViewer,

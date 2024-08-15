@@ -18,12 +18,7 @@ import { OperatorContextType } from "./context";
 import ObjectNodeImpl from "./ObjectNode";
 import MessageNodeImpl from "./MessageNode";
 import type { Connections } from "@/contexts/PatchContext";
-import {
-  currentUUID,
-  uuid,
-  plusUUID,
-  registerUUID,
-} from "@/lib/uuid/IDGenerator";
+import { currentUUID, uuid, plusUUID, registerUUID } from "@/lib/uuid/IDGenerator";
 import type { Statement } from "./definitions/zen/types";
 import { recompileGraph } from "./compilation/recompileGraph";
 import { mergeAndExportToWav } from "@/utils/wav";
@@ -113,15 +108,9 @@ export class PatchImpl implements Patch {
       const { type, data } = e.data.message;
       if (type === "flush") {
         const chunk = { recLength: data.recLength, buffers: data.buffers };
-        const blob = await mergeAndExportToWav(
-          [chunk],
-          this.audioContext.sampleRate,
-        );
+        const blob = await mergeAndExportToWav([chunk], this.audioContext.sampleRate);
         if (!blob) return;
-        const timestamp = new Date()
-          .toISOString()
-          .replace(/[-:]/g, "")
-          .replace(/\.\d*/, "");
+        const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d*/, "");
         const filename = `zen-plus-${timestamp}.wav`;
 
         // Create a download link
@@ -165,27 +154,18 @@ export class PatchImpl implements Patch {
    */
   getAllNodes(): ObjectNode[] {
     const nodes = [...this.objectNodes];
-    const subpatches = nodes
-      .filter((x) => x.subpatch)
-      .map((x) => x.subpatch) as Patch[];
+    const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
     return [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes())];
   }
 
   getAllMessageNodes(): MessageNode[] {
     const nodes = [...this.objectNodes];
-    const subpatches = nodes
-      .filter((x) => x.subpatch)
-      .map((x) => x.subpatch) as Patch[];
-    return [
-      ...this.messageNodes,
-      ...subpatches.flatMap((x: Patch) => x.getAllMessageNodes()),
-    ];
+    const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
+    return [...this.messageNodes, ...subpatches.flatMap((x: Patch) => x.getAllMessageNodes())];
   }
 
   getSourceNodes() {
-    return this.objectNodes.filter(
-      (node) => node.inlets.length === 0 && node.name !== "history",
-    );
+    return this.objectNodes.filter((node) => node.inlets.length === 0 && node.name !== "history");
   }
 
   // isZenBase tells us whether we are at the "base" of a "zen patch", i.e. the node that is considered
@@ -319,10 +299,7 @@ export class PatchImpl implements Patch {
 
     if (parentNode) {
       if (parentNode.parentSlots) {
-        parentNode.parentSlots.receive(
-          parentNode.parentSlots.inlets[0],
-          "reconnect",
-        );
+        parentNode.parentSlots.receive(parentNode.parentSlots.inlets[0], "reconnect");
       }
     }
   }
@@ -346,9 +323,7 @@ export class PatchImpl implements Patch {
     const parentNode = (this as any as SubPatch).parentNode;
     if (parentNode) {
       if (parentNode.attributes["Custom Presentation"]) {
-        json.isCustomView = parentNode.attributes["Custom Presentation"]
-          ? true
-          : false;
+        json.isCustomView = parentNode.attributes["Custom Presentation"] ? true : false;
         json.size = parentNode.size;
       }
       json.attributes = parentNode.attributes;
@@ -362,8 +337,7 @@ export class PatchImpl implements Patch {
 
     this.objectNodes = [];
     this.messageNodes = [];
-    this.presentationMode =
-      x.presentationMode === undefined ? false : x.presentationMode;
+    this.presentationMode = x.presentationMode === undefined ? false : x.presentationMode;
 
     const parentNode = (this as any as SubPatch).parentNode;
     if (parentNode) {
@@ -382,10 +356,7 @@ export class PatchImpl implements Patch {
     const ids: any = {};
     if (x.messageNodes) {
       for (const serializedNode of x.messageNodes) {
-        const messageNode = new MessageNodeImpl(
-          this,
-          serializedNode.messageType,
-        );
+        const messageNode = new MessageNodeImpl(this, serializedNode.messageType);
         messageNode.fromJSON(serializedNode);
         this.messageNodes.push(messageNode);
         ids[messageNode.id] = messageNode;
@@ -399,9 +370,7 @@ export class PatchImpl implements Patch {
       let found = false;
       if (name === "in" || name === "out") {
         const arg = Number.parseInt(tokens[1]);
-        const _objectNode = this.objectNodes.find(
-          (x) => x.name === name && x.arguments[0] === arg,
-        );
+        const _objectNode = this.objectNodes.find((x) => x.name === name && x.arguments[0] === arg);
         if (_objectNode) {
           objectNode = _objectNode as ObjectNodeImpl;
           objectNode.id = serializedNode.id;
@@ -429,16 +398,8 @@ export class PatchImpl implements Patch {
     const connections: Connections = {};
 
     const currentId = currentUUID();
-    const missedConnections: [
-      SerializedConnection,
-      ObjectNode,
-      ObjectNode,
-      number,
-    ][] = [];
-    for (const serializedNode of [
-      ...x.objectNodes,
-      ...(x.messageNodes || []),
-    ]) {
+    const missedConnections: [SerializedConnection, ObjectNode, ObjectNode, number][] = [];
+    for (const serializedNode of [...x.objectNodes, ...(x.messageNodes || [])]) {
       const node = ids[serializedNode.id];
       if (node) {
         const nodeConnections = [];
@@ -457,21 +418,11 @@ export class PatchImpl implements Patch {
               const inlet = destination.inlets[destinationInlet];
               const outlet = node.outlets[outletNumber];
               if (inlet && outlet) {
-                const _connection = node.connect(
-                  destination,
-                  inlet,
-                  outlet,
-                  false,
-                );
+                const _connection = node.connect(destination, inlet, outlet, false);
                 _connection.segmentation = segmentation;
                 nodeConnections.push(_connection);
               } else {
-                missedConnections.push([
-                  connection,
-                  node,
-                  destination,
-                  outletNumber,
-                ]);
+                missedConnections.push([connection, node, destination, outletNumber]);
               }
             }
           }
@@ -504,20 +455,6 @@ export class PatchImpl implements Patch {
 
     if (!(this as Patch as SubPatch).parentNode) {
       this.initialLoadCompile();
-      /*
-           for (let node of this.objectNodes) {
-               if (node.subpatch && node.subpatch.isZenBase()) {
-                   for (let outlet of node.outlets) {
-                       for (let c of outlet.connections) {
-                           if (c.splitter) {
-                               node.disconnectAudioNode(c);
-                           }
-                           node.connectAudioNode(c);
-                       }
-                   }
-               }
-           }
-           */
     }
 
     // now hydrate all presets
@@ -548,10 +485,7 @@ export class PatchImpl implements Patch {
         node.subpatch.patchType !== OperatorContextType.AUDIO &&
         node.subpatch.patchType !== OperatorContextType.CORE
       ) {
-        if (
-          this.isZenBase() &&
-          (this as Patch as SubPatch).patchType === OperatorContextType.ZEN
-        ) {
+        if (this.isZenBase() && (this as Patch as SubPatch).patchType === OperatorContextType.ZEN) {
           continue;
         }
         node.subpatch.recompileGraph();
@@ -603,8 +537,7 @@ export class PatchImpl implements Patch {
   }
 
   resolveMissedConnections() {
-    for (const [connection, source, dest, outletNumber] of this
-      .missedConnections) {
+    for (const [connection, source, dest, outletNumber] of this.missedConnections) {
       let { destinationInlet } = connection;
       if (!destinationInlet) {
         destinationInlet = 0;

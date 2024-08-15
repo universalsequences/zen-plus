@@ -56,7 +56,6 @@ for (${varKeyword} j=0; j < BLOCK_SIZE; j+= ${block.context.isSIMD ? 4 : 1}) {
 `;
   }
   code += `
-/* context#${block.context.id} */
 ${!block.context.isSIMD ? prettify("    ", histories.join("\n")) : ""}
 ${prettify("    ", inbound)}
 ${post}

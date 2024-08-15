@@ -1,20 +1,8 @@
 import { BaseNode } from "@/lib/nodes/BaseNode";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import type {
-  Patch,
-  IOlet,
-  Message,
-  Coordinate,
-  SubPatch,
-} from "@/lib/nodes/types";
-import {
-  createContext,
-  useState,
-  useContext,
-  useCallback,
-  useEffect,
-} from "react";
+import type { Patch, IOlet, Message, Coordinate, SubPatch } from "@/lib/nodes/types";
+import { createContext, useState, useContext, useCallback, useEffect } from "react";
 import { usePatches } from "./PatchesContext";
 
 interface IWindowsContext {
@@ -34,8 +22,7 @@ const WindowsContext = createContext<IWindowsContext | undefined>(undefined);
 
 export const useWindows = (): IWindowsContext => {
   const context = useContext(WindowsContext);
-  if (!context)
-    throw new Error("useWorkerHandler must be used within LockedProvider");
+  if (!context) throw new Error("useWorkerHandler must be used within LockedProvider");
   return context;
 };
 
@@ -44,10 +31,15 @@ type Positions = {
 };
 
 export const WindowsProvider: React.FC<Props> = ({ children }) => {
-  const { selectedPatch, patches, setSelectedPatch } = usePatches();
+  const { basePatch, selectedPatch, patches, setSelectedPatch } = usePatches();
   const [patchWindows, setPatchWindows] = useState<Patch[]>([]);
   const [windowPositions, setWindowPositions] = useState<Positions>({});
 
+  useEffect(() => {
+    basePatch.setPatchWindows = setPatchWindows;
+  }, [setPatchWindows, basePatch])
+
+  /*
   useEffect(() => {
     if (!selectedPatch) {
       return;
@@ -60,6 +52,7 @@ export const WindowsProvider: React.FC<Props> = ({ children }) => {
       return p;
     });
   }, [selectedPatch]);
+  */
 
   const getPatchSize = (patch: Patch) => {
     return (patch as SubPatch).parentNode.size || { width: 200, height: 200 };
@@ -68,7 +61,8 @@ export const WindowsProvider: React.FC<Props> = ({ children }) => {
   const findNextAvailablePosition = useCallback(
     (size: { width: number; height: number }) => {
       const padding = 50; // Padding between windows
-      let position: Coordinate = { x: 0, y: 0 };
+      let position: Coordinate = { x: 0, y: window.innerHeight - size.height }; // Start from bottom left
+      let lowestY = window.innerHeight; // Track the lowest Y of the current row
 
       while (true) {
         let overlapping = false;
@@ -78,32 +72,36 @@ export const WindowsProvider: React.FC<Props> = ({ children }) => {
           if (!patchWindow) continue;
           const existingPatchSize = getPatchSize(patchWindow);
 
+          // Update lowestY to keep track of the lowest window in the current row
+          if (pos.y < lowestY && pos.y > position.y - size.height - padding) {
+            lowestY = pos.y;
+          }
+
           if (
             position.x < pos.x + existingPatchSize.width + padding &&
             position.x + size.width + padding > pos.x &&
-            position.y < pos.y + existingPatchSize.height + padding &&
-            position.y + size.height + padding > pos.y
+            position.y > pos.y - size.height - padding &&
+            position.y - size.height - padding < pos.y + existingPatchSize.height
           ) {
             overlapping = true;
             position.x = pos.x + existingPatchSize.width + padding;
             if (position.x + size.width > window.innerWidth) {
               position.x = 0;
-              position.y = pos.y + existingPatchSize.height + padding;
+              position.y = lowestY - size.height - padding; // Place just above the lowest window in the current row
+              lowestY = window.innerHeight; // Reset lowestY for the new row
             }
             break;
           }
         }
         if (!overlapping) break;
       }
-
       return {
         x: position.x,
-        y: position.y + 100,
+        y: Math.max(50, position.y - 30),
       };
     },
     [windowPositions, patchWindows],
   );
-
   const addPatchWindow = useCallback(
     (patch: Patch) => {
       const patchSize = getPatchSize(patch);

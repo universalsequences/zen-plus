@@ -2,6 +2,7 @@ import { doc } from "./doc";
 import { gate } from "./gate";
 import { route } from "./route";
 import { slots } from "./slots";
+import { oscilloscope } from "./oscilloscope";
 import { live_meter } from "./meter";
 import { receive, publishPatchSignals, send } from "./pubsub";
 import type { API } from "@/lib/nodes/context";
@@ -40,9 +41,7 @@ export const speakers = (node: ObjectNode) => {
   if (!node.audioNode) {
     // need to create an audio node that connects to speakers
     const ctxt = node.patch.audioContext;
-    const splitter = ctxt.createChannelMerger(
-      (node.attributes.channels || 1) as number,
-    );
+    const splitter = ctxt.createChannelMerger((node.attributes.channels || 1) as number);
     node.audioNode = splitter; //node.patch.audioContext.destination;
     splitter.connect(ctxt.destination);
     const root = getRootPatch(node.patch);
@@ -73,9 +72,7 @@ doc("number~", {
 
 export const number_tilde = (node: ObjectNode) => {
   // setup the visualizer worklet and hook it up to this node
-  createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor").then(
-    () => {},
-  );
+  createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor").then(() => {});
 
   return (_message: Message) => [];
 };
@@ -94,11 +91,7 @@ export const scope_tilde = (node: ObjectNode) => {
 };
 
 let init: any = {};
-export const createWorklet = async (
-  node: ObjectNode,
-  path: string,
-  processor: string,
-) => {
+export const createWorklet = async (node: ObjectNode, path: string, processor: string) => {
   let audioContext = node.patch.audioContext;
   if (!init[processor]) {
     await audioContext.audioWorklet.addModule(path);
@@ -117,5 +110,6 @@ export const api: API = {
   "scope~": scope_tilde,
   "send~": send,
   "receive~": receive,
+  "oscilloscope~": oscilloscope,
   publishPatchSignals: publishPatchSignals,
 };

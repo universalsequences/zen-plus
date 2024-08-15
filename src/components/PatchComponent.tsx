@@ -33,12 +33,7 @@ import MessageNodeImpl from "@/lib/nodes/MessageNode";
 import MessageNodeComponent from "./MessageNodeComponent";
 import { Connections, usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
-import {
-  usePosition,
-  ResizingNode,
-  DraggingNode,
-  Coordinates,
-} from "@/contexts/PositionContext";
+import { usePosition, ResizingNode, DraggingNode, Coordinates } from "@/contexts/PositionContext";
 import PresentationMode from "./PresentationMode";
 import { MiniToolbar } from "./toolbar/MiniToolbar";
 
@@ -269,6 +264,7 @@ const PatchComponent: React.FC<{
             position.y <= selection.y2
           );
         });
+        console.log("set selected nodes filtered", filtered);
         setSelectedNodes(filtered);
       }
     },
@@ -366,9 +362,7 @@ const PatchComponent: React.FC<{
         let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
         let id = draggingSegmentation.source.id;
         let node = draggingSegmentation.source as ObjectNode;
-        let height = node.size
-          ? node.size.height
-          : sizeIndexRef.current[id].height;
+        let height = node.size ? node.size.height : sizeIndexRef.current[id].height;
         if (height) {
           segmentCable(draggingSegmentation, y - height);
         }
@@ -506,9 +500,10 @@ const PatchComponent: React.FC<{
   useEffect(() => {
     if (lockedMode) {
       setDraggingNode(null);
-      setSelectedNodes([]);
+      //console.log("patch.selected nodes");
+      //setSelectedNodes([]);
     }
-  }, [lockedMode, setSelectedNodes, setDraggingNode]);
+  }, [lockedMode, setSelectedNodes, setDraggingNode, selectedPatch]);
 
   useEffect(() => {
     patch.isSelected = patch === selectedPatch;
@@ -633,15 +628,7 @@ const PatchComponent: React.FC<{
       }
       lastClick.current = now;
     },
-    [
-      setSelectedNodes,
-      size,
-      setSize,
-      selection,
-      setSelectedConnection,
-      setSelection,
-      patch,
-    ],
+    [setSelectedNodes, size, setSize, selection, setSelectedConnection, setSelection, patch],
   );
 
   const onDrop = useCallback(() => {
@@ -705,17 +692,11 @@ const PatchComponent: React.FC<{
       }
 
       if (hparent) {
-        _maxWidth =
-          hparent && hparent.children[0] === hprev
-            ? hparent.size
-            : 100 - hparent.size;
+        _maxWidth = hparent && hparent.children[0] === hprev ? hparent.size : 100 - hparent.size;
       }
 
       if (vparent) {
-        _maxHeight =
-          vparent && vparent.children[0] === vprev
-            ? vparent.size
-            : 100 - vparent.size;
+        _maxHeight = vparent && vparent.children[0] === vprev ? vparent.size : 100 - vparent.size;
       }
 
       if (tile.parent && tile.parent.splitDirection === "vertical") {
@@ -759,24 +740,14 @@ const PatchComponent: React.FC<{
           maxHeight: _maxHeight + "%",
         };
 
-    if (
-      tile &&
-      tile.parent &&
-      tile.parent.children[1] === tile &&
-      tile.children.length === 0
-    ) {
+    if (tile && tile.parent && tile.parent.children[1] === tile && tile.children.length === 0) {
       style = {};
     }
 
     let isFloatingCustom = false;
     if (!isCustomView && (patch as SubPatch).parentNode && lockedMode) {
       let node = (patch as SubPatch).parentNode;
-      if (
-        false &&
-        node.attributes["Custom Presentation"] &&
-        node.size &&
-        presentationMode
-      ) {
+      if (false && node.attributes["Custom Presentation"] && node.size && presentationMode) {
         let parent = (patch as SubPatch).parentPatch;
         let parentNode = (parent as SubPatch).parentNode;
         //if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
@@ -850,15 +821,11 @@ const PatchComponent: React.FC<{
           className={
             (draggingOver ? " dragging-over " : "") +
             (isFloatingCustom ? " dark-background " : "") +
-            (tile && tile.parent && tile.parent.children.length === 1
-              ? "transition-all "
-              : "") +
+            (tile && tile.parent && tile.parent.children.length === 1 ? "transition-all " : "") +
             "transition-colors duration-300 ease-in-out " +
             cl +
             " " +
-            (!isCustomView && patch === selectedPatch
-              ? "selected-patch "
-              : "") +
+            (!isCustomView && patch === selectedPatch ? "selected-patch " : "") +
             (isCustomView ? "" : " border border-zinc-100 ") +
             " flex flex-col relative w-full " +
             (presentationMode ? " presentation " : "") +
@@ -877,8 +844,7 @@ const PatchComponent: React.FC<{
                   console.log("starting resize...");
                   setResizingPatch({
                     startSize:
-                      (patch as SubPatch).parentNode &&
-                      (patch as SubPatch).parentNode.size,
+                      (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                     startPosition: { x: e.pageX, y: e.pageY },
                     gridTemplate,
                     resizeType: PatchResizeType.South,
@@ -893,8 +859,7 @@ const PatchComponent: React.FC<{
                   e.stopPropagation();
                   setResizingPatch({
                     startSize:
-                      (patch as SubPatch).parentNode &&
-                      (patch as SubPatch).parentNode.size,
+                      (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                     startPosition: { x: e.pageX, y: e.pageY },
                     gridTemplate,
                     resizeType: PatchResizeType.North,
@@ -909,8 +874,7 @@ const PatchComponent: React.FC<{
                   e.stopPropagation();
                   setResizingPatch({
                     startSize:
-                      (patch as SubPatch).parentNode &&
-                      (patch as SubPatch).parentNode.size,
+                      (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                     startPosition: { x: e.pageX, y: e.pageY },
                     gridTemplate,
                     resizeType: PatchResizeType.East,
@@ -926,8 +890,7 @@ const PatchComponent: React.FC<{
                     e.stopPropagation();
                     setResizingPatch({
                       startSize:
-                        (patch as SubPatch).parentNode &&
-                        (patch as SubPatch).parentNode.size,
+                        (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
                       startPosition: { x: e.pageX, y: e.pageY },
                       gridTemplate,
                       resizeType: PatchResizeType.West,
@@ -948,9 +911,7 @@ const PatchComponent: React.FC<{
             zoomRef={zoomRef}
             zoomableRef={zoomableRef}
           />
-          {!isCustomView && (
-            <>{selectedPatch === patch ? <Toolbar patch={patch} /> : ""}</>
-          )}
+          {!isCustomView && <>{selectedPatch === patch ? <Toolbar patch={patch} /> : ""}</>}
         </div>
       </>
     );
