@@ -68,6 +68,17 @@ doc("%", {
 
 export const mod = (node: ObjectNode, a: Lazy) => {
   return (message: Message): Message[] => {
+    if (node.attributes.field && typeof message === "object") {
+      const field = node.attributes.field as string;
+      const v = (message as any)[field] as number;
+      const val = v % (a() as number);
+      return [
+        {
+          ...message,
+          [node.attributes.field as string]: val,
+        } as Message,
+      ];
+    }
     return [(message as number) % (a() as number)];
   };
 };
