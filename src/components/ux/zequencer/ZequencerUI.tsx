@@ -9,15 +9,11 @@ import { useValue } from "@/contexts/ValueContext";
 import { useCallback, useEffect, useState } from "react";
 import type { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 
-export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { sizeIndex } = usePosition();
   const { width, height } = objectNode.size || { width: 200, height: 200 };
 
-  const [selectedSteps, setSelectedSteps] = useState<GenericStepData[] | null>(
-    null,
-  );
+  const [selectedSteps, setSelectedSteps] = useState<GenericStepData[] | null>(null);
 
   const [selection, setSelection] = useState<Selection | null>(null);
 
@@ -28,10 +24,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
 
   const currentStepNumber = Array.isArray(value) ? (value[0] as number) : 0;
 
-  const { node } = useAttributedByNameNode(
-    objectNode,
-    attributes.name as string,
-  );
+  const { node } = useAttributedByNameNode(objectNode, attributes.name as string);
 
   const { presentationMode } = usePosition();
 
@@ -39,7 +32,6 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
     if (node) {
       // this zequencer.ui is concerned with a zequencer.core node
       // so we must watch it for changes in step values
-      console.log("setting node to watch");
       setNodeToWatch(node);
       setTimeout(() => {
         if (node) {
@@ -56,9 +48,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
     if (selection && node?.steps) {
       const steps = node.steps.filter(
         (x, stepNumber) =>
-          x.on &&
-          stepNumber >= selection.fromStepNumber &&
-          stepNumber <= selection.toStepNumber,
+          x.on && stepNumber >= selection.fromStepNumber && stepNumber <= selection.toStepNumber,
       );
       setSelectedSteps(steps);
     }
@@ -81,9 +71,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
   }
 
   const [durationSteps, setDurationSteps] = useState<boolean[]>([]);
-  const [stepEditingDuration, setStepEditingDuration] = useState<number | null>(
-    null,
-  );
+  const [stepEditingDuration, setStepEditingDuration] = useState<number | null>(null);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -140,7 +128,6 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
       for (let i = 0; i < node.steps.length; i++) {
         if (node.steps[i].duration && node.steps[i].on) {
           const duration = node.steps[i].duration as number;
-          console.log("duration for step=%s is %s", i, duration);
           for (let j = 0; j < duration; j++) {
             durs[i + j] = true;
           }
@@ -162,9 +149,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({
                     <Step
                       stepEditingDuration={stepEditingDuration}
                       setStepEditingDuration={setStepEditingDuration}
-                      isDurationStep={
-                        durationSteps[rowIndex * 16 + index] || false
-                      }
+                      isDurationStep={durationSteps[rowIndex * 16 + index] || false}
                       isSelected={selectedSteps?.includes(step) || false}
                       selection={selection}
                       setSelection={setSelection}

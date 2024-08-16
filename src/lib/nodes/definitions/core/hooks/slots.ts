@@ -1,4 +1,4 @@
-import { ObjectNode } from "@/lib/nodes/types";
+import type { ObjectNode } from "@/lib/nodes/types";
 import { doc } from "../doc";
 
 doc("getSlotNodes", {

@@ -59,7 +59,6 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
     : zenWithTarget(target, ast as UGen, forceScalar);
 
   const h = new Date().getTime();
-  console.log("compiling zen graph took %s ms", h - a);
   return {
     zenGraph,
     statement,
@@ -110,12 +109,9 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
       patch.disconnectGraph();
       // then we need to create a 2 channel gain node and connect it to the merger;
       const nodes: AudioNode[] = [];
-      console.log("creating merger for trivial graph= ", trivialInputs);
       const mergerIn = patch.audioContext.createChannelMerger(trivialInputs);
       const mergerOut = patch.audioContext.createChannelSplitter(trivialInputs);
       mergerIn.connect(mergerOut);
-      console.log("mergerIn= ", mergerIn);
-      console.log("mergerOut= ", mergerOut);
       parentNode.merger = mergerIn;
       mergerOut.connect(patch.audioContext.destination);
       parentNode.useAudioNode(mergerOut);
@@ -144,7 +140,6 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
               initMemory(zenGraph.context, worklet);
               worklet.port.postMessage({ type: "ready" });
               patch.skipRecompile = true;
-              console.log("sending attributes and messages...");
               patch.sendAttributeMessages();
               patch.sendNumberMessages(true);
               const matricesAndBuffers = patch.objectNodes.filter(
@@ -155,7 +150,6 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
               }
 
               patch.skipRecompile = false;
-              console.log("finished");
             }
             const data = e.data.time
               ? [
@@ -175,7 +169,6 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
           patch.disconnectGraph();
           const merger = patch.audioContext.createChannelMerger(zenGraph.numberOfInputs);
           const parentNode = (patch as Patch as SubPatch).parentNode;
-          console.log("connecting new worklet now", ret.workletNode);
           if (parentNode) {
             parentNode.merger = merger;
             merger.connect(ret.workletNode);

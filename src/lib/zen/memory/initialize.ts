@@ -21,7 +21,6 @@ export const determineMemorySize = (context: Context) => {
 export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
   const initializes: any = [];
   const memorySize = determineMemorySize(context);
-  console.log("determined size...", memorySize);
   const memory = new Float32Array(memorySize);
   for (const block of context.memory.blocksInUse) {
     if (block.initData !== undefined) {

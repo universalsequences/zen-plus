@@ -5,7 +5,9 @@ export class MutableValue {
   objectNode: ObjectNode;
   _value: Message;
   index?: number;
-  constructor(node: ObjectNode, index?: number) {
+  useOnNewValue: boolean;
+  constructor(node: ObjectNode, index?: number, useOnNewValue = true) {
+    this.useOnNewValue = useOnNewValue;
     this.objectNode = node;
     this._value = 0;
     this.index = index;
@@ -20,7 +22,7 @@ export class MutableValue {
       state: x,
     });
     this._value = x;
-    if (this.objectNode.onNewValue) {
+    if (this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);
     }
   }
@@ -35,7 +37,7 @@ export class MutableValue {
       this.objectNode.arguments[this.index] = x;
       this.objectNode.receive(this.objectNode.inlets[0], x);
     }
-    if (this.objectNode.onNewValue) {
+    if (this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);
     }
   }

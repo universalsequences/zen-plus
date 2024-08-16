@@ -101,8 +101,7 @@ const replaceContexts = (
 export const determineBlocks = (...fragments: CodeFragment[]): CodeBlock[] => {
   const { _blocks, blocks } = calc(...fragments);
   const missing = blocks.filter((x) => !_blocks.includes(x));
-  console.log("missing=", missing);
-  return _blocks;
+   return _blocks;
 };
 
 const _determineBlocks = (

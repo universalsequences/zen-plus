@@ -30,7 +30,10 @@ import { usePatch } from "@/contexts/PatchContext";
 import CustomSubPatchView from "./CustomSubPatchView";
 import { useStorage } from "@/contexts/StorageContext";
 
-const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode }> = ({
+  objectNode,
+  position
+}) => {
   const { setSelection, selectedNodes, setSelectedNodes } = useSelection();
   const { updatePosition, sizeIndexRef } = usePosition();
 
@@ -59,6 +62,7 @@ const ObjectNodeComponent: React.FC<{ objectNode: ObjectNode }> = ({ objectNode 
   let out = React.useMemo(() => {
     return (
       <InnerObjectNodeComponent
+        position={position}
         lockedModeRef={lockedModeRef}
         sizeIndexRef={sizeIndexRef}
         objectNode={objectNode}
@@ -85,7 +89,9 @@ const InnerObjectNodeComponent: React.FC<{
   updatePosition: (id: string, position: Coordinate) => void;
   setSelectedNodes: React.Dispatch<React.SetStateAction<(ObjectNode | MessageNode)[]>>;
   objectNode: ObjectNode;
+  position?: string;
 }> = ({
+  position,
   typeError,
   updatePosition,
   size,
@@ -329,7 +335,7 @@ const InnerObjectNodeComponent: React.FC<{
             clicked.current = true;
             setEditing(true);
           }
-          console.log('setSelectedNodes([])')
+          console.log("setSelectedNodes([])");
           setSelectedNodes([]);
         }
       } else {
@@ -373,6 +379,7 @@ const InnerObjectNodeComponent: React.FC<{
 
   return (
     <PositionedComponent
+      position={position}
       fullscreen={fullscreen}
       isHydrated={objectNode.lastSentMessage !== undefined}
       isCustomView={isCustomView}

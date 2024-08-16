@@ -116,6 +116,7 @@ export class PresetManager {
         if (x.currentPreset) {
             this.currentPreset = x.currentPreset;
         }
+        console.log('preset from json', x, this);
     }
 
     hydrateSerializedPresets(allNodes: Node[]) {

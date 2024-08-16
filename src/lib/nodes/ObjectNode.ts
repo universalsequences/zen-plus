@@ -1010,6 +1010,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     this.id = json.id;
+    if (this.name === "zequencer.core") {
+      console.log("json for zequencer = ", json, this.id, this);
+    }
 
     if (!isPreset) {
       registerUUID(this.id);

@@ -26,11 +26,9 @@ doc("zequencer.core", {
   description: "A sequencer that can be controlled by messages.",
 });
 
-export const zequencer = <Schemas extends readonly FieldSchema[]>(
-  node: ObjectNode,
-) => {
+export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNode) => {
   if (!node.custom) {
-    node.custom = new MutableValue(node);
+    node.custom = new MutableValue(node, 0, false);
   }
 
   if (!node.attributes.name) {
@@ -42,16 +40,10 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(
     node.attributes.length = 16;
   }
 
-  node.attributeCallbacks.length = (
-    length: number | boolean | string | number[],
-  ) => {
+  node.attributeCallbacks.length = (length: number | boolean | string | number[]) => {
     console.log("length changed", length, typeof length);
     if (node.stepsSchema) {
-      node.steps = setupSchema(
-        node.stepsSchema,
-        node.steps || [],
-        length as number,
-      );
+      node.steps = setupSchema(node.stepsSchema, node.steps || [], length as number);
       node.stepsSchema = schema;
       updateUI();
     }
@@ -72,20 +64,30 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(
 
   const updateUI = () => {
     if (node.onNewValue && node.steps) {
-      node.onNewValue([lastStepNumber, node.steps]);
+      const xyz = [lastStepNumber, node.steps];
+      node.onNewValue(xyz);
+    }
+
+    if (node.custom && node.steps) {
+      node.custom.value = [...node.steps] as Message[];
     }
   };
   return (message: Message) => {
+    if (Array.isArray(message) && node.steps) {
+      const keys = Object.keys(message[0]);
+      if (Object.keys(node.steps[0]).every((x) => keys.includes(x))) {
+        console.log("setting steps!", message);
+        node.steps = message as GenericStepData[];
+        updateUI();
+        return [];
+      }
+    }
     // schema will come in the form of an object
     // so operation: ["schema", [{name: "transpose", min: 0, max: 12, default: 0}]
     const parsedSchema = v.safeParse(StepSchema, message);
     if (parsedSchema.success) {
       schema = parsedSchema.output;
-      node.steps = setupSchema(
-        schema,
-        node.steps || [],
-        node.attributes.length as number,
-      );
+      node.steps = setupSchema(schema, node.steps || [], node.attributes.length as number);
       node.stepsSchema = schema;
       updateUI();
       return [];
@@ -118,16 +120,13 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(
     }
 
     if (node.steps && node.stepsSchema) {
-      const operationResult = handleOperation(
-        message,
-        node.steps,
-        node.stepsSchema,
-      );
+      const operationResult = handleOperation(message, node.steps, node.stepsSchema);
 
       if (operationResult.success) {
         node.steps = operationResult.steps;
         node.stepsSchema = operationResult.schema;
         updateUI();
+
         return [];
       }
     }

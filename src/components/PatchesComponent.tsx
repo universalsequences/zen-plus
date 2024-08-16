@@ -1,5 +1,5 @@
 "use client";
-import {PatchWindows} from "./PatchWindows";
+import { PatchWindows } from "./PatchWindows";
 import AssistantSidebar from "./AssistantSidebar";
 import PatchWindow from "./PatchWindow";
 import { Landing } from "./landing/Landing";
@@ -24,13 +24,8 @@ const PatchesComponent: React.FC<{
   let { rootTile, selectedPatch, patches } = usePatches();
   let { gridTemplate } = useTilesContext();
 
-  let {
-    lastResizingTime,
-    setSelection,
-    setSelectedNodes,
-    setSelectedConnection,
-    selection,
-  } = useSelection();
+  let { lastResizingTime, setSelection, setSelectedNodes, setSelectedConnection, selection } =
+    useSelection();
   let [showSearch, setShowSearch] = useState(false);
 
   const { googleSignIn, user } = useAuth();
@@ -98,18 +93,12 @@ const PatchesComponent: React.FC<{
       <>
         <div
           onClick={onClick}
-          className={
-            "flex w-full h-full min-h-screen " + (lightMode ? "light-mode" : "")
-          }
+          className={"flex w-full h-full min-h-screen " + (lightMode ? "light-mode" : "")}
         >
-        <PatchWindows/>
           <div className="flex flex-col w-full mt-5">
             <div
               //style={patches.length > 1 ? { gridTemplateColumns: gridTemplate } : {}}
-              className={
-                "m-1 mt-4 flex-1 patches h-full flex-1 " +
-                ("patches-" + patches.length)
-              }
+              className={"m-1 mt-4 flex-1 flex flex-col patches flex-1 " + ("patches-" + patches.length)}
             >
               {rootTile ? (
                 <PatchTile
@@ -121,6 +110,7 @@ const PatchesComponent: React.FC<{
               ) : (
                 ""
               )}
+              <PatchWindows />
             </div>
           </div>
           <Sidebar />

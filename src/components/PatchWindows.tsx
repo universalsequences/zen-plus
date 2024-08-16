@@ -8,10 +8,12 @@ import {
   TriangleDownIcon,
   TriangleUpIcon,
 } from "@radix-ui/react-icons";
+import ObjectNodeComponent from "./ObjectNodeComponent";
+import { NodePatchWrapper } from "./NodePatchWrapper";
 
 export const PatchWindows = () => {
   const [hide, setHide] = useState(false);
-  const { patchWindows } = useWindows();
+  const { patchWindows, sideNodeWindow } = useWindows();
   useEffect(() => {
     setHide(false);
   }, [patchWindows]);
@@ -33,14 +35,16 @@ export const PatchWindows = () => {
   return (
     <div
       style={{ zIndex: 10000000000 }}
-      className="w-full fixed bottom-0  pl-10 left-0 pt-2 bg-black flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "
+      className="transition-all w-full relative pl-10 left-0 pt-2 bg-black flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "
     >
       {hide ? (
         <TriangleUpIcon className={iconClass} onClick={() => setHide(!hide)} />
       ) : (
         <TriangleDownIcon onClick={() => setHide(!hide)} className={iconClass} />
       )}
-      <div className="w-full left-0 overflow-x-auto whitespace-nowrap flex gap-2 ">
+
+      {!hide && sideNodeWindow && <NodePatchWrapper objectNode={sideNodeWindow} />}
+      <div className="flex-1 left-0 overflow-x-auto whitespace-nowrap flex gap-2 ">
         {hide ? (
           <div className="w-full h-6"></div>
         ) : (

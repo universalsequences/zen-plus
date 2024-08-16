@@ -155,7 +155,16 @@ export class PatchImpl implements Patch {
   getAllNodes(): ObjectNode[] {
     const nodes = [...this.objectNodes];
     const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
-    return [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes())];
+    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes())];
+    const slots = xyz.filter((x) => x.name === "slots~");
+    for (const slotNode of slots) {
+      if (slotNode.slots) {
+        for (const slot of slotNode.slots) {
+          xyz.push(...(slot.subpatch?.getAllNodes() || []));
+        }
+      }
+    }
+    return xyz;
   }
 
   getAllMessageNodes(): MessageNode[] {

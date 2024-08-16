@@ -17,11 +17,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import type { ObjectNode, SubPatch } from "@/lib/nodes/types";
 import { duplicate } from "@/lib/nodes/utils/duplicateObject";
-import {
-  FileIcon,
-  Pencil2Icon,
-  CardStackPlusIcon,
-} from "@radix-ui/react-icons";
+import { FileIcon, Pencil2Icon, CardStackPlusIcon } from "@radix-ui/react-icons";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { usePosition } from "@/contexts/PositionContext";
 
@@ -30,9 +26,7 @@ export const SLOT_VIEW_HEIGHT = 20;
 
 const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const _name =
-    objectNode.subpatch && objectNode.subpatch.name
-      ? objectNode.subpatch.name
-      : objectNode.text;
+    objectNode.subpatch && objectNode.subpatch.name ? objectNode.subpatch.name : objectNode.text;
   const { removePatchWindow, patchWindows, addPatchWindow } = useWindows();
 
   const { closePatch, expandPatch, patches } = usePatches();
@@ -50,9 +44,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   useEffect(() => {
     let _sorted = [...onchainSubPatches].sort((a, b) =>
-      searchText !== ""
-        ? b.createdAt.seconds - a.createdAt.seconds
-        : a.name.localeCompare(b.name),
+      searchText !== "" ? b.createdAt.seconds - a.createdAt.seconds : a.name.localeCompare(b.name),
     );
     setSubPatches(
       _sorted.filter(
@@ -139,15 +131,18 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       </ContextMenu.Content>
       <ContextMenu.Trigger
         className={
-          "w-full flex h-full slot-view overflow-hidden " +
-          objectNode.attributes.moduleType
+          "w-full flex h-full slot-view overflow-hidden " + objectNode.attributes.moduleType
         }
       >
         <div>
           <div className="mr-2 ml-auto my-auto text-white flex">
             <div>{name}</div>
             <div
-              onClick={() => {
+              onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+                e.stopPropagation();
+                          }}
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                e.stopPropagation();
                 if (objectNode.subpatch) {
                   if (patchWindows.includes(objectNode.subpatch)) {
                     removePatchWindow(objectNode.subpatch);
@@ -171,8 +166,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 }
               }}
               className={
-                (objectNode.subpatch &&
-                [...patches, ...patchWindows].includes(objectNode.subpatch)
+                (objectNode.subpatch && [...patches, ...patchWindows].includes(objectNode.subpatch)
                   ? " bg-zinc-400 hover:bg-zinc-200 "
                   : " hover:bg-zinc-700 ") +
                 "w-3 h-3 my-auto rounded-full border border-1 border-zinc-600 ml-2 transition-colors cursor-pointer"

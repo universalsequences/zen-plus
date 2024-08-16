@@ -12,6 +12,8 @@ interface IWindowsContext {
   windowPositions: Positions;
   updatePosition: (x: string, y: Coordinate) => void;
   setPatchWindows: React.Dispatch<React.SetStateAction<Patch[]>>;
+  setSidePatchWindow: React.Dispatch<React.SetStateAction<Patch | null>>;
+  sidePatchWindow: ObjectNode | null;
 }
 
 interface Props {
@@ -33,11 +35,13 @@ type Positions = {
 export const WindowsProvider: React.FC<Props> = ({ children }) => {
   const { basePatch, selectedPatch, patches, setSelectedPatch } = usePatches();
   const [patchWindows, setPatchWindows] = useState<Patch[]>([]);
+  const [sideNodeWindow, setSideNodeWindow] = useState<ObjectNode | null>(null);
   const [windowPositions, setWindowPositions] = useState<Positions>({});
 
   useEffect(() => {
     basePatch.setPatchWindows = setPatchWindows;
-  }, [setPatchWindows, basePatch])
+    basePatch.setSideNodeWindow = setSideNodeWindow;
+  }, [setPatchWindows, basePatch]);
 
   /*
   useEffect(() => {
@@ -135,6 +139,8 @@ export const WindowsProvider: React.FC<Props> = ({ children }) => {
         windowPositions,
         updatePosition,
         setPatchWindows,
+        sideNodeWindow,
+        setSideNodeWindow,
       }}
     >
       {children}

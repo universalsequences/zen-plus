@@ -6,6 +6,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import PatchWrapper from "./PatchWrapper";
 import { useWindows } from "@/contexts/WindowsContext";
+import { generateColor } from "@/utils/color";
 
 const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -81,6 +82,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
   }, [expandPatch, removePatchWindow, patch]);
 
   const coord = windowPositions[patch.id] || { x: 500, y: 300 };
+  console.log('color=', generateColor(baseName));
   return (
     <div
       style={{
@@ -112,7 +114,9 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
             {patch.name}
           </div>
         </div>
-        <div className="absolute right-3 text-xs text-zinc-500 py-0.5">{baseName}</div>
+        <div style={{ color: generateColor(baseName) }} className="absolute right-3 text-xs py-0.5">
+          {baseName}
+        </div>
       </div>
       <PatchWrapper
         index={0}

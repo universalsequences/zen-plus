@@ -21,7 +21,7 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
           style={{ borderBottom: "1px solid #4f4f4f" }}
           className="p-2 w-full text-xs"
         >
-          <div className="text-base">{(node as ObjectNode).name}</div>
+          <div className="text-base">{(node as ObjectNode).name} ( {node.id} )</div>
           {doc && <div className="mt-2 w-52">{doc.description}</div>}
         </div>
         <div

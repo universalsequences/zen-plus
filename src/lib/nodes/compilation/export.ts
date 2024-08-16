@@ -65,7 +65,6 @@ export const exportToAudioUnit = (
 
   prunedCode = prunedCode.slice(0, start) + prunedCode.slice(end);
 
-  console.log("parameters= ", parameters);
   const template = Handlebars.compile(audioUnitTemplate);
   const compiled = template({
     className: `AudioUnit${Math.floor(Math.random() * 1000000)}`,
@@ -81,7 +80,6 @@ export const exportToAudioUnit = (
     baseAudioUnitMM,
   };
 
-  console.log(audioUnit);
   return audioUnit;
 };
 

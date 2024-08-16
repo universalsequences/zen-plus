@@ -27,3 +27,26 @@ export const setPatchWindows = (node: ObjectNode) => {
     return [];
   };
 };
+
+doc("setSideNodeWindow", {
+  description: "sets node as side window in bar",
+  numberOfOutlets: 0,
+  numberOfInlets: 1,
+});
+
+export const setSideNodeWindow = (node: ObjectNode) => {
+  return (node: Message) => {
+    console.log('set side node window called', node)
+    if (node instanceof ObjectNodeImpl) {
+      const root = getRootPatch((node as ObjectNode).patch);
+      if (root.setSideNodeWindow) {
+        if (node.subpatch) {
+          node.subpatch.lockedMode = true;
+          node.subpatch.presentationMode = true;
+        }
+        root.setSideNodeWindow(node);
+      }
+    }
+    return [];
+  };
+};

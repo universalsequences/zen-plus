@@ -18,6 +18,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 
 const PositionedComponent: React.FC<{
+  position?: string;
   fullscreen?: boolean;
   isHydrated?: boolean;
   isCustomView?: boolean;
@@ -28,6 +29,7 @@ const PositionedComponent: React.FC<{
   children: React.ReactNode;
   node: ObjectNode | MessageNode;
 }> = ({
+  position,
   fullscreen,
   text,
   node,
@@ -197,7 +199,7 @@ const PositionedComponent: React.FC<{
     }
     let className =
       (isCustom ? "" : "h-6_5 border bg-black-clear") +
-      ` absolute  node-component text-black text-xs flex ${_skipOverflow ? "overflow-visible" : "overflow-hidden"} hover:overflow-visible border `;
+      ` ${position || "absolute"}  node-component text-black text-xs flex ${_skipOverflow ? "overflow-visible" : "overflow-hidden"} hover:overflow-visible border `;
     if ((node as MessageNode).messageType === MessageType.Message) {
       className += " rounded-md";
       minWidth = 20;
@@ -226,12 +228,16 @@ const PositionedComponent: React.FC<{
       } else {
         className += " border-zinc-900";
       }
-    } else {
+    } else if (position !== "relative") {
       className += " border-zinc-100";
     }
 
-    if (isSelected) {
+    if (isSelected && position !== "relative") {
       className += " selected";
+    }
+
+    if (position === "relative") {
+      className = className.replaceAll("border", "");
     }
 
     if ((node as ObjectNode).operatorContextType && !isCustom) {
@@ -300,6 +306,11 @@ const PositionedComponent: React.FC<{
       className = "fixed top-0 left-0";
     }
 
+    if (position === "relative") {
+      _style.left = 0;
+      _style.top = 0;
+    }
+
     return (
       <div
         ref={ref}
@@ -350,20 +361,24 @@ const PositionedComponent: React.FC<{
             )}
           </>
         )}
-        <IOletsComponent
-          text={text}
-          isOutlet={false}
-          className="absolute flex -top-1"
-          node={node}
-          iolets={node.inlets}
-        />
-        <IOletsComponent
-          text={text}
-          isOutlet={true}
-          className="absolute flex -bottom-1"
-          node={node}
-          iolets={node.outlets}
-        />
+        {position !== "relative" && (
+          <IOletsComponent
+            text={text}
+            isOutlet={false}
+            className="absolute flex -top-1"
+            node={node}
+            iolets={node.inlets}
+          />
+        )}
+        {position !== "relative" && (
+          <IOletsComponent
+            text={text}
+            isOutlet={true}
+            className="absolute flex -bottom-1"
+            node={node}
+            iolets={node.outlets}
+          />
+        )}
         {children}
       </div>
     );

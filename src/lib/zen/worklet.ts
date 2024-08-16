@@ -29,11 +29,6 @@ export const createWorklet = (
     const url = `data:application/javascript;base64,${workletBase64}`;
 
     const onCompilation = (): AudioWorkletNode => {
-      console.log(
-        "graph.numberOfInputs=%s",
-        graph.numberOfInputs,
-        graph.context.numberOfInputs,
-      );
       const workletNode = new AudioWorkletNode(ctxt, name, {
         channelInterpretation: "discrete",
         numberOfInputs: graph.context.numberOfInputs,
@@ -107,11 +102,7 @@ interface ParsedCode {
   messageArray: string;
 }
 
-const parseMessages = (
-  target: Target,
-  code: string,
-  parsed: ParsedCode,
-): ParsedCode => {
+const parseMessages = (target: Target, code: string, parsed: ParsedCode): ParsedCode => {
   let beginToken = "@beginMessage";
   let endToken = "@endMessage";
   let indexOf = code.indexOf(beginToken);
@@ -125,10 +116,7 @@ const parseMessages = (
     let messageKey = code.slice(indexOf + beginToken.length, end);
     messageConstants.push(messageKey);
     if (target === Target.C) {
-      code =
-        code.slice(0, indexOf) +
-        `${messageIdx++}` +
-        code.slice(end + endToken.length);
+      code = code.slice(0, indexOf) + `${messageIdx++}` + code.slice(end + endToken.length);
     } else {
       code =
         code.slice(0, indexOf) +
@@ -139,10 +127,8 @@ const parseMessages = (
   }
   messageIdx = parsed.messageIdx;
   for (let message of messageConstants) {
-    parsed.messageArray +=
-      `this.messageKey${messageIdx} = "${message}";` + "\n";
-    parsed.messageArray +=
-      `this.messageKeys[${messageIdx - 1}] = "${message}";` + "\n";
+    parsed.messageArray += `this.messageKey${messageIdx} = "${message}";` + "\n";
+    parsed.messageArray += `this.messageKeys[${messageIdx - 1}] = "${message}";` + "\n";
     messageIdx++;
   }
 
@@ -155,10 +141,7 @@ const parseMessages = (
   };
 };
 
-export const createWorkletCode = (
-  name: string,
-  graph: ZenGraph,
-): CodeOutput => {
+export const createWorkletCode = (name: string, graph: ZenGraph): CodeOutput => {
   // first lets replace all instances of @message with what we want
   let parsed: ParsedCode = {
     code: graph.code || "",
@@ -264,10 +247,8 @@ this.port.postMessage({type: "ack",body: "yo"});
           } else {
             const ptr = this.allocateMemory(data.length);
             this.copyDataToWasmMemory(data, ptr);
-            console.log('about to');
             this.wasmModule.exports.initializeMemory(idx, ptr, data.length);
             this.wasmModule.exports.my_free(ptr);
-            console.log('complete');
           }
          } else {
             this.memory.set(data, idx)
@@ -294,7 +275,6 @@ this.port.postMessage({type: "ack",body: "yo"});
            this.memory = null;
        } else if (e.data.type === "ready") {
            this.ready = true;
-           console.log("READY=", this.ready);
        }
     }
   }
@@ -607,11 +587,7 @@ export const prettyPrint = (prefix: string, code: string): string => {
     .join("\n");
 };
 
-export const genFunctions = (
-  functions: Function[],
-  target: Target,
-  varKeyword: string,
-) => {
+export const genFunctions = (functions: Function[], target: Target, varKeyword: string) => {
   let out = "";
   for (let func of functions) {
     let name: string = func.name;

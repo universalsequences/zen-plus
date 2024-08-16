@@ -67,7 +67,7 @@ export type Message =
   | Message[]
   | MessageObject
   | MessageObject[]
-| ObjectNode
+  | ObjectNode
   | ParameterLock;
 
 export type Lazy = () => Message;
@@ -291,6 +291,7 @@ export type Patch = Identifiable & {
   audioNode?: AudioNode;
   exportedAudioUnit?: ExportedAudioUnit;
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
+  setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
 };
 
 export type SubPatch = Patch & {
