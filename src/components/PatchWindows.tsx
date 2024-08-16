@@ -15,7 +15,7 @@ export const PatchWindows = () => {
   const [hide, setHide] = useState(false);
   const { patchWindows, sideNodeWindow } = useWindows();
   useEffect(() => {
-    setHide(false);
+    // setHide(false);
   }, [patchWindows]);
 
   const onKeyDown = useCallback(

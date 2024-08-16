@@ -202,7 +202,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
 
   useEffect(() => {
     setPresentationMode(patch.presentationMode);
-  }, [patch, setPresentationMode]);
+  }, [patch, setPresentationMode, patch.presentationMode]);
 
   const checkNearInlets = useCallback(
     (x: number, y: number) => {

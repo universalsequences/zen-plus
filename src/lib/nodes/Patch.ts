@@ -354,6 +354,8 @@ export class PatchImpl implements Patch {
         parentNode.attributes["Custom Presentation"] = x.isCustomView;
         parentNode.size = x.size;
       }
+    } else {
+      console.log("no parent presentationMode=", this.presentationMode)
     }
 
     this.id = x.id;
