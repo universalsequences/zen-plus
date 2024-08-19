@@ -219,7 +219,7 @@ export const recompileGraph = (patch: Patch) => {
   executeAndSend(topNodes);
 
   // NOTE - might need to bring this back but this was not allowing me to have functions in base
-  if (patch.isZenBase() && (patch as SubPatch).parentPatch) {
+  if (!patch.isZenBase() && (patch as SubPatch).parentPatch) {
     const inputs = patch
       .getAllNodes()
       .filter((node) => node.name === "in")
@@ -242,7 +242,9 @@ export const recompileGraph = (patch: Patch) => {
         }
       }
     }
+  }
 
+  if (patch.isZenBase()) {
     if (
       (patch as SubPatch).patchType === OperatorContextType.ZEN &&
       (patch as SubPatch).parentPatch
