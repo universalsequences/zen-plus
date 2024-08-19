@@ -13,7 +13,7 @@ export const StepSchema = v.array(FieldSchema);
 
 export type StepDataSchema = v.InferInput<typeof StepSchema>;
 
-// Create a utility type to convert an array of field schemas to a step type
+// utility type to convert an array of field schemas to a step type
 export type StepFromSchemas<Schemas extends readonly FieldSchema[]> = {
   [K in Schemas[number]["name"]]: Schemas[number] extends {
     name: K;

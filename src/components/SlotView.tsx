@@ -135,12 +135,12 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         }
       >
         <div>
-          <div className="mr-2 ml-auto my-auto text-white flex">
+          <div className="mr-2 ml-auto my-auto text-zinc-300 flex">
             <div>{name}</div>
             <div
               onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.stopPropagation();
-                          }}
+              }}
               onClick={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.stopPropagation();
                 if (objectNode.subpatch) {

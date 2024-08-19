@@ -2,8 +2,7 @@ import { createContext, useState, useContext, useRef, useCallback, useEffect } f
 import type React from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
-import { useMessage } from "./MessageContext";
-import type { Message, Node, SerializedPatch } from "@/lib/nodes/types";
+import type { Message, Node} from "@/lib/nodes/types";
 import { usePosition } from "./PositionContext";
 
 interface IValueContext {
@@ -29,11 +28,20 @@ export const ValueProvider: React.FC<Props> = ({ node, children }) => {
   const [value, setValue] = useState<Message | null>(null);
   const { patches, selectedPatch } = usePatches();
   const { patch, isCustomView } = usePatch();
-  const isBeingWatched = useRef(false);
   const { presentationMode } = usePosition();
 
   useEffect(() => {
     nodeToWatch.onNewValue = setValue;
+    if (!nodeToWatch.onNewValues) {
+      nodeToWatch.onNewValues = {};
+    }
+    nodeToWatch.onNewValues[node.id] = setValue;
+
+    return () => {
+      if (nodeToWatch.onNewValues) {
+        delete nodeToWatch.onNewValues[node.id];
+      }
+    };
   }, [nodeToWatch, patches, selectedPatch, patch, isCustomView, presentationMode]);
 
   return (

@@ -898,7 +898,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (this.slots) {
-      json.slots = this.slots.map((x: ObjectNode) => x.getJSON()).slice(0, 4);
+      json.slots = this.slots.map((x: ObjectNode) => x.getJSON());
     }
 
     if (this.custom) {
@@ -961,10 +961,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     if (json.steps) {
       this.steps = json.steps;
-    }
-
-    if (json.slots) {
-      deserializedSlots(this, json.slots);
     }
 
     if (json.saveData) {
@@ -1038,6 +1034,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         console.log("loading custom for toggle with json.custom=", json.custom);
       }
       this.custom.fromJSON(json.custom);
+    }
+
+    if (json.slots) {
+      deserializedSlots(this, json.slots);
     }
   }
 

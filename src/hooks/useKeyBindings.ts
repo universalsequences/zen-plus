@@ -1,12 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { getSegmentation } from "@/lib/cables/getSegmentation";
-import {
-  IOConnection,
-  ObjectNode,
-  Coordinate,
-  MessageType,
-  MessageNode,
-} from "@/lib/nodes/types";
+import { IOConnection, ObjectNode, Coordinate, MessageType, MessageNode } from "@/lib/nodes/types";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
 import { usePosition } from "@/contexts/PositionContext";
 import { useLocked } from "@/contexts/LockedContext";
@@ -14,12 +8,10 @@ import { usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useWindows } from "@/contexts/WindowsContext";
+import { useStepsContext } from "@/contexts/StepsContext";
 
-export const useKeyBindings = (
-  scrollRef: React.MutableRefObject<HTMLDivElement | null>,
-) => {
-  let { setSelectedConnection, selectedNodes, selectedConnection } =
-    useSelection();
+export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement | null>) => {
+  let { setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
   const { lockedMode, setLockedMode } = useLocked();
   let {
     updatePosition,
@@ -29,8 +21,7 @@ export const useKeyBindings = (
     presentationMode,
     setPresentationMode,
   } = usePosition();
-  const { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } =
-    usePatch();
+  const { newMessageNode, segmentCable, patch, deleteConnection, deleteNodes } = usePatch();
   const { patchWindows, setPatchWindows } = useWindows();
   const {
     closePatch,
@@ -46,6 +37,8 @@ export const useKeyBindings = (
     selectedPatch,
     setSelectedPatch,
   } = usePatches();
+
+  const { selectedSteps } = useStepsContext();
   const counter1 = useRef(0);
 
   const [command, setCommand] = useState(false);
@@ -82,6 +75,7 @@ export const useKeyBindings = (
     setSelectedConnection,
     selectedNodes,
     deleteNodes,
+    selectedSteps
   ]);
 
   const getXY = (): Coordinate | null => {
@@ -95,23 +89,20 @@ export const useKeyBindings = (
     let y = scrollRef.current.scrollTop + client.y;
     return { x, y };
   };
-  const createMessageNode = useCallback(
-    (isNumberBox: boolean, isParameter?: boolean) => {
-      let messageNode = new MessageNodeImpl(
-        patch,
-        isNumberBox ? MessageType.Number : MessageType.Message,
-      );
-      let position = getXY();
-      if (isParameter) {
-        messageNode.attributes["is parameter"] = true;
-      }
-      if (position) {
-        newMessageNode(messageNode, position);
-        updatePosition(messageNode.id, position);
-      }
-    },
-    [],
-  );
+  const createMessageNode = useCallback((isNumberBox: boolean, isParameter?: boolean) => {
+    let messageNode = new MessageNodeImpl(
+      patch,
+      isNumberBox ? MessageType.Number : MessageType.Message,
+    );
+    let position = getXY();
+    if (isParameter) {
+      messageNode.attributes["is parameter"] = true;
+    }
+    if (position) {
+      newMessageNode(messageNode, position);
+      updatePosition(messageNode.id, position);
+    }
+  }, []);
 
   const onKeyDown = useCallback(
     (e: any) => {
@@ -248,13 +239,14 @@ export const useKeyBindings = (
         segmentSelectedCable(selectedConnection);
       }
       if (e.key === "Backspace") {
+        console.log("selected steps=", selectedSteps);
+        if (selectedSteps && selectedSteps.length > 0) {
+          return;
+        }
         if (selectedConnection) {
           // need to delete this connection
           selectedConnection.source.disconnect(selectedConnection, true);
-          deleteConnection(
-            (selectedConnection.source as any).id,
-            selectedConnection,
-          );
+          deleteConnection((selectedConnection.source as any).id, selectedConnection);
         } else if (selectedNodes.length > 0) {
           deleteNodes(selectedNodes);
           deletePositions(selectedNodes as ObjectNode[]);
@@ -277,6 +269,7 @@ export const useKeyBindings = (
       selectedConnection,
       setCommand,
       selectedNodes,
+      selectedSteps,
       setPatches,
       selectedPatch,
       selectedPatch,

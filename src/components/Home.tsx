@@ -13,6 +13,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { NavProvider } from "@/contexts/NavContext";
 import { TilesProvider } from "@/contexts/TilesContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { StepsProvider } from "@/contexts/StepsContext";
 import { useStorage } from "@/contexts/StorageContext";
 import { PatchesProvider } from "@/contexts/PatchesContext";
 import { SelectionProvider } from "@/contexts/SelectionContext";
@@ -139,9 +140,11 @@ export default function App(props: Props) {
             <WindowsProvider>
               <WorkerProvider patch={basePatch}>
                 <TilesProvider>
+                  <StepsProvider>
                   <main className="flex min-h-screen flex-col h-full w-full">
                     <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
                   </main>
+                  </StepsProvider>
                 </TilesProvider>
               </WorkerProvider>
             </WindowsProvider>

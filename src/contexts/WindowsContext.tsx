@@ -1,7 +1,7 @@
 import { BaseNode } from "@/lib/nodes/BaseNode";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import type { Patch, IOlet, Message, Coordinate, SubPatch } from "@/lib/nodes/types";
+import type { Patch, IOlet, Message, Coordinate, SubPatch, ObjectNode } from "@/lib/nodes/types";
 import { createContext, useState, useContext, useCallback, useEffect } from "react";
 import { usePatches } from "./PatchesContext";
 
@@ -12,8 +12,8 @@ interface IWindowsContext {
   windowPositions: Positions;
   updatePosition: (x: string, y: Coordinate) => void;
   setPatchWindows: React.Dispatch<React.SetStateAction<Patch[]>>;
-  setSidePatchWindow: React.Dispatch<React.SetStateAction<Patch | null>>;
-  sidePatchWindow: ObjectNode | null;
+  setSideNodeWindow: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
+  sideNodeWindow: ObjectNode | null;
 }
 
 interface Props {

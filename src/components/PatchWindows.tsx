@@ -14,6 +14,8 @@ import { NodePatchWrapper } from "./NodePatchWrapper";
 export const PatchWindows = () => {
   const [hide, setHide] = useState(false);
   const { patchWindows, sideNodeWindow } = useWindows();
+
+
   useEffect(() => {
     // setHide(false);
   }, [patchWindows]);
@@ -34,8 +36,13 @@ export const PatchWindows = () => {
   const iconClass = "top-0 left-2 w-8 h-8 absolute cursor-pointer";
   return (
     <div
-      style={{ zIndex: 10000000000 }}
-      className="transition-all w-full relative pl-10 left-0 pt-2 bg-black flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "
+      style={{
+        backgroundSize: "14px 14px",
+        backgroundImage:
+          "radial-gradient(circle at center center, rgba(41, 41, 41, 0.44) 0%, rgba(28, 27, 27, 0.08) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69))",
+        zIndex: 10000000000,
+      }}
+      className="transition-all w-full relative pl-10 left-0 pt-2 flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "
     >
       {hide ? (
         <TriangleUpIcon className={iconClass} onClick={() => setHide(!hide)} />

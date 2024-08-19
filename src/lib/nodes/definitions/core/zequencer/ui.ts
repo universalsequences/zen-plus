@@ -16,6 +16,10 @@ export const zequencer_ui = (node: ObjectNode) => {
     node.size = { width: 200, height: 200 };
   }
 
+  if (node.attributes.parameters === undefined) {
+    node.attributes.parameters = false;
+  }
+
   if (!node.attributes.stepOnColor) {
     node.attributes.stepOnColor = "#ffffff";
   }

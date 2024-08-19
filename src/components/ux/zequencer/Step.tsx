@@ -1,11 +1,12 @@
 import { useLocked } from "@/contexts/LockedContext";
-import type { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
+import type { GenericStepData, StepDataSchema } from "@/lib/nodes/definitions/core/zequencer/types";
 import type { ObjectNode } from "@/lib/nodes/types";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { interpolateHexColors } from "../Toggle";
 import type { Selection } from "./types";
 
 export const Step: React.FC<{
+  isMini: boolean;
   selectedSteps: GenericStepData[] | null;
   isSelected: boolean;
   selection: Selection | null;
@@ -23,9 +24,7 @@ export const Step: React.FC<{
   isDurationStep: boolean;
   stepEditingDuration: number | null;
   setStepEditingDuration: React.Dispatch<React.SetStateAction<number | null>>;
-  setSelectedSteps: React.Dispatch<
-    React.SetStateAction<GenericStepData[] | null>
-  >;
+  setSelectedSteps: React.Dispatch<React.SetStateAction<GenericStepData[] | null>>;
 }> = ({
   setSelectedSteps,
   isDurationStep,
@@ -42,17 +41,20 @@ export const Step: React.FC<{
   stepMoved,
   setStepMoved,
   selection,
+  isMini,
   setSelection,
   stepEditingDuration,
   setStepEditingDuration,
 }) => {
   const { lockedMode } = useLocked();
+  const down = useRef(false);
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!lockedMode) {
         return;
       }
+      down.current = true;
       if (!e.metaKey && step.on) {
         setStepNumberMoving(stepNumber);
         if (!isSelected) {
@@ -65,15 +67,7 @@ export const Step: React.FC<{
         });
       }
     },
-    [
-      lockedMode,
-      step,
-      setStepNumberMoving,
-      setSelection,
-      stepNumber,
-      isSelected,
-      setSelectedSteps,
-    ],
+    [lockedMode, step, setStepNumberMoving, setSelection, stepNumber, isSelected, setSelectedSteps],
   );
 
   const onMouseOver = useCallback(() => {
@@ -82,7 +76,6 @@ export const Step: React.FC<{
     }
     if (stepEditingDuration !== null) {
       const duration = Math.max(1, stepNumber - stepEditingDuration + 1);
-      console.log("step editing duration", duration);
       node.receive(node.inlets[0], {
         name: "duration",
         stepNumber: stepEditingDuration,
@@ -90,7 +83,6 @@ export const Step: React.FC<{
       });
     }
     if (selection) {
-      console.log("updating selection=", selection.fromStepNumber, stepNumber);
       setSelection({
         ...selection,
         toStepNumber: stepNumber,
@@ -119,14 +111,15 @@ export const Step: React.FC<{
 
   const toggle = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!lockedMode) {
+      if (!lockedMode || !down.current) {
         return;
       }
+
+      down.current = false;
       if (stepEditingDuration !== null) {
         return;
       }
       if (stepMoved || selection?.fromStepNumber !== selection?.toStepNumber) {
-        console.log("stepmoved=%s selection=", stepMoved, selection);
         setStepNumberMoving(null);
         setStepMoved(false);
         return;
@@ -135,11 +128,15 @@ export const Step: React.FC<{
       if (e.metaKey) {
         return;
       }
+      if (step.on) {
+        setSelectedSteps([]);
+      }
       node.receive(node.inlets[0], {
         stepNumberToToggle: stepNumber,
       });
     },
     [
+      isSelected,
       stepEditingDuration,
       selection,
       setStepMoved,
@@ -151,9 +148,7 @@ export const Step: React.FC<{
     ],
   );
   const isInSelection =
-    selection &&
-    stepNumber >= selection.fromStepNumber &&
-    stepNumber <= selection.toStepNumber;
+    selection && stepNumber >= selection.fromStepNumber && stepNumber <= selection.toStepNumber;
 
   const primaryColor = step.on ? onColor : offColor;
   const secondaryColor = isInSelection
@@ -173,7 +168,7 @@ export const Step: React.FC<{
       onMouseOver={onMouseOver}
       onFocus={() => 0}
       onKeyDown={(e: any) => 0}
-      className="w-full h-full flex relative"
+    className={`w-full ${isMini ? "h-5" : "h-full"} flex relative`}
     >
       <div
         style={{
@@ -182,7 +177,7 @@ export const Step: React.FC<{
             ? interpolateHexColors(primaryColor, "#000000", 0.3)
             : primaryColor,
         }}
-        className={`overflow-hidden relative flex w-3/4 h-2/3 m-auto border-2 cursor-pointer ${lockedMode ? "hover:scale-105" : ""} rounded-full`}
+        className={`overflow-hidden relative flex w-3/4 h-2/3 m-auto border-2 cursor-pointer ${lockedMode ? " " : ""} rounded-full`}
       />
       <div
         onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {

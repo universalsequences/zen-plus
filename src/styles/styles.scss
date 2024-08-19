@@ -308,20 +308,21 @@ body {
         }
     }
     .patcher-background {
-        //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
-        background-image: radial-gradient(
-                circle at center center,
-                #cbcbcb82 0%,
-                rgba(61, 58, 58, 0.05) 11%,
-                transparent 11%,
-                transparent 100%
-            ),
-            linear-gradient(
-                90deg,
-                rgba(11, 11, 11, 0.69),
-                rgba(11, 11, 11, 0.69)
-            );
+         background-image: radial-gradient(
+                    circle at center center,
+                    rgba(68, 67, 67, 0.51) 0%,
+                    rgba(61, 58, 58, 0.05) 11%,
+                    transparent 11%,
+                    transparent 100%
+                ),
+                linear-gradient(
+                    90deg,
+                    rgb(179 174 174 / 89%),
+                    rgb(165 158 158 / 99%)
+                );
     }
+        //background-image: radial-gradient(circle at center center, rgb(116 117 117) 0%, rgb(200 197 185) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, #8c9092, #8d8f96);
+
 
     .node-component.border-zinc-900 {
         border-color: #bebbbbcf;

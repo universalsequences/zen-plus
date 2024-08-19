@@ -33,6 +33,7 @@ export const slots = (node: ObjectNode) => {
           : [];
     return nums;
   };
+
   const handleHijack = (x: AttributeValue) => {
     const nums = getHijacks(x);
     for (let i = node.outlets.length; i < 2 + nums.length; i++) {
@@ -49,16 +50,23 @@ export const slots = (node: ObjectNode) => {
     reconnect();
   });
 
-  if (!node.attributes.size) {
-    node.newAttribute("size", 6, (size) => {
-      if (node.slots && (size as number) > node.slots?.length) {
-        for (let i = node.slots.length; i < (size as number); i++) {
+  console.log("SLOTS INITIALIZED WITH SIZE =", node.attributes.size);
+  node.newAttribute("size", (node.attributes.size as number) || 6);
+  node.attributeCallbacks.size = (size) => {
+    console.log("size called with size=", size);
+    if (node.slots) {
+      const _size = size as number;
+      if (_size > node.slots.length) {
+        for (let i = node.slots.length; i < _size; i++) {
+          console.log("adding new patch i=%s", i);
           node.slots.push(newPatch(node));
         }
+      } else if (_size < node.slots.length) {
+        node.slots = node.slots.slice(0, _size);
       }
-      reconnect();
-    });
-  }
+    }
+    reconnect();
+  };
 
   if (!node.slots) {
     node.slots = [];

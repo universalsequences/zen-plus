@@ -5,19 +5,12 @@ import {
   type FieldSchema,
   StepSchema,
   type StepDataSchema,
-  type BaseStepData,
   type TickMessage,
   TickSchema,
-  type StepFromSchemas,
-  type SetFieldForStepMessage,
-  SetFieldForStepSchema,
   GenericStepData,
-  MoveStepSchema,
 } from "./types";
 import * as v from "valibot";
-import { setFieldForStep } from "./setFieldToStep";
 import { setupSchema } from "./setupSchema";
-import { moveStep } from "./moveStep";
 import { handleOperation } from "./operation";
 
 doc("zequencer.core", {
@@ -41,7 +34,6 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
   }
 
   node.attributeCallbacks.length = (length: number | boolean | string | number[]) => {
-    console.log("length changed", length, typeof length);
     if (node.stepsSchema) {
       node.steps = setupSchema(node.stepsSchema, node.steps || [], length as number);
       node.stepsSchema = schema;
@@ -63,20 +55,22 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
   let lastStepNumber = 0;
 
   const updateUI = () => {
-    if (node.onNewValue && node.steps) {
+    if (node.onNewValues && node.steps) {
       const xyz = [lastStepNumber, node.steps];
-      node.onNewValue(xyz);
+      for (const id in node.onNewValues) {
+        node.onNewValues[id](xyz);
+      }
     }
 
     if (node.custom && node.steps) {
-      node.custom.value = [...node.steps] as Message[];
+      node.custom.value = node.steps.map(x => ({... x})) as Message[];
     }
   };
+
   return (message: Message) => {
     if (Array.isArray(message) && node.steps) {
       const keys = Object.keys(message[0]);
       if (Object.keys(node.steps[0]).every((x) => keys.includes(x))) {
-        console.log("setting steps!", message);
         node.steps = message as GenericStepData[];
         updateUI();
         return [];

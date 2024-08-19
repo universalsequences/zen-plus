@@ -173,6 +173,7 @@ export type Node = Identifiable &
     send: (outlet: IOlet, x: Message) => void;
     receive: (inlet: IOlet, x: Message, fromNode?: Node) => void;
     onNewValue?: (value: Message) => void;
+    onNewValues?: { [x: string]: (value: Message) => void };
   };
 
 export type ObjectNode = Positioned &

@@ -6,25 +6,40 @@ import { Step } from "./Step";
 import { useAttributedByNameNode } from "@/hooks/useAttributedByNameNode";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useValue } from "@/contexts/ValueContext";
-import { useCallback, useEffect, useState } from "react";
-import type { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { GenericStepData, StepDataSchema } from "@/lib/nodes/definitions/core/zequencer/types";
+import { useStepsContext } from "@/contexts/StepsContext";
+import { Cirklon } from "./Cirklon";
+import { CirklonParameters } from "./CirklonParameters";
 
 export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-  const { sizeIndex } = usePosition();
+  usePosition();
+  useSelection();
+
   const { width, height } = objectNode.size || { width: 200, height: 200 };
-
-  const [selectedSteps, setSelectedSteps] = useState<GenericStepData[] | null>(null);
-
   const [selection, setSelection] = useState<Selection | null>(null);
 
+  const { selectedSteps, setSelectedSteps } = useStepsContext();
+
   const attributes = objectNode.attributes;
-  const { attributesIndex } = useSelection();
 
   const { setNodeToWatch, value } = useValue();
 
-  const currentStepNumber = Array.isArray(value) ? (value[0] as number) : 0;
+  const { selectedNodes } = useSelection();
 
   const { node } = useAttributedByNameNode(objectNode, attributes.name as string);
+  const currentStepNumber = Array.isArray(value) ? (value[0] as number) : 0;
+
+  const selectedStepsRef = useRef(selectedSteps);
+  useEffect(() => {
+    selectedStepsRef.current = selectedSteps;
+  }, [selectedSteps]);
+  useEffect(() => {
+    const bad = selectedStepsRef.current?.filter((x) => node?.steps?.includes(x));
+    if (bad) {
+      setSelectedSteps(bad);
+    }
+  }, [node?.steps]);
 
   const { presentationMode } = usePosition();
 
@@ -44,6 +59,10 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const [stepNumberMoving, setStepNumberMoving] = useState<number | null>(null);
   const [stepMoved, setStepMoved] = useState(false);
 
+  useEffect(() => {
+    return () => setSelectedSteps([]);
+  }, []);
+
   const onMouseUp = useCallback(() => {
     if (selection && node?.steps) {
       const steps = node.steps.filter(
@@ -55,6 +74,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     setStepEditingDuration(null);
     setStepNumberMoving(null);
     setSelection(null);
+    setMouseStartY(null);
     setStepMoved(false);
   }, [selection, node]);
 
@@ -75,7 +95,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!selectedSteps || !node?.steps) {
+      if (!selectedSteps || !node?.steps || !selectedSteps.length) {
         return;
       }
       if (e.key === "Backspace") {
@@ -114,7 +134,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
         });
       }
     },
-    [selectedSteps, node],
+    [selectedSteps, node, selectedNodes],
   );
 
   useEffect(() => {
@@ -137,16 +157,42 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     }
   }, [node?.steps]);
 
+  const schema = node?.stepsSchema as StepDataSchema;
+  const [parameter, setParameter] = useState(schema?.[0]?.name);
+  const showParameters = objectNode.attributes.parameters;
+  useEffect(() => {
+    setParameter(schema?.[0]?.name);
+  }, [schema]);
+
+  const [mouseStartY, setMouseStartY] = useState<number | null>(null);
+
   return (
     <div className="bg-zinc-900 p-2" style={{ width, height }}>
       <div className="flex flex-col gap-1 h-full">
         <div className="flex flex-col gap-1 h-full">
+          {showParameters && schema && parameter && (
+            <CirklonParameters
+                    color={attributes.stepOnColor as string}
+              schema={schema} setParameter={setParameter} parameter={parameter} />
+          )}
           {node &&
             rows.map((steps, rowIndex) => (
               <div key={rowIndex} className="flex flex-col gap-1 h-full">
-                <div className="flex h-full">
+                {node && showParameters && schema && (
+                  <Cirklon
+                    setMouseStartY={setMouseStartY}
+                    mouseStartY={mouseStartY}
+                    color={attributes.stepOnColor as string}
+                    parameter={parameter}
+                    schema={schema}
+                    objectNode={node}
+                    steps={steps}
+                  />
+                )}
+                <div className={`flex ${showParameters ? "h-8" : "h-full"}`}>
                   {steps.map((step, index) => (
                     <Step
+                      isMini={!showParameters}
                       stepEditingDuration={stepEditingDuration}
                       setStepEditingDuration={setStepEditingDuration}
                       isDurationStep={durationSteps[rowIndex * 16 + index] || false}

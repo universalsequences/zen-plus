@@ -216,7 +216,7 @@ export const simdMemo = (
   };
 
   const emit = (context: Context, result: Generated): Generated => {
-    result.codeFragments[0].code += ` /* id: ${id} */ `;
+    //result.codeFragments[0].code += ` /* id: ${id} */ `;
     result.codeFragments[0].id = id;
 
     if (memoized) {

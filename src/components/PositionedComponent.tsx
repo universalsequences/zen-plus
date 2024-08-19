@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useMessage } from "@/contexts/MessageContext";
 import { index } from "./ux/index";
 import IOletsComponent from "./IOletsComponent";
-import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "./SlotView";
+import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "./SlotView"
+import { fetchOnchainSubPatch } from "@/lib/onchain/fetch";
 import {
   Orientation,
   MessageType,
@@ -361,7 +362,7 @@ const PositionedComponent: React.FC<{
             )}
           </>
         )}
-        {position !== "relative" && (
+        {!isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={false}
@@ -370,7 +371,7 @@ const PositionedComponent: React.FC<{
             iolets={node.inlets}
           />
         )}
-        {position !== "relative" && (
+        {!isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={true}

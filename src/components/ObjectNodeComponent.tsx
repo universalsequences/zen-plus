@@ -3,7 +3,6 @@ import UXView from "./ux/UXView";
 import SlotView from "./SlotView";
 import type { File } from "@/lib/files/types";
 import type { TypeError, TypeSuccess } from "@/lib/nodes/typechecker";
-import { fetchOnchainSubPatch } from "@/lib/onchain/fetch";
 import { useValue } from "@/contexts/ValueContext";
 import { usePublicClient } from "wagmi";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
@@ -16,8 +15,7 @@ import {
 import type { ContextDefinition } from "@/hooks/useAutoComplete";
 import AutoCompletes from "./AutoCompletes";
 import { index, type NodeProps } from "./ux/index";
-import Attributes from "./Attributes";
-import { ContextMenu, useThemeContext } from "@radix-ui/themes";
+import { ContextMenu } from "@radix-ui/themes";
 import { type SizeIndex, usePosition, type DraggingNode } from "@/contexts/PositionContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { useLocked } from "@/contexts/LockedContext";
@@ -32,7 +30,7 @@ import { useStorage } from "@/contexts/StorageContext";
 
 const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode }> = ({
   objectNode,
-  position
+  position,
 }) => {
   const { setSelection, selectedNodes, setSelectedNodes } = useSelection();
   const { updatePosition, sizeIndexRef } = usePosition();
