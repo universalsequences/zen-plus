@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useValue } from "@/contexts/ValueContext";
 import NumberBox from "./NumberBox";
 import { Message, ObjectNode } from "@/lib/nodes/types";
+import { useStepsContext } from "@/contexts/StepsContext";
 
 const AttrUIValue: React.FC<{
   lockedModeRef: React.MutableRefObject<boolean>;
@@ -9,6 +10,7 @@ const AttrUIValue: React.FC<{
   max: number;
   node: ObjectNode;
 }> = ({ node, lockedModeRef, min, max }) => {
+  const { selectedSteps } = useStepsContext();
   const parsed = parseFloat(node.text.split(" ")[2]);
   const [value, setValue] = useState(!Number.isNaN(parsed) ? parsed : 0);
   const onChangeValue = useCallback(
@@ -24,8 +26,22 @@ const AttrUIValue: React.FC<{
       }
       let message: Message = text.slice(1).join(" ");
       objectNode.send(objectNode.outlets[0], message);
+
+      if (selectedSteps) {
+        for (const step of selectedSteps) {
+          const existingLock = step.parameterLocks.find((x) => x.id === node.id);
+          if (existingLock) {
+            existingLock.value = num;
+          } else {
+            step.parameterLocks.push({
+              id: node.id,
+              value: num,
+            });
+          }
+        }
+      }
     },
-    [node],
+    [node, selectedSteps],
   );
 
   let { value: message } = useValue();

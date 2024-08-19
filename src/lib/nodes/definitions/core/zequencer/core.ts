@@ -8,10 +8,12 @@ import {
   type TickMessage,
   TickSchema,
   GenericStepData,
+  ParameterLock,
 } from "./types";
 import * as v from "valibot";
 import { setupSchema } from "./setupSchema";
 import { handleOperation } from "./operation";
+import { getRootPatch } from "@/lib/nodes/traverse";
 
 doc("zequencer.core", {
   numberOfInlets: 1,
@@ -63,7 +65,36 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     }
 
     if (node.custom && node.steps) {
-      node.custom.value = node.steps.map(x => ({... x})) as Message[];
+      node.custom.value = node.steps.map((x) => ({ ...x })) as Message[];
+    }
+  };
+
+  const objectCache: { [x: string]: ObjectNode } = {};
+
+  const findObject = (id: string): ObjectNode | null => {
+    if (objectCache[id]) return objectCache[id];
+
+    const rootPatch = getRootPatch(node.patch);
+    const searchResult = rootPatch.getAllNodes().find((x) => x.id === id);
+    if (searchResult) {
+      objectCache[id] = searchResult;
+      return searchResult;
+    }
+    return null;
+  };
+
+  const handleParameterLocks = (locks: ParameterLock[], time: number) => {
+    for (const lock of locks) {
+      const { id, value } = lock;
+      const object = findObject(id);
+      if (!object) {
+        console.error("object not found for plock id=%s", id);
+        return;
+      }
+      if (object.name === "attrui") {
+        object.receive(object.inlets[0], [value, time]);
+      }
+      // otherwise we run with that shit
     }
   };
 
@@ -89,8 +120,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
 
     const parsedTick = v.safeParse(TickSchema, message);
     if (parsedTick.success) {
-      // not a tick so ignore
-      // handle tick
+      // this is a tick message so we will try to see if theres anything to send out
       const tick: TickMessage = parsedTick.output;
 
       if (!node.steps) {
@@ -103,6 +133,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
       updateUI();
 
       if (node.steps[stepNumber].on) {
+        handleParameterLocks(node.steps[stepNumber].parameterLocks, tick.time);
         return [
           {
             time: tick.time,

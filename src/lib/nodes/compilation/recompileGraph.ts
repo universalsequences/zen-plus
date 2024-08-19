@@ -1,11 +1,5 @@
 import { OperatorContextType } from "../context";
-import {
-  PatchType,
-  type Message,
-  type ObjectNode,
-  type Patch,
-  type SubPatch,
-} from "../types";
+import { PatchType, type Message, type ObjectNode, type Patch, type SubPatch } from "../types";
 
 const debug = false;
 const dlog = (...x: any[]) => {
@@ -23,8 +17,7 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
 
   // re-parse every node so that we "start from scratch"
   const objectNodes = patch.objectNodes;
-  const _objectNodes =
-    patch.name === undefined ? patch.getAllNodes() : objectNodes; //objectNodes;
+  const _objectNodes = patch.name === undefined ? patch.getAllNodes() : objectNodes; //objectNodes;
   if (patch.name === undefined || patch.isZenBase()) {
     let __o = patch.getAllNodes();
     if (!parentPatch) {
@@ -122,10 +115,7 @@ export const recompileGraph = (patch: Patch) => {
   if (parentPatch) {
     // we are in a zen node so we proceed as usual
     for (const node of objectNodes) {
-      if (
-        node.subpatch &&
-        node.subpatch.patchType !== OperatorContextType.AUDIO
-      ) {
+      if (node.subpatch && node.subpatch.patchType !== OperatorContextType.AUDIO) {
         node.subpatch.recompileGraph(true);
       }
     }
@@ -158,15 +148,11 @@ export const recompileGraph = (patch: Patch) => {
 
     const parent = (patch as Patch as SubPatch).parentPatch;
     if (parent && (patch as SubPatch).patchType === OperatorContextType.ZEN) {
-      const functions = parent
-        .getAllNodes()
-        .filter((x) => x.name === "function");
+      const functions = parent.getAllNodes().filter((x) => x.name === "function");
       mapReceive(functions);
     }
 
-    const histories = patch
-      .getAllNodes()
-      .filter((node) => node.name === "history");
+    const histories = patch.getAllNodes().filter((node) => node.name === "history");
     dlog("sending histories", histories);
     mapReceive(histories);
 
@@ -180,23 +166,17 @@ export const recompileGraph = (patch: Patch) => {
     //const dataNodes = patch.getAllNodes().filter((node) => node.name === "data");
     //mapReceive(dataNodes, [0]);
 
-    const bufferNodes = patch
-      .getAllNodes()
-      .filter((node) => node.name === "buffer");
+    const bufferNodes = patch.getAllNodes().filter((node) => node.name === "buffer");
     dlog("sending bufferNodes", bufferNodes);
     mapReceive(bufferNodes, [0]);
 
-    const paramNodes = patch
-      .getAllNodes()
-      .filter((node) => node.name === "param");
+    const paramNodes = patch.getAllNodes().filter((node) => node.name === "param");
     dlog("sending bufferNodes", paramNodes);
     mapReceive(paramNodes);
   }
 
   if (patch.name === undefined) {
-    const uniformNodes = patch
-      .getAllNodes()
-      .filter((node) => node.name === "uniform");
+    const uniformNodes = patch.getAllNodes().filter((node) => node.name === "uniform");
     dlog("sending uniformNodes", uniformNodes);
     mapReceive(uniformNodes, "bang");
   }
@@ -210,9 +190,7 @@ export const recompileGraph = (patch: Patch) => {
   //const topNodesNoLoad = (patch.isZenBase() ? _objectNodes : objectNodes).filter(
   //  (node) => node.inlets.length === 0 && !node.needsLoad,
   //);
-  const topNodesNoLoad = objectNodes.filter(
-    (node) => node.inlets.length === 0 && !node.needsLoad,
-  );
+  const topNodesNoLoad = objectNodes.filter((node) => node.inlets.length === 0 && !node.needsLoad);
   dlog("sending topNodesNoLoad", topNodesNoLoad);
   const a1 = new Date().getTime();
   executeAndSend(topNodesNoLoad);
@@ -240,7 +218,8 @@ export const recompileGraph = (patch: Patch) => {
   dlog("sending topNodes", topNodes);
   executeAndSend(topNodes);
 
-  if (!patch.isZenBase() && (patch as SubPatch).parentPatch) {
+  // NOTE - might need to bring this back but this was not allowing me to have functions in base
+  if (patch.isZenBase() && (patch as SubPatch).parentPatch) {
     const inputs = patch
       .getAllNodes()
       .filter((node) => node.name === "in")
@@ -268,6 +247,7 @@ export const recompileGraph = (patch: Patch) => {
       (patch as SubPatch).patchType === OperatorContextType.ZEN &&
       (patch as SubPatch).parentPatch
     ) {
+      console.log("checking for polycalls cuz were in ZEN and parentPatch exists", patch);
       const calls = patch
         .getAllNodes()
         .filter(
@@ -279,16 +259,12 @@ export const recompileGraph = (patch: Patch) => {
               node.name === "polytrig"),
         );
 
-      dlog("sending calls bc zen and has parent patch", calls);
+      console.log("sending calls bc zen and has parent patch", calls);
       for (const call of calls) {
         if (call.name === "polytrig") {
           call.receive(call.inlets[0], "bang");
         } else {
-          if (
-            call.fn &&
-            call.inlets[0] &&
-            call.inlets[0].lastMessage !== undefined
-          ) {
+          if (call.fn && call.inlets[0] && call.inlets[0].lastMessage !== undefined) {
             call.receive(call.inlets[0], call.inlets[0].lastMessage);
           }
         }

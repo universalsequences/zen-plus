@@ -694,6 +694,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         ignoreMessage = true;
       }
     }
+    if (this.name === "polytrig") {
+      ignoreMessage = false;
+    }
     return { isCompiling, ignoreMessage };
   }
 

@@ -71,6 +71,14 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         object.storedParameterValue = defaultValue;
       }
     }
+    if (typeof x === "string" && x !== "bang") {
+      const tokens = x.split(" ");
+      if (tokens.length === 2) {
+        x = parseFloat(tokens[1]);
+      } else if (tokens.length === 3 && tokens[0] === name()) {
+        x = [parseFloat(tokens[1]), parseFloat(tokens[2])];
+      }
+    }
     if (typeof x === "string" && x !== "bang" && x.split(" ").length === 2) {
       let split = x.split(" ");
       x = parseFloat(split[1]);
