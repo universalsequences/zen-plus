@@ -31,6 +31,11 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const currentStepNumber = Array.isArray(value) ? (value[0] as number) : 0;
 
   const selectedStepsRef = useRef(selectedSteps);
+
+  useEffect(() => {
+    return () => setSelectedSteps(null);
+  }, []);
+
   useEffect(() => {
     selectedStepsRef.current = selectedSteps;
   }, [selectedSteps]);

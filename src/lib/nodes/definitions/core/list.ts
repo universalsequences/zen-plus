@@ -12,6 +12,8 @@ export const unpack = (node: ObjectNode, ...args: Lazy[]) => {
   return (message: Message): Message[] => {
     if (Array.isArray(message)) {
       return message as Message[];
+    } else if (ArrayBuffer.isView(message)) {
+      return Array.from(message);
     }
     return [];
   };

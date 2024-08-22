@@ -26,6 +26,8 @@ import {
   SubPatch,
 } from "@/lib/nodes/types";
 import { PatchImpl } from "@/lib/nodes/Patch";
+import { prompt } from "@/lib/anthropic/assistant";
+import { api } from "@/lib/nodes/definitions/zen/index";
 
 export type Connections = {
   [x: string]: IOConnection[];
@@ -88,9 +90,9 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
   const { patches } = usePatches();
 
   const assist = useCallback(
-    (prompt: string): Promise<ObjectNode[]> => {
+    (text: string): Promise<ObjectNode[]> => {
       return new Promise((resolve) => {
-        patch.assistant.createThread(prompt).then((msgData) => {
+        prompt(text).then((msgData) => {
           // first clear the old assistant nodes
           console.log("deleting previous nodes...", [...assistantNodes.current]);
           patch.objectNodes = [];
@@ -98,8 +100,10 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
           // deleteNodes(patch.assistant.nodesAdded);
           assistantNodes.current = [];
           if (msgData) {
-            let msg = msgData[2];
+            let msg = msgData[0];
             console.log(msg);
+            const operations = msgData[0];
+            /*
             let operations = msgData.find(
               (x) => !x.includes("json") && x.includes("create") && !x.includes("..."),
             ) as string;
@@ -109,6 +113,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
               let end = operations.indexOf("]");
               operations = operations.slice(start, end + 1);
             }
+            */
             let ops = [];
             try {
               ops = JSON.parse(operations);
@@ -124,16 +129,25 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             let nodes: ObjectNode[] = [];
             for (let op of ops) {
               let tokens = Array.isArray(op) ? op : op.split(" ");
-              console.log(tokens);
+              if (api[tokens[0]]) {
+                tokens = ["create", ...tokens];
+                if (tokens.length > 5) {
+                tokens.splice(3, 1);
+                }
+              }
               let [operationType, operatorName, id, x, y] = tokens;
+              console.log("tokens", tokens);
 
               operatorName = operatorName.replaceAll("$1", "");
               operatorName = operatorName.replaceAll("~", "");
+
+              console.log("operator name=", operatorName);
 
               let position = {
                 x: parseInt(x),
                 y: parseInt(y),
               };
+              console.log("position=", position);
               if (operationType === "comment") {
                 let [operationType, x, y, ...comments] = tokens;
                 let comment = comments.join(" ").replace("'", "");

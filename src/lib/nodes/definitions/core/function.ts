@@ -10,15 +10,17 @@ export interface Point {
 
 export class FunctionEditor {
   points: Point[];
-  objectNode: ObjectNode;
+  objectNode?: ObjectNode;
   updates: number;
   value: Message;
+  adsr: boolean;
 
-  constructor(objectNode: ObjectNode) {
+  constructor(objectNode?: ObjectNode) {
     this.objectNode = objectNode;
     this.points = [];
     this.updates = 0;
     this.value = 0;
+    this.adsr = false;
   }
 
   getJSON() {
@@ -28,32 +30,32 @@ export class FunctionEditor {
   fromJSON(x: any) {
     if (x) {
       this.points = x;
-      this.objectNode.receive(this.objectNode.inlets[0], "bang");
-      if (this.objectNode.patch.onNewMessage) {
-        this.objectNode.patch.onNewMessage(this.objectNode.id, this.updates++);
+      if (this.objectNode) {
+        this.objectNode.receive(this.objectNode.inlets[0], "bang");
+        if (this.objectNode.patch.onNewMessage) {
+          this.objectNode.patch.onNewMessage(this.objectNode.id, this.updates++);
+        }
       }
     }
   }
 
   addBreakPoint(x: Point) {
+    if (this.adsr) {
+      return;
+    }
     this.points.push(x);
     this.update();
   }
 
   update() {
+    if (!this.objectNode) return;
     publish("statechanged", {
       node: this.objectNode,
       state: this.getJSON(),
     });
   }
 
-  private bezierInterpolate(
-    t: number,
-    p0: number,
-    p1: number,
-    p2: number,
-    p3: number,
-  ): number {
+  private bezierInterpolate(t: number, p0: number, p1: number, p2: number, p3: number): number {
     const oneMinusT = 1 - t;
     return (
       oneMinusT * oneMinusT * oneMinusT * p0 +
@@ -75,8 +77,7 @@ export class FunctionEditor {
       // Calculate t based on x position
       const t =
         (i - sortedPoints[currentSegmentIndex].x) /
-        (sortedPoints[currentSegmentIndex + 1].x -
-          sortedPoints[currentSegmentIndex].x);
+        (sortedPoints[currentSegmentIndex + 1].x - sortedPoints[currentSegmentIndex].x);
 
       if (t >= 0 && t <= 1) {
         let a = sortedPoints[currentSegmentIndex];
@@ -173,9 +174,17 @@ export class FunctionEditor {
 
 doc("function", {
   numberOfInlets: 1,
-  numberOfOutlets: 2,
+  numberOfOutlets: 7,
   description: "function editor",
-  outletNames: ["list", "interpolated list"],
+  outletNames: [
+    "list",
+    "interpolated list",
+    "attack-decay interpolated list",
+    "release list",
+    "attack-decay size",
+    "sustain",
+    "release size",
+  ],
 });
 export const function_editor = (node: ObjectNode) => {
   if (!node.custom) {
@@ -186,10 +195,66 @@ export const function_editor = (node: ObjectNode) => {
     node.attributes.divisions = 4;
   }
 
+  if (!node.attributes.adsr) {
+    node.attributes.adsr = false;
+  }
+
+  node.attributeDefaults.adsr = false;
+
+  node.attributeCallbacks.adsr = (message: string | number | boolean | number[]) => {
+    const editor = node.custom as FunctionEditor;
+    console.log("node.attributecallbacks called with=", message, editor);
+    if (message && editor) {
+      console.log("doing some shit... calling adsr true and points are=", editor.points);
+      if (editor.points.length === 5) {
+        console.log("returning...");
+        editor.adsr = true;
+        return;
+      }
+
+      console.log("adding break points?");
+      editor.addBreakPoint({ x: 0 * 1000, y: 0 });
+      editor.addBreakPoint({ x: 0.1 * 1000, y: 1 });
+      editor.addBreakPoint({ x: 0.5 * 1000, y: 0.5 });
+      editor.addBreakPoint({ x: 0.75 * 1000, y: 0.5 });
+      editor.addBreakPoint({ x: 1 * 1000, y: 0 });
+      editor.adsr = true;
+    }
+  };
+
+  if (node.attributes.adsr) {
+    node.attributeCallbacks.adsr(true);
+  }
+
   node.needsLoad = true;
 
   return (msg: Message) => {
     if (msg === "bang") {
+      const editor = node.custom as FunctionEditor;
+      console.log("attributes bang", node, editor, msg);
+      if (editor.adsr) {
+        console.log("calling points = ", [...editor.points]);
+        const ed1 = new FunctionEditor();
+        ed1.points = editor.points.slice(0, 3);
+        const ed2 = new FunctionEditor();
+        ed2.points = editor.points.slice(3);
+        const attackDecay = ed1.points[2].x;
+        const release = 1000 - ed2.points[0].x;
+
+        ed1.points = scaleAttackDecay(attackDecay, ed1.points);
+        ed2.points = scaleRelease(release, ed2.points);
+        const releaseBufferList = ed2.toBufferList();
+        releaseBufferList[999] = 0;
+        return [
+          editor.toList(),
+          editor.toBufferList(),
+          ed1.toBufferList(),
+          releaseBufferList,
+          attackDecay,
+          ed1.points[2].y,
+          release,
+        ];
+      }
       return [
         (node.custom as FunctionEditor).toList(),
         (node.custom as FunctionEditor).toBufferList(),
@@ -198,4 +263,31 @@ export const function_editor = (node: ObjectNode) => {
 
     return [];
   };
+};
+
+const scaleAttackDecay = (length: number, points: Point[]): Point[] => {
+  const pts: Point[] = [];
+
+  for (const pt of points) {
+    pts.push({
+      x: (1000 * pt.x) / length,
+      y: pt.y,
+      c: pt.c,
+    });
+  }
+  return pts;
+};
+
+const scaleRelease = (length: number, points: Point[]): Point[] => {
+  const pts: Point[] = [];
+  const start = points[0].x;
+
+  for (const pt of points) {
+    pts.push({
+      x: (1000 * (pt.x - start)) / length,
+      y: pt.y,
+      c: pt.c,
+    });
+  }
+  return pts;
 };

@@ -15,7 +15,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   };
   let editor: FunctionEditor = objectNode.custom as any as FunctionEditor;
   let [points, setPoints] = useState(editor.points);
-  let { attributesIndex } = useSelection();
+  useSelection();
   let { lockedMode } = useLocked();
 
   let { messages } = useMessage();
@@ -36,9 +36,24 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       if (!ref.current) {
         return;
       }
+
       let rect = ref.current.getBoundingClientRect();
-      let y = e.clientY - rect.top;
-      let x = e.clientX - rect.left;
+      let y = e.clientY - rect.top - 10;
+      let x = e.clientX - rect.left - 10;
+
+      const svgPoint = ref.current.createSVGPoint();
+      svgPoint.x = e.clientX;
+      svgPoint.y = e.clientY;
+      const mousePosition = svgPoint.matrixTransform(ref.current.getScreenCTM()?.inverse());
+      x = mousePosition.x;
+      y = mousePosition.y;
+
+      if (editor.adsr) {
+        return;
+      }
+      if (x < 0 || y < 0 || x > width || y > height) {
+        return;
+      }
 
       x = 1000 * (x / width);
       y = 1 - y / height;
@@ -86,21 +101,59 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       const rect = ref.current.getBoundingClientRect();
       let y = e.clientY - rect.top;
       let x = e.clientX - rect.left;
+
+      const svgPoint = ref.current.createSVGPoint();
+      svgPoint.x = e.clientX;
+      svgPoint.y = e.clientY;
+      const mousePosition = svgPoint.matrixTransform(ref.current.getScreenCTM()?.inverse());
+      x = mousePosition.x;
+      y = mousePosition.y;
+
+      x = Math.min(x, width);
+      y = Math.min(y, height);
+      x = Math.max(x, 0);
+      y = Math.max(y, 0);
+
       x = 1000 * (x / width);
       y = 1 - y / height;
       y = Math.min(1, Math.max(0, y));
       x = Math.min(1000, Math.max(0, x));
 
       if (editing) {
-        editing.x = x;
-        editing.y = y;
-        setPoints([...editor.points]);
-      } else if (curveEdit) {
-        curveEdit.c = -1 + y * 2;
-        if (Math.abs(curveEdit.c) < 0.05) {
-          curveEdit.c = 0;
+        if (editor.adsr) {
+          const index = editor.points.indexOf(editing);
+          if (index === 2 || index === 3) {
+            editor.points[2].y = y;
+            editor.points[3].y = y;
+            editing.x = x;
+          } else if (index === 4) {
+            return;
+          } else {
+            editing.x = x;
+            editing.y = y;
+          }
+
+          editing.x = Math.min(editing.x, editor.points[index + 1]?.x);
+          if (index >= 1) {
+           editing.x = Math.max(editing.x, editor.points[index - 1]?.x);
+          }
+        } else {
+          editing.x = x;
+          editing.y = y;
         }
         setPoints([...editor.points]);
+      } else if (curveEdit) {
+        if (editor.adsr && editor.points.indexOf(curveEdit) === 2) {
+          editor.points[2].y = y;
+          editor.points[3].y = y;
+          setPoints([...editor.points]);
+        } else {
+          curveEdit.c = -1 + y * 2;
+          if (Math.abs(curveEdit.c) < 0.05) {
+            curveEdit.c = 0;
+          }
+          setPoints([...editor.points]);
+        }
       }
       objectNode.receive(objectNode.inlets[0], "bang");
     },
@@ -130,18 +183,20 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             onClick(e);
           }
         }}
-        className={
-          curveEdit ? "cursor-ns-resize flex relative" : "flex relative"
-        }
+        className={curveEdit ? "cursor-ns-resize flex relative" : "flex relative"}
         style={{ width, height: height }}
       >
         <div className="pointer-events-none z-30 absolute right-0 bottom-0 text-white">
-          {editing
-            ? `x=${round(editing.x / 1000.0)} y=${round(editing.y)}`
-            : ""}
+          {editing ? `x=${round(editing.x / 1000.0)} y=${round(editing.y)}` : ""}
           {curveEdit ? `c=${Math.round(100 * curveEdit.c!) / 100.0}` : ""}
         </div>
-        <svg ref={ref} className="my-auto " width={width} height={height}>
+        <svg
+          className="m-auto"
+          viewBox={`-10 -10 ${width + 10} ${height + 20}`}
+          ref={ref}
+          width={width}
+          height={height}
+        >
           {new Array(divisions + 1).fill(0).map((_a, i) => (
             <line
               key={i}
@@ -163,10 +218,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             />
           ))}
           {paths.map((d, i) => (
-            <g
-              key={i}
-              className="transitioncolors active:stroke-red-500 hover:stroke-red-500"
-            >
+            <g key={i} className="transitioncolors active:stroke-red-500 hover:stroke-red-500">
               <path
                 onMouseDown={(e: any) => {
                   if (lockedMode) {
@@ -187,16 +239,31 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                     setCurveEdit(sortedPoints[i]);
                   }
                 }}
+                stroke="#00fff4"
                 fill="transparent"
-                className="transition-colors active:stroke-red-500 hover:stroke-red-500 stroke-zinc-400 cursor-ns-resize"
+                className="transition-colors active:stroke-red-500 hover:stroke-red-500 cursor-ns-resize"
                 d={d}
                 strokeWidth={2}
               />
             </g>
           ))}
           {points.map((point, i) => (
-            <g key={i} className="hover:fill-red-500 transition-colors">
-              <circle
+            <g key={i} className="hover:stroke-white hover:fill-black transition-colors">
+              <rect
+                onMouseDown={(e: any) => {
+                  e.stopPropagation();
+                  if (!lockedMode) {
+                    return;
+                  }
+                  setEditing(point);
+                }}
+                x={-2 + (width * point.x) / 1000}
+                y={-4 + (1.0 - point.y) * height}
+                width={6}
+                height={6}
+                className="cursor-pointer stroke-yellow-500 "
+              />
+              <rect
                 onMouseDown={(e: any) => {
                   e.stopPropagation();
                   if (!lockedMode) {
@@ -205,39 +272,18 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                   setEditing(point);
                 }}
                 className="cursor-pointer"
-                cx={3 + (width * point.x) / 1000}
-                cy={(1.0 - point.y) * height}
-                r={6}
+                x={-4 + (width * point.x) / 1000}
+                y={-4 + (1.0 - point.y) * height}
+                width={12}
+                height={12}
                 fill={"transparent"}
-              />
-              <circle
-                onMouseDown={(e: any) => {
-                  e.stopPropagation();
-                  if (!lockedMode) {
-                    return;
-                  }
-                  setEditing(point);
-                }}
-                cx={(width * point.x) / 1000}
-                cy={(1.0 - point.y) * height}
-                r={4}
-                className="cursor-pointer fill-white hover:fill-red-500"
               />
             </g>
           ))}
         </svg>
       </div>
     );
-  }, [
-    divisions,
-    width,
-    height,
-    lockedMode,
-    points,
-    setCurveEdit,
-    editing,
-    curveEdit,
-  ]);
+  }, [divisions, width, height, lockedMode, points, setCurveEdit, editing, curveEdit]);
 };
 export default FunctionUX;
 

@@ -85,7 +85,13 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
         }
       }
       if (!voiceChosen) {
-        voiceChosen = voices[0];
+        let minTime = 10000000;
+        for (const v of voices) {
+          if (v.lastTriggerTime && v.lastTriggerTime < minTime) {
+            minTime = v.lastTriggerTime as number;
+            voiceChosen = v;
+          }
+        }
       }
 
       if (voiceChosen && time) {

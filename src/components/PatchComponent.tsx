@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useStorage } from "@/contexts/StorageContext";
+import AssistantSidebar from "./AssistantSidebar";
 import { usePatchLoader } from "@/hooks/usePatchLoader";
 import { useLocked } from "@/contexts/LockedContext";
 import { useTilesContext } from "@/contexts/TilesContext";
@@ -388,7 +389,6 @@ const PatchComponent: React.FC<{
               )}
             </>
           )}
-          {/*<AssistantSidebar />*/}
           <PatchInner
             isSelected={selectedPatch === patch}
             visibleObjectNodes={visibleObjectNodes}
@@ -398,6 +398,8 @@ const PatchComponent: React.FC<{
             zoomableRef={zoomableRef}
           />
           {!isCustomView && <>{selectedPatch === patch ? <Toolbar patch={patch} /> : ""}</>}
+
+          <AssistantSidebar />
         </div>
       </>
     );
