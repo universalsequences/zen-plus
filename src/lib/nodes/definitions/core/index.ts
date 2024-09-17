@@ -2,13 +2,18 @@ import type { API } from "@/lib/nodes/context";
 import { hooks } from "./hooks/index";
 import { dedupe } from "./dedupe";
 import { keydown } from "./keys";
+import { queue } from "./queue";
 import { currenttime, converttime } from "./time";
 import { select, route, filterselect } from "./select";
+import { lisp } from "./lisp";
 import { dict, dict_get, dictpack } from "./json";
 import { toggle } from "./toggle";
 import { print } from "./print";
 import { zequencer_index } from "./zequencer/index";
 import {
+  or,
+  eq,
+  lt,
   identity,
   filter_neq,
   filter_arg_eq,
@@ -85,4 +90,9 @@ export const api: API = {
   "key.down": keydown,
   ...strings,
   ...hooks,
+  ...lisp,
+  "==": eq,
+  "||": or,
+  queue,
+  "<": lt,
 };

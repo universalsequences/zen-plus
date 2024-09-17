@@ -273,6 +273,10 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
           let height = y - position.y;
           node.size.height = height;
           updateSize(node.id, { ...node.size });
+          if (node.updateSize) {
+            node.updateSize({... node.size});
+          }
+
         } else {
           let { node } = resizingNodeRef.current;
           let position = presentationMode
@@ -289,6 +293,10 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
           node.size.height = height;
           node.size.width = width;
           updateSize(node.id, { ...node.size });
+
+          if (node.updateSize) {
+            node.updateSize({... node.size});
+          }
           for (let __node of selectedNodes) {
             if ((__node as ObjectNode).size) {
               let _node: ObjectNode = __node as ObjectNode;
@@ -296,6 +304,10 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
                 _node.size.height = height;
                 _node.size.width = width;
                 updateSize(_node.id, { ..._node.size });
+
+                if (node.updateSize) {
+                  node.updateSize({... node.size});
+                }
               }
             }
           }

@@ -36,7 +36,11 @@ export const toggle = (node: ObjectNode) => {
   }
   return (message: Message) => {
     if (node.custom) {
-      node.custom.value = node.custom.value ? 0 : 1;
+      if (typeof message === "number") {
+        node.custom.value = message ? 1 : 0;
+      } else {
+        node.custom.value = node.custom.value ? 0 : 1;
+      }
       return [node.custom.value];
     }
 

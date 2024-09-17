@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { usePosition } from "@/contexts/PositionContext";
 import { MessageNode, Message, Coordinate } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
+import { printLispExpression } from "../lib/nodes/utils/lisp";
 
 const MessageBox: React.FC<{
   message: Message;
@@ -17,17 +18,30 @@ const MessageBox: React.FC<{
     typeof message === "string" || typeof message === "number"
       ? message.toString()
       : Array.isArray(message)
-        ? JSON.stringify(message)
+        ? printLispExpression(message)
         : "*message*";
 
   let [text, setText] = useState<string>(_value);
   let [editing, setEditing] = useState(false);
 
-  /*
+  const update = useCallback(() => {
+    if (fullDiv.current) {
+      const size = {
+        width: fullDiv.current.offsetWidth,
+        height: fullDiv.current.offsetHeight,
+      };
+      messageNode.size = size;
+      updateSize(messageNode.id, size);
+    }
+
+  }, [messageNode]);
+
   useEffect(() => {
-    setText(_value);
-  }, [_value, setText]);
-  */
+    update();
+  }, [])
+  useEffect(() => {
+    update();
+  }, [message]);
 
   useEffect(() => {
     if (editing) {
@@ -119,11 +133,9 @@ const MessageBox: React.FC<{
       {editing ? (
         <input
           ref={inputRef}
-          style={
-            ref.current
-              ? { width: Math.max(36, ref.current.offsetWidth + 1) + "px" }
-              : {}
-          }
+          style={{
+            width: `${Math.max(4, text.length * 0.95)}ch`,
+          }}
           onKeyDown={(e: any) => {
             if (e.key === "Enter") enter();
           }}

@@ -26,6 +26,7 @@ import {
 } from "./types";
 import { type Slot, deserializedSlots } from "./definitions/audio/slots";
 import { GenericStepData } from "./definitions/core/zequencer/types";
+import { getRootPatch } from "./traverse";
 
 interface Constants {
   [x: string]: number | boolean;
@@ -758,9 +759,38 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     );
   }
 
+  handleSizeMessage(message: string) {
+    const [_op, w, h] = message.split(" ");
+    const width = Number.parseInt(w);
+    const height = Number.parseInt(h);
+    this.updateSize({ width, height });
+    this.size = { width, height };
+  }
+
+  updateSize(size: Size) {
+    // any hooks
+    this.size = { ...size };
+    const root = getRootPatch(this.patch);
+    if (root.onUpdateSize) {
+      root.onUpdateSize(this.id, this.size);
+    }
+
+    if (this.name === "zen") {
+      const resizeNodes =
+        this.subpatch?.objectNodes.filter((x) => x.name === "onPatchResize") || [];
+      for (const n of resizeNodes) {
+        n.send(n.outlets[0], [size.width, size.height]);
+      }
+    }
+  }
+
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
-    const startTime = new Date().getTime();
     if (!this.fn) {
+      return;
+    }
+
+    if (typeof message === "string" && message.startsWith("set-size")) {
+      this.handleSizeMessage(message);
       return;
     }
 
@@ -1010,6 +1040,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     this.id = json.id;
     if (this.name === "zequencer.core") {
+      this.steps = json.steps;
       console.log("json for zequencer = ", json, this.id, this);
     }
 

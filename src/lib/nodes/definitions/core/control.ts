@@ -4,7 +4,7 @@ import { doc } from "./doc";
 doc("filter.=", {
   isHot: false,
   inletNames: ["message", "condition"],
-  numberOfOutlets: 1,
+  numberOfOutlets: 2,
   numberOfInlets: 2,
   description: "passes message if message matches condition",
 });
@@ -17,9 +17,9 @@ export const filter_eq = (node: ObjectNode, condition: Lazy) => {
     let { field } = node.attributes;
     let data = field !== "" ? (message as any)[field as string] : message;
     if (data === condition()) {
-      return [message];
+      return [message, undefined];
     }
-    return [];
+    return [undefined, message];
   };
 };
 
@@ -52,11 +52,7 @@ doc("filter.i=", {
   numberOfInlets: 3,
   description: "passes message if message matches condition",
 });
-export const filter_arg_eq = (
-  _node: ObjectNode,
-  arg: Lazy,
-  condition: Lazy,
-) => {
+export const filter_arg_eq = (_node: ObjectNode, arg: Lazy, condition: Lazy) => {
   return (message: Message) => {
     if (arg() === condition()) {
       if (_node.attributes["debug"]) {
@@ -142,11 +138,7 @@ doc("filter.%=", {
   description: "passes message if message matches condition",
 });
 
-export const filter_mod_eq = (
-  node: ObjectNode,
-  divisor: Lazy,
-  condition: Lazy,
-) => {
+export const filter_mod_eq = (node: ObjectNode, divisor: Lazy, condition: Lazy) => {
   if (!node.attributes["field"]) {
     node.attributes["field"] = "";
   }
@@ -166,3 +158,45 @@ doc("identity", {
   numberOfOutlets: 1,
 });
 export const identity = (_node: ObjectNode) => (x: Message) => [x];
+
+doc("==", {
+  description: "outputs 1 if equal and 0 if not",
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+});
+
+export const eq = (node: ObjectNode, arg: Lazy) => {
+  return (message: Message) => {
+    if (arg() === message) {
+      return [1];
+    }
+    return [0];
+  };
+};
+
+doc("<", {
+  description: "outputs 1 if < and 0 if not",
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+});
+
+export const lt = (node: ObjectNode, arg: Lazy) => {
+  return (message: Message) => {
+    if (message < arg()) {
+      return [1];
+    }
+    return [0];
+  };
+};
+
+doc("||", {
+  description: "outputs 1 if or and 0 if not",
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+});
+
+export const or = (node: ObjectNode, arg: Lazy) => {
+  return (message: Message) => {
+    return [arg() || message];
+  };
+};

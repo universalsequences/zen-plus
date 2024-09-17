@@ -3,6 +3,7 @@ import { useLocked } from "@/contexts/LockedContext";
 import AttrUIValue from "./AttrUIValue";
 import { useSelection } from "@/contexts/SelectionContext";
 import { SubPatch, ObjectNode, Message } from "@/lib/nodes/types";
+import { getNodesControllableByAttriUI } from "../../lib/nodes/utils/getNodesControllableByAttriUI";
 
 interface Option {
   label: string;
@@ -22,26 +23,12 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   );
   let parsed = parseFloat(objectNode.text.split(" ")[2]);
 
-
   useEffect(() => {
     loadOptions();
   }, []);
 
   const loadOptions = useCallback(() => {
-    let outbound = objectNode.outlets[0].connections.map((x) => x.destination);
-    let zenObjects: ObjectNode[] = (outbound as ObjectNode[]).filter((x) => x.name === "zen");
-    let subpatches = zenObjects.map((x) => x.subpatch).filter((x) => x) as SubPatch[];
-    let allNodes = subpatches.flatMap((x) => x.getAllNodes());
-    let paramNodes = [...outbound, ...allNodes].filter(
-      (x) => (x as ObjectNode).name === "uniform" || (x as ObjectNode).name === "param",
-    );
-    if ((objectNode.patch as SubPatch).parentNode) {
-      paramNodes = [
-        ...paramNodes,
-        ...objectNode.patch.objectNodes.filter((x) => x.name === "param" || x.name === "uniform"),
-      ];
-    }
-    let parameterOptions = paramNodes.map((x) => (x as ObjectNode).arguments[0]) as string[];
+    const paramNodes = getNodesControllableByAttriUI(objectNode);
     let options: Option[] = [];
     for (let node of paramNodes) {
       let paramName = (node as ObjectNode).arguments[0] as string;
@@ -67,6 +54,7 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       text[1] = e.target.value;
 
       objectNode.text = text.join(" ");
+      objectNode.controllingParamNode = options.find((x) => x.label === e.target.value)?.value || undefined;
     },
     [setSelectedOption, options],
   );

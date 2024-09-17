@@ -96,6 +96,7 @@ doc("schedule", {
 
 export const schedule = (objectNode: ObjectNode, lookahead: Lazy) => {
   let events: MessageObject[] = [];
+  let eventsToDelete: MessageObject[] = [];
 
   const toDelete: MessageObject[] = [];
   const onTick = () => {
@@ -107,6 +108,9 @@ export const schedule = (objectNode: ObjectNode, lookahead: Lazy) => {
         continue;
       }
       if ((event.time as number) - now <= _lookahead) {
+        if (event.index === 0) {
+          toDelete.push(...eventsToDelete);
+        }
         objectNode.send(objectNode.outlets[0], event);
         toDelete.push(event);
       }
@@ -125,6 +129,9 @@ export const schedule = (objectNode: ObjectNode, lookahead: Lazy) => {
     }
     if (typeof event !== "object") {
       return [];
+    }
+    if ((event as any)["index"] === 0) {
+      eventsToDelete = [...events];
     }
     events.push(event as MessageObject);
     return [];

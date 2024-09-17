@@ -9,19 +9,9 @@ const NumberBox: React.FC<{
   min: number;
   max: number;
   value: number;
-  setValue: (x: number) => void;
+  setValue: (x: number, e?: MouseEvent) => void;
   round: boolean;
-}> = ({
-  isParameter,
-  className,
-  lockedModeRef,
-  value,
-  setValue,
-  round,
-  min,
-  max,
-  isSelected,
-}) => {
+}> = ({ isParameter, className, lockedModeRef, value, setValue, round, min, max, isSelected }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(false);
   const mouseRef = useRef<number>(0);
@@ -85,7 +75,7 @@ const NumberBox: React.FC<{
       }
 
       newValue = Math.max(min, Math.min(newValue, max));
-      setValue(newValue);
+      setValue(newValue, e);
     },
     [editing, setValue, min, max],
   );
@@ -135,9 +125,6 @@ const NumberBox: React.FC<{
             if (!lockedModeRef.current) {
               return;
             }
-            if (e.metaKey) {
-              return;
-            }
             e.stopPropagation();
             setEditing(true);
             mouseRef.current = e.pageY;
@@ -148,9 +135,6 @@ const NumberBox: React.FC<{
         <div
           onMouseDown={(e: any) => {
             if (!lockedModeRef.current) {
-              return;
-            }
-            if (e.metaKey) {
               return;
             }
             e.stopPropagation();
@@ -164,10 +148,7 @@ const NumberBox: React.FC<{
             {integer}
           </div>
           <div className="">.</div>
-          <div
-            onMouseDown={() => (rounding.current = false)}
-            className="flex-1"
-          >
+          <div onMouseDown={() => (rounding.current = false)} className="flex-1">
             {float !== undefined
               ? value < 0
                 ? float.toString().slice(3)

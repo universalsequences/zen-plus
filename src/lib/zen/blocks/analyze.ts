@@ -69,9 +69,7 @@ const calc = (...fragments: CodeFragment[]) => {
       ) {
         if (
           _blocks.some((x) =>
-            Array.from(blocks[i].outboundDependencies).some((y) =>
-              x.outboundDependencies.has(y),
-            ),
+            Array.from(blocks[i].outboundDependencies).some((y) => x.outboundDependencies.has(y)),
           )
         ) {
         } else {
@@ -101,7 +99,7 @@ const replaceContexts = (
 export const determineBlocks = (...fragments: CodeFragment[]): CodeBlock[] => {
   const { _blocks, blocks } = calc(...fragments);
   const missing = blocks.filter((x) => !_blocks.includes(x));
-   return _blocks;
+  return _blocks;
 };
 
 const _determineBlocks = (
@@ -115,6 +113,9 @@ const _determineBlocks = (
 
   // adding blocks needs to be breadth first search in order to maintain the correct dependency orders
   const traverse = (fragment: CodeFragment, outboundDependency?: string) => {
+    if (fragment.variable === "sum44") {
+      console.log("traversing fragment sum44");
+    }
     let fragmentContext = fragment.context;
     let matchingBlock = allBlocks.find((x) => x.context === fragmentContext);
     let needsAdd = false;
@@ -153,10 +154,7 @@ const _determineBlocks = (
       matchingBlock.outboundDependencies.add(fragment.variable!);
     }
 
-    if (
-      outboundDependency &&
-      !matchingBlock.outboundDependencies.has(outboundDependency)
-    ) {
+    if (outboundDependency && !matchingBlock.outboundDependencies.has(outboundDependency)) {
       matchingBlock.outboundDependencies.add(outboundDependency);
     }
 
@@ -205,10 +203,7 @@ const _determineBlocks = (
       }
     }
 
-    if (
-      fragment.output !== undefined &&
-      !matchingBlock.outputs.includes(fragment.output)
-    ) {
+    if (fragment.output !== undefined && !matchingBlock.outputs.includes(fragment.output)) {
       matchingBlock.outputs.push(fragment.output);
     }
 
@@ -219,6 +214,12 @@ const _determineBlocks = (
         if (matchingBlock.code !== "") {
           prefix = "\n";
         }
+      }
+      if (fragment.variable === "sum44") {
+        console.log("adding sum 44 to block.code=", matchingBlock.code);
+        console.log("sum44 prefix=", prefix);
+        console.log("sum44 fragment.code=",fragment.code);
+        console.log("BLOCK to add=", matchingBlock);
       }
       matchingBlock.code = matchingBlock.code + prefix + fragment.code;
       /*

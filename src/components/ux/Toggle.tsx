@@ -5,11 +5,9 @@ import { usePosition } from "@/contexts/PositionContext";
 import { useLocked } from "@/contexts/LockedContext";
 import { useValue } from "@/contexts/ValueContext";
 
-export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
-  useValue();
+  const v = useValue();
   const [value, setValue] = useState(objectNode.custom?.value as number);
   const { lockedMode } = useLocked();
 
@@ -33,9 +31,7 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({
     <div
       onClick={toggle}
       style={{
-        color: value
-          ? strokeColor
-          : interpolateHexColors(fillColor, strokeColor, 0.35),
+        color: value ? strokeColor : interpolateHexColors(fillColor, strokeColor, 0.35),
         backgroundColor: fillColor,
         width: size.width,
         height: size.height,
@@ -57,11 +53,7 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({
   );
 };
 
-export function interpolateHexColors(
-  color1: string,
-  color2: string,
-  ratio: number,
-): string {
+export function interpolateHexColors(color1: string, color2: string, ratio: number): string {
   // Ensure the ratio is within the correct range
   ratio = Math.max(0, Math.min(1, ratio));
 

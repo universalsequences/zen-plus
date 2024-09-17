@@ -12,12 +12,7 @@ import { LoopContext } from "./context";
 import { CodeFragment } from "./emitter";
 import { UGen, Generated, Arg, float } from "./zen";
 import { memo } from "./memo";
-import {
-  Context,
-  emitCodeHelper,
-  emitCode,
-  ContextMessageType,
-} from "./context";
+import { Context, emitCodeHelper, emitCode, ContextMessageType } from "./context";
 import { emitBlocks } from "./simd";
 import { emitFunctions, emitArguments } from "./functions";
 import { SIMDContext } from "./index";
@@ -59,18 +54,14 @@ export type ContextualBlock = {
 const getAllCompleted = (context: Context): string[] => {
   return [
     ...Array.from(context.completedCycles),
-    ...Array.from(getParentContexts(context)).flatMap((x) =>
-      Array.from(x.completedCycles),
-    ),
+    ...Array.from(getParentContexts(context)).flatMap((x) => Array.from(x.completedCycles)),
   ];
 };
 
 const getAllEmitted = (context: Context): string[] => {
   return [
     ...Array.from(context.historiesEmitted),
-    ...Array.from(getParentContexts(context)).flatMap((x) =>
-      Array.from(x.historiesEmitted),
-    ),
+    ...Array.from(getParentContexts(context)).flatMap((x) => Array.from(x.historiesEmitted)),
   ];
 };
 
@@ -107,10 +98,7 @@ export const history = (
 
       let allEmitted = new Set(getAllEmitted(context));
       let parent: Context | undefined = (context as SIMDContext).context;
-      if (
-        parent &&
-        (parent.isFunctionCaller || (FORCENEW && parent === parent.baseContext))
-      ) {
+      if (parent && (parent.isFunctionCaller || (FORCENEW && parent === parent.baseContext))) {
         parent = undefined;
       }
       if (parent && allEmitted.size > 0) {
@@ -205,13 +193,7 @@ export const history = (
         }
       }
 
-      if (
-        FORCENEW &&
-        !context.newBase &&
-        parent &&
-        !parent.isSIMD &&
-        !parent.newBase
-      ) {
+      if (FORCENEW && !context.newBase && parent && !parent.isSIMD && !parent.newBase) {
         cachedContext = parent;
         return cachedContext;
       }
@@ -227,7 +209,7 @@ export const history = (
       return block;
     };
 
-    const getMemoizedValueIfAny = (context: Context): Generated | undefined => {
+    const getMemoizedValueIfAny = (_context: Context): Generated | undefined => {
       if (input) {
         if (inMem) {
           return inMem;
@@ -256,13 +238,11 @@ export const history = (
         block.name = params.name;
         block.min = params.min;
         block.max = params.max;
+        console.log("creating history param for context", context, params.name);
       }
 
       if (!historyVar) {
-        historyVar = context.useCachedVariables(
-          outputId,
-          debugName || "historyVal",
-        )[0];
+        historyVar = context.useCachedVariables(outputId, debugName || "historyVal")[0];
       }
 
       let IDX = block.idx;
@@ -278,10 +258,8 @@ export const history = (
         context.historiesEmitted.add(historyVar);
       }
 
-      let _input =
-        input !== undefined ? __input || context.gen(input) : undefined;
-      let _reset =
-        reset === undefined ? context.gen(float(0)) : context.gen(reset);
+      let _input = input !== undefined ? __input || context.gen(input) : undefined;
+      let _reset = reset === undefined ? context.gen(float(0)) : context.gen(reset);
 
       // TODO: inspect the results of the _input (context), and potentially
       // grab the context and lift it to be used here
@@ -313,13 +291,7 @@ export const history = (
       let codeFragments: CodeFragment[] = [];
 
       if (_input) {
-        codeFragments = generateInputFragment(
-          context,
-          IDX,
-          historyDef,
-          _input,
-          _reset,
-        );
+        codeFragments = generateInputFragment(context, IDX, historyDef, _input, _reset);
         fragmentVariable = codeFragments[0].variable;
       } else {
         // no "input" to history (aka reading the history value)
@@ -371,10 +343,7 @@ export const history = (
     ): CodeFragment[] => {
       // we are writing to the history, placing the input into the memory at
       // the block index
-      let [newVariable] = context.useCachedVariables(
-        inputId,
-        debugName || "histVal",
-      );
+      let [newVariable] = context.useCachedVariables(inputId, debugName || "histVal");
       let code = `
 memory[${IDX}] = ${_input.variable};
 `;
@@ -388,14 +357,7 @@ memory[${IDX}] = ${_input.variable};
         code = "";
       }
 
-      let codeFragments = emitCodeHelper(
-        false,
-        context,
-        code,
-        newVariable,
-        _input,
-        _reset,
-      );
+      let codeFragments = emitCodeHelper(false, context, code, newVariable, _input, _reset);
       codeFragments.forEach((frag) => (frag.histories = [historyDef]));
       return codeFragments;
     };
@@ -435,7 +397,7 @@ memory[${IDX}] = ${_input.variable};
         }
       }
 
-      return {
+      const x = {
         variable: fragmentVariable,
         codeFragments,
         histories: Array.from(new Set([historyDef, ...histories])),
@@ -450,6 +412,7 @@ memory[${IDX}] = ${_input.variable};
         variables: [fragmentVariable],
         functionArguments: args,
       };
+      return x;
     };
 
     _h.clear = () => {};
@@ -477,8 +440,7 @@ memory[${IDX}] = ${_input.variable};
       block.initData[0] = val;
     }
     for (let { context, block } of contextBlocks) {
-      let messageType: ContextMessageType =
-        time !== undefined ? "schedule-set" : "memory-set";
+      let messageType: ContextMessageType = time !== undefined ? "schedule-set" : "memory-set";
       let body = {
         idx: block.idx,
         value: val,
@@ -499,15 +461,11 @@ memory[${IDX}] = ${_input.variable};
 
 /** used to collect all the histories for a functions arguments */
 export const emitHistory = (...gen: Generated[]): string[] => {
-  return Array.from(new Set(gen.flatMap((x) => x.histories))).filter(
-    (x) => x !== undefined,
-  );
+  return Array.from(new Set(gen.flatMap((x) => x.histories))).filter((x) => x !== undefined);
 };
 
 export const emitOutputHistory = (...gen: Generated[]): string[] => {
-  return Array.from(new Set(gen.flatMap((x) => x.outputHistories))).filter(
-    (x) => x !== undefined,
-  );
+  return Array.from(new Set(gen.flatMap((x) => x.outputHistories))).filter((x) => x !== undefined);
 };
 
 /** used to collect all the histories for a functions arguments */
@@ -518,4 +476,13 @@ export const emitOuterHistory = (...gen: Generated[]): string[] => {
 /** used to collect all the histories for a functions arguments */
 export const emitParams = (...gen: Generated[]): History[] => {
   return Array.from(new Set(gen.flatMap((x) => x.params)));
+};
+
+export const findDeepHistories = (gen: Generated): string[] => {
+  const histories: string[] = [...gen.histories];
+  for (const dep of gen.codeFragments[0].dependencies) {
+    histories.push(...findDeepHistories(gen));
+  }
+
+  return histories;
 };

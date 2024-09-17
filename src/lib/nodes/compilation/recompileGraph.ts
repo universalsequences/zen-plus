@@ -100,6 +100,8 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
 export const recompileGraph = (patch: Patch) => {
   const parentNode = (patch as Patch as SubPatch).parentNode;
   const parentPatch = (patch as Patch as SubPatch).parentPatch;
+
+  patch.sendNumberNodes();
   if (parentNode && parentNode.attributes.type === "core") {
     return;
   }

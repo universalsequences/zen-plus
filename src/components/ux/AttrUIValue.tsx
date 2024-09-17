@@ -14,7 +14,7 @@ const AttrUIValue: React.FC<{
   const parsed = parseFloat(node.text.split(" ")[2]);
   const [value, setValue] = useState(!Number.isNaN(parsed) ? parsed : 0);
   const onChangeValue = useCallback(
-    (num: number) => {
+    (num: number, e?: MouseEvent) => {
       let objectNode = node;
       setValue(num);
       let text = objectNode.text.split(" ");
@@ -27,16 +27,18 @@ const AttrUIValue: React.FC<{
       let message: Message = text.slice(1).join(" ");
       objectNode.send(objectNode.outlets[0], message);
 
-      if (selectedSteps) {
+      if (selectedSteps && e?.metaKey) {
         for (const step of selectedSteps) {
           const existingLock = step.parameterLocks.find((x) => x.id === node.id);
           if (existingLock) {
+            console.log("setting existing lock", num, existingLock, step);
             existingLock.value = num;
           } else {
             step.parameterLocks.push({
               id: node.id,
               value: num,
             });
+            console.log("appending to step.paramLocks", step.parameterLocks, step);
           }
         }
       }

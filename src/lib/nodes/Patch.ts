@@ -170,7 +170,26 @@ export class PatchImpl implements Patch {
   getAllMessageNodes(): MessageNode[] {
     const nodes = [...this.objectNodes];
     const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
-    return [...this.messageNodes, ...subpatches.flatMap((x: Patch) => x.getAllMessageNodes())];
+    const xyz = [...this.messageNodes, ...subpatches.flatMap((x: Patch) => x.getAllMessageNodes())];
+    const slots = this.objectNodes.filter((x) => x.name === "slots~");
+    for (const slotNode of slots) {
+      if (slotNode.slots) {
+        for (const slot of slotNode.slots) {
+          xyz.push(...(slot.subpatch?.getAllMessageNodes() || []));
+        }
+      }
+    }
+    return xyz;
+  }
+
+  sendNumberNodes() {
+    for (const node of this.getAllMessageNodes()) {
+      if (node.messageType === MessageType.Number) {
+        if (node.message !== undefined) {
+        node.send(node.outlets[0], node.message);
+        }
+      }
+    }
   }
 
   getSourceNodes() {
@@ -355,7 +374,7 @@ export class PatchImpl implements Patch {
         parentNode.size = x.size;
       }
     } else {
-      console.log("no parent presentationMode=", this.presentationMode)
+      console.log("no parent presentationMode=", this.presentationMode);
     }
 
     this.id = x.id;

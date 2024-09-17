@@ -1,10 +1,9 @@
-import { doc } from './doc'
-import { isForwardCycle } from '@/lib/nodes/traverse';
-import { NodeFunc } from './memo';
-import { ObjectNode, Lazy, Message, SubPatch } from '../../types';
-import { Operator, Statement, CompoundOperator } from './types';
-import { zen, s, history, Arg, History, UGen, print } from '@/lib/zen/index';
-import ObjectNodeComponent from '@/components/ObjectNodeComponent';
+import { doc } from "./doc";
+import { isForwardCycle } from "@/lib/nodes/traverse";
+import { ObjectNode, Message, SubPatch } from "../../types";
+import { Statement, CompoundOperator } from "./types";
+import { history, Arg, History, UGen, print } from '@/lib/zen/index';
+import ObjectNodeComponent from "@/components/ObjectNodeComponent";
 
 /**
  *              _______________
@@ -41,59 +40,56 @@ import ObjectNodeComponent from '@/components/ObjectNodeComponent';
  *     history(output);
  */
 
-doc(
-    'history',
-    {
-        numberOfInlets: 1,
-        numberOfOutlets: 1,
-        attributes: {
-            "initial": 0
-        },
-        description: "history",
-    });
-
+doc("history", {
+  numberOfInlets: 1,
+  numberOfOutlets: 1,
+  attributes: {
+    initial: 0,
+  },
+  description: "history",
+});
 
 export const zen_history = (object: ObjectNode) => {
-    let h: History;
+  let h: History;
 
-    // for our AST, there are two cases with history
-    // 1. we pipe data into the history
-    // 2. we want to retrieve data out of the history to use
-    return (x: Message): Statement[] => {
-        if (h == undefined) {
-            h = history(object.attributes["initial"] as number, undefined, undefined, true);
-        }
+  // for our AST, there are two cases with history
+  // 1. we pipe data into the history
+  // 2. we want to retrieve data out of the history to use
+  return (x: Message): Statement[] => {
+    if (h == undefined) {
+      h = history(object.attributes["initial"] as number, undefined, undefined, true);
+    }
 
-        let inputStatement: Statement = x as Statement;
+    let inputStatement: Statement = x as Statement;
 
-        // we need to determine if the statement we are receiving contains
-        // THIS history
-        let isCycle = object.isCycle !== undefined ? object.isCycle : isForwardCycle(object);
-        object.isCycle = isCycle;
-        if (!isCycle) {
-            if (x !== "bang") {
-                let statement: Statement = [{ name: "history", history: h, historyInput: x as Statement }];
-                statement.node = object;
-                let _statement = [statement[0], x as Statement] as Statement; // as Statement];
-                _statement.node = object;
-                return [(_statement as Statement)]; //as Statement[];
-            } else {
-                return [];
-            }
-        }
-        if (isCycle) {
-            // have we already processed this history?
+    // we need to determine if the statement we are receiving contains
+    // THIS history
+    let isCycle = object.isCycle !== undefined ? object.isCycle : isForwardCycle(object);
+    object.isCycle = isCycle;
+    if (!isCycle) {
+      if (x !== "bang") {
+        let statement: Statement = [{ name: "history", history: h, historyInput: x as Statement }];
+        statement.node = object;
+        let _statement = [statement[0], x as Statement] as Statement; // as Statement];
+        _statement.node = object;
+        return [_statement as Statement]; //as Statement[];
+      } else {
+        return [];
+      }
+    }
+    if (isCycle) {
+      // have we already processed this history?
 
-            let basePatch = object.patch;
-            while (!basePatch.isZenBase()) {
-                basePatch = (basePatch as SubPatch).parentPatch;
-            }
+      let basePatch = object.patch;
+      while (!basePatch.isZenBase()) {
+        basePatch = (basePatch as SubPatch).parentPatch;
+      }
 
-            if (basePatch.historyNodes.has(object)) {
-                return [];
-            }
+      if (basePatch.historyNodes.has(object)) {
+        return [];
+      }
 
-            /*
+      /*
 
             let loopedHistory = containsSameHistory(h, inputStatement, true);
             if (loopedHistory && Array.isArray(loopedHistory)) {
@@ -114,55 +110,64 @@ export const zen_history = (object: ObjectNode) => {
                 }
             }
             */
-        }
+    }
 
-        if (x === "bang") {
-            // this refers to the initial pass. in this case, we just want to pass the
-            // history's value through: i.e. history()
-            let statement: Statement = [{ name: "history", history: h } as CompoundOperator];
-            statement.node = {
-                ...object,
-                id: object.id + '_history' + 0
-            };
-            return [statement];
-        } else {
-            // this refers to when this node receives a statement in the inlet-- we need
-            // to place this statement in the dependency array in Patcher (as they will be placed)
-            // at the start of the whole program
-            let statement: Statement = [{ name: "history", history: h, historyInput: x as Statement } as CompoundOperator, inputStatement];
-            statement.node = object;
-            object.patch.newHistoryDependency(statement, object);
-            return [statement];
-        }
-    };
+    if (x === "bang") {
+      // this refers to the initial pass. in this case, we just want to pass the
+      // history's value through: i.e. history()
+      let statement: Statement = [{ name: "history", history: h } as CompoundOperator];
+      statement.node = {
+        ...object,
+        id: object.id + "_history" + 0,
+      };
+      return [statement];
+    } else {
+      // this refers to when this node receives a statement in the inlet-- we need
+      // to place this statement in the dependency array in Patcher (as they will be placed)
+      // at the start of the whole program
+      let statement: Statement = [
+        { name: "history", history: h, historyInput: x as Statement } as CompoundOperator,
+        inputStatement,
+      ];
+      statement.node = object;
+      object.patch.newHistoryDependency(statement, object);
+      return [statement];
+    }
+  };
 };
 
-export const containsSameHistory = (history: History, statement: Statement, needsInput: boolean, depth: number = 0, visited = new Set<Statement>()): Statement | null => {
-    //console.log('contains same history called looking for history', history, statement);
-    if (visited.has(statement)) {
-        return null;
-    }
-    visited.add(statement);
-    if (Array.isArray(statement)) {
-        let [operator, ...statements] = statement;
-        if ((operator as CompoundOperator).history === history) {
-            let loopedHistory = statement;
-            let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator
-            let historyInput = compoundOperator.historyInput;
-            if (!needsInput || historyInput) {
-                return statement;
-            }
-        }
-        for (let statement of statements) {
-            let s = containsSameHistory(history, statement as Statement, needsInput, depth + 1, visited);
-            if (s) {
-                return s;
-            }
-        }
-        return null;
-    }
-    if ((statement as CompoundOperator).history === history) {
+export const containsSameHistory = (
+  history: History,
+  statement: Statement,
+  needsInput: boolean,
+  depth: number = 0,
+  visited = new Set<Statement>(),
+): Statement | null => {
+  //console.log('contains same history called looking for history', history, statement);
+  if (visited.has(statement)) {
+    return null;
+  }
+  visited.add(statement);
+  if (Array.isArray(statement)) {
+    let [operator, ...statements] = statement;
+    if ((operator as CompoundOperator).history === history) {
+      let loopedHistory = statement;
+      let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator;
+      let historyInput = compoundOperator.historyInput;
+      if (!needsInput || historyInput) {
         return statement;
+      }
+    }
+    for (let statement of statements) {
+      let s = containsSameHistory(history, statement as Statement, needsInput, depth + 1, visited);
+      if (s) {
+        return s;
+      }
     }
     return null;
-}
+  }
+  if ((statement as CompoundOperator).history === history) {
+    return statement;
+  }
+  return null;
+};

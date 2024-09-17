@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useState,
-  useContext,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from "react";
 import {
   Patch,
   IOlet,
@@ -16,6 +9,7 @@ import {
   ObjectNode,
   Coordinate,
 } from "@/lib/nodes/types";
+import { getRootPatch } from "@/lib/nodes/traverse";
 
 const ALIGNMENT_GRID = 3;
 export interface ResizingNode {
@@ -89,8 +83,7 @@ const PositionContext = createContext<PositionerContext | undefined>(undefined);
 
 export const usePosition = (): PositionerContext => {
   const context = useContext(PositionContext);
-  if (!context)
-    throw new Error("useMessageHandler must be used within MessageProvider");
+  if (!context) throw new Error("useMessageHandler must be used within MessageProvider");
   return context;
 };
 
@@ -141,7 +134,6 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     if (maxY > 0 || maxX > 0) {
       setSize({ width: maxX + 300, height: maxY + 300 });
     }
-    //console.log('setting size index of patch=', patch.name, _size);
     setSizeIndex(_size);
     sizeIndexRef.current = _size;
   }, [patch.objectNodes, setSizeIndex]);
@@ -171,27 +163,24 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
       sizeIndexRef.current = { ..._size };
       setSizeIndex(_size);
     },
-    [setSizeIndex, sizeIndex],
+    [sizeIndex],
   );
 
-  const [draggingCable, setDraggingCable] = useState<DraggingCable | null>(
-    null,
-  );
+  useEffect(() => {
+    getRootPatch(patch).onUpdateSize = updateSize;
+  }, [patch, updateSize]);
+
+  const [draggingCable, setDraggingCable] = useState<DraggingCable | null>(null);
   const [draggingNode, setDraggingNode] = useState<DraggingNode | null>(null);
   const [resizingNode, setResizingNode] = useState<ResizingNode | null>(null);
-  const [draggingSegmentation, setDraggingSegmentation] =
-    useState<IOConnection | null>(null);
+  const [draggingSegmentation, setDraggingSegmentation] = useState<IOConnection | null>(null);
   const coordinatesRef = useRef<Coordinates>({});
-  const [coordinates, setCoordinates] = useState<Coordinates>(
-    coordinatesRef.current,
-  );
+  const [coordinates, setCoordinates] = useState<Coordinates>(coordinatesRef.current);
   const [zIndices, setZIndices] = useState<ZIndices>({});
   const [size, setSize] = useState<Size | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]);
-  let [presentationMode, setPresentationMode] = useState(
-    patch.presentationMode,
-  );
+  let [presentationMode, setPresentationMode] = useState(patch.presentationMode);
   const [nearestInlet, setNearestInlet] = useState<NearestInlet | null>(null);
 
   useEffect(() => {

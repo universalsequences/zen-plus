@@ -150,6 +150,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
       if (operationResult.success) {
         node.steps = operationResult.steps;
         node.stepsSchema = operationResult.schema;
+        node.attributes.length = node.steps.length;
         updateUI();
 
         return [];

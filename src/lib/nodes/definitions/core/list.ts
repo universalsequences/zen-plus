@@ -131,8 +131,9 @@ doc("stream", {
 
 export const stream = (node: ObjectNode, list: Lazy) => {
   return (_trig: Message) => {
-    if (Array.isArray(list())) {
-      for (const element of list() as any[]) {
+    const _list = typeof list() === "string" ? (list() as string).split("") : list();
+    if (Array.isArray(_list)) {
+      for (const element of _list as any[]) {
         node.send(node.outlets[0], element);
       }
       node.send(node.outlets[1], "collect");
@@ -272,7 +273,62 @@ export const list_duplicate = (node: ObjectNode, list: Lazy) => {
   };
 };
 
+doc("concat", {
+  description: "concatenate 2 lists",
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+});
+
+const concat = (node: ObjectNode, b: Lazy) => (msg: Message) => {
+  const _b = b();
+  if (Array.isArray(msg) && Array.isArray(_b)) {
+    return [[...msg, ..._b]];
+  }
+  return [];
+};
+
+doc("list.shift", {
+  description: "shift lists",
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+});
+
+const list_shift = (node: ObjectNode, b: Lazy) => (msg: Message) => {
+  const _b = b();
+  if (!Array.isArray(msg) || typeof _b !== "number") {
+    console.log("wrong", msg, _b);
+    return [];
+  }
+  const l: Message[] = [];
+  for (let i = 0; i < msg.length; i++) {
+    l.push(msg[(i + _b) % msg.length] as Message);
+  }
+  console.log("l=", l);
+  return [l];
+};
+
+doc("list.reverse", {
+  description: "shift lists",
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+  inletNames: ["list", "reverese"],
+  defaultValue: 1,
+});
+
+const list_reverse = (node: ObjectNode, reverse: Lazy) => (msg: Message) => {
+  if (!Array.isArray(msg)) {
+    return [];
+  }
+  if (reverse()) {
+    return [[...msg].reverse()];
+  }
+  return [msg];
+};
+
 export const lists: API = {
+  "list.shift": list_shift,
+  "list.reverse": list_reverse,
+  concat,
   collect,
   "string.split": string_split,
   "list.set": list_set,

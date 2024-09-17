@@ -9,6 +9,7 @@ import { replaceAll } from "./replaceAll";
 import { prettyPrint } from "./worklet";
 import { LoopContext, Context } from "./context";
 import { Target } from "./targets";
+import { findDeepHistories } from "./history";
 
 export interface Range {
   min: Arg;
@@ -47,6 +48,7 @@ export const sumLoop = (range: Range, body: LoopBody): UGen => {
     let [i, sum] = context.useCachedVariables(id, "i", "sum");
 
     context = context.useContext(false, true);
+    console.log("SUM useContext returned", context);
     let loopContext =
       typeof range.min === "number" && typeof range.max === "number"
         ? new LoopContext(i, range, context)
@@ -66,13 +68,11 @@ export const sumLoop = (range: Range, body: LoopBody): UGen => {
     const blockWeWant = blocks.find((x) => x.context === loopContext);
 
     let histories = Array.from(new Set(_body.histories));
-    histories = histories.map(
-      (x) => replaceAll(x, "let", context.varKeyword) + ";",
-    );
+    histories = histories.map((x) => replaceAll(x, "let", context.varKeyword) + ";");
     let outerHistories = Array.from(new Set(_body.outerHistories));
-    outerHistories = outerHistories.map(
-      (x) => replaceAll(x, "let", context.varKeyword) + ";",
-    );
+    outerHistories = outerHistories.map((x) => replaceAll(x, "let", context.varKeyword) + ";");
+
+    console.log("histories vs outerHistories", histories, outerHistories);
 
     // need to generate all "inbound dependencies"
     console.log("block we want=", blockWeWant, blocks, _body);
@@ -88,7 +88,7 @@ ${sum} += ${blockWeWant!.codeFragment.variable};
     console.log("LOOP OUT context.id=%s", context.id, out);
     const generated = context.emit(out, sum);
 
-    let parents = getParentContexts(context);
+    let parents = new Set<Context>(); //getParentContexts(context, context.target === Target.Javascript);
     console.log("parent contexts =", Array.from(parents), context);
     // the trick is to put the other blocks inside there
     const deps = blocks
@@ -113,27 +113,28 @@ ${sum} += ${blockWeWant!.codeFragment.variable};
     }
 
     const historiesWritten = getHistoriesBeingWrittenTo(context);
-    const withHistories = deps.filter((x) =>
-      x.histories.some((x) => historiesWritten.has(x)),
-    );
+    const withHistories = deps.filter((x) => x.histories.some((x) => historiesWritten.has(x)));
 
+    console.log("generated.variable=%s context used=", generated.variable, context);
     generated.context = context;
     generated.codeFragments[0].context = context;
+    generated.codeFragments[0].histories.push(... histories);
+
+    const deepHistories = findDeepHistories(generated);
+    console.log("DEEP HISTORIES FOR LOOP=", deepHistories);
 
     console.log("placing depenencies for contet.id=%s", context.id, deps);
     generated.codeFragments[0].dependencies = deps;
+    generated.codeFragments[0].id = id;
 
     if (!(loopContext as LoopContext).inboundDependencies) {
       (loopContext as LoopContext).inboundDependencies = [];
     }
     if ((loopContext as LoopContext).inboundDependencies) {
-      const allInbounds = blocks.flatMap((x) =>
-        Array.from(x.inboundDependencies),
-      );
+      const allInbounds = blocks.flatMap((x) => Array.from(x.inboundDependencies));
       (loopContext as LoopContext).inboundDependencies?.push(...allInbounds);
-      context.inboundDependencies = (
-        loopContext as LoopContext
-      ).inboundDependencies;
+      context.inboundDependencies = (loopContext as LoopContext).inboundDependencies;
+      console.log("adding inbound dependencies=", [...(context.inboundDependencies || [])]);
     }
 
     memoized = generated;
@@ -156,17 +157,13 @@ export const rawSumLoop = (range: Range, body: UGen, i: string): UGen => {
 
     let _body = body(loopContext);
     let histories = Array.from(new Set(_body.histories));
-    histories = histories.map(
-      (x) => replaceAll(x, "let", context.varKeyword) + ";",
-    );
+    histories = histories.map((x) => replaceAll(x, "let", context.varKeyword) + ";");
     let outerHistories = Array.from(new Set(_body.outerHistories)).filter(
       (x) => !context.historiesEmitted.has(x),
     );
     outerHistories.forEach((h) => context.historiesEmitted.add(h));
     //context.historiesEmitted = [...context.historiesEmitted, ...outerHistories];
-    outerHistories = outerHistories.map(
-      (x) => replaceAll(x, "let", context.varKeyword) + ";",
-    );
+    outerHistories = outerHistories.map((x) => replaceAll(x, "let", context.varKeyword) + ";");
 
     let out = `
 ${prettyPrint("    ", outerHistories.join(""))}

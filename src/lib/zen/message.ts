@@ -21,7 +21,7 @@ new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.vari
 `;
       } else {
         code += `
-if (this.messageCounter % 1000 === 0) {
+if (this.messageCounter % 20 === 0) {
 this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
 /*
     let subTypeMap = this.messageQueue[@beginMessage${name}@endMessage];
@@ -56,12 +56,7 @@ ${context.varKeyword} ${vari} = ${_value.variable};
  * to only send messages when a condition is met (like a "tick")
  *
  **/
-export const condMessage = (
-  name: string,
-  subType: Arg,
-  value: Arg,
-  condition: Arg,
-) => {
+export const condMessage = (name: string, subType: Arg, value: Arg, condition: Arg) => {
   return simdMemo(
     (
       context: Context,

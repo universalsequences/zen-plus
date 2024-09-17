@@ -3,7 +3,7 @@ import { doc } from "../doc";
 
 doc("zequencer.ui", {
   description: "UI for the zequencer node",
-  numberOfInlets: 0,
+  numberOfInlets: 1,
   numberOfOutlets: 0,
 });
 

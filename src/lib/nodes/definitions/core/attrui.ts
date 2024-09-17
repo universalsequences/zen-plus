@@ -2,6 +2,7 @@ import { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
+import { getNodesControllableByAttriUI } from "../../utils/getNodesControllableByAttriUI";
 
 doc("attrui", {
   description: "control parameters/attribitues with ui",
@@ -22,9 +23,14 @@ export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
 
   // node.inlets.forEach(x => x.hidden = true);
   return (_message: Message) => {
+    if (!node.controllingParamNode) {
+      const _name = name();
+      const params = getNodesControllableByAttriUI(node, _name as string);
+      console.log('params found for attrui', _name, params);
+      node.controllingParamNode = params[0];
+    }
     if (Array.isArray(_message)) {
       const [value, time] = _message;
-      console.log("sending out message with time");
       if (custom) {
         custom.value = value as number;
       }

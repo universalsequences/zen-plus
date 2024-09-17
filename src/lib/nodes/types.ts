@@ -214,6 +214,8 @@ export type ObjectNode = Positioned &
     parentSlots?: ObjectNode;
     steps?: GenericStepData[];
     stepsSchema?: StepDataSchema;
+    updateSize: (size: Size) => void;
+    controllingParamNode?: ObjectNode; // any param nodes that are controleld by this node
   };
 
 export interface SerializableCustom {
@@ -293,6 +295,8 @@ export type Patch = Identifiable & {
   exportedAudioUnit?: ExportedAudioUnit;
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
+  onUpdateSize: (id: string, size: Size) => void;
+  sendNumberNodes: () => void;
 };
 
 export type SubPatch = Patch & {

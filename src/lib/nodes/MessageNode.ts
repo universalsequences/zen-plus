@@ -13,6 +13,7 @@ import {
 import { BaseNode } from "./BaseNode";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { isNumber } from "@/utils/isNumber";
+import { parseLispExpression } from "./utils/lisp";
 
 const TRIGGER = "trigger";
 const REPLACE = "replace";
@@ -95,6 +96,12 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
   }
 
   parse(text: string) {
+    if (text.includes("(") && text.includes(")")) {
+      const lisp = parseLispExpression(text);
+      console.log("lisp=",lisp);
+      this.receive(this.inlets[1], lisp);
+      return lisp;
+    }
     if (text.includes("[") && text.includes("]")) {
       try {
         const list = JSON.parse(text);
@@ -104,9 +111,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
         console.log("error parsing text", text, e);
       }
     }
-    const parsed: Message[] | Message = isNumber(text)
-      ? Number.parseFloat(text)
-      : text;
+    const parsed: Message[] | Message = isNumber(text) ? Number.parseFloat(text) : text;
     this.receive(this.inlets[1], parsed as Message);
     return parsed;
   }
@@ -128,8 +133,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
       return msg;
     }
     if (
-      (typeof incomingMessage === "string" ||
-        typeof incomingMessage === "number") &&
+      (typeof incomingMessage === "string" || typeof incomingMessage === "number") &&
       typeof this.message === "string" &&
       this.message.includes("$1")
     ) {
