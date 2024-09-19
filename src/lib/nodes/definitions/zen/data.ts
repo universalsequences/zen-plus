@@ -8,8 +8,7 @@ doc("data", {
   numberOfInlets: 3,
   numberOfOutlets: 1,
   inletNames: ["initData", "size", "channels"],
-  description:
-    "creates a data buffer with set size & channels, to be used by peek/poke objects",
+  description: "creates a data buffer with set size & channels, to be used by peek/poke objects",
 });
 
 export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
@@ -23,21 +22,22 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
     _node.attributes["interpolation"] = "linear";
   }
   return (inputData: Message): Statement[] => {
+    console.log("received data", inputData);
     if (lastSize !== size() || lastChannels !== channels()) {
+      console.log("null");
       block = null;
       lastChannels = channels() as number;
       lastSize = size() as number;
     }
     if (!block) {
+      console.log("no block so initing?");
       let initBuffer: Float32Array | undefined = Array.isArray(inputData)
         ? new Float32Array(inputData as number[])
         : ArrayBuffer.isView(inputData)
           ? (inputData as Float32Array)
           : undefined;
       if (initBuffer === undefined) {
-        initBuffer = new Float32Array(
-          (size() as number) * (channels() as number),
-        );
+        initBuffer = new Float32Array((size() as number) * (channels() as number));
       }
       block = data(
         size() as number,
@@ -46,6 +46,7 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
         true,
         _node.attributes.interpolation as Interpolation,
       );
+      console.log("blockgen is now=", block);
     } else {
       // we've already initialized the data, so we need to simply
       // feed this data into the block
@@ -53,13 +54,20 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
       //  return [];
       //}
       lastData = inputData;
+      console.log("otherwise setting inputData", inputData, block);
       if (ArrayBuffer.isView(inputData)) {
         if (block.set) {
+          console.log("actual setting buf...");
           block.set(inputData as Float32Array);
+        } else {
+          console.log("no set");
         }
       } else if (Array.isArray(inputData)) {
         if (block.set) {
+          console.log("actual setting buf...");
           block.set(new Float32Array(inputData as number[]));
+        } else {
+          console.log("no set");
         }
       }
       return [];
@@ -82,12 +90,7 @@ doc("peek", {
 
 export type BlockArg = BlockGen[];
 
-export const zen_peek = (
-  node: ObjectNode,
-  index: Lazy,
-  channel: Lazy,
-  maxLength: Lazy,
-) => {
+export const zen_peek = (node: ObjectNode, index: Lazy, channel: Lazy, maxLength: Lazy) => {
   if (!maxLength()) {
     node.inlets[3].lastMessage = 1000000;
   }
@@ -109,11 +112,7 @@ export const zen_peek = (
         (ret as Statement).node = node;
         return [ret];
       } else {
-        let ret = [
-          operator,
-          index() as Statement,
-          channel() as Statement,
-        ] as Statement;
+        let ret = [operator, index() as Statement, channel() as Statement] as Statement;
         (ret as Statement).node = node;
         return [ret];
       }
@@ -152,25 +151,13 @@ doc("poke", {
   description: "poke value into buffer",
 });
 
-export const zen_poke = (
-  _object: ObjectNode,
-  index: Lazy,
-  channel: Lazy,
-  value: Lazy,
-) => {
+export const zen_poke = (_object: ObjectNode, index: Lazy, channel: Lazy, value: Lazy) => {
   return (msg: Message): Statement[] => {
     let operator = {
       name: "poke",
       params: msg as unknown as BlockGen,
     };
-    return [
-      [
-        operator,
-        index() as Statement,
-        channel() as Statement,
-        value() as Statement,
-      ],
-    ];
+    return [[operator, index() as Statement, channel() as Statement, value() as Statement]];
   };
 };
 

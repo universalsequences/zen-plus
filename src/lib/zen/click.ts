@@ -1,4 +1,4 @@
-import { Context } from "./context";
+import { Context, LoopContext } from "./context";
 import { simdMemo } from "./memo-simd";
 import { memo } from "./memo";
 import { ContextualBlock } from "./history";
@@ -39,15 +39,31 @@ if (${clickVar} > 0) {
 
   clicker.click = (time?: number, value?: number) => {
     for (let { context, block } of contextBlocks) {
-      let msg: any = {
-        type: time !== undefined ? "schedule-set" : "memory-set",
-        body: {
-          idx: block.idx,
-          value: value === undefined ? 1 : value,
-          time,
-        },
-      };
-      context.baseContext.postMessage(msg);
+      const loopSize = (block.context as LoopContext).loopSize || 0;
+      if (loopSize) {
+        for (let i = 0; i < loopSize; i++) {
+          const idx = (block._idx as number) + i;
+          let msg: any = {
+            type: time !== undefined ? "schedule-set" : "memory-set",
+            body: {
+              idx: idx,
+              value: value === undefined ? 1 : value,
+              time,
+            },
+          };
+          context.baseContext.postMessage(msg);
+        }
+      } else {
+        let msg: any = {
+          type: time !== undefined ? "schedule-set" : "memory-set",
+          body: {
+            idx: block.idx,
+            value: value === undefined ? 1 : value,
+            time,
+          },
+        };
+        context.baseContext.postMessage(msg);
+      }
     }
   };
   return clicker;

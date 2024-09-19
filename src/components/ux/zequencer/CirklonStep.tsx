@@ -2,6 +2,9 @@ import { useStepsContext } from "@/contexts/StepsContext";
 import { FieldSchema, GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 import { ObjectNode } from "@/lib/nodes/types";
 import { Dispatch, SetStateAction, useCallback, useRef } from "react";
+import { usePatches } from "../../../contexts/PatchesContext";
+import { usePatch } from "@/contexts/PatchContext";
+import { usePatchSelector } from "@/hooks/usePatchSelector";
 
 interface Props {
   objectNode: ObjectNode;
@@ -20,6 +23,7 @@ export const CirklonStep = (props: Props) => {
   const { min = 0, max = 1 } = fieldSchema;
   const ratio = Math.min(1, (value - min) / (max - min));
   const ref = useRef<HTMLDivElement | null>(null);
+  const { selectPatch } = usePatchSelector();
 
   const update = useCallback(
     (value: number) => {
@@ -37,11 +41,9 @@ export const CirklonStep = (props: Props) => {
       const h = ref.current?.offsetHeight as number;
 
       const value = min + ((h - y) / h) * (max - min);
-      console.log("calculate value h=%s y=%s min=%s max=%s value=%s", h, y, min, max, value);
-        if (max - min > 6) {
-            return Math.round(value);
-            
-        }
+      if (max - min > 6) {
+        return Math.round(value);
+      }
       return value;
     },
     [min, max],
@@ -54,8 +56,9 @@ export const CirklonStep = (props: Props) => {
       props.setMouseStartY(y);
       update(calculateValue(y));
       setSelectedSteps([step]);
+      selectPatch();
     },
-    [update, calculateValue],
+    [update, calculateValue, selectPatch],
   );
 
   const onMouseMove = useCallback(
@@ -72,7 +75,7 @@ export const CirklonStep = (props: Props) => {
   );
 
   return (
-    <div                                                                  
+    <div
       className={`${step.on ? "" : "opacity-20 pointer-events-none"} w-full h-full relative  flex`}
     >
       <div

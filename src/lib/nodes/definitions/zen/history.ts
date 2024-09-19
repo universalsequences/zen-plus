@@ -2,7 +2,7 @@ import { doc } from "./doc";
 import { isForwardCycle } from "@/lib/nodes/traverse";
 import { ObjectNode, Message, SubPatch } from "../../types";
 import { Statement, CompoundOperator } from "./types";
-import { history, Arg, History, UGen, print } from '@/lib/zen/index';
+import { history, Arg, History, UGen, print } from "@/lib/zen/index";
 import ObjectNodeComponent from "@/components/ObjectNodeComponent";
 
 /**
@@ -56,6 +56,7 @@ export const zen_history = (object: ObjectNode) => {
   // 1. we pipe data into the history
   // 2. we want to retrieve data out of the history to use
   return (x: Message): Statement[] => {
+    console.log("history node called with message", x);
     if (h == undefined) {
       h = history(object.attributes["initial"] as number, undefined, undefined, true);
     }
@@ -65,6 +66,7 @@ export const zen_history = (object: ObjectNode) => {
     // we need to determine if the statement we are receiving contains
     // THIS history
     let isCycle = object.isCycle !== undefined ? object.isCycle : isForwardCycle(object);
+    console.log("is cycle=", isCycle);
     object.isCycle = isCycle;
     if (!isCycle) {
       if (x !== "bang") {
@@ -88,28 +90,6 @@ export const zen_history = (object: ObjectNode) => {
       if (basePatch.historyNodes.has(object)) {
         return [];
       }
-
-      /*
-
-            let loopedHistory = containsSameHistory(h, inputStatement, true);
-            if (loopedHistory && Array.isArray(loopedHistory)) {
-                let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator
-                let historyInput = compoundOperator.historyInput;
-                // we need to determine if it has the history input set correctly
-                if (historyInput) {
-                    // finally check one more layer down..
-                    let contains = containsSameHistory(h, historyInput, false);
-                    if (contains) {
-                        let newHistory: Statement = [compoundOperator, inputStatement] as Statement;
-                        newHistory.node = object;
-                        // object.patch.newHistoryDependency(newHistory, object);
-                        return [];
-                    } else {
-                        return [];
-                    }
-                }
-            }
-            */
     }
 
     if (x === "bang") {
@@ -130,6 +110,7 @@ export const zen_history = (object: ObjectNode) => {
         inputStatement,
       ];
       statement.node = object;
+      console.log('adding new patch dep=', statement, object.patch)
       object.patch.newHistoryDependency(statement, object);
       return [statement];
     }

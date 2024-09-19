@@ -4,6 +4,9 @@ import type { ObjectNode } from "@/lib/nodes/types";
 import { useCallback, useRef } from "react";
 import { interpolateHexColors } from "../Toggle";
 import type { Selection } from "./types";
+import { usePatches } from "../../../contexts/PatchesContext";
+import { usePatch } from "@/contexts/PatchContext";
+import { usePatchSelector } from "@/hooks/usePatchSelector";
 
 export const Step: React.FC<{
   isMini: boolean;
@@ -48,9 +51,12 @@ export const Step: React.FC<{
 }) => {
   const { lockedMode } = useLocked();
   const down = useRef(false);
+  const { selectPatch } = usePatchSelector();
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      selectPatch();
       if (!lockedMode) {
         return;
       }
@@ -67,7 +73,16 @@ export const Step: React.FC<{
         });
       }
     },
-    [lockedMode, step, setStepNumberMoving, setSelection, stepNumber, isSelected, setSelectedSteps],
+    [
+      lockedMode,
+      step,
+      selectPatch,
+      setStepNumberMoving,
+      setSelection,
+      stepNumber,
+      isSelected,
+      setSelectedSteps,
+    ],
   );
 
   const onMouseOver = useCallback(() => {
@@ -168,7 +183,7 @@ export const Step: React.FC<{
       onMouseOver={onMouseOver}
       onFocus={() => 0}
       onKeyDown={(e: any) => 0}
-    className={`w-full ${isMini ? "h-5" : "h-full"} flex relative`}
+      className={`w-full ${isMini ? "h-5" : "h-full"} flex relative`}
     >
       <div
         style={{

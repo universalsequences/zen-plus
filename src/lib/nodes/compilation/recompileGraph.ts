@@ -11,6 +11,7 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
   patch.disconnectGraph();
   patch.outputStatements = [];
   patch.storedStatement = undefined;
+  console.log("resetting history deps");
   patch.historyDependencies = [];
   patch.historyNodes = new Set<ObjectNode>();
   patch.waiting = true;

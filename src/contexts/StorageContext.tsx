@@ -4,31 +4,15 @@ import { useAuth } from "./AuthContext";
 import { applyDiffs } from "@/lib/onchain/merge";
 import { File } from "@/lib/files/types";
 import { decompress } from "@/lib/onchain/fetch";
-import {
-  documentId,
-  addDoc,
-  doc,
-  DocumentData,
-  getDoc,
-  getFirestore,
-  updateDoc,
-  collection,
-  query,
-  orderBy,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { addDoc, doc, DocumentData, getDoc, updateDoc, collection } from "firebase/firestore";
 
 import { db } from "@/lib/db/firebase";
 import { v4 as uuidv4 } from "uuid";
 import { Patch, SubPatch, IOlet, SerializedPatch } from "@/lib/nodes/types";
 import { storage } from "@/lib/db/firebase";
-import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
-import { abi } from "@/lib/abi/minter-abi";
-import { MINTER_CONTRACT, DROP_CONTRACT } from "@/components/WriteOnChain";
-import { usePublicClient, useContractRead } from "wagmi";
-import { OnchainSubPatch, fetchOnchainSubPatch } from "@/lib/onchain/fetch";
-import jsonpatch from "fast-json-patch";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import jsonpatch, { Operation } from "fast-json-patch";
+import { PatchDoc } from "../lib/org/types";
 
 export interface Project {
   name: string;
@@ -38,13 +22,6 @@ export interface Project {
 interface IStorageContext {
   getPatches: (key: string) => Project[];
   onchainSubPatches: File[];
-  storePatch: (
-    name: string,
-    patch: Patch,
-    isSubPatch: boolean,
-    email: string,
-    screenshot?: string,
-  ) => Promise<void>;
   fetchPatchesForEmail: (
     email: string,
     isSubPatch?: boolean,
@@ -53,7 +30,7 @@ interface IStorageContext {
     searchText?: string,
   ) => Promise<FilesQueryResult>;
   fetchProject: (id: string, email: string) => Promise<File | null>;
-  fetchPatch: (x: any) => Promise<SerializedPatch>;
+  fetchPatch: (x: any, y: boolean) => Promise<SerializedPatch>;
   fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
   fetchRevisions: (head: any) => Promise<File[]>;
   loadSubPatches: () => void;
@@ -77,40 +54,9 @@ export interface FilesQueryResult {
 }
 
 export const StorageProvider: React.FC<Props> = ({ children }) => {
-  /*
-    const publicClient = usePublicClient();
-    const { data: subpatches, isError, isLoading } = useContractRead({
-        address: MINTER_CONTRACT,
-        abi: abi,
-        functionName: 'getPatchHeads',
-        args: [true]
-    })
-    */
-
   let [subpatches, setSubPatches] = useState<File[]>([]);
 
   const { user } = useAuth();
-
-  /*
-    useEffect(() => {
-        if (subpatches) {
-            fetchAll(subpatches);
-        }
-    }, [subpatches]);
-
-    const fetchAll = async (list: any) => {
-        let fetched: any[] = [];
-        for (let elem of list) {
-            let tokenId = elem.tokenId;
-            let patch = await fetchOnchainSubPatch(publicClient, tokenId);
-            fetched.push({
-                tokenId: tokenId.toString(),
-                name: elem.name,
-                patch
-            });
-        }
-    };
-    */
 
   const getPatches = (key: string) => {
     let projects = JSON.parse(window.localStorage.getItem(key) || "[]");
@@ -131,120 +77,10 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     return _projects;
   };
 
-  console.log("STORAGE CONTEXT");
-
-  const compress = async (json: any): Promise<string> => {
-    // we gotta save it now
-    // Convert the string to a Blob
-    console.log(json);
-    console.log("api compressed with json=", JSON.stringify(json).length);
-    let resp = await fetch("/api/compress", {
-      method: "POST",
-      body: JSON.stringify(json),
-    });
-    let payload = await resp.json();
-    let compressed = payload.compressed;
-    return compressed;
-  };
-
-  const uploadCompressedData = async (compressed: string): Promise<string> => {
-    const diffBlob = new Blob([compressed], { type: "text/plain" });
-
-    // Create a storage reference from our storage service
-    const uniqueId = uuidv4(); // Generates a unique ID
-    let path = `patches/${uniqueId}`;
-    const diffRef = ref(storage, path);
-    // Upload the Blob
-    let snapshot = await uploadBytes(diffRef, diffBlob);
-    return snapshot.ref.fullPath;
-  };
-
-  const storePatch = async (
-    name: string,
-    patch: Patch,
-    isSubPatch: boolean,
-    email: string,
-    screenshot?: string,
-  ) => {
-    let json: any = patch.getJSON();
-
-    let originalCompressed = await compress(json);
-
-    let prev = patch.previousSerializedPatch;
-    let current = json;
-    if (prev && current && patch.previousDocId) {
-      const diff = jsonpatch.compare(prev, current);
-      json = diff;
-    }
-
-    let compressed = await compress(json);
-
-    // we have the patch so we need to genearte the data
-    let auxData: any = {};
-    let document: any = {
-      createdAt: new Date(),
-      name,
-      patch: await uploadCompressedData(originalCompressed),
-      commit: await uploadCompressedData(compressed),
-      user: email,
-      isSubPatch,
-      hasNewVersion: false,
-    };
-    let parentNode = (patch as SubPatch).parentNode;
-    if (parentNode) {
-      let moduleType = parentNode.attributes.moduleType;
-      let getIO = (iolets: IOlet[], name: string) => {
-        let ios: any[] = [];
-        iolets.forEach((inlet, inletNumber) => {
-          let inletObject = patch.objectNodes.find(
-            (x) => x.name === name && x.arguments[0] === inletNumber + 1,
-          );
-          if (inletObject) {
-            ios[inletNumber] = inletObject.attributes.io;
-          } else {
-            ios[inletNumber] = "other";
-          }
-        });
-        return ios;
-      };
-      let inputs = getIO(parentNode.inlets, "in");
-      let outputs = getIO(parentNode.outlets, "out");
-      document.inputs = inputs;
-      document.outputs = outputs;
-      document.moduleType = moduleType;
-    }
-
-    if (screenshot) {
-      document.screenshot = screenshot;
-    }
-    console.log("document to store=", document);
-    if (patch.previousDocId) {
-      const docRef = doc(db, "patches", patch.previousDocId);
-      try {
-        await updateDoc(docRef, { hasNewVersion: true });
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          let previousDoc = docSnap.data();
-          let commits = [patch.previousDocId];
-          if (previousDoc.commits) {
-            commits = [...commits, ...previousDoc.commits];
-          }
-          document.commits = commits;
-        }
-      } catch (error) {}
-    }
-    addDoc(collection(db, "patches"), document).then((doc) => {
-      let docId = doc.id;
-      patch.previousDocId = docId;
-      patch.previousSerializedPatch = patch.getJSON();
-      window.history.pushState(null, "", `/editor/${docId}`);
-    });
-  };
-
   const loadSubPatches = useCallback(() => {
     if (user) {
       if (subpatches.length === 0) {
-        console.log("LOADING SUB PATCHES");
+        // TODO - don't load every single patch at start
         fetchPatchesForEmail(user.email, true).then((docs) => {
           setSubPatches(docs.files);
         });
@@ -303,6 +139,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
           let json = await resp.json();
           let files: File[] = json.projects.map((x: any) => ({
             ...x,
+            tags: x.tags,
             createdAt: Timestamp.fromMillis(
               x.createdAt.seconds * 1000 + x.createdAt.nanoseconds / 1000000,
             ),
@@ -352,14 +189,23 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     try {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        let document = docSnap.data();
-        return fetchPatch(document);
+        let doc = docSnap.data();
+        let document: PatchDoc = {
+          patch: doc.patch,
+          commit: doc.commit,
+          commits: doc.commits,
+          tags: doc.tags,
+        };
+        const patch = await fetchPatch(document, true);
+        patch.docId = id;
+        patch.doc = document;
+        return patch;
       }
     } catch (e) {}
     return null;
   };
 
-  const fetchPatch = async (x: any): Promise<SerializedPatch> => {
+  const fetchPatch = async (x: PatchDoc, isSubPatch = false): Promise<SerializedPatch> => {
     let commit = x.commit;
     let commits = x.commits || [];
     let fileRef = ref(storage, commit);
@@ -377,18 +223,13 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
       let text = await r.text();
       let decompressed: SerializedPatch = decompress(text);
 
-      console.log("fetching with commits=", x.commits);
-
-      if (commits.length === 0) {
+      if (commits.length === 0 || isSubPatch) {
         return decompressed;
       } else {
-        console.log("applying diffs.");
         let _commits = [decompressed];
-        let a = new Date().getTime();
         for (let c of commits) {
           _commits.push(await fetchCommit(c));
         }
-        let b = new Date().getTime();
         let applied: SerializedPatch = applyDiffs(_commits);
         return applied;
       }
@@ -408,6 +249,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
       user: x.user,
       screenshot: x.screenshot,
       favorited: x.favorited,
+      tags: x.tags,
     };
   };
 
@@ -431,7 +273,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     <StorageContext.Provider
       value={{
         fetchPatchesForEmail,
-        storePatch,
         getPatches,
         fetchPatch,
         fetchRevisions,

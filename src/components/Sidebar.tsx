@@ -8,23 +8,20 @@ import Attributes from "./Attributes";
 const Sidebar = () => {
   const { selectedNodes, setOpened, opened } = useSelection();
   const { selectedPatch } = usePatches();
-  const isSubPatch =
-    selectedPatch && (selectedPatch as SubPatch).parentPatch !== undefined;
+  const isSubPatch = selectedPatch && (selectedPatch as SubPatch).parentPatch !== undefined;
   const node =
-    selectedNodes[0] ||
-    (selectedPatch ? (selectedPatch as SubPatch).parentNode : undefined);
+    selectedNodes[0] || (selectedPatch ? (selectedPatch as SubPatch).parentNode : undefined);
 
   const inner = React.useMemo(() => {
     if (!node) {
       return <></>;
     }
     const attributes = node.attributes;
-      const attributeNames = Object.keys(attributes);
-      return (
-        <div className="w-full h-full text-xs flex flex-col">
-          <Attributes node={node} />
-        </div>
-      );
+    return (
+      <div className="w-full h-full text-xs flex flex-col">
+        <Attributes node={node} />
+      </div>
+    );
   }, [node]);
 
   const name = selectedNodes[0] ? (node as ObjectNode).name || "number" : "";

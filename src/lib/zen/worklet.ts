@@ -430,7 +430,7 @@ process(inputs, outputs, parameters) {
     let outputChannel = outputs[0];
 
     if (this.messageCounter % 32 === 0) {
-      // this.flushWASMMessages();
+      this.flushWASMMessages();
     }
     this.messageCounter++;
 

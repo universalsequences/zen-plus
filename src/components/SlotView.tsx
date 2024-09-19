@@ -39,17 +39,18 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { loadSubPatch } = useSubPatchLoader(objectNode);
 
   const [subpatches, setSubPatches] = useState(
-    [...onchainSubPatches].sort((a, b) => a.name.localeCompare(b.name)),
+    [...onchainSubPatches].sort((a, b) => b.createdAt.seconds - a.createdAt.seconds),
   );
 
   useEffect(() => {
     let _sorted = [...onchainSubPatches].sort((a, b) =>
-      searchText !== "" ? b.createdAt.seconds - a.createdAt.seconds : a.name.localeCompare(b.name),
+      b.createdAt.seconds - a.createdAt.seconds
     );
     setSubPatches(
       _sorted.filter(
         (x) =>
           searchText === "" ||
+          x.tags?.some((x) => x.toLowerCase().includes(searchText.toLowerCase())) ||
           (x.moduleType && x.moduleType.includes(searchText.toLowerCase())) ||
           x.name.toLowerCase().includes(searchText.toLowerCase()),
       ),
@@ -81,6 +82,11 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               {x.moduleType && x.moduleType !== "other" && (
                 <div className="text-zinc-200">{x.moduleType}</div>
               )}
+              <div className="ml-3 flex">
+                {x.tags?.map((x) => (
+                  <span className="underline mx-1">{x}</span>
+                ))}
+              </div>
               <div className="w-20  text-right ml-1 text-zinc-500">
                 {getTime(x.createdAt.toDate())}
               </div>

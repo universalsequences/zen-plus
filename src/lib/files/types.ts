@@ -13,4 +13,5 @@ export interface File {
   inputs?: string[];
   outputs?: string[];
   moduleType?: string;
+  tags?: string[];
 }

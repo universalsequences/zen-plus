@@ -28,6 +28,9 @@ const expandConnections = (connection: IOConnection): IOConnection[] => {
     let subpatchNode = (patch as SubPatch).parentNode;
     if (subpatchNode) {
       // then we are
+      if (patch.isZenBase()) {
+        return [];
+      }
       let outletNumber = (destination as ObjectNode).arguments[0] as number;
       let outlet = subpatchNode.outlets[outletNumber - 1];
       if (outlet) {
@@ -69,10 +72,7 @@ export const isForwardCycle = (
   return false;
 };
 
-export const traverseBackwards = (
-  node: Node,
-  visited: Set<Node> = new Set<Node>(),
-): Node[] => {
+export const traverseBackwards = (node: Node, visited: Set<Node> = new Set<Node>()): Node[] => {
   if (visited.has(node)) {
     return [];
   }
@@ -83,11 +83,7 @@ export const traverseBackwards = (
       let { source } = connection;
       let subpatch = (source as ObjectNode).subpatch;
       if (subpatch) {
-        ins = [
-          ...ins,
-          ...traverseBackwards(source, visited),
-          ...subpatch.getAllNodes(),
-        ];
+        ins = [...ins, ...traverseBackwards(source, visited), ...subpatch.getAllNodes()];
       } else {
         ins = [...ins, ...traverseBackwards(source, visited)];
       }
@@ -115,11 +111,7 @@ export const traverseForwards = (
       if (visited.has(destination)) {
         continue;
       }
-      ins = [
-        ...ins,
-        destination,
-        ...traverseForwards(destination, originalNode, visited, debug),
-      ];
+      ins = [...ins, destination, ...traverseForwards(destination, originalNode, visited, debug)];
     }
   }
   return ins;

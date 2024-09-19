@@ -24,6 +24,7 @@ import { recompileGraph } from "./compilation/recompileGraph";
 import { mergeAndExportToWav } from "@/utils/wav";
 import { onCompile, sleep } from "./compilation/onCompile";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
+import { PatchDoc } from "../org/types";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -69,6 +70,8 @@ export class PatchImpl implements Patch {
   recordingStartedAt?: Date;
   exportedAudioUnit?: ExportedAudioUnit;
   lockedMode: boolean;
+  docId?: string | undefined;
+  doc?: PatchDoc | undefined;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
@@ -186,7 +189,7 @@ export class PatchImpl implements Patch {
     for (const node of this.getAllMessageNodes()) {
       if (node.messageType === MessageType.Number) {
         if (node.message !== undefined) {
-        node.send(node.outlets[0], node.message);
+          node.send(node.outlets[0], node.message);
         }
       }
     }
@@ -347,6 +350,8 @@ export class PatchImpl implements Patch {
       objectNodes: this.objectNodes.map((x) => x.getJSON()),
       messageNodes: this.messageNodes.map((x) => x.getJSON()),
       presentationMode: this.presentationMode,
+      doc: this.doc,
+      docId: this.docId
     };
     const parentNode = (this as any as SubPatch).parentNode;
     if (parentNode) {
@@ -362,7 +367,8 @@ export class PatchImpl implements Patch {
   fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
     this.skipRecompile = true;
     this.name = x.name;
-
+    this.doc = x.doc;
+    this.docId = x.docId;
     this.objectNodes = [];
     this.messageNodes = [];
     this.presentationMode = x.presentationMode === undefined ? false : x.presentationMode;

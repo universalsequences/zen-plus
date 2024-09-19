@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { TargetIcon, TriangleRightIcon } from "@radix-ui/react-icons";
+import { usePatchSelector } from "@/hooks/usePatchSelector";
 
 const NumberBox: React.FC<{
   lockedModeRef: React.MutableRefObject<boolean>;
@@ -101,6 +102,7 @@ const NumberBox: React.FC<{
     [editing, setValue, value],
   );
 
+  const { selectPatch } = usePatchSelector();
   useEffect(() => {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -122,6 +124,7 @@ const NumberBox: React.FC<{
       >
         <TriangleRightIcon
           onMouseDown={(e: any) => {
+            selectPatch();
             if (!lockedModeRef.current) {
               return;
             }
@@ -134,6 +137,7 @@ const NumberBox: React.FC<{
         />
         <div
           onMouseDown={(e: any) => {
+            selectPatch();
             if (!lockedModeRef.current) {
               return;
             }

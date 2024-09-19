@@ -95,6 +95,7 @@ export class LoopMemoryBlock extends MemoryBlock {
   _size: number;
   context: LoopContext;
   allocatedSize: number;
+  _allocatedSize: number;
   channels: number;
   length: number;
   initData?: Float32Array;
@@ -104,7 +105,8 @@ export class LoopMemoryBlock extends MemoryBlock {
     this.context = context;
     this._idx = idx;
     this._size = size;
-    this.allocatedSize = allocatedSize;
+    this.allocatedSize = this.context.loopSize * allocatedSize;
+    this._allocatedSize = allocatedSize;
     this.channels = 0;
     this.length = 0;
   }
@@ -112,7 +114,7 @@ export class LoopMemoryBlock extends MemoryBlock {
   // in order for this to work in a loop we have to carve out memory for each iteration of the loop
   get idx(): number | string {
     // say
-    return `${this._idx} + ${this.allocatedSize}*${this.context.loopIdx}`; //*${this.context.loopSize}`;
+    return `${this._idx} + ${this._allocatedSize}*${this.context.loopIdx}`; //*${this.context.loopSize}`;
   }
 
   set idx(x: number | string) {
@@ -120,7 +122,7 @@ export class LoopMemoryBlock extends MemoryBlock {
   }
 
   get size(): number {
-    return this._size * this.context.loopSize;
+    return this.allocatedSize * this.context.loopSize;
   }
 
   set size(x: number) {

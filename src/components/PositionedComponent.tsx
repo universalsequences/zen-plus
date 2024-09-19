@@ -17,6 +17,7 @@ import { usePositionStyle } from "@/hooks/usePositionStyle";
 import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
+import { usePatchSelector } from "../hooks/usePatchSelector";
 
 const PositionedComponent: React.FC<{
   position?: string;
@@ -42,6 +43,7 @@ const PositionedComponent: React.FC<{
   isHydrated,
 }) => {
   const { setSelectedPatch } = usePatches();
+  const { selectPatch } = usePatchSelector();
   const { patch } = usePatch();
   const { setSelectedNodes, selectedNodes } = useSelection();
   const {
@@ -132,6 +134,7 @@ const PositionedComponent: React.FC<{
         //e.stopPropagation();
         return;
       }
+      selectPatch();
       e.stopPropagation();
       let divRect = ref.current?.getBoundingClientRect();
       if (divRect) {
@@ -153,7 +156,6 @@ const PositionedComponent: React.FC<{
           } else {
             setSelectedNodes([node]);
           }
-          setSelectedPatch(patch);
         }
 
         if (lockedModeRef.current) {
@@ -172,7 +174,7 @@ const PositionedComponent: React.FC<{
         updateZIndex(node.id, node.zIndex);
       }
     },
-    [setDraggingNode, selectedNodes, patch],
+    [setDraggingNode, selectedNodes, patch, selectPatch],
   );
 
   const onClick = useCallback(
@@ -210,6 +212,10 @@ const PositionedComponent: React.FC<{
       className += " pushable";
       className += " message-node";
     }
+    if ((node as MessageNode).messageType === MessageType.Number) {
+      className = className.replace("bg-black-clear", "");
+    }
+
     let isSelected = selectedNodes.includes(node);
     if ((node as ObjectNode).name === "button") {
       minWidth = 5;

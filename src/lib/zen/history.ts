@@ -441,12 +441,12 @@ memory[${IDX}] = ${_input.variable};
     }
     for (let { context, block } of contextBlocks) {
       let messageType: ContextMessageType = time !== undefined ? "schedule-set" : "memory-set";
+
       let body = {
         idx: block.idx,
         value: val,
         time,
       };
-      //            console.log('setting value =', val, body, block);
       context.baseContext.postMessage({
         type: messageType,
         body,

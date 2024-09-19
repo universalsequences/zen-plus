@@ -39,6 +39,8 @@ interface IPatchesContext {
   resizeTile: (x: number) => void;
   patchDragging: Patch | undefined;
   setPatchDragging: (x: Patch | undefined) => void;
+  counter: number;
+  setCounter: React.Dispatch<React.SetStateAction<number>>;
 }
 
 interface Props {
@@ -72,6 +74,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     { gridArea: "1/1/1/1" },
   ]);
 
+  const [counter, setCounter] = useState(0);
   const [rootTile, setRootTile] = useState<Tile | null>(null);
 
   useEffect(() => {
@@ -495,6 +498,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         splitTile,
         patchDragging,
         setPatchDragging,
+        counter,
+        setCounter
       }}
     >
       {children}

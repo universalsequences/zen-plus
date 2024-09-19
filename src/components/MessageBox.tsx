@@ -3,6 +3,7 @@ import { usePosition } from "@/contexts/PositionContext";
 import { MessageNode, Message, Coordinate } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
 import { printLispExpression } from "../lib/nodes/utils/lisp";
+import { usePatchSelector } from "@/hooks/usePatchSelector";
 
 const MessageBox: React.FC<{
   message: Message;
@@ -96,12 +97,15 @@ const MessageBox: React.FC<{
 
   const startPosition = useRef<Coordinate | null>(null);
 
+  const {selectPatch} = usePatchSelector();
+
   return (
     <div
       ref={fullDiv}
       onMouseDown={(e: any) => {
         if (lockedModeRef.current) {
           e.stopPropagation();
+          selectPatch();
         }
         startPosition.current = { ...messageNode.position };
       }}

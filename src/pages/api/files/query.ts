@@ -106,5 +106,6 @@ const docToFile = (id: string, x: DocumentData): File => {
     inputs: x.inputs,
     outputs: x.outputs,
     moduleType: x.moduleType,
+    tags: x.tags
   };
 };

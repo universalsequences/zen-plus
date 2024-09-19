@@ -19,6 +19,7 @@ import type {
   ParameterLock,
   StepDataSchema,
 } from "./definitions/core/zequencer/types";
+import { PatchDoc } from "../org/types";
 
 export interface Size {
   width: number;
@@ -297,6 +298,8 @@ export type Patch = Identifiable & {
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
   onUpdateSize: (id: string, size: Size) => void;
   sendNumberNodes: () => void;
+  docId?: string;
+  doc?: PatchDoc;
 };
 
 export type SubPatch = Patch & {
@@ -345,6 +348,8 @@ export type SerializedPatch = Identifiable & {
   size?: Size;
   isCustomView?: boolean;
   attributes?: Attributes;
+  docId?: string;
+  doc?: PatchDoc;
 };
 
 export type SerializedMessageNode = Identifiable & {

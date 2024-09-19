@@ -21,19 +21,8 @@ new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.vari
 `;
       } else {
         code += `
-if (this.messageCounter % 20 === 0) {
+if (this.messageCounter % 256 === 0) {
 this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
-/*
-    let subTypeMap = this.messageQueue[@beginMessage${name}@endMessage];
-    if (!subTypeMap) {
-console.log("creating new array");
-      subTypeMap = new Float32Array(8);
-      this.messageQueue[@beginMessage${name}@endMessage] = subTypeMap;
-    }
-
-    // Add the message to the queue for the given type/subType
-    subTypeMap[${_subType.variable}]= ${_value.variable};
-*/
 }
 `;
       }

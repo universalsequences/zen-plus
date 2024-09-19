@@ -14,6 +14,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { DropdownMenu } from "@radix-ui/themes";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Patch, SubPatch } from "@/lib/nodes/types";
+import { storePatch } from "@/lib/saving/storePatch";
 const jsonpatch = require("fast-json-patch");
 
 enum Option {
@@ -34,7 +35,6 @@ const PatchDropdown = React.memo((props: Props) => {
   const [option, setOption] = useState<Option | null>(null);
   const { patch, children } = props;
   let [name, setName] = useState(patch.name);
-  const { storePatch } = useStorage();
   const { setLightMode, lightMode } = useSettings();
 
   let account = useAccount();

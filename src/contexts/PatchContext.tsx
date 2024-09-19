@@ -87,7 +87,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
   const [messageNodes, setMessageNodes] = useState<MessageNode[]>([]);
   let assistantNodes = useRef<ObjectNode[]>([]);
 
-  const { patches } = usePatches();
+  const { patches, counter } = usePatches();
 
   const assist = useCallback(
     (text: string): Promise<ObjectNode[]> => {
@@ -132,7 +132,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
               if (api[tokens[0]]) {
                 tokens = ["create", ...tokens];
                 if (tokens.length > 5) {
-                tokens.splice(3, 1);
+                  tokens.splice(3, 1);
                 }
               }
               let [operationType, operatorName, id, x, y] = tokens;
@@ -319,7 +319,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
       connections[node.id] = _connections;
     }
     setConnections(connections);
-  }, [patch, setObjectNodes, setMessageNodes, patches]);
+  }, [patch, setObjectNodes, setMessageNodes, patches, counter]);
 
   const segmentCable = useCallback(
     (connection: IOConnection, segment: number) => {
@@ -471,47 +471,6 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     },
     [setObjectNodes, patch],
   );
-
-  /*
-    const publicClient = usePublicClient();
-    const { data: subpatches, isError, isLoading } = useContractRead({
-        address: MINTER_CONTRACT,
-        abi: abi,
-        functionName: 'getPatchHeads',
-        args: [true]
-    })
-
-
-    let flagg = useRef(false);
-    useEffect(() => {
-        if (!(patch as SubPatch).parentPatch && subpatches && !flagg.current) {
-            flagg.current = true;
-            fetchAll(subpatches);
-        }
-    }, [subpatches]);
-
-    let { storePatch } = useStorage();
-    const fetchAll = async (list: any) => {
-        let fetched: any[] = [];
-        let position = { x: 100, y: 100 };
-        for (let elem of list) {
-            let tokenId = elem.tokenId;
-            let _patch = await fetchOnchainSubPatch(publicClient, tokenId);
-            let node = new ObjectNodeImpl(patch);
-            node.parse(elem.name, undefined, undefined, _patch);
-            position = {
-                ...position,
-                y: position.y + 30
-            }
-            // newObjectNode(node, position);
-            let __patch = node.subpatch;
-            if (__patch) {
-                console.log('storing patch', elem.name);
-                await storePatch(elem.name, __patch, true, "alecresende@gmail.com");
-            }
-        }
-    };
-    */
 
   const newMessageNode = useCallback(
     (messageNode: MessageNode, position: Coordinate) => {

@@ -6,27 +6,16 @@ import { useSelection } from "@/contexts/SelectionContext";
 import Attributes from "./Attributes";
 import { ContextMenu, useThemeContext } from "@radix-ui/themes";
 import { useMessage } from "@/contexts/MessageContext";
-import {
-  ObjectNode,
-  Patch,
-  Coordinate,
-  Size,
-  MessageNode,
-  MessageType,
-} from "@/lib/nodes/types";
+import { ObjectNode, Patch, Coordinate, Size, MessageNode, MessageType } from "@/lib/nodes/types";
 import PositionedComponent from "./PositionedComponent";
 import NumberBox from "./ux/NumberBox";
 
 const DEFAULT_TEXT = "";
-const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({
-  messageNode,
-}) => {
+const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageNode }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const { lockedMode } = useLocked();
   const { setSelectedNodes, selectedNodes } = useSelection();
-  const [value, setValue] = useState<number>(
-    (messageNode.message as number) || 0,
-  );
+  const [value, setValue] = useState<number>((messageNode.message as number) || 0);
   let { value: message } = useValue();
 
   if (message === null) {
@@ -106,19 +95,14 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({
             </ContextMenu.Item>
           </ContextMenu.Content>
           <ContextMenu.Trigger className="ContextMenuTrigger relative">
-            <div
-              ref={ref}
-              className="flex h-full w-full flex-1 whitespace-nowrap relative"
-            >
+            <div ref={ref} className="flex h-full w-full flex-1 whitespace-nowrap relative">
               <>
                 {messageNode.messageType === MessageType.Number ? (
                   <NumberBox
                     lockedModeRef={lockedModeRef}
                     isSelected={isSelected}
                     min={messageNode.attributes.min as number}
-                    isParameter={
-                      messageNode.attributes["is parameter"] as boolean
-                    }
+                    isParameter={messageNode.attributes["is parameter"] as boolean}
                     max={messageNode.attributes.max as number}
                     value={value as number}
                     setValue={(x: number) => {
@@ -136,7 +120,7 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({
                   />
                 )}
                 {messageNode.attributes["scripting name"] !== "" && (
-                  <div className="absolute top-1 -right-10 h-7 text-white text-xs w-8">
+                  <div className="h-7 mt-0.5 ml-2 text-white text-xs w-8">
                     {messageNode.attributes["scripting name"]}
                   </div>
                 )}

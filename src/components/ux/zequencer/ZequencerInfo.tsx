@@ -104,7 +104,6 @@ const SchemaField = (props: Props) => {
   const { field, steps, plockValue } = props;
   const [update, setUpdate] = useState(0);
   const value = (plockValue ? plockValue.value : steps[0][field.name] || field.default) as number;
-  console.log("update=", update, value);
 
   const onChange = useCallback(
     (v: number) => {
@@ -116,14 +115,12 @@ const SchemaField = (props: Props) => {
             const { node } = plockValue;
             const existingLock = step.parameterLocks.find((x) => x.id === node.id);
             if (existingLock) {
-              console.log("setting existing lock=", v);
               existingLock.value = v;
             } else {
               step.parameterLocks.push({
                 id: node.id,
                 value: v,
               });
-              console.log("setting new lock=", v);
             }
             plockValue.value = v;
             setUpdate((prev) => prev + 1);
@@ -141,9 +138,6 @@ const SchemaField = (props: Props) => {
   );
 
   const paramNode = plockValue?.node?.controllingParamNode;
-  if (plockValue) {
-  console.log("param node=", paramNode);
-  }
   return (
     <div className="flex ">
       <div className="w-16">

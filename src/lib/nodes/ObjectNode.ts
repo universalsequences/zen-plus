@@ -276,7 +276,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       } else {
         this.subpatch.fromJSON(patchPreset, true);
       }
+      this.subpatch.doc = patchPreset.doc;
+      this.subpatch.docId = patchPreset.docId;
     }
+
     if (
       this.name !== "param" &&
       this.name !== "uniform" &&

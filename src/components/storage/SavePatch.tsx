@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { captureAndSendCanvas, ZenCodeSidebar } from "../ZenCodeSidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,13 +6,13 @@ import { useStorage } from "@/contexts/StorageContext";
 import { Patch, SubPatch } from "@/lib/nodes/types";
 import { OperatorContextType } from "@/lib/nodes/context";
 import { getRootPatch } from "@/lib/nodes/traverse";
+import { storePatch } from "@/lib/saving/storePatch";
 
 const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }) => {
   let [loading, setLoading] = useState(false);
   let ref = useRef<SVGSVGElement>(null);
   const { logout, user } = useAuth();
   let isSubPatch: boolean = (patch as SubPatch).parentPatch !== undefined;
-  const { storePatch } = useStorage();
 
   let [name, setName] = useState("");
   const save = useCallback(async () => {
@@ -23,7 +23,7 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
       .filter((x) => x.name === "onSave");
 
     for (const save of saves) {
-      save.send(save.outlets[0], "bang");   
+      save.send(save.outlets[0], "bang");
     }
 
     // first save the image to ipfs
@@ -75,6 +75,20 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
       }
     }
   }, [patch, name, isSubPatch, setLoading]);
+
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "enter") {
+        save();
+      }
+    },
+    [save],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onKeyDown]);
 
   let maxX = Math.max(...patch.objectNodes.map((x) => x.position.x)) + 200;
   let maxY = Math.max(...patch.objectNodes.map((x) => x.position.y)) + 200;

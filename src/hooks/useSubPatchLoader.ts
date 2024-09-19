@@ -123,7 +123,7 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
           );
         };
 
-                const reconnectIO2 = (isInput: boolean) => {
+        const reconnectIO2 = (isInput: boolean) => {
           let iolets = isInput ? objectNode.inlets : objectNode.outlets;
           let ioletsChosen: IOlet[] = [];
           for (let i = 0; i < iolets.length; i++) {
@@ -188,18 +188,6 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
 
         reconnectIO2(true);
         reconnectIO2(false);
-        //reconnectIO(outletConnections, false);
-
-        /*
-            for (let connection of inletConnections) {
-                let inlet = objectNode.inlets[connection.inletNumber];
-                if (inlet) {
-                    let c1 = connection.source.connect(objectNode, inlet, connection.source.outlets[connection.outletNumber], false);
-                    registerConnection(connection.source.id, c1);
-                }
-            }
-            */
-
         if (objectNode.subpatch) {
           objectNode.subpatch.initialLoadCompile();
         }
