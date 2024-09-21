@@ -38,6 +38,7 @@ doc("lisp", {
   numberOfInlets: (x) => x,
   numberOfOutlets: 1,
   description: "script",
+  isHot: false,
 });
 
 export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
@@ -58,7 +59,8 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
         for (let i = 0; i < args.length; i++) {
           console.log(args[i]());
           if (args[i]() !== undefined) {
-            env[`$${i + 2}`] = args[i]();
+            const value = args[i]();
+            env[`$${i + 2}`] = ArrayBuffer.isView(value) ? Array.from(value) : value;
           }
         }
         const ret = evaluate(parsed, env);

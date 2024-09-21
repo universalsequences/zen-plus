@@ -32,6 +32,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   }, [value]);
 
   let { width, height } = objectNode.size || { width: 100, height: 100 };
+  const [highlightedText, setHighlightedText] = useState(text); // New state to manage highlighted text
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const t = e.target.value;
@@ -47,6 +48,113 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const syntaxHighlighterRef = useRef<HTMLDivElement>(null);
+
+  // Check for Lisp special forms and common functions
+  const isSpecialForm = (line: string) => {
+    const specialForms = ["defun", "let", "if", "lambda", "setq"];
+    return specialForms.some((form) => line.trim().startsWith(`(${form}`));
+  };
+
+  // Calculate indentation based on Lisp structure, including special forms
+  const getIndentation = (
+    line: string,
+    previousIndentLevel: number,
+    isInSpecialForm: boolean,
+  ): number => {
+    const openParenCount = (line.match(/\(/g) || []).length;
+    const closeParenCount = (line.match(/\)/g) || []).length;
+
+    // Reset indentation level for top-level forms like defun
+    if (isSpecialForm(line)) {
+      return 0;
+    }
+
+    // If inside a special form (e.g., defun, if), increase indentation on the next line
+    if (isInSpecialForm) {
+      return Math.max(0, previousIndentLevel + openParenCount - closeParenCount + 1);
+    }
+
+    return Math.max(0, previousIndentLevel + openParenCount - closeParenCount);
+  };
+
+  // Re-indent the buffer based on structure and Lisp forms
+  const autoIndentBuffer = (inputText: string, caretPosition: number) => {
+    const lines = inputText.split("\n");
+    let newBuffer = "";
+    let indentLevel = 0;
+    let newCaretPosition = caretPosition;
+    let caretOffset = 0;
+    let inSpecialForm = false;
+
+    lines.forEach((line, index) => {
+      // Detect if this line is a special form
+      const specialFormDetected = isSpecialForm(line);
+
+      // Calculate the correct indentation for the current line
+      const currentIndentLevel = getIndentation(line.trim(), indentLevel, inSpecialForm);
+      indentLevel = currentIndentLevel;
+
+      // Track if we are inside a special form block (e.g., after defun or if)
+      inSpecialForm = specialFormDetected;
+
+      const trimmedLine = line.trim();
+      const indentedLine = "  ".repeat(indentLevel) + trimmedLine;
+
+      // Append the indented line to the new buffer
+      newBuffer += indentedLine + (index < lines.length - 1 ? "\n" : "");
+
+      // If the caret is within this line, adjust its position based on the indentation
+      if (caretPosition >= caretOffset && caretPosition <= caretOffset + line.length) {
+        const relativeCaretPos = caretPosition - caretOffset;
+        newCaretPosition = caretOffset + "  ".repeat(indentLevel).length + relativeCaretPos;
+      }
+
+      caretOffset += line.length + 1; // +1 for the newline character
+    });
+
+    return { newBuffer, newCaretPosition };
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      //e.preventDefault();
+
+      const { selectionStart } = e.currentTarget;
+      const currentValue = e.currentTarget.value;
+
+      // Re-indent the entire buffer and calculate the new caret position
+      const { newBuffer, newCaretPosition } = autoIndentBuffer(currentValue, selectionStart);
+
+      // Update the text in the textarea with the re-indented buffer
+      setText(newBuffer);
+      const { currentTarget } = e;
+
+      // Move the caret to the correct position after re-indenting
+      setTimeout(() => {
+        currentTarget.selectionStart = currentTarget.selectionEnd = newCaretPosition + 1;
+      }, 0);
+    }
+  };
+  const highlightMatchingParentheses = (text: string, cursorPos: number) => {
+    const openIndex = text.lastIndexOf("(", cursorPos);
+    const closeIndex = text.indexOf(")", openIndex);
+
+    if (openIndex !== -1 && closeIndex !== -1) {
+      const beforeOpen = text.slice(0, openIndex);
+      const between = text.slice(openIndex + 1, closeIndex);
+      const afterClose = text.slice(closeIndex + 1);
+
+      return `${beforeOpen}(<mark>${between}</mark>)${afterClose}`;
+    }
+    return text;
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const cursorPos = e.currentTarget.selectionStart;
+    const highlighted = highlightMatchingParentheses(text, cursorPos);
+    setHighlightedText(highlighted);
+  };
+
   // Synchronize scrolling between textarea and syntax highlighter
   const syncScroll = () => {
     if (textAreaRef.current && syntaxHighlighterRef.current) {
@@ -89,13 +197,13 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             whiteSpace: "pre-wrap", // Ensure wrapping
             padding: 0,
             overflowX: "hidden",
-width,
+            width,
             overflowWrap: "break-word", // Break long words for wrapping
             wordWrap: "break-word", // Ensure long words wrap properly
             ...fontStyles,
           }}
         >
-          {text + " "} {/* Adding a space to ensure proper wrapping */}
+          {text + " "}
         </SyntaxHighlighter>
       </div>
       <textarea
@@ -104,6 +212,8 @@ width,
         className="outline-none w-full h-full bg-transparent text-transparent caret-white p-2"
         value={text}
         onChange={handleChange}
+        onKeyUp={handleKeyUp} // Handle parentheses highlighting
+        onKeyDown={handleKeyDown} // Handle Enter key for auto-indent
         style={{
           position: "absolute",
           top: 0,

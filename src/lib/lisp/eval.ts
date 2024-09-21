@@ -35,12 +35,12 @@ function evaluateExpression(expr: Expression, env: Environment): Message {
 }
 
 function evaluateList(list: Expression[], env: Environment): Message {
+  console.log('evaluate list', list, env);
   if (list.length === 0) {
     return null;
   }
   let [_func, ...args] = list;
-  const func = evaluateExpression(_func, env);
-  console.log("func = ", func);
+  const func = evaluateExpression(_func, env) || _func;
 
   if (typeof func === "function") {
     const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
@@ -51,7 +51,6 @@ function evaluateList(list: Expression[], env: Environment): Message {
     if (func in env) {
       const fn = env[func];
       if (typeof fn === "function") {
-        console.log("wutf");
         const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
         return fn(env)(...evaluatedArgs);
       }
@@ -61,7 +60,6 @@ function evaluateList(list: Expression[], env: Environment): Message {
       const fn = env[func];
       if (typeof fn === "function") {
         const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
-        console.log("uh");
         return fn(env)(...evaluatedArgs);
       }
     }
@@ -72,17 +70,23 @@ function evaluateList(list: Expression[], env: Environment): Message {
         }
         const params = args[0] as string[];
         const body = args[1];
-        console.log("returning function!");
         return (callScope: Environment) =>
           (...args: Message[]) => {
-            const localEnv = Object.create({ ...env, ...callScope });
+            const localEnv = { ...env, ...callScope };
 
             params.slice(0).forEach((param, index) => {
               localEnv[param] = args[index];
             });
-            console.log("evaluating...", body, localEnv);
+            console.log("lambda evaluating with localEnv", localEnv);
             return evaluateExpression(body, localEnv);
           };
+      case "fill":
+        if (args.length !== 2) {
+          throw new Error("fill requires exactly two arguments: a function and a list");
+        }
+        const fillSize = evaluateExpression(args[0], env);
+        const fillValue = evaluateExpression(args[1], env);
+        return new Array(fillSize as number).fill(fillValue);
       case "map":
         if (args.length !== 2) {
           throw new Error("Map requires exactly two arguments: a function and a list");
@@ -119,10 +123,9 @@ function evaluateList(list: Expression[], env: Environment): Message {
           1,
         );
       case "/":
-        return args.reduce((quotient, arg, index) =>
-          index === 0
-            ? Number(evaluateExpression(arg, env))
-            : (quotient as number) / Number(evaluateExpression(arg, env)),
+        return Number(
+          (evaluateExpression(args[0], env) as number) /
+            (evaluateExpression(args[1], env) as number),
         );
       case "%":
         if (args.length !== 2) {
@@ -136,6 +139,18 @@ function evaluateList(list: Expression[], env: Environment): Message {
       case ">=":
         return Number(evaluateExpression(args[0], env)) >= Number(evaluateExpression(args[1], env));
       case "<=":
+        return Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env));
+      case "slice":
+        const array = evaluateExpression(args[0], env);
+        if (!Array.isArray(array)) {
+          throw new Error("must be an array");
+        }
+        return args.length === 3
+          ? array.slice(
+              Number(evaluateExpression(args[1], env)),
+              Number(evaluateExpression(args[2], env)),
+            )
+          : array.slice(Number(evaluateExpression(args[1], env)));
         return Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env));
       case "==":
         return evaluateExpression(args[0], env) === evaluateExpression(args[1], env);
@@ -167,12 +182,25 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("car operation requires a list argument");
         }
         return firstArg[0] ?? null;
+      case "s":
+        let last: Message | undefined = undefined;
+        for (let arg of args) {
+          last = evaluateExpression(arg, env);
+        }
+        if (last) {
+          return last;
+        }
       case "get":
+        console.log("get called");
         if (args.length !== 2) {
           throw new Error("get operation requires exactly two arguments");
         }
         const a = evaluateExpression(args[0], env);
-        const b = evaluateExpression(args[1], env);
+        const b =
+          typeof args[1] === "string" && !(args[1] in env)
+            ? args[1]
+            : evaluateExpression(args[1], env);
+        console.log("a/b for get", a, b);
         return a[b];
       case "cdr":
         if (args.length !== 1) {
@@ -268,7 +296,7 @@ function evaluateAtom(atom: Atom, env: Environment): Message {
     if (atom.startsWith("$")) {
       throw new Error(`Unknown input: ${inputKey}`);
     }
-    return atom;
+    return null; //atom;
   }
   return atom;
 }
@@ -288,3 +316,7 @@ function defineFunctionInEnv(funcDef: FunctionDefinition, env: Environment): Mes
   return null;
 }
 export { evaluate };
+
+const isStringLiteral = (x: string) => {
+  return x.trim().startsWith('"') && x.trim().endsWith('"');
+};
