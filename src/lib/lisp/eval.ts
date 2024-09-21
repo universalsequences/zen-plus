@@ -1,6 +1,8 @@
+import { isSymbol } from "./types";
 import type {
   Expression,
   Message,
+  Symbol,
   ObjectLiteral,
   Atom,
   FunctionDefinition,
@@ -46,35 +48,52 @@ function evaluateList(list: Expression[], env: Environment): Message {
     const fn = func;
     return fn(env)(...evaluatedArgs);
   }
-  if (typeof func === "string") {
-    if (func in env) {
-      const fn = env[func];
+  if (isSymbol(func)) {
+    const symbol = (func as Symbol).value;
+    if (symbol in env) {
+      const fn = env[symbol];
       if (typeof fn === "function") {
         const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
         return fn(env)(...evaluatedArgs);
       }
     }
 
-    if (func in env) {
-      const fn = env[func];
-      if (typeof fn === "function") {
-        const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
-        return fn(env)(...evaluatedArgs);
-      }
-    }
-    switch (func) {
+    switch (symbol) {
+      case "defun":
+        if (args.length !== 2) {
+          throw new Error("defun requires a name, a list of parameters, and a body");
+        }
+        if (!Array.isArray(args[0])) {
+          throw new Error("defun requires list as first arg");
+        }
+        const [funcName, ..._params] = args[0];
+        const defunBody = args[1];
+        if (!isSymbol(funcName)) {
+          throw new Error("Function name must be a symbol");
+        }
+        return defineFunctionInEnv(
+          {
+            type: "function",
+            params: [funcName as Symbol, ...(_params as Symbol[])],
+            body: defunBody,
+          },
+          env,
+        );
       case "lambda":
         if (args.length !== 2 || !Array.isArray(args[0])) {
           throw new Error("Lambda expression must have parameter list and body");
         }
-        const params = args[0] as string[];
+        const params = args[0] as Symbol[];
+        if (params.some((x) => !isSymbol(x))) {
+          throw new Error("Lambda expression must have parameter list of symbols");
+        }
         const body = args[1];
         return (callScope: Environment) =>
           (...args: Message[]) => {
             const localEnv = { ...env, ...callScope };
 
             params.slice(0).forEach((param, index) => {
-              localEnv[param] = args[index];
+              localEnv[param.value] = args[index];
             });
             return evaluateExpression(body, localEnv);
           };
@@ -96,10 +115,10 @@ function evaluateList(list: Expression[], env: Environment): Message {
             throw new Error("let variables must be lists");
           }
           const [varName, varValue] = b;
-          if (typeof varName !== "string") {
-            throw new Error("Variable name in let binding must be a string");
+          if (!isSymbol(varName)) {
+            throw new Error("Variable name in let binding must be a symbol");
           }
-          localEnv[varName] = evaluateExpression(varValue, localEnv);
+          localEnv[(varName as Symbol).value] = evaluateExpression(varValue, localEnv);
         }
 
         let result: Message = null;
@@ -277,11 +296,12 @@ function evaluateList(list: Expression[], env: Environment): Message {
         if (args.length !== 2) {
           throw new Error("set operation requires exactly two arguments");
         }
-        if (typeof args[0] !== "string") {
+        if (!isSymbol(args[0])) {
           throw new Error("set operation requires string for variable name");
         }
-        env[args[0]] = evaluateExpression(args[1], env);
-        return env[args[0]];
+        const setSymbol = (args[0] as Symbol).value;
+        env[setSymbol] = evaluateExpression(args[1], env);
+        return env[setSymbol];
       case "print":
         const printResult = args.map((arg) => evaluateExpression(arg, env));
         return printResult[printResult.length - 1] ?? null;
@@ -316,12 +336,12 @@ function evaluateObject(obj: ObjectLiteral, env: Environment): Message {
 }
 
 function evaluateAtom(atom: Atom, env: Environment): Message {
-  if (typeof atom === "string") {
-    const inputKey = atom;
+  if (isSymbol(atom)) {
+    const inputKey = (atom as Symbol).value;
     if (inputKey in env) {
       return env[inputKey];
     }
-    if (atom.startsWith("$")) {
+    if (inputKey.startsWith("$")) {
       throw new Error(`Unknown input: ${inputKey}`);
     }
     return null; //atom;
@@ -331,13 +351,13 @@ function evaluateAtom(atom: Atom, env: Environment): Message {
 
 function defineFunctionInEnv(funcDef: FunctionDefinition, env: Environment): Message {
   const { params, body } = funcDef;
-  env[params[0]] =
+  env[params[0].value] =
     (callScope: Environment) =>
     (...args: Message[]) => {
       const localEnv = Object.create({ ...env, ...callScope });
 
       params.slice(1).forEach((param, index) => {
-        localEnv[param] = args[index];
+        localEnv[param.value] = args[index];
       });
       return evaluateExpression(body, localEnv);
     };

@@ -1,16 +1,26 @@
 import type { Atom, Expression, List, ObjectLiteral, AST, FunctionDefinition } from "./types";
 
+// Update the Atom type to include a new 'Symbol' type
+
 function tokenize(input: string): string[] {
   const tokens: string[] = [];
   let current = "";
   let inString = false;
-
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
-
     if (char === '"') {
-      inString = !inString;
-      current += char;
+      if (inString) {
+        current += char;
+        tokens.push(current);
+        current = "";
+        inString = false;
+      } else {
+        if (current.trim().length > 0) {
+          tokens.push(current.trim());
+        }
+        current = char;
+        inString = true;
+      }
     } else if (inString) {
       current += char;
     } else if (char === "(" || char === ")" || char === "{" || char === "}") {
@@ -28,11 +38,9 @@ function tokenize(input: string): string[] {
       current += char;
     }
   }
-
   if (current.trim().length > 0) {
     tokens.push(current.trim());
   }
-
   return tokens;
 }
 
@@ -41,11 +49,9 @@ function parse(input: string): AST {
   const expressions: Expression[] = [];
   const expr = parseExpression(tokens);
   expressions.push(expr);
-
   while (tokens.length > 0) {
     expressions.push(parseExpression(tokens));
   }
-
   return expressions;
 }
 
@@ -90,30 +96,27 @@ function parseObjectLiteral(tokens: string[]): ObjectLiteral {
     spread: null,
     properties: {},
   };
-
   if (tokens[0] === "}") {
     tokens.shift(); // Remove closing brace for empty object
     return obj;
   }
-
   if (tokens[0] === "...") {
     tokens.shift(); // Remove spread operator
     obj.spread = parseExpression(tokens);
   }
-
   while (tokens[0] !== "}") {
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing closing brace");
     }
     const key = parseExpression(tokens);
-    if (typeof key !== "string") {
-      throw new Error("Object key must be a string");
+    if (typeof key !== "string" && !(typeof key === "object" && key.type === "Symbol")) {
+      throw new Error("Object key must be a string or symbol");
     }
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing value for key");
     }
     const value = parseExpression(tokens);
-    obj.properties[key] = value;
+    obj.properties[typeof key === "string" ? key : key.value] = value;
   }
   tokens.shift(); // Remove closing brace
   return obj;
@@ -126,9 +129,10 @@ function parseAtom(token: string): Atom {
   if (/^-?\d+(\.\d+)?$/.test(token)) return Number(token);
   // Handle string literals
   if (token.startsWith('"') && token.endsWith('"')) {
-    return token.slice(1, -1); // Remove surrounding quotes
+    return token; // Keep the quotes
   }
-  return token;
+  // Everything else is a symbol
+  return { type: "Symbol", value: token };
 }
 
 // Export the parse function
