@@ -57,7 +57,6 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
         const parsed = parse(node.script);
         env["$1"] = msg;
         for (let i = 0; i < args.length; i++) {
-          console.log(args[i]());
           if (args[i]() !== undefined) {
             const value = args[i]();
             env[`$${i + 2}`] = ArrayBuffer.isView(value) ? Array.from(value) : value;

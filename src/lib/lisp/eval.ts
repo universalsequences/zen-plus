@@ -35,7 +35,6 @@ function evaluateExpression(expr: Expression, env: Environment): Message {
 }
 
 function evaluateList(list: Expression[], env: Environment): Message {
-  console.log('evaluate list', list, env);
   if (list.length === 0) {
     return null;
   }
@@ -77,9 +76,40 @@ function evaluateList(list: Expression[], env: Environment): Message {
             params.slice(0).forEach((param, index) => {
               localEnv[param] = args[index];
             });
-            console.log("lambda evaluating with localEnv", localEnv);
             return evaluateExpression(body, localEnv);
           };
+      case "let":
+        if (args.length < 2) {
+          throw new Error("Let requires at least two arguments: bindings and body");
+        }
+        const bindings = args[0];
+        const letBody = args.slice(1);
+
+        if (!Array.isArray(bindings)) {
+          throw new Error("First argument to let must be a list of bindings");
+        }
+
+        const localEnv = Object.create(env);
+        for (let i = 0; i < bindings.length; i += 1) {
+          const b = bindings[i];
+          if (!Array.isArray(b)) {
+            throw new Error("let variables must be lists");
+          }
+          const [varName, varValue] = b;
+          if (typeof varName !== "string") {
+            throw new Error("Variable name in let binding must be a string");
+          }
+          localEnv[varName] = evaluateExpression(varValue, localEnv);
+        }
+
+        let result: Message = null;
+        if (!letBody) {
+          throw new Error("must have body for let");
+        }
+        for (const expr of letBody) {
+          result = evaluateExpression(expr, localEnv);
+        }
+        return result;
       case "fill":
         if (args.length !== 2) {
           throw new Error("fill requires exactly two arguments: a function and a list");
@@ -191,7 +221,6 @@ function evaluateList(list: Expression[], env: Environment): Message {
           return last;
         }
       case "get":
-        console.log("get called");
         if (args.length !== 2) {
           throw new Error("get operation requires exactly two arguments");
         }
@@ -200,7 +229,6 @@ function evaluateList(list: Expression[], env: Environment): Message {
           typeof args[1] === "string" && !(args[1] in env)
             ? args[1]
             : evaluateExpression(args[1], env);
-        console.log("a/b for get", a, b);
         return a[b];
       case "cdr":
         if (args.length !== 1) {
