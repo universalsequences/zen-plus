@@ -2,7 +2,7 @@ import { ObjectNode } from "@/lib/nodes/types";
 import { PatchDoc } from "@/lib/org/types";
 import { deleteTagFromDoc, tagDoc } from "@/lib/org/tags";
 import { Cross2Icon, DiscIcon, PlusCircledIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Props {
   node?: ObjectNode;
@@ -10,12 +10,18 @@ interface Props {
   docId?: string;
 }
 export const PatchDocComponent = (props: Props) => {
+  const ref = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [addingNewTag, setAddingNewTag] = useState(false);
   const [tagToEdit, setTagToEdit] = useState<string | null>(null);
   const docId = props.docId || props.node?.subpatch?.docId;
   const doc = props.doc || props.node?.subpatch?.doc;
   const [tags, setTags] = useState(doc?.tags || []);
+
+  useEffect(() => {
+    console.log("focusing...");
+    ref.current?.focus();
+  }, [addingNewTag]);
 
   const deleteTag = useCallback(() => {
     if (docId && tagToEdit) {
@@ -39,6 +45,21 @@ export const PatchDocComponent = (props: Props) => {
     }
     setText("");
   }, [text, docId, doc]);
+
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        saveTag();
+      }
+    },
+    [saveTag],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onKeyDown]);
+
   if (!docId || !doc) {
     return <></>;
   }
@@ -56,6 +77,7 @@ export const PatchDocComponent = (props: Props) => {
       ) : addingNewTag ? (
         <div className="flex">
           <input
+            ref={ref}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value)}
             className="flex-1 px-1 outline-none"
             value={text}

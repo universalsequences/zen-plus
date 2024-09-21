@@ -49,7 +49,7 @@ const Comment: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
     let fontSize = objectNode.attributes["font-size"] as number;
     return (
-        <div className="w-full h-full">
+        <div className="w-full h-full comment">
             <textarea
                 style={size ? { fontSize: fontSize, lineHeight: fontSize + 'px', width: size.width } : { fontSize: fontSize, lineHeight: fontSize + 'px' }}
                 ref={textareaRef}

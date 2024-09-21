@@ -14,10 +14,10 @@ interface Props {
 export const ExpandedPatch = (props: Props) => {
   const { patch } = props;
   return (
-    <div className="px-8  pt-5 flex flex-col gap-2 items-start relative">
+    <div className="px-8  pt-5 flex flex-col gap-2 items-start relative border-t border-t-zinc-500 ">
       <ArrowLeftIcon
         onClick={() => props.setSelectedPatch(null)}
-        className="absolute -top-1 left-2 h-5 w-5 cursor-pointer"
+        className="absolute top-2 left-2 h-5 w-5 cursor-pointer"
       />
       <PatchOption patch={props.patch} setSelectedPatch={props.setSelectedPatch} />
       <div className="flex items-start">

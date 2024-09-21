@@ -71,7 +71,7 @@ export const storePatch = async (
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         let previousDoc = docSnap.data();
-        let commits = [patch.previousDocId];
+        let commits = [docId];
         if (previousDoc.commits) {
           commits = [...commits, ...previousDoc.commits];
         }

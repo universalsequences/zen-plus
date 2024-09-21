@@ -1,6 +1,7 @@
 import Matrix from "./Matrix";
+import Lisp from "./Lisp";
 import { Waveform } from "./Waveform";
-import {ZequencerInfo} from "./zequencer/ZequencerInfo"
+import { ZequencerInfo } from "./zequencer/ZequencerInfo";
 import { ASTViewer } from "./ASTViewer";
 import ButtonOptions from "./ButtonOptions";
 import Color from "./Color";
@@ -62,8 +63,9 @@ export const index: ComponentIndex = {
   preset: Preset,
   color: Color,
   "live.meter~": LiveMeter,
+  lisp: Lisp,
   buttonoptions: ButtonOptions,
-  "zequencer.info": ZequencerInfo
+  "zequencer.info": ZequencerInfo,
 };
 
 export const optionalIndex: ComponentIndex = {

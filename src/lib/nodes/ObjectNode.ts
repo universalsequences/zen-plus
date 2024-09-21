@@ -69,6 +69,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   definition?: Definition;
   slots?: Slot[];
   steps?: GenericStepData[];
+  script?: string;
 
   constructor(patch: Patch, id?: string) {
     super(patch);
@@ -927,6 +928,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       outlets: this.getConnectionsJSON(),
       size: this.size,
       operatorContextType: this.operatorContextType,
+      script: this.script
     };
 
     if (this.steps) {
@@ -994,6 +996,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
             ? (json.buffer as MessageObject[])
             : new Float32Array(json.buffer as number[]);
     }
+
+    this.script = json.script;
 
     if (json.steps) {
       this.steps = json.steps;

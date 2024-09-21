@@ -217,6 +217,7 @@ export type ObjectNode = Positioned &
     stepsSchema?: StepDataSchema;
     updateSize: (size: Size) => void;
     controllingParamNode?: ObjectNode; // any param nodes that are controleld by this node
+    script?: string;
   };
 
 export interface SerializableCustom {
@@ -325,6 +326,7 @@ export interface SerializedConnection {
 
 export type SerializedObjectNode = Identifiable & {
   text: string;
+  script?: string;
   position: Coordinate;
   presentationPosition: Coordinate;
   outlets: SerializedOutlet[];

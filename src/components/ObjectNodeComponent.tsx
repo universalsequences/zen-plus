@@ -326,6 +326,7 @@ const InnerObjectNodeComponent: React.FC<{
             if (diff > 250) {
               return;
             }
+            e.stopPropagation();
             expandPatch(objectNode);
             return;
           }

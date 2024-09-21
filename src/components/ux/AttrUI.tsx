@@ -54,7 +54,8 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       text[1] = e.target.value;
 
       objectNode.text = text.join(" ");
-      objectNode.controllingParamNode = options.find((x) => x.label === e.target.value)?.value || undefined;
+      objectNode.controllingParamNode =
+        options.find((x) => x.label === e.target.value)?.value || undefined;
     },
     [setSelectedOption, options],
   );
@@ -78,11 +79,11 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         }}
         className={
           (lockedMode ? "" : " pointer-events-none ") +
-          "flex h-6 bg-zinc-900 w-full flex-1 border-zinc-100"
+          "flex h-6 flex-1 bg-zinc-900 w-full flex-1 border-zinc-100"
         }
       >
         <select
-          className="w-32 text-white bg-zinc-900 outline-none pl-1 mr-1"
+          className="w-full text-white bg-zinc-900 outline-none pl-1 mr-1 flex-1"
           placeholder="none"
           value={(selectedOption as string) || "none"}
           onChange={onChangeOption}
@@ -96,8 +97,7 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         <div
           style={{ borderLeft: "1px solid #8d8787" }}
           className={
-            (!selectedOption ? "pointer-events-none opacity-20" : "") +
-            " h-full flex flex-col flex-1"
+            (!selectedOption ? "pointer-events-none opacity-20" : "") + " h-full flex flex-col "
           }
         >
           <div className="my-auto w-full">

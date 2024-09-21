@@ -5,10 +5,12 @@ import { useSelection } from "@/contexts/SelectionContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode } from "@/lib/nodes/types";
 import { Point, FunctionEditor } from "@/lib/nodes/definitions/core/function";
+import { usePatchSelector } from "@/hooks/usePatchSelector";
 
 const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let ref = useRef<SVGSVGElement | null>(null);
   const { sizeIndex } = usePosition();
+  const { selectPatch } = usePatchSelector();
   let { width, height } = sizeIndex[objectNode.id] || {
     width: 300,
     height: 80,
@@ -135,7 +137,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
           editing.x = Math.min(editing.x, editor.points[index + 1]?.x);
           if (index >= 1) {
-           editing.x = Math.max(editing.x, editor.points[index - 1]?.x);
+            editing.x = Math.max(editing.x, editor.points[index - 1]?.x);
           }
         } else {
           editing.x = x;
@@ -221,6 +223,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             <g key={i} className="transitioncolors active:stroke-red-500 hover:stroke-red-500">
               <path
                 onMouseDown={(e: any) => {
+                  selectPatch();
                   if (lockedMode) {
                     e.stopPropagation();
                     setCurveEdit(sortedPoints[i]);
@@ -234,6 +237,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               />
               <path
                 onMouseDown={(e: any) => {
+                  selectPatch();
                   if (lockedMode) {
                     e.stopPropagation();
                     setCurveEdit(sortedPoints[i]);
@@ -251,6 +255,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             <g key={i} className="hover:stroke-white hover:fill-black transition-colors">
               <rect
                 onMouseDown={(e: any) => {
+                  selectPatch();
                   e.stopPropagation();
                   if (!lockedMode) {
                     return;
@@ -266,6 +271,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               <rect
                 onMouseDown={(e: any) => {
                   e.stopPropagation();
+                  selectPatch();
                   if (!lockedMode) {
                     return;
                   }

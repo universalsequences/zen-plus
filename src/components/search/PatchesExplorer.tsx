@@ -59,7 +59,7 @@ export const PatchesExplorer = () => {
 
   return (
     <div className="pt-10">
-      <div className="flex gap-2 absolute top-0 w-full overflow-x-auto py-1">
+      <div className="flex gap-2 absolute top-0 w-full overflow-x-auto py-1 no-scrollbar">
         {tags.map((x) => (
           <Tag key={x} name={x} isSelected={selectedTag === x} setSelectedTag={setSelectedTag} />
         ))}
@@ -87,7 +87,7 @@ const Tag: React.FC<{
 }> = ({ name, isSelected, setSelectedTag }) => {
   let bg = isSelected ? "bg-zinc-300" : "bg-zinc-900";
   let fg = isSelected ? "text-zinc-900" : "text-zinc-100";
-  let className = `px-4 py-1 rounded-full cursor-pointer transition-all ${bg} ${fg}`;
+  let className = `px-4 py-1 rounded-full cursor-pointer transition-all whitespace-nowrap ${bg} ${fg}`;
   return (
     <div
       onClick={() => (isSelected ? setSelectedTag(null) : setSelectedTag(name))}
