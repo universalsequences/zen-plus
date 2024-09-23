@@ -351,7 +351,7 @@ export class PatchImpl implements Patch {
       messageNodes: this.messageNodes.map((x) => x.getJSON()),
       presentationMode: this.presentationMode,
       doc: this.doc,
-      docId: this.docId
+      docId: this.docId,
     };
     const parentNode = (this as any as SubPatch).parentNode;
     if (parentNode) {
@@ -512,6 +512,7 @@ export class PatchImpl implements Patch {
   }
 
   async initialLoadCompile() {
+    this.sendNumberNodes();
     this.recompileGraph();
 
     const compiled: Patch[] = [];

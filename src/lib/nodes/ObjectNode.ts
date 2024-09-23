@@ -928,7 +928,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       outlets: this.getConnectionsJSON(),
       size: this.size,
       operatorContextType: this.operatorContextType,
-      script: this.script
+      script: this.script,
     };
 
     if (this.steps) {

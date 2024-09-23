@@ -17,7 +17,7 @@ export const PatchWindows = () => {
 
 
   useEffect(() => {
-    // setHide(false);
+    setHide(false);
   }, [patchWindows]);
 
   const onKeyDown = useCallback(

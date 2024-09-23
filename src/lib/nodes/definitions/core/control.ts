@@ -133,7 +133,7 @@ export const filter_gte = (node: ObjectNode, condition: Lazy) => {
 doc("filter.%=", {
   isHot: false,
   inletNames: ["message", "divisor", "condition"],
-  numberOfOutlets: 1,
+  numberOfOutlets: 2,
   numberOfInlets: 3,
   description: "passes message if message matches condition",
 });
@@ -148,7 +148,7 @@ export const filter_mod_eq = (node: ObjectNode, divisor: Lazy, condition: Lazy) 
     if (data % (divisor() as number) === condition()) {
       return [message];
     }
-    return [];
+    return [undefined, message];
   };
 };
 

@@ -181,12 +181,23 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("Modulo operation requires exactly two arguments");
         }
         return Number(evaluateExpression(args[0], env)) % Number(evaluateExpression(args[1], env));
+      case "floor":
+        if (args.length !== 1) {
+          throw new Error("floor operation requires exactly one arguments");
+        }
+        return Math.floor(Number(evaluateExpression(args[0], env)));
+      case "random":
+        return Math.random();
       case ">":
         return Number(evaluateExpression(args[0], env)) > Number(evaluateExpression(args[1], env));
       case "<":
         return Number(evaluateExpression(args[0], env)) < Number(evaluateExpression(args[1], env));
       case ">=":
-        return Number(evaluateExpression(args[0], env)) >= Number(evaluateExpression(args[1], env));
+        const [a1, b1] = [
+          Number(evaluateExpression(args[0], env)),
+          Number(evaluateExpression(args[1], env)),
+        ];
+        return a1 >= b1;
       case "<=":
         return Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env));
       case "slice":
@@ -244,10 +255,7 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("get operation requires exactly two arguments");
         }
         const a = evaluateExpression(args[0], env);
-        const b =
-          typeof args[1] === "string" && !(args[1] in env)
-            ? args[1]
-            : evaluateExpression(args[1], env);
+        const b = typeof args[1] === "string" ?  toStringLiteral(args[1]) : evaluateExpression(args[1], env);
         return a[b];
       case "cdr":
         if (args.length !== 1) {
@@ -304,8 +312,10 @@ function evaluateList(list: Expression[], env: Environment): Message {
         return env[setSymbol];
       case "print":
         const printResult = args.map((arg) => evaluateExpression(arg, env));
+        console.log(printResult);
         return printResult[printResult.length - 1] ?? null;
       default:
+        console.log("known function", func);
         throw new Error(`Unknown function: ${func}`);
     }
   }
@@ -346,6 +356,9 @@ function evaluateAtom(atom: Atom, env: Environment): Message {
     }
     return null; //atom;
   }
+  if (typeof atom === "string") {
+    atom = atom.trim().slice(1, atom.length - 1);
+  }
   return atom;
 }
 
@@ -367,4 +380,8 @@ export { evaluate };
 
 const isStringLiteral = (x: string) => {
   return x.trim().startsWith('"') && x.trim().endsWith('"');
+};
+const toStringLiteral = (x: string) => {
+  let trimmed = x.trim();
+  return trimmed.slice(1, trimmed.length-1);
 };

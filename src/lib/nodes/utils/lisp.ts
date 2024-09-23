@@ -1,3 +1,4 @@
+import { safeStringify } from "@/utils/safePrint";
 import { Message } from "../types";
 
 function tokenize(input: string): string[] {
@@ -50,7 +51,6 @@ export const printLispExpression = (expr: Message): string => {
     return `(${innerExpr})`;
   } else {
     // Base case: if it's a symbol or number, return it as a string
-    return expr?.toString ? expr.toString() : "?";
-
+    return safeStringify(expr);
   }
 };

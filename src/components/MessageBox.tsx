@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { usePosition } from "@/contexts/PositionContext";
 import { MessageNode, Message, Coordinate } from "@/lib/nodes/types";
-import { useValue } from "@/contexts/ValueContext";
-import { printLispExpression } from "../lib/nodes/utils/lisp";
 import { usePatchSelector } from "@/hooks/usePatchSelector";
+import { safeStringify } from "@/utils/safePrint";
 
 const MessageBox: React.FC<{
   message: Message;
@@ -15,12 +14,7 @@ const MessageBox: React.FC<{
   const fullDiv = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  let _value =
-    typeof message === "string" || typeof message === "number"
-      ? message.toString()
-      : Array.isArray(message)
-        ? printLispExpression(message)
-        : "*message*";
+  let _value = safeStringify(message);
 
   let [text, setText] = useState<string>(_value);
   let [editing, setEditing] = useState(false);
@@ -34,12 +28,11 @@ const MessageBox: React.FC<{
       messageNode.size = size;
       updateSize(messageNode.id, size);
     }
-
   }, [messageNode]);
 
   useEffect(() => {
     update();
-  }, [])
+  }, []);
   useEffect(() => {
     update();
   }, [message]);
@@ -97,7 +90,7 @@ const MessageBox: React.FC<{
 
   const startPosition = useRef<Coordinate | null>(null);
 
-  const {selectPatch} = usePatchSelector();
+  const { selectPatch } = usePatchSelector();
 
   return (
     <div

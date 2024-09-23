@@ -13,7 +13,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
   const [text, setText] = useState(objectNode.script || "");
   const [animate, setAnimate] = useState(false);
-  const { value } = useValue();
+  const value = 0; //{ value } = useValue();
   const current = useRef(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const syntaxHighlighterRef = useRef<HTMLDivElement>(null);
@@ -141,7 +141,8 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }
   };
 
-  const syncScroll = () => {
+  const syncScroll = (e?: Event) => {
+    e?.stopPropagation();
     if (textAreaRef.current && syntaxHighlighterRef.current) {
       syntaxHighlighterRef.current.scrollTop = textAreaRef.current.scrollTop;
       syntaxHighlighterRef.current.scrollLeft = textAreaRef.current.scrollLeft;
@@ -156,6 +157,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         textarea.removeEventListener("scroll", syncScroll);
       };
     }
+    syncScroll();
   }, [text, lockedMode]);
 
   return (
@@ -166,7 +168,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           padding: "5px",
           width,
           height,
-          whiteSpace: "pre-wrap",
+          //whiteSpace: "pre-wrap",
           overflow: "hidden",
           pointerEvents: "none",
           ...fontStyles,
@@ -180,12 +182,12 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           style={materialDark}
           customStyle={{
             margin: 0,
-            whiteSpace: "pre-wrap",
+            //whiteSpace: "pre-wrap",
             padding: 0,
-            overflowX: "hidden",
+            overflow: "auto",
             width,
-            overflowWrap: "break-word",
-            wordWrap: "break-word",
+            //overflowWrap: "break-word",
+            //wordWrap: "break-word",
             ...fontStyles,
           }}
         >
@@ -210,12 +212,14 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             background: "transparent",
             caretColor: "white",
             padding: "5px",
+            whiteSpace: "nowrap",
             margin: 0,
             border: "none",
-            whiteSpace: "pre-wrap",
-            overflowWrap: "break-word",
-            wordWrap: "break-word",
+            //whiteSpace: "pre-wrap",
+            //overflowWrap: "break-word",
+            //wordWrap: "break-word",
             overflow: "auto",
+            overflowX: "scroll",
             ...fontStyles,
           }}
         />
