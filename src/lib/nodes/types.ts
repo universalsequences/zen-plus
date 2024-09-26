@@ -200,6 +200,7 @@ export type ObjectNode = Positioned &
     operatorContextType: OperatorContextType;
     needsLoad?: boolean;
     isResizable?: boolean;
+    hasDynamicInlets?: boolean;
     storedLazyMessage?: Lazy;
     param?: ParamGen;
     isCycle?: boolean;

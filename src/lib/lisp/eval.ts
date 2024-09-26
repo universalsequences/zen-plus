@@ -201,7 +201,10 @@ function evaluateList(list: Expression[], env: Environment): Message {
       case "<=":
         return Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env));
       case "slice":
-        const array = evaluateExpression(args[0], env);
+        let array = evaluateExpression(args[0], env);
+        if (ArrayBuffer.isView(array)) {
+          array = Array.from(array);
+        }
         if (!Array.isArray(array)) {
           throw new Error("must be an array");
         }
@@ -219,7 +222,15 @@ function evaluateList(list: Expression[], env: Environment): Message {
       case "and":
         return args.every((arg) => Boolean(evaluateExpression(arg, env)));
       case "or":
-        return args.some((arg) => Boolean(evaluateExpression(arg, env)));
+        let i = 0;
+        for (const arg of args) {
+          const a = evaluateExpression(arg, env);
+          if (a) {
+            return a;
+          }
+          i++;
+        }
+        return args[args.length - 1];
       case "not":
         if (args.length !== 1) {
           throw new Error("Not operation requires exactly one argument");
@@ -238,7 +249,7 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("First operation requires exactly one argument");
         }
         const firstArg = evaluateExpression(args[0], env);
-        if (!Array.isArray(firstArg)) {
+        if (!Array.isArray(firstArg) && !ArrayBuffer.isView(firstArg)) {
           throw new Error("car operation requires a list argument");
         }
         return firstArg[0] ?? null;
@@ -255,14 +266,16 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("get operation requires exactly two arguments");
         }
         const a = evaluateExpression(args[0], env);
-        const b = typeof args[1] === "string" ?  toStringLiteral(args[1]) : evaluateExpression(args[1], env);
+        const b =
+          typeof args[1] === "string" ? toStringLiteral(args[1]) : evaluateExpression(args[1], env);
         return a[b];
       case "cdr":
         if (args.length !== 1) {
           throw new Error("cdr operation requires exactly one argument");
         }
-        const restArg = evaluateExpression(args[0], env);
-        if (!Array.isArray(restArg)) {
+        let restArg = evaluateExpression(args[0], env);
+
+        if (!Array.isArray(restArg) && !ArrayBuffer.isView(restArg)) {
           throw new Error("cdr operation requires a list argument");
         }
         return restArg.slice(1);
@@ -296,7 +309,11 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("Length operation requires exactly one argument");
         }
         const lengthArg = evaluateExpression(args[0], env);
-        if (typeof lengthArg === "string" || Array.isArray(lengthArg)) {
+        if (
+          typeof lengthArg === "string" ||
+          Array.isArray(lengthArg) ||
+          ArrayBuffer.isView(lengthArg)
+        ) {
           return lengthArg.length;
         }
         throw new Error("Length operation requires a string or list argument");
@@ -312,7 +329,6 @@ function evaluateList(list: Expression[], env: Environment): Message {
         return env[setSymbol];
       case "print":
         const printResult = args.map((arg) => evaluateExpression(arg, env));
-        console.log(printResult);
         return printResult[printResult.length - 1] ?? null;
       default:
         console.log("known function", func);
@@ -383,5 +399,5 @@ const isStringLiteral = (x: string) => {
 };
 const toStringLiteral = (x: string) => {
   let trimmed = x.trim();
-  return trimmed.slice(1, trimmed.length-1);
+  return trimmed.slice(1, trimmed.length - 1);
 };

@@ -9,6 +9,15 @@ export const ObjectNodePresentationWrapper: React.FC<{ objectNode: ObjectNode }>
   objectNode,
 }) => {
   const style = usePositionStyle(objectNode, true);
+  const _style = React.useMemo(() => {
+    const _s = {... style};
+
+  if (objectNode.size) {
+    _s.width = objectNode.size.width;
+    _s.height = objectNode.size.height;
+  }
+    return _s;
+  }, [style]);
 
   let CustomComponent = (objectNode.name
     ? index[objectNode.name]
@@ -17,7 +26,7 @@ export const ObjectNodePresentationWrapper: React.FC<{ objectNode: ObjectNode }>
 
   return (
     <ValueProvider node={objectNode}>
-      <div style={style} className="absolute">
+      <div style={_style} className="absolute">
         {isCustomSubPatchView ? (
           <CustomSubPatchView objectNode={objectNode} />
         ) : CustomComponent ? (

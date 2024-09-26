@@ -6,6 +6,7 @@ import {
     zoraTestnet,
     zoraSepolia,
     goerli,
+    baseSepolia,
     zora
 } from 'wagmi/chains';
 import Skeleton from '@/components/files/Skeleton';
@@ -71,6 +72,9 @@ const Works: React.FC<{ defaultWork?: WorkOption, setShowNav: (x: boolean) => vo
                 </div>}
                 {user && <div onClick={() => setChain(zoraSepolia.id)} className={(chain === zoraSepolia.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     zora sepolia
+                </div>}
+                {user && <div onClick={() => setChain(baseSepolia.id)} className={(chain === baseSepolia.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
+                    base sepolia
                 </div>}
                 <div onClick={() => setChain(zora.id)} className={(chain === zora.id ? "text-white" : "text-zinc-500") + " mr-5 cursor-pointer hover:text-white transition-all hover:scale-105"} >
                     zora

@@ -75,7 +75,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     setSelectedConnection,
     selectedNodes,
     deleteNodes,
-    selectedSteps
+    selectedSteps,
   ]);
 
   const getXY = (): Coordinate | null => {

@@ -22,15 +22,12 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
     _node.attributes["interpolation"] = "linear";
   }
   return (inputData: Message): Statement[] => {
-    console.log("received data", inputData);
     if (lastSize !== size() || lastChannels !== channels()) {
-      console.log("null");
       block = null;
       lastChannels = channels() as number;
       lastSize = size() as number;
     }
     if (!block) {
-      console.log("no block so initing?");
       let initBuffer: Float32Array | undefined = Array.isArray(inputData)
         ? new Float32Array(inputData as number[])
         : ArrayBuffer.isView(inputData)
@@ -46,28 +43,18 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
         true,
         _node.attributes.interpolation as Interpolation,
       );
-      console.log("blockgen is now=", block);
     } else {
-      // we've already initialized the data, so we need to simply
-      // feed this data into the block
-      //if (lastData === inputData) {
-      //  return [];
-      //}
       lastData = inputData;
-      console.log("otherwise setting inputData", inputData, block);
       if (ArrayBuffer.isView(inputData)) {
         if (block.set) {
-          console.log("actual setting buf...");
           block.set(inputData as Float32Array);
         } else {
           console.log("no set");
         }
       } else if (Array.isArray(inputData)) {
         if (block.set) {
-          console.log("actual setting buf...");
           block.set(new Float32Array(inputData as number[]));
         } else {
-          console.log("no set");
         }
       }
       return [];

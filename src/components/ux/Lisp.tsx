@@ -144,20 +144,23 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const syncScroll = (e?: Event) => {
     e?.stopPropagation();
     if (textAreaRef.current && syntaxHighlighterRef.current) {
-      syntaxHighlighterRef.current.scrollTop = textAreaRef.current.scrollTop;
+           syntaxHighlighterRef.current.scrollTop = textAreaRef.current.scrollTop;
       syntaxHighlighterRef.current.scrollLeft = textAreaRef.current.scrollLeft;
+    } else if (syntaxHighlighterRef.current) {
+      syntaxHighlighterRef.current.scrollLeft = 0;
+      syntaxHighlighterRef.current.scrollTop = 0;
     }
   };
 
   useEffect(() => {
     const textarea = textAreaRef.current;
+    syncScroll();
     if (textarea) {
       textarea.addEventListener("scroll", syncScroll);
       return () => {
         textarea.removeEventListener("scroll", syncScroll);
       };
     }
-    syncScroll();
   }, [text, lockedMode]);
 
   return (

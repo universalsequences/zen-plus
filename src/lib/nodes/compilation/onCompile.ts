@@ -215,12 +215,11 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
             handlePublishers(parentNode);
           }
 
-          /*
-        patch.zenCode = printAndMinify(statement);
-        if (patch.setZenCode) {
-          patch.setZenCode(patch.zenCode);
-        }
-        */
+          patch.zenCode = printAndMinify(statement);
+          if (patch.setZenCode) {
+            console.log('setting zen code=', patch.zenCode);
+            patch.setZenCode(patch.zenCode);
+          }
         })
         .catch(() => {});
     });

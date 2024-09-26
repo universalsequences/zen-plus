@@ -49,6 +49,11 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
   let lastText: string | undefined = undefined;
   let lastParsed: AST;
   node.inlets[node.inlets.length - 1].lastMessage = env as Message;
+  node.hasDynamicInlets = true;
+
+  if (node.attributes["font-size"] === 9) {
+    node.attributes["font-size"] = 11;
+  }
 
   const getEnvFromMessages = () => {
     return args[args.length - 1]() as Environment;
@@ -64,7 +69,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
     const _env = getEnvFromMessages();
     if (_env !== lastEnv) {
       lastEnv = _env;
-      env = { ... env, ..._env };
+      env = { ...env, ..._env };
     }
 
     // where do we store the script, in a attribute? lol
@@ -79,7 +84,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
         for (let i = 0; i < args.length; i++) {
           if (args[i]() !== undefined) {
             const value = args[i]();
-            env[`$${i + 2}`] = ArrayBuffer.isView(value) ? Array.from(value) : value;
+            env[`$${i + 2}`] = ArrayBuffer.isView(value) ? value : value;
           }
         }
         const ret = evaluate(parsed, env);
