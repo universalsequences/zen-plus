@@ -33,9 +33,7 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
   let lastMessage: Message | null = null;
   const onMessage = (message: Message) => {
     // received the message
-    const patchType = node.patch
-      ? (node.patch as SubPatch).patchType
-      : undefined;
+    const patchType = node.patch ? (node.patch as SubPatch).patchType : undefined;
     if (Array.isArray(message) && patchType === OperatorContextType.ZEN) {
       // we are in a zen patch so only subscribe to messages
       // from "this zen audio graph"
@@ -48,14 +46,11 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
         return;
       }
     }
-    if (lastMessage === message) {
+    if (lastMessage === message && message !== "bang") {
       return;
     }
     const second = (message as Message[])[2];
-    if (
-      second &&
-      ((message as Message[])[2] as unknown as SubPatch).patchType !== undefined
-    ) {
+    if (second && ((message as Message[])[2] as unknown as SubPatch).patchType !== undefined) {
       (message as Message[]).splice(2, 1);
     }
     node.send(node.outlets[0], message);
@@ -63,12 +58,15 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
   };
 
   return (x: Message) => {
-    if (name() !== lastName) {
+    if (lastName && name() !== lastName) {
+      console.log("unsubscribing", lastName);
       queue.unsubscribe(lastName, onMessage);
       initialized = false;
     }
     if (!initialized) {
+      console.log("subscribing name=%s", name());
       queue.subscribe(name() as string, onMessage);
+      initialized = true;
     }
     return [];
   };

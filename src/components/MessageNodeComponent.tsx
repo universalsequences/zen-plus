@@ -11,7 +11,10 @@ import PositionedComponent from "./PositionedComponent";
 import NumberBox from "./ux/NumberBox";
 
 const DEFAULT_TEXT = "";
-const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageNode }) => {
+const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: MessageNode }> = ({
+  messageNode,
+  isCustomView,
+}) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const { lockedMode } = useLocked();
   const { setSelectedNodes, selectedNodes } = useSelection();
@@ -53,6 +56,9 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageN
   let isSelected = selectedNodes.includes(messageNode);
 
   const onMouseDown = useCallback(() => {
+    if (isCustomView) {
+      return;
+    }
     if (!selectedNodes.includes(messageNode)) {
       setSelectedNodes([messageNode]);
     }
@@ -74,7 +80,8 @@ const MessageNodeComponent: React.FC<{ messageNode: MessageNode }> = ({ messageN
   return React.useMemo(() => {
     return (
       <PositionedComponent
-        text={DEFAULT_TEXT} //message as string}
+        text={DEFAULT_TEXT} 
+        isCustomView={isCustomView}
         lockedModeRef={lockedModeRef}
         node={messageNode}
       >

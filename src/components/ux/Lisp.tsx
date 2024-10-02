@@ -4,8 +4,9 @@ import { useSelection } from "@/contexts/SelectionContext";
 import { ObjectNode } from "@/lib/nodes/types";
 import { usePosition } from "@/contexts/PositionContext";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { materialDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { nightOwl } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useValue } from "@/contexts/ValueContext";
+import { Syntax } from "./Syntax";
 
 const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { attributesIndex } = useSelection();
@@ -17,6 +18,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const current = useRef(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const syntaxHighlighterRef = useRef<HTMLDivElement>(null);
+  const syntaxRef = useRef<HTMLPreElement>(null);
 
   const { width, height } = objectNode.size || { width: 100, height: 100 };
   const fontStyles = {
@@ -89,6 +91,8 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     return match ? match[0].length : 0;
   };
 
+  const [cursor, setCursor] = useState(0);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -138,17 +142,34 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             selectionStart + 2;
         }
       }, 0);
+    } else {
     }
   };
 
+  const handleKeyUp = useCallback(() => {
+    setTimeout(() => {
+      if (textAreaRef.current) {
+        setCursor(textAreaRef.current.selectionStart);
+      }
+      syncScroll();
+    }, 0);
+  }, []);
+
   const syncScroll = (e?: Event) => {
     e?.stopPropagation();
-    if (textAreaRef.current && syntaxHighlighterRef.current) {
-           syntaxHighlighterRef.current.scrollTop = textAreaRef.current.scrollTop;
-      syntaxHighlighterRef.current.scrollLeft = textAreaRef.current.scrollLeft;
-    } else if (syntaxHighlighterRef.current) {
-      syntaxHighlighterRef.current.scrollLeft = 0;
-      syntaxHighlighterRef.current.scrollTop = 0;
+    if (textAreaRef.current && syntaxHighlighterRef.current && syntaxRef.current) {
+      syntaxHighlighterRef.current.childNodes[0].scrollTop = textAreaRef.current.scrollTop;
+      syntaxHighlighterRef.current.childNodes[0].scrollLeft = textAreaRef.current.scrollLeft;
+      textAreaRef.current.scrollTop = syntaxHighlighterRef.current.childNodes[0].scrollTop;
+      textAreaRef.current.scrollLeft = syntaxHighlighterRef.current.childNodes[0].scrollLeft;
+      syntaxRef.current.scrollTop = textAreaRef.current.scrollTop;
+      syntaxRef.current.scrollLeft = textAreaRef.current.scrollLeft;
+    } else if (syntaxHighlighterRef.current && syntaxRef.current) {
+      syntaxHighlighterRef.current.childNodes[0].scrollLeft = 0;
+      syntaxHighlighterRef.current.childNodes[0].scrollTop = 0;
+      syntaxRef.current.scrollLeft = 0;
+      syntaxRef.current.scrollTop = 0;
+    } else {
     }
   };
 
@@ -164,73 +185,98 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   }, [text, lockedMode]);
 
   return (
-    <div style={{ width, height }} className="bg-zinc-800 relative">
-      <div
-        ref={syntaxHighlighterRef}
-        style={{
-          padding: "5px",
-          width,
-          height,
-          //whiteSpace: "pre-wrap",
-          overflow: "hidden",
-          pointerEvents: "none",
-          ...fontStyles,
-          position: "absolute",
-          top: 0,
-          left: 0,
-        }}
-      >
-        <SyntaxHighlighter
-          language="lisp"
-          style={materialDark}
-          customStyle={{
-            margin: 0,
-            //whiteSpace: "pre-wrap",
-            padding: 0,
-            overflow: "auto",
-            width,
-            //overflowWrap: "break-word",
-            //wordWrap: "break-word",
-            ...fontStyles,
-          }}
-        >
-          {text + " "}
-        </SyntaxHighlighter>
-      </div>
-      {lockedMode && (
-        <textarea
-          ref={textAreaRef}
-          spellCheck={false}
-          className="outline-none w-full h-full bg-transparent text-transparent caret-white p-2"
-          value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width,
-            height,
-            color: "transparent",
-            background: "transparent",
-            caretColor: "white",
-            padding: "5px",
-            whiteSpace: "nowrap",
-            margin: 0,
-            border: "none",
-            //whiteSpace: "pre-wrap",
-            //overflowWrap: "break-word",
-            //wordWrap: "break-word",
-            overflow: "auto",
-            overflowX: "scroll",
-            ...fontStyles,
-          }}
-        />
+    <div
+      onClick={() => handleKeyUp()}
+      style={{ width, height }}
+      className="bg-zinc-800 relative flex"
+    >
+      {objectNode.attributes["hide-code"] ? (
+        <div className="m-auto text-white">code</div>
+      ) : (
+        <>
+          <div
+            ref={syntaxHighlighterRef}
+            style={{
+              padding: "5px",
+              width,
+              height,
+              //whiteSpace: "pre-wrap",
+              overflow: "hidden",
+              ...fontStyles,
+            }}
+          >
+            <SyntaxHighlighter
+              language="lisp"
+              style={nightOwl}
+              customStyle={{
+                margin: 0,
+                //whiteSpace: "pre-wrap",
+                padding: 0,
+                pointerEvents: "none",
+                overflow: "auto",
+                width,
+                height,
+                //overflowWrap: "break-word",
+                //wordWrap: "break-word",
+                ...fontStyles,
+              }}
+            >
+              {text + " "}
+            </SyntaxHighlighter>
+          </div>
+          <textarea
+            readOnly={!lockedMode}
+            ref={textAreaRef}
+            spellCheck={false}
+            className="outline-none w-full h-full bg-transparent text-transparent caret-white p-2"
+            value={text}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
+            style={{
+              position: "absolute",
+              top: 0,
+              padding: 5,
+              left: 0,
+              width,
+              height,
+              color: "transparent",
+              background: "transparent",
+              caretColor: "white",
+              whiteSpace: "nowrap",
+              margin: 0,
+              border: "none",
+              overflow: "auto",
+              overflowX: "scroll",
+              ...fontStyles,
+            }}
+          />
+
+          <div
+            ref={syntaxRef}
+            style={{
+              padding: "5px",
+              width,
+              height,
+              //whiteSpace: "pre-wrap",
+              overflow: "hidden",
+              ...fontStyles,
+              position: "absolute",
+              pointerEvents: "none",
+              top: 0,
+              left: 0,
+            }}
+          >
+            <Syntax width={width} height={height} text={text} cursor={cursor} style={fontStyles} />
+          </div>
+
+          <div
+            style={{ zIndex: 10000000 }}
+            className={`w-2 h-2 rounded-full transition-all ${animate ? "bg-lime-500" : ""} top-1 right-1 absolute`}
+          />
+        </>
       )}
-      <div
-        style={{ zIndex: 10000000 }}
-        className={`w-2 h-2 rounded-full transition-all ${animate ? "bg-lime-500" : ""} top-1 right-1 absolute`}
-      />
+      ;
     </div>
   );
 };

@@ -176,9 +176,7 @@ export class Context {
   }
 
   alloc(size: number): MemoryBlock {
-    console.log("alloc called");
     const loopContext: LoopContext | null = this.getLoopContextIfAny();
-    console.log("get loop context if any...", loopContext);
     if (loopContext) {
       return this.loopAlloc(size, loopContext);
     }
@@ -187,7 +185,6 @@ export class Context {
 
   loopAlloc(size: number, context: LoopContext): LoopMemoryBlock {
     let allocSize = size * context.loopSize;
-    console.log("loopAlloc=", allocSize);
     const block: MemoryBlock = this.memory.alloc(size * context.loopSize);
     const index = this.memory.blocksInUse.indexOf(block);
     const _block = new LoopMemoryBlock(context, block.idx as number, block.size, size); //block.allocatedSize);
@@ -508,12 +505,10 @@ export class LoopContext extends Context {
   }
 
   alloc(size: number): MemoryBlock {
-    console.log("loop context called with size=", size * this.loopSize);
     let block: MemoryBlock = this.memory.alloc(size * this.loopSize);
     let index = this.memory.blocksInUse.indexOf(block);
     let context = this.context;
     let _block = new LoopMemoryBlock(this, block.idx as number, block.size, size);
-    console.log("pre block=", block, block.size, size);
     this.memory.blocksInUse[index] = _block;
     return _block;
   }

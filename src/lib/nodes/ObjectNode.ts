@@ -868,7 +868,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       const ret: Message[] = this.fn(message);
       const b = new Date().getTime();
       if (b - a > 25) {
-        console.log("function %s id=%s took %s ms", this.name, this.id, b - a, a, b, this);
+        //console.log("function %s id=%s took %s ms", this.name, this.id, b - a, a, b, this);
       }
 
       for (let i = 0; i < ret.length; i++) {

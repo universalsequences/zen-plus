@@ -122,8 +122,8 @@ export class PresetManager {
         let preset = this.serializedPresets[i];
         for (let id in preset) {
           let { state } = preset[id];
-            let presetPatch = this.objectNode.patch;
-          let node = allNodes.find((x) => isPatchBelow(presetPatch, x.patch) &&  x.id === id);
+          let presetPatch = this.objectNode.patch;
+          let node = allNodes.find((x) => isPatchBelow(presetPatch, x.patch) && x.id === id);
           if (node) {
             this.presets[i][id] = {
               node,
@@ -143,7 +143,11 @@ export const preset = (object: ObjectNode) => {
   }
   return (x: Message) => {
     if (typeof x === "number" && object.custom) {
-      (object.custom as PresetManager).switchToPreset(x as number);
+      const mgmt = object.custom as PresetManager;
+      mgmt.switchToPreset(Math.round(x as number));
+      if (object.onNewValue) {
+        object.onNewValue(mgmt.currentPreset);
+      }
     }
     return [];
   };

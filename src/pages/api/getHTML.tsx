@@ -40,7 +40,7 @@ async function getHTML(
 ): Promise<string | null> {
   const web3 =
     chainId === baseSepolia.id
-      ? new Web3(new Web3.providers.HttpProvider("https://sepolia.base.org/"))
+      ? new Web3(new Web3.providers.HttpProvider("https://sepolia.base.org"))
       : chainId === 5
         ? new Web3(
             new Web3.providers.HttpProvider(`https://goerli.infura.io/v3/${process.env.INFURA_ID}`),

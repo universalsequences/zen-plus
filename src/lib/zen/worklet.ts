@@ -24,8 +24,8 @@ export const createWorklet = (
 ): Promise<ZenWorklet> => {
   return new Promise((resolve: (x: ZenWorklet) => void) => {
     const { code, wasm } = createWorkletCode(name, graph);
-    console.log(code);
     const workletCode = code;
+    console.log(code);
     const workletBase64 = btoa(workletCode);
     const url = `data:application/javascript;base64,${workletBase64}`;
 
@@ -370,6 +370,7 @@ let msg = {type, subType, body: messages[type][subType], time: times[type][subTy
    }
 
    allocateMemory(length) {
+console.log('allocate memory', length);
      const bytesPerElement = Float32Array.BYTES_PER_ELEMENT;
      const ptr = this.wasmModule.exports.my_malloc(length * bytesPerElement);
      return ptr;
@@ -429,12 +430,14 @@ process(inputs, outputs, parameters) {
     let inputChannel = inputs[0];
     let outputChannel = outputs[0];
 
-    if (this.messageCounter % 32 === 0) {
+    if (this.messageCounter % 128 === 0) {
       this.flushWASMMessages();
     }
     this.messageCounter++;
 
-    this.scheduleEvents(128);
+    if (this.events.length > 0) {
+      this.scheduleEvents(128);
+    }
 
     for (let i = 0; i < 1; i ++) {
       if (!this.wasmModule) {
@@ -454,10 +457,10 @@ process(inputs, outputs, parameters) {
       // Copy output buffer to output channel
       for (let j=0; j < ${graph.numberOfOutputs}; j++) {
 
-         let arr = this.output.slice(j*128, (j+1)*128);
-if (j === 1) {
-}
-         outputs[0][j].set(arr, 0);
+         //let arr = this.output.slice(j*128, (j+1)*128);
+         //outputs[0][j].set(arr, 0);
+         outputs[0][j].set(this.output.subarray(j * 128, (j + 1) * 128), 0);
+
       }
     }
     return true;

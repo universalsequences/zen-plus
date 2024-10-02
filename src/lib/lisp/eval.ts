@@ -60,14 +60,15 @@ function evaluateList(list: Expression[], env: Environment): Message {
 
     switch (symbol) {
       case "defun":
-        if (args.length !== 2) {
+        if (args.length !== 3) {
           throw new Error("defun requires a name, a list of parameters, and a body");
         }
-        if (!Array.isArray(args[0])) {
+        if (!Array.isArray(args[1])) {
           throw new Error("defun requires list as first arg");
         }
-        const [funcName, ..._params] = args[0];
-        const defunBody = args[1];
+        const funcName = args[0];
+        const _params = args[1];
+        const defunBody = args[2];
         if (!isSymbol(funcName)) {
           throw new Error("Function name must be a symbol");
         }
@@ -141,10 +142,13 @@ function evaluateList(list: Expression[], env: Environment): Message {
           throw new Error("Map requires exactly two arguments: a function and a list");
         }
         const mapFunc = evaluateExpression(args[0], env);
-        const mapList = evaluateExpression(args[1], env);
+        let mapList = evaluateExpression(args[1], env);
 
         if (typeof mapFunc !== "function") {
           throw new Error("First argument to map must be a function");
+        }
+        if (ArrayBuffer.isView(mapList)) {
+          mapList = Array.from(mapList as Float32Array);
         }
         if (!Array.isArray(mapList)) {
           throw new Error("Second argument to map must be a list");
@@ -329,9 +333,10 @@ function evaluateList(list: Expression[], env: Environment): Message {
         return env[setSymbol];
       case "print":
         const printResult = args.map((arg) => evaluateExpression(arg, env));
+        console.log(printResult)
         return printResult[printResult.length - 1] ?? null;
       default:
-        console.log("known function", func);
+        console.log("missing function def=", func);
         throw new Error(`Unknown function: ${func}`);
     }
   }

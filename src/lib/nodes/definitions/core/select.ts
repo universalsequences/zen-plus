@@ -67,6 +67,8 @@ export const route = (node: ObjectNode, ...types: Lazy[]) => {
     }
     if (!matched) {
       outputs[outputs.length - 1] = message;
+    } else {
+      (outputs as any[])[outputs.length - 1] = undefined;
     }
     return outputs;
   };
@@ -82,7 +84,6 @@ doc("filterselect", {
 export const filterselect = (node: ObjectNode, ...messages: Lazy[]) => {
   return (index: Message) => {
     if (typeof index === "number") {
-      console.log("index=%s", index, messages);
       if (messages[index] && messages[index]()) {
         return [messages[index]()];
       }

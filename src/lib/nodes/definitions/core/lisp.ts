@@ -55,6 +55,11 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes["font-size"] = 11;
   }
 
+  const empty: Message[] = [];
+  const out: Message[] = [];
+
+  node.newAttribute("hide-code", false);
+
   const getEnvFromMessages = () => {
     return args[args.length - 1]() as Environment;
   };
@@ -63,7 +68,8 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
     if (msg === "clear") {
       lastEnv = getEnvFromMessages();
       env = { ...lastEnv };
-      return [];
+      return empty;
+      // return [];
     }
 
     const _env = getEnvFromMessages();
@@ -87,14 +93,18 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
             env[`$${i + 2}`] = ArrayBuffer.isView(value) ? value : value;
           }
         }
+        let a = new Date().getTime();
         const ret = evaluate(parsed, env);
-
-        if (node.onNewValue) {
-          node.onNewValue(counter++);
+        let b = new Date().getTime();
+        if (b - a > 100) {
+          console.log("lisp took %s ms", b - a, b);
         }
-        return [ret, env];
+        out[0] = ret;
+        out[1] = env;
+        return out;
+        // return [ret, env];
       } catch (e) {
-        console.log("error", e);
+        console.log("error", e, node);
         return [];
       }
     }

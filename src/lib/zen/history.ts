@@ -238,7 +238,6 @@ export const history = (
         block.name = params.name;
         block.min = params.min;
         block.max = params.max;
-        console.log("creating history param for context", context, params.name);
       }
 
       if (!historyVar) {

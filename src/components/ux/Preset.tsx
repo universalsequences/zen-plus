@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { PresetManager } from "@/lib/nodes/definitions/core/preset";
-import MatrixCell from "./MatrixCell";
-import { useMessage } from "@/contexts/MessageContext";
-import { useSelection } from "@/contexts/SelectionContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode } from "@/lib/nodes/types";
+import { useValue } from "@/contexts/ValueContext";
 
 const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let ref = useRef<HTMLDivElement>(null);
@@ -13,9 +11,11 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let mgmt = objectNode.custom as any as PresetManager;
   let [current, setCurrent] = useState(mgmt.currentPreset);
 
-    useEffect(() => {
-        setCurrent(mgmt.currentPreset);
-    }, [mgmt])
+  useValue();
+
+  useEffect(() => {
+    setCurrent(mgmt.currentPreset);
+  }, [mgmt.currentPreset]);
 
   const switchToPreset = useCallback(
     (i: number) => {
@@ -30,7 +30,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       style={{ width, height }}
       className="flex flex-wrap overflow-hidden content-start bg-zinc-950"
     >
-      {mgmt.presets.map((preset, i) => (
+      {mgmt.presets.map((_preset, i) => (
         <div
           key={i}
           onClick={() => switchToPreset(i)}

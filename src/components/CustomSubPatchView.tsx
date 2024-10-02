@@ -57,7 +57,7 @@ const Inner = () => {
         <ObjectNodePresentationWrapper key={node.id} objectNode={node} />
       ))}
       {visibleMessageNodes.map((node) => (
-        <MessageNodeWrapper key={node.id} messageNode={node} />
+        <MessageNodeWrapper isCustomView={true} key={node.id} messageNode={node} />
       ))}
     </div>
   );

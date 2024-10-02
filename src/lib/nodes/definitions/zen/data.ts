@@ -49,7 +49,6 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
         if (block.set) {
           block.set(inputData as Float32Array);
         } else {
-          console.log("no set");
         }
       } else if (Array.isArray(inputData)) {
         if (block.set) {

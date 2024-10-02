@@ -70,7 +70,6 @@ export const data = (
       block.channels = channels;
       contextBlocks.push({ block, context });
     }
-    console.log("creating block =", contextBlocks, block);
 
     _context = context;
 
@@ -107,11 +106,8 @@ export const data = (
 
   resp.set = (buf: Float32Array, time?: number) => {
     lastData = buf;
-      console.log("data set contextBlocks=", contextBlocks);
     for (let { context, block } of contextBlocks) {
       block.initData = buf;
-      console.log("sending data=", block.idx, buf, time);
-      console.log("block = ", block);
       context.baseContext.postMessage({
         type: "init-memory",
         body: {

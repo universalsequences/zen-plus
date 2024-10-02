@@ -32,11 +32,16 @@ export class FunctionEditor {
       this.points = x;
       if (this.objectNode) {
         this.objectNode.receive(this.objectNode.inlets[0], "bang");
-        if (this.objectNode.patch.onNewMessage) {
-          this.objectNode.patch.onNewMessage(this.objectNode.id, this.updates++);
-        }
+        this.updateUX();
       }
     }
+  }
+
+  updateUX() {
+    if (this.objectNode?.patch.onNewMessage) {
+      this.objectNode.patch.onNewMessage(this.objectNode.id, this.updates++);
+    }
+    this.update();
   }
 
   addBreakPoint(x: Point) {
@@ -203,16 +208,12 @@ export const function_editor = (node: ObjectNode) => {
 
   node.attributeCallbacks.adsr = (message: string | number | boolean | number[]) => {
     const editor = node.custom as FunctionEditor;
-    console.log("node.attributecallbacks called with=", message, editor);
     if (message && editor) {
-      console.log("doing some shit... calling adsr true and points are=", editor.points);
       if (editor.points.length === 5) {
-        console.log("returning...");
         editor.adsr = true;
         return;
       }
 
-      console.log("adding break points?");
       editor.addBreakPoint({ x: 0 * 1000, y: 0 });
       editor.addBreakPoint({ x: 0.1 * 1000, y: 1 });
       editor.addBreakPoint({ x: 0.5 * 1000, y: 0.5 });
@@ -228,37 +229,94 @@ export const function_editor = (node: ObjectNode) => {
 
   node.needsLoad = true;
 
-  return (msg: Message) => {
-    if (msg === "bang") {
-      const editor = node.custom as FunctionEditor;
-      console.log("attributes bang", node, editor, msg);
-      if (editor.adsr) {
-        console.log("calling points = ", [...editor.points]);
-        const ed1 = new FunctionEditor();
-        ed1.points = editor.points.slice(0, 3);
-        const ed2 = new FunctionEditor();
-        ed2.points = editor.points.slice(3);
-        const attackDecay = ed1.points[2].x;
-        const release = 1000 - ed2.points[0].x;
+  const collect = () => {
+    const editor = node.custom as FunctionEditor;
+    if (editor.adsr) {
+      const ed1 = new FunctionEditor();
+      ed1.points = editor.points.slice(0, 3);
+      const ed2 = new FunctionEditor();
+      ed2.points = editor.points.slice(3);
+      const attackDecay = ed1.points[2].x;
+      const release = 1000 - ed2.points[0].x;
 
-        ed1.points = scaleAttackDecay(attackDecay, ed1.points);
-        ed2.points = scaleRelease(release, ed2.points);
-        const releaseBufferList = ed2.toBufferList();
-        releaseBufferList[999] = 0;
-        return [
-          editor.toList(),
-          editor.toBufferList(),
-          ed1.toBufferList(),
-          releaseBufferList,
-          attackDecay,
-          ed1.points[2].y,
-          release,
-        ];
-      }
+      ed1.points = scaleAttackDecay(attackDecay, ed1.points);
+      ed2.points = scaleRelease(release, ed2.points);
+      const releaseBufferList = ed2.toBufferList();
+      releaseBufferList[999] = 0;
       return [
-        (node.custom as FunctionEditor).toList(),
-        (node.custom as FunctionEditor).toBufferList(),
+        editor.toList(),
+        editor.toBufferList(),
+        ed1.toBufferList(),
+        releaseBufferList,
+        attackDecay,
+        ed1.points[2].y,
+        release,
       ];
+    }
+    return [
+      (node.custom as FunctionEditor).toList(),
+      (node.custom as FunctionEditor).toBufferList(),
+    ];
+  };
+
+  type Operation = {
+    [x: string]: (...v: number[]) => Message[];
+  };
+  const ops: Operation = {
+    attack: (attack: number) => {
+      const editor = node.custom as FunctionEditor;
+      editor.points[1].x = Math.min(attack, editor.points[2].x);
+      editor.updateUX();
+      return collect();
+    },
+    decay: (decay: number) => {
+      const editor = node.custom as FunctionEditor;
+      editor.points[2].x = editor.points[1].x + decay;
+      editor.updateUX();
+      return collect();
+    },
+    release: (release: number) => {
+      const editor = node.custom as FunctionEditor;
+      editor.points[3].x = Math.max(editor.points[2].x, 1000 - release);
+      editor.updateUX();
+      return collect();
+    },
+    sustain: (sustain: number) => {
+      const editor = node.custom as FunctionEditor;
+      editor.points[2].y = sustain;
+      editor.points[3].y = sustain;
+      editor.updateUX();
+      return collect();
+    },
+    curve: (idx: number, curve: number) => {
+      const editor = node.custom as FunctionEditor;
+      if (editor.points[idx]) {
+        editor.points[idx].c = Math.max(-1, Math.min(1, curve));
+      }
+      editor.updateUX();
+      return collect();
+    },
+  };
+
+  return (msg: Message) => {
+    if (typeof msg === "string") {
+      const tokens = msg.split(" ");
+      const op = ops[tokens[0]];
+      if (op) {
+        if (tokens.length === 2) {
+          const val = Number.parseFloat(tokens[1]);
+          if (Number.isNaN(val)) return [];
+          return op(val);
+        } else {
+          const a = Number.parseFloat(tokens[1]);
+          const b = Number.parseFloat(tokens[2]);
+          if (Number.isNaN(a) || Number.isNaN(b)) return [];
+          return op(a, b);
+        }
+      }
+    }
+    if (msg === "bang") {
+      return collect();
     }
 
     return [];

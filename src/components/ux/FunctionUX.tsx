@@ -164,12 +164,16 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const onMouseUp = useCallback(
     (e: MouseEvent) => {
-      setEditing(null);
-      setCurveEdit(null);
-      objectNode.receive(objectNode.inlets[0], "bang");
-      editor.update();
+      if (editing) {
+        setEditing(null);
+        objectNode.receive(objectNode.inlets[0], "bang");
+        editor.update();
+      }
+      if (curveEdit) {
+        setCurveEdit(null);
+      }
     },
-    [setEditing, setCurveEdit, width, height, editor],
+    [editing, curveEdit, setEditing, setCurveEdit, width, height, editor],
   );
 
   let sortedPoints = [...points].sort((a, b) => a.x - b.x);

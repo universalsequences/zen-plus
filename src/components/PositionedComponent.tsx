@@ -154,6 +154,7 @@ const PositionedComponent: React.FC<{
               prev.includes(node) ? prev.filter((x) => x !== node) : [...prev, node],
             );
           } else {
+            console.log('setting selec', node)
             setSelectedNodes([node]);
           }
         }

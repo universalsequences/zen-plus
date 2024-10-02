@@ -152,6 +152,10 @@ doc("collect", {
 export const collect = (node: ObjectNode) => {
   let list: Message[] = [];
   return (_trig: Message) => {
+    if (_trig === "clear") {
+      list.length = 0;
+      return [];
+    }
     if (_trig === "collect") {
       const collected = list;
       list = [];
