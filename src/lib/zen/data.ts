@@ -24,7 +24,7 @@ export type Interpolation = "linear" | "none";
 
 export interface Gettable<t> {
   get?: () => Promise<t>;
-  set?: (x: t, time?: number) => void;
+  set?: (x: t, time?: number, transferable?: boolean) => void;
   getInitData?: () => Float32Array;
   getSize?: () => number;
   getChannels?: () => number;
@@ -104,18 +104,21 @@ export const data = (
     return initData!;
   };
 
-  resp.set = (buf: Float32Array, time?: number) => {
+  resp.set = (buf: Float32Array, time?: number, transferable = false) => {
     lastData = buf;
     for (let { context, block } of contextBlocks) {
       block.initData = buf;
-      context.baseContext.postMessage({
-        type: "init-memory",
-        body: {
-          idx: block.idx,
-          data: buf,
-          time: time,
+      context.baseContext.postMessage(
+        {
+          type: "init-memory",
+          body: {
+            idx: block.idx,
+            data: buf,
+            time: time,
+          },
         },
-      });
+        transferable ? ([buf.buffer] as StructuredSerializeOptions) : undefined,
+      );
     }
   };
 

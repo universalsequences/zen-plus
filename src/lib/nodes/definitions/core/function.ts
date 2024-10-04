@@ -1,3 +1,4 @@
+import { ListPool } from "@/lib/lisp/ListPool";
 import { doc } from "./doc";
 import { publish } from "@/lib/messaging/queue";
 import { Message, ObjectNode } from "@/lib/nodes/types";
@@ -14,6 +15,7 @@ export class FunctionEditor {
   updates: number;
   value: Message;
   adsr: boolean;
+  listPool: ListPool;
 
   constructor(objectNode?: ObjectNode) {
     this.objectNode = objectNode;
@@ -21,6 +23,7 @@ export class FunctionEditor {
     this.updates = 0;
     this.value = 0;
     this.adsr = false;
+    this.listPool = new ListPool();
   }
 
   getJSON() {
@@ -74,7 +77,11 @@ export class FunctionEditor {
     if (this.points.length < 2) {
       return new Float32Array([]);
     }
-    let interpolatedList = new Array(1000).fill(0);
+    this.listPool.releaseUsed();
+    let interpolatedList = this.listPool.get() as number[];
+    for (let i = 0; i < 1000; i++) {
+      interpolatedList[i] = 0;
+    }
     let sortedPoints = [...this.points].sort((a, b) => a.x - b.x);
 
     let currentSegmentIndex = 0;
@@ -109,7 +116,11 @@ export class FunctionEditor {
       }
     }
 
-    return new Float32Array(interpolatedList);
+    const arr = this.listPool.getFloat32Array(1000);
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = interpolatedList[i];
+    }
+    return arr;
   }
 
   toList() {

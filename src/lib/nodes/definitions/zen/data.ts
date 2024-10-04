@@ -17,9 +17,12 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
   let lastSize: number = 0;
   let lastData: Message;
 
-  _node.attributeOptions.interpolation = ["linaer", "none"];
+  _node.attributeOptions.interpolation = ["linear", "none"];
   if (!_node.attributes.interpolation) {
     _node.attributes["interpolation"] = "linear";
+  }
+  if (!_node.attributes["detach"]) {
+    _node.attributes["detach"] = false;
   }
   return (inputData: Message): Statement[] => {
     if (lastSize !== size() || lastChannels !== channels()) {
@@ -47,12 +50,16 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
       lastData = inputData;
       if (ArrayBuffer.isView(inputData)) {
         if (block.set) {
-          block.set(inputData as Float32Array);
+          block.set(inputData as Float32Array, undefined, _node.attributes["detach"] as boolean);
         } else {
         }
       } else if (Array.isArray(inputData)) {
         if (block.set) {
-          block.set(new Float32Array(inputData as number[]));
+          block.set(
+            new Float32Array(inputData as number[]),
+            undefined,
+            _node.attributes["detach"] as boolean,
+          );
         } else {
         }
       }

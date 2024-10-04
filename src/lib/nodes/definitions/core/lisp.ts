@@ -1,8 +1,9 @@
 import { Lazy, Message, ObjectNode } from "../../types";
 import { parse } from "@/lib/lisp/parse";
-import { evaluate } from "@/lib/lisp/eval";
+import { createContext } from "@/lib/lisp/eval";
 import { doc } from "./doc";
 import { AST, Environment } from "@/lib/lisp/types";
+import { ListPool } from "@/lib/lisp/ListPool";
 
 doc("car", {
   numberOfInlets: 1,
@@ -48,6 +49,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
   let counter = 0;
   let lastText: string | undefined = undefined;
   let lastParsed: AST;
+  const pool = new ListPool();
   node.inlets[node.inlets.length - 1].lastMessage = env as Message;
   node.hasDynamicInlets = true;
 
@@ -67,7 +69,8 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
   return (msg: Message) => {
     if (msg === "clear") {
       lastEnv = getEnvFromMessages();
-      env = { ...lastEnv };
+      env = pool.getObject();
+      Object.assign(env, lastEnv);
       return empty;
       // return [];
     }
@@ -75,9 +78,12 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
     const _env = getEnvFromMessages();
     if (_env !== lastEnv) {
       lastEnv = _env;
-      env = { ...env, ..._env };
+      env = pool.getObject();
+      Object.assign(env, _env);
     }
 
+    pool.releaseUsed();
+    const evaluate = createContext(pool);
     // where do we store the script, in a attribute? lol
     //
     if (node.script) {
