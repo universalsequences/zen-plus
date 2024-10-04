@@ -199,6 +199,11 @@ export const createContext = (pool: ListPool) => {
             throw new Error("floor operation requires exactly one arguments");
           }
           return Math.floor(Number(evaluateExpression(args[0], env)));
+        case "ceil":
+          if (args.length !== 1) {
+            throw new Error("floor operation requires exactly one arguments");
+          }
+          return Math.ceil(Number(evaluateExpression(args[0], env)));
         case "random":
           return Math.random();
         case ">":

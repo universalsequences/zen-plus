@@ -234,6 +234,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             onKeyDown={handleKeyDown}
             onKeyUp={handleKeyUp}
             style={{
+              pointerEvents: !lockedMode ? "none" : undefined,
               position: "absolute",
               top: 0,
               padding: 5,
@@ -269,11 +270,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           >
             <Syntax width={width} height={height} text={text} cursor={cursor} style={fontStyles} />
           </div>
-
-          <div
-            style={{ zIndex: 10000000 }}
-            className={`w-2 h-2 rounded-full transition-all ${animate ? "bg-lime-500" : ""} top-1 right-1 absolute`}
-          />
         </>
       )}
       ;

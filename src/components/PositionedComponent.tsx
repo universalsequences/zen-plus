@@ -18,6 +18,7 @@ import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "../hooks/usePatchSelector";
+import { useLocked } from "@/contexts/LockedContext";
 
 const PositionedComponent: React.FC<{
   position?: string;
@@ -44,6 +45,7 @@ const PositionedComponent: React.FC<{
 }) => {
   const { setSelectedPatch } = usePatches();
   const { selectPatch } = usePatchSelector();
+  const { lockedMode } = useLocked();
   const { patch } = usePatch();
   const { setSelectedNodes, selectedNodes } = useSelection();
   const {
@@ -154,7 +156,7 @@ const PositionedComponent: React.FC<{
               prev.includes(node) ? prev.filter((x) => x !== node) : [...prev, node],
             );
           } else {
-            console.log('setting selec', node)
+            console.log("setting selec", node);
             setSelectedNodes([node]);
           }
         }
@@ -327,7 +329,7 @@ const PositionedComponent: React.FC<{
         style={_style}
         className={className}
       >
-        {isSelected && (
+        {isSelected && !lockedMode && (
           <>
             <div className="absolute top-0 right-0 w-1 h-1 bg-zinc-300 " />
             <div
@@ -336,7 +338,7 @@ const PositionedComponent: React.FC<{
                 startResizing(e, Orientation.XY)
               }
               style={allowSize ? { width: 10, height: 10 } : { maxWidth: 25, maxHeight: 25 }}
-              className="absolute bottom-0 right-0 w-1 h-1 bg-zinc-300 cursor-se-resize z-30"
+              className="absolute bottom-0 right-0 w-2 h-2 bg-zinc-300 cursor-se-resize z-30"
             />
             <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 " />
             <div className="absolute bottom-0 left-0 w-1 h-1 bg-zinc-300 " />
@@ -393,6 +395,7 @@ const PositionedComponent: React.FC<{
   }, [
     node,
     isError,
+    lockedMode,
     size,
     children,
     style,

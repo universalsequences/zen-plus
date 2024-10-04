@@ -138,14 +138,17 @@ body, html {
 } 
 
 .patches {
-  row-gap: 20px;
-  column-gap: 7px;
+  //row-gap: 20px;
+  //column-gap: 7px;
+  row-gap: 0px;
+  column-gap: 0px;
   //grid-template-columns: 1fr 1fr; /* Start with 2 columns */
   grid-template-rows: auto;
 }
 
 .tile {
-    margin-top: 15px;
+    //margin-top: 15px;
+    margin-top: 0px;
 }
 .tile:first-child {
   grid-column: 1 / 2;

@@ -26,6 +26,7 @@ interface Selection {
 }
 
 const PatchComponent: React.FC<{
+  isWindow?: boolean;
   tileRef: React.RefObject<HTMLDivElement | null>;
   setFileToOpen: (x: any | null) => void;
   fileToOpen: any | null;
@@ -36,6 +37,7 @@ const PatchComponent: React.FC<{
   index: number;
   isCustomView?: boolean;
 }> = ({
+  isWindow,
   visibleObjectNodes,
   index,
   isCustomView,
@@ -397,7 +399,13 @@ const PatchComponent: React.FC<{
             zoomRef={zoomRef}
             zoomableRef={zoomableRef}
           />
-          {!isCustomView && <>{selectedPatch === patch ? <Toolbar patch={patch} /> : ""}</>}
+          {!isCustomView &&
+            !isWindow && (
+              <>
+                {" "}
+                <Toolbar patch={patch} />{" "}
+              </>,
+            )}
 
           <AssistantSidebar />
         </div>

@@ -135,7 +135,7 @@ body, html {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #414141; /* handle color */
+    background: #989797; /* handle color */
     border-radius: 8px;
     height: 8px;
 }
@@ -150,12 +150,12 @@ body, html {
 } 
 
 .patches {
-  row-gap: 7px;
-  column-gap: 7px;
+  //row-gap: 7px;
+  //column-gap: 7px;
   //grid-template-columns: 1fr 1fr; /* Start with 2 columns */
   grid-template-rows: auto;
-  margin: 15px;
-  margin-top: 35px;
+  //margin: 15px;
+  //margin-top: 35px;
 }
 
 .tile {

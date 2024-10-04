@@ -8,13 +8,9 @@ interface Props {
 
 export const RecorderToolbar = ({ patch }: Props) => {
   const [recording, setRecording] = useState(patch.isRecording);
-  const [startTime, setStartTime] = useState<Date | null>(
-    patch.recordingStartedAt || null,
-  );
+  const [startTime, setStartTime] = useState<Date | null>(patch.recordingStartedAt || null);
   const [elapsedTime, setElapsedTime] = useState<number>(
-    patch.recordingStartedAt
-      ? new Date().getTime() - patch.recordingStartedAt.getTime()
-      : 0,
+    patch.recordingStartedAt ? new Date().getTime() - patch.recordingStartedAt.getTime() : 0,
   );
 
   // Function to start or stop recording
@@ -62,13 +58,11 @@ export const RecorderToolbar = ({ patch }: Props) => {
     <div className="flex items-center">
       <div
         onClick={toggleRecording}
-        className={`ml-3 w-5 h-5 rounded-full ${recording ? "bg-red-500" : "bg-zinc-900"} border-zinc-100 border-2 border cursor-pointer`}
+        className={`ml-3 w-4 h-4 rounded-full ${recording ? "bg-red-500" : "bg-zinc-900"} border-zinc-100 border-2 border cursor-pointer`}
       ></div>
       <div className="w-8">
         {recording ? (
-          <span className="text-white text-xs ml-1">
-            {formatElapsedTime(elapsedTime)}
-          </span>
+          <span className="text-white text-xs ml-1">{formatElapsedTime(elapsedTime)}</span>
         ) : (
           ""
         )}

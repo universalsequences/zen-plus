@@ -161,6 +161,9 @@ body {
     }
 }
 
+.bg-toolbar.top-toolbar.selected-toolbar {
+    background-color:#0032ffb8;
+}
 .bg-toolbar.top-toolbar {
     background-color: #373c4469;
     backdrop-filter: blur(8px);
@@ -385,16 +388,16 @@ svg {
 }
 
 .tile.selected-patch {
-    border-color: #cbffef !important;
+    //border-color: #cbffef !important;
 }
 
 .tile {
     flex-grow: 1;
-    border-width: 3px !important;
+    border-width: 1px !important;
     flex-shrink: 1;
     flex-basis: 0;
     margin: 1px;
-    border-radius: 12px;
+    border-radius: 1px;
     overflow: hidden;
     border-color: #1b1b1b !important;
 }
@@ -428,7 +431,7 @@ svg {
 }
 
 .tile-container {
-    gap: 5px;
+    gap: 0px;
 }
 
 .save-connect {
@@ -672,22 +675,15 @@ div:active {
                 rgba(11, 11, 11, 0.69),
                 rgba(11, 11, 11, 0.69)
             );
-        background-size: 14px 14px;
+        background-size: 12px 12px;
     }
 }
 
 .patcher-background {
     background-color: #12151bf0;
     //background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf0,#0b0b0bf2);
-    background-image: radial-gradient(
-            circle at center center,
-            #cbcbcb42 0%,
-            rgba(101, 98, 98, 0.65) 11%,
-            transparent 11%,
-            transparent 100%
-        ),
-        linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
-    background-size: 14px 14px;
+      background-image: radial-gradient(circle at center center, rgba(203, 203, 203, 0.2588235294) 0%, rgb(101 98 98 / 5%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
+    background-size: 12px 12px;
 }
 
 .text-zen-violet {
@@ -726,12 +722,12 @@ div:active {
     box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px !important;
 
     .patcher-background {
-        border-bottom-right-radius: 16px;
-        border-bottom-left-radius: 16px;
+        border-bottom-right-radius: 0px;
+        border-bottom-left-radius: 0px;
         margin-right: 1px;
     }
     .tile {
-        border-radius: 16px;
+        border-radius: 0px;
         .patcher-background {
             background-color: #121212;
             background-image: none;

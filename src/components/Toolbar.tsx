@@ -22,6 +22,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     setPatchDragging,
     changeTileForPatch,
     zenCode,
+    selectedPatch,
     closePatch,
     patches,
     setPatches,
@@ -56,6 +57,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
   const patchRef = useRef<Patch>(patch);
 
+  const isSelected = patch === selectedPatch;
+
   useEffect(() => {
     patchRef.current = patch;
   }, [patch]);
@@ -87,23 +90,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
   const selectPatch = useCallback(
     (_patch: Patch) => {
-      /*
-        if (!(_patch as SubPatch).parentPatch) {
-            // base patch chosen-- so we close
-            _closePatch();
-            if (patches.length === 1) {
-                setPatches([_patch]);
-            }
-            return;
-        }
-        */
       changeTileForPatch(patchRef.current, _patch);
-      /*
-        let indexOf = patches.indexOf(patch);
-        let _patches = [...patches];
-        _patches[indexOf] = _patch;
-        setPatches(_patches);
-        */
     },
     [setPatches, patches, patch],
   );
@@ -171,18 +158,16 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   );
   if (breadcrumbs.length === 1) {
     return (
-      <div style={{ height: 35 }} className="flex fixed top-0 left-0  full w-full">
-        <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-5  top-toolbar h-10 ">
+      <div className="flex  full w-full select-none ">
+        <div className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}>
           <PatchDropdown patch={patch}>
-            <GlobeIcon className="w-6 h-6 mt-1 mr-3 cursor-pointer" />
+            <GlobeIcon className="w-4 h-4 mt-1 mr-3 cursor-pointer" />
           </PatchDropdown>
-          <OrgSpaces patch={patch} />
           <div
             style={{ borderLeft: "1px solid white" }}
-            className="ml-auto top-0 bottom my-auto pt-0.5 right-0 px-5 flex w-64"
+            className="ml-auto top-0 bottom my-auto pt-0.5 right-0 px-5 flex w-24"
           >
             {rightPart}
-            <div className="ml-auto mr-5 my-auto text-sm">zen+</div>
           </div>
         </div>
       </div>
@@ -197,17 +182,15 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   }
   return (
     <div
-      style={{ zIndex: 100000000000000, height: 35 }}
       onClick={(e: any) => e.stopPropagation()}
       onMouseDown={(e: any) => e.stopPropagation()}
-      className="flex fixed top-0 left-0  full w-full select-none "
+      className="flex  full w-full select-none "
     >
-      <div className="flex-1 m-1 bg-toolbar relative rounded-full flex px-5  top-toolbar h-10 ">
+    <div className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}>
         <PatchDropdown patch={patch}>
-          <GlobeIcon className="w-6 h-6 mt-1 mr-3 cursor-pointer" />
+          <GlobeIcon className="w-4 h-4 mt-1 mr-3 cursor-pointer" />
         </PatchDropdown>
-        <OrgSpaces patch={patch} />
-        <div className="flex relative pr-8 my-auto mx-auto">
+        <div className="flex relative pr-8 my-auto">
           {breadcrumbs}
           <Cross2Icon
             onClick={() => {
@@ -217,7 +200,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           />
         </div>
         {
-          <div className="absolute right-60 bottom-0 top-0  mr-3 my-auto pt-0.5 right-0 px-5 flex  flex w-28 text-right">
+          <div className="absolute right-32 bottom-0 top-0  mr-3 my-auto pt-0.5 right-0 px-5 flex  flex w-28 text-right">
             <div className="text-xs my-auto ml-auto text-zinc-400">
               {__patch.zenCode ? "compiled" : type}
             </div>
@@ -228,12 +211,9 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         }
         <div
           style={{ borderLeft: "1px solid white" }}
-          className="absolute right-0 bottom-0 top-0 table my-auto pt-0.5 right-0 px-5 flex w-64"
+          className="absolute right-0 bottom-0 top-0 table my-auto pt-0.5 right-0 px-5 flex w-24"
         >
-          <div className="flex">
-            {rightPart}
-            <div className="ml-auto mr-5 my-auto text-sm">zen+</div>
-          </div>
+          <div className="flex">{rightPart}</div>
         </div>
       </div>
     </div>

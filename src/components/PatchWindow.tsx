@@ -82,7 +82,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
   }, [expandPatch, removePatchWindow, patch]);
 
   const coord = windowPositions[patch.id] || { x: 500, y: 300 };
-  console.log('color=', generateColor(baseName));
+  console.log("color=", generateColor(baseName));
   return (
     <div
       style={{
@@ -119,6 +119,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
         </div>
       </div>
       <PatchWrapper
+        isWindow={true}
         index={0}
         maxWidth={500}
         maxHeight={500}

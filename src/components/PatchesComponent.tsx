@@ -95,10 +95,10 @@ const PatchesComponent: React.FC<{
           onClick={onClick}
           className={"flex w-full h-full min-h-screen " + (lightMode ? "light-mode" : "")}
         >
-          <div className="flex flex-col w-full mt-5">
+          <div className="flex flex-col w-full">
             <div
               //style={patches.length > 1 ? { gridTemplateColumns: gridTemplate } : {}}
-              className={"m-1 mt-4 flex-1 flex flex-col patches flex-1 " + ("patches-" + patches.length)}
+              className={" flex-1 flex flex-col patches flex-1 " + ("patches-" + patches.length)}
             >
               {rootTile ? (
                 <PatchTile

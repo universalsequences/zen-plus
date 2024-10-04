@@ -15,7 +15,6 @@ export const PatchWindows = () => {
   const [hide, setHide] = useState(false);
   const { patchWindows, sideNodeWindow } = useWindows();
 
-
   useEffect(() => {
     setHide(false);
   }, [patchWindows]);
@@ -33,7 +32,7 @@ export const PatchWindows = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onKeyDown]);
   if (patchWindows.length === 0) return <></>;
-  const iconClass = "top-0 left-2 w-8 h-8 absolute cursor-pointer";
+  const iconClass = "top-0 left-1 w-8 h-8 absolute cursor-pointer";
   return (
     <div
       style={{
