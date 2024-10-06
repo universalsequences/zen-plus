@@ -69,6 +69,7 @@ export type Message =
   | MessageObject
   | MessageObject[]
   | ObjectNode
+  | Coordinate
   | ParameterLock;
 
 export type Lazy = () => Message;

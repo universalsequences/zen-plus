@@ -161,16 +161,19 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         tokens[2] !== undefined ? Number.parseFloat(tokens[2]) : undefined;
 
       // look for parameters in this patch
-      const nodes = this.getAllNodes().filter(
-        (x) => x.name === "param" || x.name === "uniform",
-      );
+      const nodes = this.getAllNodes().filter((x) => x.name === "param" || x.name === "uniform");
       const params = nodes.filter((x) => x.arguments[0] === paramName);
       for (const x of params) {
-        x.receive(
-          x.inlets[0],
-          time !== undefined ? [paramValue, time] : paramValue,
-        );
+        x.receive(x.inlets[0], time !== undefined ? [paramValue, time] : paramValue);
       }
+      const tagParams = nodes.filter((x) => x.attributes["tag"] === paramName);
+      for (const param of tagParams) {
+        const max = param.attributes["max"] as number;
+        const min = param.attributes["min"] as number;
+        const val = min + (max - min) * paramValue;
+        param.receive(param.inlets[0], time !== undefined ? [val, time] : val);
+      }
+
       if (params.length > 0) {
         return true;
       }

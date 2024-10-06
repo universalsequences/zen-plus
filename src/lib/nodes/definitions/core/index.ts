@@ -1,4 +1,5 @@
 import type { API } from "@/lib/nodes/context";
+import { xy_control } from "./xy";
 import { hooks } from "./hooks/index";
 import { dedupe } from "./dedupe";
 import { keydown } from "./keys";
@@ -94,5 +95,6 @@ export const api: API = {
   "==": eq,
   "||": or,
   queue,
+  "xy.control": xy_control,
   "<": lt,
 };

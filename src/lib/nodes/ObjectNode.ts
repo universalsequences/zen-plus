@@ -549,7 +549,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       if (this.subpatch) {
         // if this is a subpatch thats receiving messages...
         // we need to pass it off to subpatch
-        const subpatchProcess = this.subpatch.processMessageForParam(message);
+        this.subpatch.processMessageForParam(message);
         return true;
       }
       if (this.attributes[attributeName] === undefined) {

@@ -773,3 +773,10 @@ div:active {
     background-color: black !important;
     animation: colorChange 300ms forwards;
 }
+
+.locked {
+    .resize-selector {
+        display: none;
+        pointer-events: none;
+    }
+}

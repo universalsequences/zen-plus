@@ -9,7 +9,9 @@ doc("getNodesWithName", {
 
 export const getNodesWithName = (node: ObjectNode, name: Lazy) => {
   return () => {
-    const nodes = node.patch.objectNodes.filter((x) => x.name === name());
+    const nodes = node.patch.objectNodes.filter(
+      (x) => x.name === name() || x.subpatch?.name === name(),
+    );
 
     if (!nodes.length) return [];
     return [nodes];

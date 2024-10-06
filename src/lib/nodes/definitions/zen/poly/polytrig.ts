@@ -2,7 +2,7 @@ import { doc } from "../doc";
 import { click, Clicker, ParamGen, param } from "@/lib/zen/index";
 import { getDefunBodies } from "../defun-utils";
 import { Message, Lazy, ObjectNode } from "../../../types";
-import type { Operator, Statement } from "../types";
+import type { CompoundOperator, Operator, Statement } from "../types";
 import { object, number, optional, parse, InferOutput } from "valibot";
 
 doc("polytrig", {
@@ -144,7 +144,7 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
       return [];
     }
 
-    let numBodies = bodies.length;
+    let numBodies = bodies.filter((x) => (x as CompoundOperator).name === "defun").length;
 
     // create the Voice objects
     voices.length = 0;
@@ -158,6 +158,8 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
     let mode = node.attributes["mode"];
     let outputs =
       mode !== "pipe" ? new Array(numBodies).fill(0) : new Array(numBodies * numVoices).fill(0);
+
+    console.log("numBodies=%s numVoices=%s", numBodies, numVoices, outputs, bodies);
 
     if (outputs.length < node.outlets.length) {
       node.outlets = node.outlets.slice(0, outputs.length);

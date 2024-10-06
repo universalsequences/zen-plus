@@ -187,6 +187,15 @@ export const createContext = (pool: ListPool) => {
             (evaluateExpression(args[0], env) as number) /
               (evaluateExpression(args[1], env) as number),
           );
+        case "exp2":
+          return Number(Math.pow(2, evaluateExpression(args[0], env) as number));
+        case "pow":
+          return Number(
+            Math.pow(
+              evaluateExpression(args[0], env) as number,
+              evaluateExpression(args[1], env) as number,
+            ),
+          );
         case "%":
           if (args.length !== 2) {
             throw new Error("Modulo operation requires exactly two arguments");

@@ -9,16 +9,15 @@ import { useValue } from "@/contexts/ValueContext";
 import { Syntax } from "./Syntax";
 
 const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-  const { attributesIndex } = useSelection();
+  useSelection();
   const { lockedMode } = useLocked();
   usePosition();
   const [text, setText] = useState(objectNode.script || "");
-  const [animate, setAnimate] = useState(false);
-  const value = 0; //{ value } = useValue();
+  const { selectedNodes, setSelectedNodes } = useSelection();
   const current = useRef(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const syntaxHighlighterRef = useRef<HTMLDivElement>(null);
-  const syntaxRef = useRef<HTMLPreElement>(null);
+  const syntaxRef = useRef<HTMLDivElement>(null);
 
   const { width, height } = objectNode.size || { width: 100, height: 100 };
   const fontStyles = {
@@ -26,21 +25,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     fontSize: `${objectNode.attributes["font-size"] as number}px`,
     lineHeight: "1.5",
   };
-
-  useEffect(() => {
-    setAnimate(false);
-    current.current = value as number;
-    setTimeout(() => {
-      const element = textAreaRef.current;
-      element && (element as any).offsetWidth;
-      setAnimate(true);
-      setTimeout(() => {
-        if (current.current !== value) {
-          setAnimate(false);
-        }
-      }, 500);
-    }, 3);
-  }, [value]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -64,26 +48,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       "unless",
     ];
     return specialForms.some((form) => line.trim().startsWith(`(${form}`));
-  };
-
-  const getIndentation = (
-    line: string,
-    previousIndentLevel: number,
-    isInSpecialForm: boolean,
-  ): number => {
-    const trimmedLine = line.trim();
-    const openParenCount = (trimmedLine.match(/\(/g) || []).length;
-    const closeParenCount = (trimmedLine.match(/\)/g) || []).length;
-
-    if (isSpecialForm(trimmedLine)) {
-      return previousIndentLevel;
-    }
-
-    if (isInSpecialForm) {
-      return Math.max(0, previousIndentLevel + 1);
-    }
-
-    return Math.max(0, previousIndentLevel + openParenCount - closeParenCount);
   };
 
   const getLineIndentation = (line: string): number => {
@@ -158,15 +122,28 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const syncScroll = (e?: Event) => {
     e?.stopPropagation();
     if (textAreaRef.current && syntaxHighlighterRef.current && syntaxRef.current) {
-      syntaxHighlighterRef.current.childNodes[0].scrollTop = textAreaRef.current.scrollTop;
-      syntaxHighlighterRef.current.childNodes[0].scrollLeft = textAreaRef.current.scrollLeft;
-      textAreaRef.current.scrollTop = syntaxHighlighterRef.current.childNodes[0].scrollTop;
-      textAreaRef.current.scrollLeft = syntaxHighlighterRef.current.childNodes[0].scrollLeft;
+      const child = syntaxHighlighterRef.current.childNodes[0] as HTMLDivElement;
+      if (child) {
+        child.scrollTop = textAreaRef.current.scrollTop;
+        child.scrollLeft = textAreaRef.current.scrollLeft;
+        textAreaRef.current.scrollTop = child.scrollTop;
+        textAreaRef.current.scrollLeft = child.scrollLeft;
+      }
       syntaxRef.current.scrollTop = textAreaRef.current.scrollTop;
       syntaxRef.current.scrollLeft = textAreaRef.current.scrollLeft;
+
+      if (child) {
+        child.scrollTop = syntaxRef.current.scrollTop;
+        child.scrollLeft = syntaxRef.current.scrollLeft;
+        textAreaRef.current.scrollTop = syntaxRef.current.scrollTop;
+        textAreaRef.current.scrollLeft = syntaxRef.current.scrollLeft;
+      }
     } else if (syntaxHighlighterRef.current && syntaxRef.current) {
-      syntaxHighlighterRef.current.childNodes[0].scrollLeft = 0;
-      syntaxHighlighterRef.current.childNodes[0].scrollTop = 0;
+      const child = syntaxHighlighterRef.current.childNodes[0] as HTMLDivElement;
+      if (child) {
+        child.scrollLeft = 0;
+        child.scrollTop = 0;
+      }
       syntaxRef.current.scrollLeft = 0;
       syntaxRef.current.scrollTop = 0;
     } else {
@@ -176,17 +153,26 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   useEffect(() => {
     const textarea = textAreaRef.current;
     syncScroll();
-    if (textarea) {
+    if (textarea && syntaxHighlighterRef.current) {
       textarea.addEventListener("scroll", syncScroll);
+      syntaxHighlighterRef.current.addEventListener("scroll", syncScroll);
       return () => {
         textarea.removeEventListener("scroll", syncScroll);
+        syntaxHighlighterRef.current?.removeEventListener("scroll", syncScroll);
       };
     }
   }, [text, lockedMode]);
 
   return (
     <div
-      onClick={() => handleKeyUp()}
+      onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+        handleKeyUp();
+        setSelectedNodes([objectNode]);
+      }}
+      onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+        //const isSelected = selectedNodes?.includes(objectNode);
+        //if (isSelected) e.stopPropagation();
+      }}
       style={{ width, height }}
       className="bg-zinc-800 relative flex"
     >
@@ -197,7 +183,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           <div
             ref={syntaxHighlighterRef}
             style={{
-              padding: "5px",
+              padding: "0px",
               width,
               height,
               //whiteSpace: "pre-wrap",
@@ -225,10 +211,9 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             </SyntaxHighlighter>
           </div>
           <textarea
-            readOnly={!lockedMode}
             ref={textAreaRef}
             spellCheck={false}
-            className="outline-none w-full h-full bg-transparent text-transparent caret-white p-2"
+            className={`${!lockedMode ? "no-selected" : ""} outline-none w-full h-full bg-transparent text-transparent caret-white p-2`}
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -237,7 +222,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               pointerEvents: !lockedMode ? "none" : undefined,
               position: "absolute",
               top: 0,
-              padding: 5,
+              padding: 0,
               left: 0,
               width,
               height,
@@ -253,10 +238,11 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             }}
           />
 
-          <div
+          <pre
             ref={syntaxRef}
+            className="no-scrollbar"
             style={{
-              padding: "5px",
+              padding: "0px",
               width,
               height,
               //whiteSpace: "pre-wrap",
@@ -266,10 +252,13 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               pointerEvents: "none",
               top: 0,
               left: 0,
+              margin: 0,
+              overflow: "auto",
+              color: "transparent",
             }}
           >
             <Syntax width={width} height={height} text={text} cursor={cursor} style={fontStyles} />
-          </div>
+          </pre>
         </>
       )}
       ;

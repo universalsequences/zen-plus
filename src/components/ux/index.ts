@@ -1,6 +1,7 @@
 import Matrix from "./Matrix";
 import Lisp from "./Lisp";
 import { Waveform } from "./Waveform";
+import { XYControlComponent } from "./XYControlComponent";
 import { ZequencerInfo } from "./zequencer/ZequencerInfo";
 import { ASTViewer } from "./ASTViewer";
 import ButtonOptions from "./ButtonOptions";
@@ -40,6 +41,7 @@ type ComponentIndex = {
 
 export const index: ComponentIndex = {
   wasmviewer: WasmViewer,
+  "xy.control": XYControlComponent,
   matrix: Matrix,
   comment: Comment,
   html: HTMLViewer,

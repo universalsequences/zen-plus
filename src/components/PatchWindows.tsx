@@ -32,16 +32,16 @@ export const PatchWindows = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onKeyDown]);
   if (patchWindows.length === 0) return <></>;
-  const iconClass = "top-0 left-1 w-8 h-8 absolute cursor-pointer";
+  const iconClass = "top-0 left-1 w-7  h-7 absolute cursor-pointer";
   return (
     <div
       style={{
         backgroundSize: "14px 14px",
         backgroundImage:
-          "radial-gradient(circle at center center, rgba(41, 41, 41, 0.44) 0%, rgba(28, 27, 27, 0.08) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69))",
+          "radial-gradient(circle at center center, rgba(41, 41, 41, 0.44) 0%, rgba(28, 27, 27, 0.08) 11%, transparent 11%, transparent 100%), linear-gradient(90deg,#b8b8b8b0, #b9b6b6b0 )",
         zIndex: 10000000000,
       }}
-      className="transition-all w-full relative pl-10 left-0 pt-2 flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "
+      className="transition-all w-full relative pl-10 left-0 pt-1 flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "
     >
       {hide ? (
         <TriangleUpIcon className={iconClass} onClick={() => setHide(!hide)} />

@@ -49,6 +49,10 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     object.attributes["default"] = 0;
   }
 
+  if (object.attributes["tag"] === undefined) {
+    object.attributes["tag"] = "";
+  }
+
   let _param: ParamGen;
   return (x: Message): Statement[] => {
     if (typeof x === "number") {

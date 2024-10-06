@@ -48,10 +48,7 @@ export const Syntax = (props: Props) => {
   const closed = findNextClose(props.text, props.cursor);
   const { width, height } = props;
   return (
-    <pre
-      style={{ padding: 0, margin: 0, width, overflow: "auto", color: "transparent" }}
-      className=""
-    >
+    <>
       {cursor !== null && closed !== null ? (
         <>
           <span style={{ color: "transparent" }}>{props.text.slice(0, cursor)}</span>
@@ -67,8 +64,8 @@ export const Syntax = (props: Props) => {
           <span>{props.text.slice(closed + 1)}</span>
         </>
       ) : (
-        <></>
+        <>{props.text}</>
       )}
-    </pre>
+    </>
   );
 };

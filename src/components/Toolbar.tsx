@@ -7,7 +7,9 @@ import PatchDropdown from "./PatchDropdown";
 import { GlobeIcon, CaretRightIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
-import type { Patch, SubPatch } from "@/lib/nodes/types";
+import type { Node, Patch, SubPatch } from "@/lib/nodes/types";
+import { useSelection } from "@/contexts/SelectionContext";
+import { SelectedNodeInfo } from "./SelectedNodeInfo";
 
 enum Option {
   Save,
@@ -16,6 +18,7 @@ enum Option {
 const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   // for now this will simply tell us what nested subpatches are
   const [option, setOption] = useState<Option | null>(null);
+  const { selectedNodes } = useSelection();
 
   const {
     patchDragging,
@@ -83,7 +86,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           className="text-white bg-black-clear outline-none px-1"
         />
       ) : (
-        (patch.name || "current patch") + " " + patch.id + " yo "
+        patch.name || "current patch"
       )}
     </div>,
   );
@@ -119,8 +122,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         key={key}
         className=" my-auto text-zinc-400 cursor-pointer text-xs rounded-full flex"
       >
-        {(_patch as SubPatch).parentPatch === undefined ? "base patch" : _patch.name || "patch"}
-        <CaretRightIcon className="w-2 mx-2" />
+        {(_patch as SubPatch).parentPatch === undefined ? "base" : _patch.name || "patch"}
+        <CaretRightIcon className="w-2 mx-1" />
       </div>,
     );
   }
@@ -149,23 +152,28 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     basePatch = (basePatch as SubPatch).parentPatch;
   }
 
-  const rightPart = (
-    <>
-      <LockButton />
-      <PresentationMode />
-      {basePatch && <RecorderToolbar patch={basePatch} />}
-    </>
-  );
+  const rightPart =
+    selectedNodes && selectedNodes[0] ? (
+      <SelectedNodeInfo node={selectedNodes[0]} />
+    ) : (
+      <div className="flex ml-3">
+        <LockButton />
+        <PresentationMode />
+        {basePatch && <RecorderToolbar patch={basePatch} />}
+      </div>
+    );
   if (breadcrumbs.length === 1) {
     return (
-      <div className="flex  full w-full select-none ">
-        <div className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}>
+      <div style={{ zIndex: 1000000000000 }} className="flex  full w-full select-none ">
+        <div
+          className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}
+        >
           <PatchDropdown patch={patch}>
-            <GlobeIcon className="w-4 h-4 mt-1 mr-3 cursor-pointer" />
+            <GlobeIcon className="w-4 h-4 my-auto mr-3 cursor-pointer" />
           </PatchDropdown>
           <div
             style={{ borderLeft: "1px solid white" }}
-            className="ml-auto top-0 bottom my-auto pt-0.5 right-0 px-5 flex w-24"
+            className="ml-auto flex top-0 bottom my-auto right-0 pl-3 flex w-28 "
           >
             {rightPart}
           </div>
@@ -185,10 +193,13 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
       onClick={(e: any) => e.stopPropagation()}
       onMouseDown={(e: any) => e.stopPropagation()}
       className="flex  full w-full select-none "
+      style={{ zIndex: 1000000000000 }}
     >
-    <div className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}>
+      <div
+        className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}
+      >
         <PatchDropdown patch={patch}>
-          <GlobeIcon className="w-4 h-4 mt-1 mr-3 cursor-pointer" />
+          <GlobeIcon className="w-4 h-4 my-auto mr-3 cursor-pointer" />
         </PatchDropdown>
         <div className="flex relative pr-8 my-auto">
           {breadcrumbs}
@@ -200,9 +211,11 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           />
         </div>
         {
-          <div className="absolute right-32 bottom-0 top-0  mr-3 my-auto pt-0.5 right-0 px-5 flex  flex w-28 text-right">
+          <div className="absolute right-28 bottom-0 top-0  mr-3 my-auto  right-0 px-5 flex  flex w-36 text-right">
             <div className="text-xs my-auto ml-auto text-zinc-400">
-              {__patch.zenCode ? "compiled" : type}
+              {__patch.zenCode
+                ? `compiled (${(__patch as SubPatch).parentNode.attributes["target"]})`
+                : type}
             </div>
             <div
               className={`w-2 h-2 rounded-full ${type === "audio" ? "bg-yellow-300" : type === "gl" ? "bg-purple-500" : "bg-teal-200"} my-auto ml-2`}
@@ -211,9 +224,9 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         }
         <div
           style={{ borderLeft: "1px solid white" }}
-          className="absolute right-0 bottom-0 top-0 table my-auto pt-0.5 right-0 px-5 flex w-24"
+          className="ml-auto flex top-0 bottom my-auto  right-0 flex w-32 flex "
         >
-          <div className="flex">{rightPart}</div>
+          <div className="flex w-full">{rightPart}</div>
         </div>
       </div>
     </div>

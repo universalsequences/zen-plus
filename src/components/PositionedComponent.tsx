@@ -45,7 +45,6 @@ const PositionedComponent: React.FC<{
 }) => {
   const { setSelectedPatch } = usePatches();
   const { selectPatch } = usePatchSelector();
-  const { lockedMode } = useLocked();
   const { patch } = usePatch();
   const { setSelectedNodes, selectedNodes } = useSelection();
   const {
@@ -145,7 +144,7 @@ const PositionedComponent: React.FC<{
 
         if (
           lockedModeRef.current &&
-          !node.subpatch?.objectNodes.some((x) => x.name === "onPatchSelect")
+          !(node as ObjectNode).subpatch?.objectNodes.some((x) => x.name === "onPatchSelect")
         ) {
           return;
         }
@@ -156,7 +155,6 @@ const PositionedComponent: React.FC<{
               prev.includes(node) ? prev.filter((x) => x !== node) : [...prev, node],
             );
           } else {
-            console.log("setting selec", node);
             setSelectedNodes([node]);
           }
         }
@@ -329,7 +327,7 @@ const PositionedComponent: React.FC<{
         style={_style}
         className={className}
       >
-        {isSelected && !lockedMode && (
+        {isSelected && (
           <>
             <div className="absolute top-0 right-0 w-1 h-1 bg-zinc-300 " />
             <div
@@ -338,10 +336,10 @@ const PositionedComponent: React.FC<{
                 startResizing(e, Orientation.XY)
               }
               style={allowSize ? { width: 10, height: 10 } : { maxWidth: 25, maxHeight: 25 }}
-              className="absolute bottom-0 right-0 w-2 h-2 bg-zinc-300 cursor-se-resize z-30"
+              className="absolute bottom-0 right-0 w-2 h-2 bg-zinc-300 cursor-se-resize z-30 resize-selector"
             />
-            <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 " />
-            <div className="absolute bottom-0 left-0 w-1 h-1 bg-zinc-300 " />
+            <div className="absolute top-0 left-0 w-1 h-1 bg-zinc-300 resize-selector " />
+            <div className="absolute bottom-0 left-0 w-1 h-1 bg-zinc-300 resize-selector" />
             {((node as ObjectNode).name !== "divider" ||
               node.attributes["orientation"] === "vertical") &&
               (allowSize || isCustom) && (
@@ -351,7 +349,7 @@ const PositionedComponent: React.FC<{
                     startResizing(e, Orientation.Y)
                   }
                   className={
-                    "absolute bottom-0 left-0 h-0.5 w-full cursor-ns-resize z-10 " +
+                    "absolute bottom-0 left-0 h-0.5 w-full cursor-ns-resize z-10 resize-selector " +
                     (isCustom ? "" : "")
                   }
                 />
@@ -364,7 +362,7 @@ const PositionedComponent: React.FC<{
                   startResizing(e, Orientation.X)
                 }
                 className={
-                  "absolute top-0 right-0 w-0.5 h-full  cursor-ew-resize z-10 " +
+                  "absolute top-0 right-0 w-0.5 h-full  cursor-ew-resize z-10 resize-selector " +
                   (isCustom ? "" : "")
                 }
               />
@@ -395,7 +393,6 @@ const PositionedComponent: React.FC<{
   }, [
     node,
     isError,
-    lockedMode,
     size,
     children,
     style,
