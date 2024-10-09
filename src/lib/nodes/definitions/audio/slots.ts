@@ -52,15 +52,12 @@ export const slots = (node: ObjectNode) => {
     reconnect();
   });
 
-  console.log("SLOTS INITIALIZED WITH SIZE =", node.attributes.size);
   node.newAttribute("size", (node.attributes.size as number) || 6);
   node.attributeCallbacks.size = (size) => {
-    console.log("size called with size=", size);
     if (node.slots) {
       const _size = size as number;
       if (_size > node.slots.length) {
         for (let i = node.slots.length; i < _size; i++) {
-          console.log("adding new patch i=%s", i);
           node.slots.push(newPatch(node));
         }
       } else if (_size < node.slots.length) {
@@ -213,7 +210,6 @@ const newPatch = (node: ObjectNode): ObjectNode => {
       objectNode.subpatch.isInsideSlot = true;
     }
     objectNode.parentSlots = node;
-    console.log("new slot patch=", objectNode);
     return objectNode;
   }
   return fakeNode;
@@ -224,7 +220,9 @@ export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNod
   for (const serialized of y) {
     const _node = newPatch(node);
     _node.fromJSON(serialized);
-    console.log("serialized = ", serialized);
+    if (_node.subpatch?.patchType !== OperatorContextType.ZEN) {
+      if (_node.subpatch) _node.subpatch.isZen = false;
+    }
     slots.push(_node);
   }
   node.slots = slots;
@@ -232,13 +230,11 @@ export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNod
 };
 
 const compileSlots = async (node: ObjectNode) => {
-  console.log("compile slots called", node);
   let slots = node.slots;
   if (!slots) {
     return;
   }
   for (let slot of slots) {
-    console.log("compiling slot", slot, slot.subpatch?.patchType);
     if (slot.subpatch?.patchType === OperatorContextType.ZEN) {
       slot.subpatch?.recompileGraph();
     } else {

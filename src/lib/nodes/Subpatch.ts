@@ -144,9 +144,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         (typeof statement === "string" || typeof statement === "object") &&
         !Array.isArray(statement)
       ) {
-        console.log("YO");
       } else {
-        console.log("FINALLY DOING SUPER.compile");
         super.compile(statement as Statement, outputNumber);
         return;
       }

@@ -207,7 +207,7 @@ export class PatchImpl implements Patch {
   // isZenBase tells us whether we are at the "base" of a "zen patch", i.e. the node that is considered
   // the "audio worklet"
   isZenBase() {
-    const subpatch = this as Patch as SubPtach;
+    const subpatch = this as Patch as SubPatch;
     if (!subpatch.parentPatch) {
       // were at the very base patch so cant be a zen base
       return false;
