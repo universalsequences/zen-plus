@@ -17,7 +17,6 @@ export const delay = (input: Arg, delayTime: Arg): UGen => {
 
   return simdMemo(
     (context: Context, _input: Generated, _delayTime: Generated): Generated => {
-      console.log("calling buf with context=", context);
       let buffer: MemoryBlock = buf(context);
       //let _input = context.gen(input);
       //let _delayTime = context.gen(delayTime);
@@ -28,7 +27,6 @@ export const delay = (input: Arg, delayTime: Arg): UGen => {
         "delayIndex",
       );
 
-      console.log("delay buffer=", buffer);
       let _accum = a(context);
       let index = `${buffer.idx} + (${_accum.variable})`;
       let lerped = lerpPeek(id, context, buffer, delayIndexName);

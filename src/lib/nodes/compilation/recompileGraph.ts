@@ -11,7 +11,6 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
   patch.disconnectGraph();
   patch.outputStatements = [];
   patch.storedStatement = undefined;
-  console.log("resetting history deps");
   patch.historyDependencies = [];
   patch.historyNodes = new Set<ObjectNode>();
   patch.waiting = true;
@@ -100,7 +99,7 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
 
 export const recompileGraph = (patch: Patch) => {
   const parentNode = (patch as Patch as SubPatch).parentNode;
-  const parentPatch = (patch as Patch as SubPatch).parentPatch;
+  let parentPatch = (patch as Patch as SubPatch).parentPatch;
 
   patch.sendNumberNodes();
   if (parentNode && parentNode.attributes.type === "core") {
@@ -252,7 +251,6 @@ export const recompileGraph = (patch: Patch) => {
       (patch as SubPatch).patchType === OperatorContextType.ZEN &&
       (patch as SubPatch).parentPatch
     ) {
-      console.log("checking for polycalls cuz were in ZEN and parentPatch exists", patch);
       const calls = patch
         .getAllNodes()
         .filter(
@@ -264,7 +262,6 @@ export const recompileGraph = (patch: Patch) => {
               node.name === "polytrig"),
         );
 
-      console.log("sending calls bc zen and has parent patch", calls);
       for (const call of calls) {
         if (call.name === "polytrig") {
           call.receive(call.inlets[0], "bang");

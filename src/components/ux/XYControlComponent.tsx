@@ -28,7 +28,6 @@ export const XYControlComponent = (props: Props) => {
       const x_norm = x / ref.current.offsetWidth;
       const y_norm = 1 - y / ref.current.offsetHeight;
 
-      console.log("norm.xy=", x_norm, y_norm);
       dragging.x = Math.min(1, Math.max(0, x_norm));
       dragging.y = Math.min(1, Math.max(0, y_norm));
       objectNode.receive(objectNode.inlets[0], "bang");
@@ -37,12 +36,12 @@ export const XYControlComponent = (props: Props) => {
   );
 
   const onMouseUp = useCallback(() => {
+    if (!dragging) return;
     setDragging(null);
     const xy = objectNode.custom as XYControl;
     xy.round();
-  }, []);
+  }, [dragging]);
 
-  console.log("dragging = ", dragging);
   useEffect(() => {
     window.addEventListener("mouseup", onMouseUp);
     window.addEventListener("mousemove", onMouseMove);
@@ -50,7 +49,7 @@ export const XYControlComponent = (props: Props) => {
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("mousemove", onMouseMove);
     };
-  });
+  }, [onMouseUp, onMouseMove]);
 
   const fillColor = objectNode.attributes["fill-color"] as string;
 
@@ -67,9 +66,36 @@ export const XYControlComponent = (props: Props) => {
 
   const roundX = objectNode.attributes.roundX as number;
 
+  // Calculate grid lines
+  const xGridLines = [];
+  for (let i = 0; i <= widthX; i += roundX) {
+    const x = ((i - minX) / widthX) * 100;
+    xGridLines.push(x);
+  }
+
+  const yGridLines = [];
+  for (let i = 0; i <= 16; i++) {
+    const y = (i / 16) * 100;
+    yGridLines.push(y);
+  }
+
   return (
     <div ref={ref} style={{ width, height }} className="flex">
       <svg className="w-full h-full" viewBox="0 0 100 100">
+        {xGridLines.map((x, i) => (
+          <line
+            key={`x-${i}`}
+            x1={x}
+            y1={0}
+            x2={x}
+            y2={100}
+            stroke={i % 4 === 0 ? "#4f4f4f" : "#1f1f1f"}
+            strokeWidth={0.5}
+          />
+        ))}
+        {yGridLines.map((y, i) => (
+          <line key={`y-${i}`} x1={0} y1={y} x2={100} y2={y} stroke="#4f4f4f" strokeWidth={0.5} />
+        ))}
         {points.map((x, i) => (
           <g>
             <circle

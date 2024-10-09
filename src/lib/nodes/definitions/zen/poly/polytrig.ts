@@ -144,7 +144,7 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
       return [];
     }
 
-    let numBodies = bodies.filter((x) => (x as CompoundOperator).name === "defun").length;
+    let numBodies = bodies.length;
 
     // create the Voice objects
     voices.length = 0;
@@ -215,6 +215,7 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
           let addition: Statement = ["add" as Operator, outputs[i], rets[i]];
           // addition.node = { ...node, id: node.id + '_addition_' + i };
           outputs[i] = addition;
+          console.log("adding i=% invocation=%s", i, invocation, outputs[i]);
         }
       } else {
         // otherwise we're just piping

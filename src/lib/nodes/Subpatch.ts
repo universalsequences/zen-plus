@@ -3,6 +3,7 @@ import { toConnectionType, OperatorContextType } from "./context";
 import { PatchImpl } from "./Patch";
 import type { ObjectNode, Message, Patch, SubPatch } from "./types";
 import ObjectNodeImpl from "./ObjectNode";
+import { MutableValue } from "./definitions/core/MutableValue";
 
 /**
  * The way sub-patches work is there is an ObjectNode that defines a subpatch object
@@ -174,6 +175,20 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         param.receive(param.inlets[0], time !== undefined ? [val, time] : val);
       }
 
+      const attriUIs = this.getAllNodes().filter(
+        (x) => x.name === "attrui" && x.arguments[0] === paramName,
+      );
+      for (const attriUI of attriUIs) {
+        //attriUI.receive(attriUI.inlets[0], paramValue);
+        //attriUI.arguments[1] = paramValue;
+        //attriUI.inlets[1].lastMessage = paramValue;
+        let text = attriUI.text.split(" ");
+        text[2] = paramValue.toString();
+        attriUI.text = text.join(" ");
+        attriUI.arguments[1] = paramValue;
+
+        (attriUI.custom as MutableValue).value = paramValue;
+      }
       if (params.length > 0) {
         return true;
       }

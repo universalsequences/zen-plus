@@ -249,7 +249,7 @@ export const history = (
       // reading from history (accessing memory)
       let historyDef =
         `${context.varKeyword} ${historyVar} = memory[${IDX}];` +
-        (params ? "/* param */" : "") +
+        (params ? `/* param ${params.name || ""}*/` : "") +
         "\n";
 
       if (input && historyVar) {

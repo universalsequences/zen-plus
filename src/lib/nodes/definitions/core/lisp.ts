@@ -49,7 +49,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
   let counter = 0;
   let lastText: string | undefined = undefined;
   let lastParsed: AST;
-  const pool = new ListPool();
+  const pool = node.pool || new ListPool();
   node.inlets[node.inlets.length - 1].lastMessage = env as Message;
   node.hasDynamicInlets = true;
 
@@ -69,7 +69,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
   return (msg: Message) => {
     if (msg === "clear") {
       lastEnv = getEnvFromMessages();
-      env = pool.getObject();
+      env = {}; //pool.getObject();
       Object.assign(env, lastEnv);
       return empty;
       // return [];
@@ -78,7 +78,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
     const _env = getEnvFromMessages();
     if (_env !== lastEnv) {
       lastEnv = _env;
-      env = pool.getObject();
+      env = {}; //pool.getObject();
       Object.assign(env, _env);
     }
 
@@ -107,6 +107,8 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
         }
         out[0] = ret;
         out[1] = env;
+
+        pool.borrow(ret);
         return out;
         // return [ret, env];
       } catch (e) {

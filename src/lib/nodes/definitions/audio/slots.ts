@@ -9,6 +9,8 @@ import {
 import { doc } from "./doc";
 import ObjectNodeImpl from "../../ObjectNode";
 import { sleep } from "../../compilation/onCompile";
+import Subpatch from "../../Subpatch";
+import { OperatorContextType } from "../../context";
 
 doc("slots~", {
   description: "connect subpatches in series",
@@ -196,14 +198,25 @@ export const slots = (node: ObjectNode) => {
 };
 
 const newPatch = (node: ObjectNode): ObjectNode => {
-  let objectNode: ObjectNode = new ObjectNodeImpl(node.patch);
-  objectNode.parse("zen");
-  objectNode.setAttribute("slotview", true);
-  if (objectNode.subpatch) {
-    objectNode.subpatch.name = "";
+  let fakeNode: ObjectNode = new ObjectNodeImpl(node.patch);
+  fakeNode.parse("zen @type audio");
+  if (fakeNode.subpatch) {
+    //const subpatch = new Subpatch(node.patch, node);
+    const subpatch = fakeNode.subpatch;
+    subpatch.isZen = false;
+    let objectNode: ObjectNode = new ObjectNodeImpl(subpatch);
+    subpatch.objectNodes.push(objectNode);
+    objectNode.parse("zen");
+    objectNode.setAttribute("slotview", true);
+    if (objectNode.subpatch) {
+      objectNode.subpatch.name = "";
+      objectNode.subpatch.isInsideSlot = true;
+    }
+    objectNode.parentSlots = node;
+    console.log("new slot patch=", objectNode);
+    return objectNode;
   }
-  objectNode.parentSlots = node;
-  return objectNode;
+  return fakeNode;
 };
 
 export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
@@ -218,12 +231,18 @@ export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNod
 };
 
 const compileSlots = async (node: ObjectNode) => {
+  console.log("compile slots called", node);
   let slots = node.slots;
   if (!slots) {
     return;
   }
   for (let slot of slots) {
-    slot.subpatch?.recompileGraph();
+    console.log("compiling slot", slot, slot.subpatch?.patchType);
+    if (slot.subpatch?.patchType === OperatorContextType.ZEN) {
+      slot.subpatch?.recompileGraph();
+    } else {
+      slot.subpatch?.initialLoadCompile();
+    }
   }
 
   let i = 0;

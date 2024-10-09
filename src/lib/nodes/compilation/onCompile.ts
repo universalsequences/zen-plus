@@ -21,7 +21,6 @@ import { isTrivialGraph } from "./trivialGraph";
 
 const constructStatements = (patch: PatchImpl, statement: Statement) => {
   const historyDependencies = patch.historyDependencies.filter((x) => notInFunction(x));
-  console.log("history deps full=", historyDependencies, [...patch.historyDependencies]);
   const _statement = ["s" as Operator];
   for (const dependency of historyDependencies) {
     if (dependency.node && dependency.node.name === "param") {
@@ -49,7 +48,6 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
     patch.historyDependencies.length > 0 ? constructStatements(patch, _statement) : _statement;
 
   const parentNode = (patch as Patch as SubPatch).parentNode;
-  console.log("statement=", statement);
   const ast = compileStatement(statement);
   const target = parentNode.attributes.target === "C" ? Target.C : Target.Javascript;
   const forceScalar = !parentNode.attributes.SIMD;
@@ -68,7 +66,6 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
 };
 
 export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNumber?: number) => {
-  console.log("on compile=", patch, [...patch.historyDependencies]);
   let statement = inputStatement;
   if (outputNumber !== undefined) {
     patch.outputStatements[outputNumber - 1] = statement;
@@ -215,11 +212,13 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
             handlePublishers(parentNode);
           }
 
+          /*
           patch.zenCode = printAndMinify(statement);
           if (patch.setZenCode) {
             console.log('setting zen code=', patch.zenCode);
             patch.setZenCode(patch.zenCode);
           }
+          */
         })
         .catch(() => {});
     });

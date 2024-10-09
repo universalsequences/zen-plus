@@ -650,15 +650,30 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   }
 
   markMessage(inlet: IOlet, message: Message, fromNode?: Node) {
+    const zenBase = this.patch.getZenBase();
+    const isCompilable =
+      this.operatorContextType === OperatorContextType.ZEN ||
+      this.operatorContextType === OperatorContextType.GL;
+    let isCompiling =
+      (zenBase?.isCompiling && isCompilable) || (this.patch.skipRecompile && isCompilable);
+    if (Array.isArray(message) && (message as Statement).node) {
+      isCompiling = true;
+    }
+
+    if (!isCompiling) {
+      return;
+    }
     if (!inlet.markedMessages) {
       inlet.markedMessages = [];
     }
     inlet.markedMessages.push({ message: message, node: fromNode });
 
+    /*
     if (!inlet.markedMessages) {
       inlet.markedMessages = [];
     }
     inlet.markedMessages.push({ message: message, node: fromNode });
+    */
 
     if (inlet.messagesReceived === undefined) {
       inlet.messagesReceived = 0;

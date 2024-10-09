@@ -22,7 +22,7 @@ export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
   }
 
   if (!node.size) {
-  node.size = { width: 100, height: 20 };
+    node.size = { width: 100, height: 20 };
   }
 
   // node.inlets.forEach(x => x.hidden = true);
@@ -30,7 +30,6 @@ export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
     if (!node.controllingParamNode) {
       const _name = name();
       const params = getNodesControllableByAttriUI(node, _name as string);
-      console.log("params found for attrui", _name, params);
       node.controllingParamNode = params[0];
     }
     if (Array.isArray(_message)) {

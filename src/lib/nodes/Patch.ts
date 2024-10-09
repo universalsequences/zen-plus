@@ -33,6 +33,7 @@ interface GraphContext {
   workletNode: AudioWorkletNode;
 }
 
+let ID_COUNTER = 0;
 export class PatchImpl implements Patch {
   type: PatchType;
   id: string;
@@ -155,15 +156,19 @@ export class PatchImpl implements Patch {
    * Gets all object nodes within a patch (including sub-patches)
    * @return {ObjectNode[]} list of objectNodes
    */
-  getAllNodes(): ObjectNode[] {
+  getAllNodes(visited = new Set<Patch>(), key = ID_COUNTER++): ObjectNode[] {
+    if (visited.has(this as Patch)) {
+      return [];
+    }
+    visited.add(this);
     const nodes = [...this.objectNodes];
     const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
-    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes())];
-    const slots = xyz.filter((x) => x.name === "slots~");
+    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes(visited, key))];
+    const slots = nodes.filter((x) => x.name === "slots~");
     for (const slotNode of slots) {
       if (slotNode.slots) {
         for (const slot of slotNode.slots) {
-          xyz.push(...(slot.subpatch?.getAllNodes() || []));
+          xyz.push(...(slot.subpatch?.getAllNodes(visited, key) || []));
         }
       }
     }
@@ -202,10 +207,12 @@ export class PatchImpl implements Patch {
   // isZenBase tells us whether we are at the "base" of a "zen patch", i.e. the node that is considered
   // the "audio worklet"
   isZenBase() {
-    if (!(this as Patch as SubPatch).parentPatch) {
+    const subpatch = this as Patch as SubPtach;
+    if (!subpatch.parentPatch) {
+      // were at the very base patch so cant be a zen base
       return false;
     }
-    if (!(this as Patch as SubPatch).parentPatch.isZen) {
+    if (!subpatch.parentPatch.isZen) {
       return true;
     }
     return false;
@@ -511,18 +518,37 @@ export class PatchImpl implements Patch {
     return _connections;
   }
 
-  async initialLoadCompile() {
+  async initialLoadCompile(base = true) {
+    console.log("initial load copile", this);
     this.sendNumberNodes();
-    this.recompileGraph();
+    const subpatch = this as SubPatch;
+    if (
+      !subpatch.parentPatch //||
+      //subpatch.patchType === OperatorContextType.ZEN ||
+      //subpatch.patchType === OperatorContextType.GL
+    ) {
+      console.log("initial load compile calling base recompile", this);
+      this.recompileGraph();
+    }
 
     const compiled: Patch[] = [];
     for (const node of this.objectNodes) {
+      if (node.subpatch) {
+        console.log(
+          "node.subpatch?.isZenBase",
+          node.subpatch?.name,
+          node,
+          node.subpatch?.isZenBase(),
+        );
+      }
       if (
         node.subpatch?.isZenBase() &&
         node.subpatch.patchType !== OperatorContextType.AUDIO &&
         node.subpatch.patchType !== OperatorContextType.CORE
       ) {
-        if (this.isZenBase() && (this as Patch as SubPatch).patchType === OperatorContextType.ZEN) {
+        console.log("tryna", node);
+        if (subpatch.patchType === OperatorContextType.ZEN) {
+          console.log("skipping...");
           continue;
         }
         node.subpatch.recompileGraph();
@@ -541,14 +567,17 @@ export class PatchImpl implements Patch {
         (node.subpatch.patchType === OperatorContextType.AUDIO ||
           node.subpatch.patchType === OperatorContextType.CORE)
       ) {
-        await node.subpatch.initialLoadCompile();
+        await node.subpatch?.initialLoadCompile(false);
       }
     }
 
-    this.setupPostCompile();
+    if (base) {
+      this.setupPostCompile();
+    }
   }
 
   setupPostCompile(useDeep = false) {
+    console.log("SET POST COMPILE");
     for (const node of this.getAllNodes()) {
       if (node.name === "send~" || node.name === "publishPatchSignals") {
         node.parse(node.text);

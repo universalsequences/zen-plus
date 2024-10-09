@@ -255,14 +255,16 @@ export const createContext = (pool: ListPool) => {
           return args.every((arg) => Boolean(evaluateExpression(arg, env)));
         case "or":
           let i = 0;
+          let _last: Message | null = null;
           for (const arg of args) {
             const a = evaluateExpression(arg, env);
+            _last = a;
             if (a) {
               return a;
             }
             i++;
           }
-          return args[args.length - 1];
+          return _last;
         case "not":
           if (args.length !== 1) {
             throw new Error("Not operation requires exactly one argument");
@@ -449,22 +451,22 @@ export const createContext = (pool: ListPool) => {
 
   function defineFunctionInEnv(funcDef: FunctionDefinition, env: Environment): Message {
     const { params, body } = funcDef;
-    env[params[0].value] =
-      (callScope: Environment) =>
-      (...args: Message[]) => {
-        const localEnv = pool.getObject();
+    env[params[0].value] = (callScope: Environment) => {
+      return (...args: Message[]) => {
+        const localEnv = Object.create(null); //pool.getEnv();
 
         Object.assign(localEnv, env, callScope);
 
         // const localEnv = Object.create({ ...env, ...callScope });
 
         params.slice(1).forEach((param, index) => {
-          localEnv[param.value] = args[index];
+          localEnv[param.value as string] = args[index];
         });
         const result = evaluateExpression(body, localEnv);
         pool.releaseObject(localEnv);
         return result;
       };
+    };
     return null;
   }
 

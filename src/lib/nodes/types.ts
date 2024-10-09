@@ -20,6 +20,7 @@ import type {
   StepDataSchema,
 } from "./definitions/core/zequencer/types";
 import { PatchDoc } from "../org/types";
+import { ListPool } from "../lisp/ListPool";
 
 export interface Size {
   width: number;
@@ -220,6 +221,7 @@ export type ObjectNode = Positioned &
     updateSize: (size: Size) => void;
     controllingParamNode?: ObjectNode; // any param nodes that are controleld by this node
     script?: string;
+    pool?: ListPool;
   };
 
 export interface SerializableCustom {
@@ -260,7 +262,7 @@ export type Patch = Identifiable & {
   historyDependencies: Statement[];
   outputStatements: Statement[];
   historyNodes: Set<ObjectNode>;
-  getAllNodes: () => ObjectNode[];
+  getAllNodes: (visited?: Set<Patch>) => ObjectNode[];
   //getAudioNodes: () => ObjectNode[];
   getAllMessageNodes: () => MessageNode[];
   newHistoryDependency: (x: Statement, o: ObjectNode) => void;
@@ -303,6 +305,7 @@ export type Patch = Identifiable & {
   sendNumberNodes: () => void;
   docId?: string;
   doc?: PatchDoc;
+  isInsideSlot?: boolean;
 };
 
 export type SubPatch = Patch & {

@@ -14,7 +14,7 @@ import {
   type Node,
   type Attributes,
 } from "./types";
-import { isCompiledType } from "./context";
+import { OperatorContextType, isCompiledType } from "./context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
 
@@ -139,7 +139,12 @@ export class BaseNode implements Node {
       compile &&
       (isCompiledType(outlet.connectionType) || isCompiledType(inlet.connectionType))
     ) {
-      this.patch.recompileGraph();
+      if (
+        (this.patch as SubPatch).patchType === OperatorContextType.ZEN ||
+        (this.patch as SubPatch).patchType === OperatorContextType.GL
+      ) {
+        this.patch.recompileGraph();
+      }
     }
 
     if (this.patch.registerConnect) {

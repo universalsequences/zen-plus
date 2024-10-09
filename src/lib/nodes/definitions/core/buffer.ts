@@ -26,9 +26,7 @@ export const buffer = (node: ObjectNode) => {
     node.attributes.channels = 1;
   }
 
-  node.attributeCallbacks["external-URL"] = (
-    message: string | number | boolean | number[],
-  ) => {
+  node.attributeCallbacks["external-URL"] = (message: string | number | boolean | number[]) => {
     if (lastDownload !== message) {
       node.buffer = undefined;
       node.receive(node.inlets[0], "bang");
@@ -80,12 +78,15 @@ export const buffer = (node: ObjectNode) => {
             }
             try {
               const arrayBuffer = await r.arrayBuffer();
+              console.log("tryna do arraybuffertoarray...");
               const [buffer, length] = await arrayBufferToArray(
                 arrayBuffer,
                 node.patch.audioContext,
                 node.attributes["data format"] as string,
                 node.attributes.channels as number,
               );
+              console.log("arraybuffer to array returned");
+              console.log("BUFFER/LENGTH", buffer, length);
               cache[url] = [buffer, length];
               node.buffer = buffer;
               node.send(node.outlets[0], buffer);
@@ -93,6 +94,7 @@ export const buffer = (node: ObjectNode) => {
             } catch (e) {}
           })
           .catch((e) => {
+            console.log("ERROR?", e);
             node.send(node.outlets[2], "bang");
           });
       }, 150);

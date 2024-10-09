@@ -31,6 +31,10 @@ const Audio: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      console.log("on keyDown called...");
+      if (!editing) {
+        return;
+      }
       if (e.key === "Enter") {
         objectNode.buffer = undefined;
         objectNode.setAttribute("external-URL", text);
@@ -38,11 +42,12 @@ const Audio: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         //objectNode.receive(objectNode.inlets[0], "bang");
       }
     },
-    [text, setEditing],
+    [text, editing, setEditing],
   );
 
   const onDrop = useCallback(
     async (ev: React.DragEvent<HTMLDivElement>) => {
+      console.log("on drop");
       ev.stopPropagation();
       ev.preventDefault();
       ev.dataTransfer.effectAllowed = "none";
@@ -53,7 +58,7 @@ const Audio: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         let len = ev.dataTransfer.items.length;
         let file: File = ev.dataTransfer.items[0].getAsFile() as File;
         let audioContext = objectNode.patch.audioContext;
-        let buffer = await getBlob(
+        let [buffer, length] = await getBlob(
           file,
           audioContext,
           objectNode.attributes["data format"] as string,
@@ -101,7 +106,8 @@ export const getBlob = (
   file: File,
   audioContext: AudioContext,
   dataFormat?: string,
-): Promise<Float32Array> => {
+): Promise<[Float32Array, number]> => {
+  console.log("getting blob...");
   return new Promise((resolve) => {
     let reader = new FileReader();
     reader.readAsArrayBuffer(file);

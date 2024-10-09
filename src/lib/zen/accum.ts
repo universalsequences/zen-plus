@@ -15,13 +15,10 @@ export const accum = (incr: Arg, reset: Arg = 0, params: AccumParams) => {
   let id = uuid();
   return simdMemo(
     (context: Context, _incr: Generated, _reset: Generated) => {
-        console.log('allocating accum with context=', context);
       block = context.alloc(1);
       //let _incr = genArg(incr, context);
       //let _reset = genArg(reset, context);
       let [varName] = context.useCachedVariables(id, "accum");
-
-      console.log("accum block=", block);
 
       if (params.init !== undefined) {
         block.initData = new Float32Array([params.init]);

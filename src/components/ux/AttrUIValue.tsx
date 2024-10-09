@@ -21,6 +21,7 @@ const AttrUIValue: React.FC<{
       text[2] = num.toString();
       objectNode.text = text.join(" ");
       objectNode.arguments[1] = num;
+      objectNode.inlets[1].lastMessage = num;
       if (node && node.custom) {
         (node.custom as any).value = num;
       }
@@ -31,14 +32,12 @@ const AttrUIValue: React.FC<{
         for (const step of selectedSteps) {
           const existingLock = step.parameterLocks.find((x) => x.id === node.id);
           if (existingLock) {
-            console.log("setting existing lock", num, existingLock, step);
             existingLock.value = num;
           } else {
             step.parameterLocks.push({
               id: node.id,
               value: num,
             });
-            console.log("appending to step.paramLocks", step.parameterLocks, step);
           }
         }
       }

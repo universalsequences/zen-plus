@@ -121,7 +121,38 @@ export const xy_control = (node: ObjectNode) => {
   }
 
   let counter = 0;
-  return () => {
+  return (msg: Message) => {
+    if (typeof msg === "string" && msg !== "bang") {
+      const tokens = msg.split(" ");
+      if (tokens.length === 3) {
+        const [_idx, a, _b, _c] = tokens;
+        const idx = Number.parseInt(_idx);
+        const val = Number.parseFloat(_b);
+
+        if (a === "x") {
+          const xy = node.custom as XYControl;
+
+          if (xy?.points && xy.points[idx]) {
+            const minX = node.attributes.minX as number;
+            const maxX = node.attributes.maxX as number;
+            const widthX = maxX - minX;
+            xy.points[idx].x = (val - minX) / widthX;
+          }
+        } else if (a === "y") {
+          const xy = node.custom as XYControl;
+          if (xy?.points && xy.points[idx]) {
+            const minY = node.attributes.minY as number;
+            const maxY = node.attributes.maxY as number;
+            const widthY = maxY - minY;
+            xy.points[idx].y = (val - minY) / widthY;
+          }
+        }
+        if (node.onNewValue) {
+          node.onNewValue(counter++);
+        }
+        return [];
+      }
+    }
     if (node.onNewValue) {
       node.onNewValue(counter++);
     }
