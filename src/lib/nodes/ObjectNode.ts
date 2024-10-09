@@ -260,6 +260,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         //this.patch.recompileGraph();
         const parentNode = (this.patch as SubPatch).parentNode;
         if (!parentNode || parentNode.attributes.type !== "core") {
+          console.log("parse causing recompile", this, this.patch);
           this.patch.recompileGraph();
         }
       }

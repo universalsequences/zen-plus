@@ -98,6 +98,7 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
 };
 
 export const recompileGraph = (patch: Patch) => {
+  console.log("RECOMPILE GRAPH", patch);
   const parentNode = (patch as Patch as SubPatch).parentNode;
   let parentPatch = (patch as Patch as SubPatch).parentPatch;
 

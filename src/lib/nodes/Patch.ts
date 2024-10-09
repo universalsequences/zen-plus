@@ -368,6 +368,7 @@ export class PatchImpl implements Patch {
       }
       json.attributes = parentNode.attributes;
     }
+    json.patchType = (this as SubPatch).patchType;
     return json;
   }
 
@@ -379,6 +380,10 @@ export class PatchImpl implements Patch {
     this.objectNodes = [];
     this.messageNodes = [];
     this.presentationMode = x.presentationMode === undefined ? false : x.presentationMode;
+
+    if (x.patchType) {
+      (this as SubPatch).patchType = x.patchType;
+    }
 
     const parentNode = (this as any as SubPatch).parentNode;
     if (parentNode) {

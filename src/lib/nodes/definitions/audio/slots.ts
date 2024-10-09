@@ -224,6 +224,7 @@ export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNod
   for (const serialized of y) {
     const _node = newPatch(node);
     _node.fromJSON(serialized);
+    console.log("serialized = ", serialized);
     slots.push(_node);
   }
   node.slots = slots;

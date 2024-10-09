@@ -357,6 +357,7 @@ export type SerializedPatch = Identifiable & {
   attributes?: Attributes;
   docId?: string;
   doc?: PatchDoc;
+  patchType?: OperatorContextType;
 };
 
 export type SerializedMessageNode = Identifiable & {

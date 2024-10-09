@@ -109,6 +109,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   recompileGraph(force?: boolean): void {
+    console.log("subpatch recompile graph calling", this);
     if (this.patchType === OperatorContextType.CORE) {
       return;
     }
@@ -116,10 +117,17 @@ export default class Subpatch extends PatchImpl implements SubPatch {
       super.recompileGraph();
       return;
     }
+    if (this.isZenBase()) {
+      super.recompileGraph();
+      return;
+    }
     if (!this.parentPatch.isZen) {
+      console.log("parent patch is not zen", this.parentPatch);
       if (this.patchType !== OperatorContextType.ZEN) {
+        console.log("doing this.parentPatch.recompileGraph");
         this.parentPatch.recompileGraph();
       } else {
+        console.log("doing super.recompileGraph");
         super.recompileGraph();
       }
     } else {
@@ -136,7 +144,9 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         (typeof statement === "string" || typeof statement === "object") &&
         !Array.isArray(statement)
       ) {
+        console.log("YO");
       } else {
+        console.log("FINALLY DOING SUPER.compile");
         super.compile(statement as Statement, outputNumber);
         return;
       }
