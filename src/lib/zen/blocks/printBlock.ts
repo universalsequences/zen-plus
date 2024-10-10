@@ -32,18 +32,20 @@ ${isLast ? "" : prettify("    ", printOutbound(block))}
       ? Array.from(new Set(block.histories.filter((h) => h.includes("let"))))
       : Array.from(
           new Set(
-            block.histories.filter(
-              (h) =>
-                post.includes(h.includes("double") || h.includes("float") ? h.split(" ")[1] : h) &&
-                (h.includes("float") || h.includes("double")) &&
-                !Array.from(block.fullInboundDependencies).some((y) => {
-                  return h.split(" ").some((h1) => h1 === y);
-                })
-            ).map(x => x.includes("/* param */") ? (x.slice(0, x.indexOf("/*")) + ";\n") : x),
+            block.histories
+              .filter(
+                (h) =>
+                  post.includes(
+                    h.includes("double") || h.includes("float") ? h.split(" ")[1] : h,
+                  ) &&
+                  (h.includes("float") || h.includes("double")) &&
+                  !Array.from(block.fullInboundDependencies).some((y) => {
+                    return h.split(" ").some((h1) => h1 === y);
+                  }),
+              )
+              .map((x) => (x.includes("/* param */") ? x.slice(0, x.indexOf("/*")) + ";\n" : x)),
           ),
-  )
-
-  console.log("histories to print=", histories, Array.from(new Set(histories)))
+        );
 
   const inbound = printInbound(block, histories, post);
   let code = "";

@@ -196,7 +196,7 @@ export type ObjectNode = Positioned &
     getJSON: () => SerializedObjectNode;
     fromJSON: (x: SerializedObjectNode) => void;
     size?: Size;
-    audioNode?: AudioNode;
+    audioNode?: AudioNode; // output for node 
     auxAudioNodes?: AudioNode[];
     useAudioNode: (x: AudioNode) => void;
     operatorContextType: OperatorContextType;
@@ -209,7 +209,7 @@ export type ObjectNode = Positioned &
     lastSentMessage?: Message;
     storedMessage?: Message;
     storedParameterValue?: number;
-    merger?: ChannelMergerNode;
+    merger?: ChannelMergerNode; // multi-channel input for node
     saveData?: any;
     custom?: SerializableCustom;
     created?: boolean;
@@ -248,14 +248,14 @@ export type Patch = Identifiable & {
   zenGraph?: ZenGraph;
   justExpanded?: boolean;
   isCompiling: boolean;
-  initialLoadCompile: () => Promise<void>;
+  initialLoadCompile: (isBase: boolean) => Promise<void>;
   objectNodes: ObjectNode[];
   messageNodes: MessageNode[];
   presentationMode: boolean;
   lockedMode?: boolean;
   compile: (x: Statement, outputNumber?: number) => void;
   assistant: Assistant;
-  recompileGraph: (force?: boolean) => void;
+  recompileGraph: () => void;
   type: PatchType;
   isZenBase: () => boolean;
   audioContext: AudioContext;
@@ -301,7 +301,7 @@ export type Patch = Identifiable & {
   exportedAudioUnit?: ExportedAudioUnit;
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
-  onUpdateSize: (id: string, size: Size) => void;
+  //onUpdateSize: (id: string, size: Size) => void;
   sendNumberNodes: () => void;
   docId?: string;
   doc?: PatchDoc;

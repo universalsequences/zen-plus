@@ -73,6 +73,12 @@ export class PatchImpl implements Patch {
   lockedMode: boolean;
   docId?: string | undefined;
   doc?: PatchDoc | undefined;
+  justExpanded?: boolean;
+  viewed?: boolean;
+  isInsideSlot?: boolean;
+  setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
+  setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
+
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
@@ -136,7 +142,6 @@ export class PatchImpl implements Patch {
   }
 
   startRecording() {
-    console.log("start recording worklet", this.recorderWorklet);
     this.recorderWorklet?.port.postMessage({ message: "clear" });
     this.recorderWorklet?.port.postMessage({ message: "record" });
     this.isRecording = true;
@@ -237,7 +242,6 @@ export class PatchImpl implements Patch {
 
   disconnectGraph() {
     for (const { workletNode, splitter, graph, merger } of this.worklets) {
-      console.log("disconnecting worklet", workletNode);
       for (const connection of this.getAudioConnections()) {
         connection.source.disconnectAudioNode(connection);
       }
@@ -392,7 +396,6 @@ export class PatchImpl implements Patch {
         parentNode.size = x.size;
       }
     } else {
-      console.log("no parent presentationMode=", this.presentationMode);
     }
 
     this.id = x.id;
@@ -524,36 +527,22 @@ export class PatchImpl implements Patch {
   }
 
   async initialLoadCompile(base = true) {
-    console.log("initial load copile", this);
     this.sendNumberNodes();
-    const subpatch = this as SubPatch;
+    const subpatch = this as unknown as SubPatch;
     if (
-      !subpatch.parentPatch //||
-      //subpatch.patchType === OperatorContextType.ZEN ||
-      //subpatch.patchType === OperatorContextType.GL
+      !subpatch.parentPatch
     ) {
-      console.log("initial load compile calling base recompile", this);
       this.recompileGraph();
     }
 
     const compiled: Patch[] = [];
     for (const node of this.objectNodes) {
-      if (node.subpatch) {
-        console.log(
-          "node.subpatch?.isZenBase",
-          node.subpatch?.name,
-          node,
-          node.subpatch?.isZenBase(),
-        );
-      }
       if (
         node.subpatch?.isZenBase() &&
         node.subpatch.patchType !== OperatorContextType.AUDIO &&
         node.subpatch.patchType !== OperatorContextType.CORE
       ) {
-        console.log("tryna", node);
         if (subpatch.patchType === OperatorContextType.ZEN) {
-          console.log("skipping...");
           continue;
         }
         node.subpatch.recompileGraph();
@@ -582,7 +571,6 @@ export class PatchImpl implements Patch {
   }
 
   setupPostCompile(useDeep = false) {
-    console.log("SET POST COMPILE");
     for (const node of this.getAllNodes()) {
       if (node.name === "send~" || node.name === "publishPatchSignals") {
         node.parse(node.text);

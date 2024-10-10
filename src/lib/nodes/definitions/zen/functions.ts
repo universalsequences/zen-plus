@@ -15,7 +15,6 @@ doc("defun", {
 });
 const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
   return (_message: Message): Statement[] => {
-    console.log("defun called", _message);
     let backwards = traverseBackwards(node).filter((x) => x !== node);
     //let numOutbound = node.outlets.flatMap(x => x.connections).length;
     let _bodies = bodies.map((x) => x()).filter((x) => x);
@@ -38,7 +37,6 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
 
     _bodies = [_message, ..._bodies];
     if (_bodies.length === 0) {
-      console.log("no bodies in defun");
       return [];
     }
 
@@ -75,7 +73,6 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
     ];
     (ret as Statement).node = node;
     node.storedMessage = ret as Statement;
-    console.log("defun return ret", ret);
     return [ret as Statement];
   };
 };

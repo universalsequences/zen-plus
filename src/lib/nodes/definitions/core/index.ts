@@ -41,8 +41,9 @@ import { waveform } from "./waveform";
 import { comment } from "./comment";
 import { send, patchmessage, subscribe } from "./messages";
 import { zfetch } from "./fetch";
-
+import { slotsout } from "../audio/slots/utils";
 export const api: API = {
+  slotsout,
   waveform,
   wasmviewer,
   ast,

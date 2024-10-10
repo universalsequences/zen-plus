@@ -68,7 +68,6 @@ export const metro = (node: ObjectNode, bpm: Lazy) => {
   return (message: Message) => {
     // update bpm and restart if necessary
     let worklet = node.audioNode as AudioWorkletNode;
-    console.log("metro received with worklet=", message, worklet);
     if (message === 1) {
       worklet?.port.postMessage({ type: "play" });
       isPlaying = false;

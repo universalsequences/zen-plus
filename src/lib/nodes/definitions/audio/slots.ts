@@ -9,7 +9,6 @@ import {
 import { doc } from "./doc";
 import ObjectNodeImpl from "../../ObjectNode";
 import { sleep } from "../../compilation/onCompile";
-import Subpatch from "../../Subpatch";
 import { OperatorContextType } from "../../context";
 
 doc("slots~", {
@@ -24,52 +23,24 @@ export type Slot = ObjectNode;
 export const slots = (node: ObjectNode) => {
   node.needsLoad = true;
 
-  // note: what the fuck is a "hijack" lol.
-  const getHijacks = (x: AttributeValue) => {
-    const nums = Array.isArray(x)
-      ? x
-      : typeof x === "string"
-        ? x.split(",").map((x) => Number.parseInt(x))
-        : typeof x === "number"
-          ? [x]
-          : [];
-    return nums;
-  };
-
-  const handleHijack = (x: AttributeValue) => {
-    const nums = getHijacks(x);
-    for (let i = node.outlets.length; i < 2 + nums.length; i++) {
-      node.newOutlet(`slot #${nums[i - 2]} messages`, ConnectionType.CORE);
-    }
-  };
-
-  if (node.attributes.hijack !== undefined) {
-    handleHijack(node.attributes.hijack as AttributeValue);
-  }
-
-  node.newAttribute("hijack", "", (x: AttributeValue) => {
-    handleHijack(x);
-    reconnect();
-  });
-
   node.newAttribute("size", (node.attributes.size as number) || 6);
   node.attributeCallbacks.size = (size) => {
-    if (node.slots) {
-      const _size = size as number;
-      if (_size > node.slots.length) {
-        for (let i = node.slots.length; i < _size; i++) {
-          node.slots.push(newPatch(node));
-        }
-      } else if (_size < node.slots.length) {
-        node.slots = node.slots.slice(0, _size);
-      }
-    }
-    reconnect();
+    updateSlots(node, size as number);
+    reconnect(node);
   };
 
+  initializeSlots(node);
+  initializeAudioNodes(node);
+  compileSlots(node);
+
+  return (message: Message) => handleMessage(node, message);
+};
+
+const initializeSlots = (node: ObjectNode) => {
   if (!node.slots) {
     node.slots = [];
-    for (let i = 0; i < (node.attributes.size! as number); i++) {
+    const size = node.attributes.size as number;
+    for (let i = 0; i < size; i++) {
       node.slots.push(newPatch(node));
     }
   }
@@ -80,161 +51,149 @@ export const slots = (node: ObjectNode) => {
       height: SLOT_VIEW_HEIGHT * 6,
     };
   }
+};
 
+const initializeAudioNodes = (node: ObjectNode) => {
   const ctxt = node.patch.audioContext;
   if (!node.audioNode) {
-    // need to create an audio node that connects to speakers
-    const splitter = ctxt.createChannelMerger(2);
-    node.audioNode = splitter; //node.patch.audioContext.destination;
+    node.audioNode = ctxt.createChannelMerger(2);
   }
-
   if (!node.merger) {
-    const merger = ctxt.createChannelMerger(2);
-    node.merger = merger;
+    node.merger = ctxt.createChannelMerger(2);
+  }
+};
+
+const updateSlots = (node: ObjectNode, newSize: number) => {
+  if (!node.slots) return;
+
+  if (newSize > node.slots.length) {
+    for (let i = node.slots.length; i < newSize; i++) {
+      node.slots.push(newPatch(node));
+    }
+  } else if (newSize < node.slots.length) {
+    node.slots = node.slots.slice(0, newSize);
+  }
+};
+
+const reconnect = (node: ObjectNode) => {
+  if (!node.slots) return;
+
+  disconnectAllSlots(node);
+  connectSlots(node);
+  setupOutputs(node);
+};
+
+const disconnectAllSlots = (node: ObjectNode) => {
+  for (const slot of node.slots!) {
+    slot.disconnectAll();
+    if (slot.audioNode) {
+      slot.audioNode.disconnect();
+    }
+  }
+};
+
+const connectSlots = (node: ObjectNode) => {
+  if (!node.slots) {
+    return;
+  }
+  for (let i = 0; i < node.slots!.length - 1; i++) {
+    const current = node.slots![i];
+    const next = node.slots![i + 1];
+    connectSlotPair(current, next);
   }
 
+  connectInputs(node);
+};
+
+const connectInputs = (node: ObjectNode) => {
+  if (!node.slots) return;
+  const first: ObjectNode = node.slots[0];
+  if (node.merger && first.merger) {
+    node.merger.disconnect();
+    const _splitter = node.patch.audioContext.createChannelSplitter(2);
+    node.merger.connect(_splitter);
+    _splitter.connect(first.merger, 0, 0);
+    _splitter.connect(first.merger, 1, 1);
+  }
+}
+
+const connectSlotPair = (current: ObjectNode, next: ObjectNode) => {
+  for (let j = 0; j < current.outlets.length; j++) {
+    if (next.inlets[j]) {
+      current.connect(next, next.inlets[j], current.outlets[j], false);
+    }
+  }
+};
+
+const setupOutputs = (node: ObjectNode) => {
+  const last = node.slots![node.slots!.length - 1];
   const splitter = node.patch.audioContext.createChannelSplitter(2);
 
-  let counter = 0;
+  last.audioNode?.connect(splitter);
+  if (node.audioNode) {
+    splitter.connect(node.audioNode, 0, 0);
+    splitter.connect(node.audioNode, 1, 1);
+  } 
 
-  const reconnect = () => {
-    if (!node.slots) {
-      return;
-    }
-    // then we need to connect each slot
-    for (const slot of node.slots) {
-      slot.disconnectAll();
-    }
-
-    for (const slot of node.slots) {
-      if (slot.audioNode) {
-        slot.audioNode.disconnect();
-      }
-    }
-
-    for (let i = 0; i < node.slots.length - 1; i++) {
-      const a = node.slots[i];
-      const b = node.slots[i + 1];
-
-      for (let j = 0; j < a.outlets.length; j++) {
-        if (b.inlets[j]) {
-          if (
-            true ||
-            !(a.audioNode as ChannelMergerNode)?.channelCount ||
-            (a.audioNode as ChannelMergerNode)?.channelCount >= j + 1
-          ) {
-            if ((b.merger as ChannelMergerNode)?.numberOfInputs < j + 1) {
-              continue;
-            }
-            a.connect(b, b.inlets[j], a.outlets[j], false);
-          } else {
-          }
-        }
-      }
-    }
-    const last: ObjectNode = node.slots[node.slots.length - 1];
-    last.audioNode?.connect(splitter); //(node.audioNode!);
-    if (node.audioNode) {
-      splitter.connect(node.audioNode, 0, 0);
-      splitter.connect(node.audioNode, 1, 1);
-    }
-
-    const first: ObjectNode = node.slots[0];
-    if (node.merger && first.merger) {
-      node.merger.disconnect();
-      const _splitter = node.patch.audioContext.createChannelSplitter(2);
-      node.merger.connect(_splitter);
-      _splitter.connect(first.merger, 0, 0);
-      _splitter.connect(first.merger, 1, 1);
-      // first.merger.connect(node.patch.audioContext.destination);
-    }
-
-    last.outlets[0].callback = (message: Message) => {
-      node.send(node.outlets[0], message);
-    };
-
-    const hijacks = getHijacks(node.attributes.hijack as AttributeValue);
-    let i = 0;
-    for (let hijack of hijacks) {
-      let _i = i;
-      if (node.slots[hijack]) {
-        node.slots[hijack].outlets[0].callback = (message: Message) => {
-          node.send(node.outlets[_i + 2], message);
-        };
-      }
-      i++;
-    }
-
-    // hijack any hijacking
-
-    // we want all messages coming out of the "last" slot to be piped thru
-    // the inlets
-
-    if (node.onNewValue) {
-      node.onNewValue(counter++);
-    }
-  };
-
-  reconnect();
-
-  return (_message: Message) => {
-    if (_message === "bang") {
-      compileSlots(node);
-      return [];
-    }
-    if (_message === "reconnect" && node.slots) {
-      reconnect();
-    } else {
-      // pipe this message to first
-      if (node.slots && node.slots[0]) {
-        node.slots[0].receive(node.slots[0].inlets[0], _message);
-      }
-    }
-    return [];
+  last.outlets[0].callback = (message: Message) => {
+    node.send(node.outlets[0], message);
   };
 };
 
-const newPatch = (node: ObjectNode): ObjectNode => {
-  let fakeNode: ObjectNode = new ObjectNodeImpl(node.patch);
-  fakeNode.parse("zen @type audio");
-  if (fakeNode.subpatch) {
-    //const subpatch = new Subpatch(node.patch, node);
-    const subpatch = fakeNode.subpatch;
+const handleMessage = (node: ObjectNode, message: Message) => {
+  if (message === "bang") {
+    compileSlots(node);
+    return [];
+  }
+  if (message === "reconnect" && node.slots) {
+    reconnect(node);
+  } else if (node.slots && node.slots[0]) {
+    node.slots[0].receive(node.slots[0].inlets[0], message);
+  }
+  return [];
+};
+
+const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode => {
+  let wrapperNode: ObjectNode = new ObjectNodeImpl(node.patch);
+  wrapperNode.parse("zen @type audio");
+  if (wrapperNode.subpatch) {
+    const subpatch = wrapperNode.subpatch;
     subpatch.isZen = false;
     let objectNode: ObjectNode = new ObjectNodeImpl(subpatch);
     subpatch.objectNodes.push(objectNode);
-    objectNode.parse("zen");
+    if (patchType === OperatorContextType.AUDIO) {
+      objectNode.parse("zen @type audio");
+    } else {
+      objectNode.parse("zen");
+    }
     objectNode.setAttribute("slotview", true);
     if (objectNode.subpatch) {
       objectNode.subpatch.name = "";
+      console.log("setting isInsideSlot", objectNode.subpatch, objectNode);
       objectNode.subpatch.isInsideSlot = true;
     }
     objectNode.parentSlots = node;
     return objectNode;
   }
-  return fakeNode;
+  return wrapperNode;
 };
 
 export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
-  const slots: Slot[] = [];
-  for (const serialized of y) {
-    const _node = newPatch(node);
+  node.slots = y.map(serialized => {
+    const _node = newPatch(node, serialized.subpatch?.patchType);
     _node.fromJSON(serialized);
-    if (_node.subpatch?.patchType !== OperatorContextType.ZEN) {
-      if (_node.subpatch) _node.subpatch.isZen = false;
+    if (_node.subpatch && _node.subpatch.patchType !== OperatorContextType.ZEN) {
+      _node.subpatch.isZen = false;
     }
-    slots.push(_node);
-  }
-  node.slots = slots;
+    return _node;
+  });
   await compileSlots(node);
 };
 
 const compileSlots = async (node: ObjectNode) => {
-  let slots = node.slots;
-  if (!slots) {
-    return;
-  }
-  for (let slot of slots) {
+  if (!node.slots) return;
+
+  for (let slot of node.slots) {
     if (slot.subpatch?.patchType === OperatorContextType.ZEN) {
       slot.subpatch?.recompileGraph();
     } else {
@@ -242,25 +201,26 @@ const compileSlots = async (node: ObjectNode) => {
     }
   }
 
-  let i = 0;
-  while (slots.some((x) => !x.audioNode || x.subpatch?.skipRecompile)) {
-    await sleep(50);
-    i++;
-    if (i > 150) {
-      // max wwait time of 500 ms
-      break;
-    }
-  }
+  await waitForCompilation(node.slots);
 
-  await sleep(200);
-
-  for (const slot of slots) {
+  for (const slot of node.slots) {
     slot.subpatch?.setupPostCompile(true);
   }
-  // wait for completion
-  node.receive(node.inlets[0], "reconnect");
 
-  // reconnect each of the connections out from the slots node
+  node.receive(node.inlets[0], "reconnect");
+  reconnectOutlets(node);
+};
+
+const waitForCompilation = async (slots: ObjectNode[]) => {
+  let attempts = 0;
+  while (slots.some((x) => !x.audioNode || x.subpatch?.skipRecompile)) {
+    await sleep(50);
+    if (++attempts > 150) break;
+  }
+  await sleep(200);
+};
+
+const reconnectOutlets = (node: ObjectNode) => {
   for (const outlet of node.outlets) {
     for (const connection of outlet.connections) {
       if (outlet.connectionType === ConnectionType.AUDIO) {

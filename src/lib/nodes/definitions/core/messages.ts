@@ -59,12 +59,10 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
 
   return (x: Message) => {
     if (lastName && name() !== lastName) {
-      console.log("unsubscribing", lastName);
       queue.unsubscribe(lastName, onMessage);
       initialized = false;
     }
     if (!initialized) {
-      console.log("subscribing name=%s", name());
       queue.subscribe(name() as string, onMessage);
       initialized = true;
     }

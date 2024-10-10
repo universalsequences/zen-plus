@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatch } from "@/contexts/PatchContext";
-import { Node, SerializedPatch, ObjectNode, IOlet } from "@/lib/nodes/types";
+import { Node, SerializedPatch, ObjectNode, IOlet, SubPatch, Patch } from "@/lib/nodes/types";
 import { uuid } from "@/lib/uuid/IDGenerator";
 
 export const useSubPatchLoader = (objectNode: ObjectNode) => {
@@ -111,8 +111,15 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
         objectNode.inlets = [];
         objectNode.outlets = [];
 
+        const parentPatch = objectNode.subpatch?.parentPatch;
+        const isInsideSlot = objectNode.subpatch?.isInsideSlot;
+        console.log("old subpatch=", objectNode.subpatch);
         objectNode.subpatch = undefined;
         objectNode.parse(name, OperatorContextType.ZEN, true, serializedSubPatch);
+        if (parentPatch && objectNode.subpatch) {
+          (objectNode.subpatch as SubPatch).parentPatch = parentPatch;
+          (objectNode.subpatch as SubPatch).isInsideSlot = isInsideSlot;
+        }
         //objectNode.id = uuid();
         if (objectNode.subpatch) {
           objectNode.subpatch.id = uuid();
@@ -192,7 +199,10 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
         reconnectIO2(false);
 
         if (objectNode.subpatch) {
-          objectNode.subpatch.initialLoadCompile();
+          if ((objectNode.subpatch as SubPatch).isInsideSlot) {
+            (objectNode.subpatch as SubPatch).recompileGraph();
+          } 
+          (objectNode.subpatch as Patch).initialLoadCompile(false);
         }
       }
     },

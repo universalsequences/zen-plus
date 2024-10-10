@@ -19,46 +19,46 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   patchType: OperatorContextType;
 
   constructor(parentPatch: Patch, parentNode: ObjectNode) {
-    const parentNodeType = parentNode.attributes.type;
+    const parentNodeType = parentNode.attributes.type as string;
     super(parentPatch.audioContext, parentNodeType === "zen", true);
+
     this.parentPatch = parentPatch;
     this.parentNode = parentNode;
     this.parentNode.newAttribute("Custom Presentation", false);
 
     this.patchType = OperatorContextType.ZEN;
-    const _parentPatch = this.parentPatch as SubPatch;
 
-    if (typeof this.parentNode.attributes["type"] === "string") {
-      this.setupPatchType(this.parentNode.attributes.type);
-    } else if (
-      _parentPatch.parentPatch &&
-      (_parentPatch.patchType === OperatorContextType.ZEN ||
-        _parentPatch.patchType === OperatorContextType.GL)
-    ) {
-      if (parentNodeType === "zen") {
-      } else {
-        this.patchType = _parentPatch.patchType;
-      }
-    } else {
-      if (typeof this.parentNode.attributes["type"] === "string") {
-        this.setupPatchType(this.parentNode.attributes.type);
-      }
-    }
-    if (this.patchType === OperatorContextType.ZEN) {
-    } else {
-      this.parentNode.operatorContextType = this.patchType;
-      for (let inlet of this.parentNode.inlets) {
-        inlet.connectionType = toConnectionType(this.patchType);
-      }
-      for (let outlet of this.parentNode.outlets) {
-        outlet.connectionType = toConnectionType(this.patchType);
-      }
-    }
-    let isAudio = this.patchType === OperatorContextType.AUDIO;
-    if (isAudio) {
+    const patchType = this.determinePatchType(parentNodeType);
+    this.setupConnectionTypes();
+
+    if (patchType === OperatorContextType.AUDIO) {
+      console.log('setting up audio patch');
       this.setupAudioPatch();
     } else {
       this._setupInitialNodes();
+    }
+  }
+
+  private determinePatchType(parentNodeType: string) {
+    if (typeof parentNodeType === "string") {
+      this.setupPatchType(parentNodeType);
+    } else {
+      const parentSubPatch = this.parentPatch as SubPatch;
+      if (parentSubPatch.parentPatch &&
+          (parentSubPatch.patchType === OperatorContextType.ZEN ||
+           parentSubPatch.patchType === OperatorContextType.GL)) {
+        this.patchType = parentNodeType === "zen" ? OperatorContextType.ZEN : parentSubPatch.patchType;
+      }
+    }
+    return this.patchType;
+  }
+
+  private setupConnectionTypes() {
+    if (this.patchType !== OperatorContextType.ZEN) {
+      this.parentNode.operatorContextType = this.patchType;
+      const connectionType = toConnectionType(this.patchType);
+      this.parentNode.inlets.forEach(inlet => inlet.connectionType = connectionType);
+      this.parentNode.outlets.forEach(outlet => outlet.connectionType = connectionType);
     }
   }
 
@@ -84,16 +84,16 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
   _setupInitialNodes() {
     const ZEN = OperatorContextType.ZEN;
-    let in1 = new ObjectNodeImpl(this);
+    let in1 = new ObjectNodeImpl(this as Patch);
     in1.parse("in 1", ZEN, false);
 
-    let in2 = new ObjectNodeImpl(this);
+    let in2 = new ObjectNodeImpl(this as Patch);
     in2.parse("in 2", ZEN, false);
 
-    let out1 = new ObjectNodeImpl(this);
+    let out1 = new ObjectNodeImpl(this as Patch);
     out1.parse("out 1", ZEN, false);
 
-    let out2 = new ObjectNodeImpl(this);
+    let out2 = new ObjectNodeImpl(this as Patch);
     out2.parse("out 2", ZEN, false);
 
     in1.connect(out1, out1.inlets[0], in1.outlets[0], false);
@@ -109,7 +109,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   recompileGraph(force?: boolean): void {
-    console.log("subpatch recompile graph calling", this);
     if (this.patchType === OperatorContextType.CORE) {
       return;
     }
@@ -117,17 +116,17 @@ export default class Subpatch extends PatchImpl implements SubPatch {
       super.recompileGraph();
       return;
     }
+
+    // NOTE: THIS MIGHT BE WRONG! (I HAVE NO IDEA WHAT IM DOING)
     if (this.isZenBase()) {
       super.recompileGraph();
       return;
     }
+
     if (!this.parentPatch.isZen) {
-      console.log("parent patch is not zen", this.parentPatch);
       if (this.patchType !== OperatorContextType.ZEN) {
-        console.log("doing this.parentPatch.recompileGraph");
         this.parentPatch.recompileGraph();
       } else {
-        console.log("doing super.recompileGraph");
         super.recompileGraph();
       }
     } else {
@@ -135,8 +134,8 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
   }
 
-  compile(statement: Statement | Message, outputNumber: number) {
-    // this will get called for any outs that get called...
+  compile(statement: Statement | Message, outputNumber?: number) {
+    // this will get called for any "out" nodes that get called...
     // this should look at the node
     if (!this.parentPatch.isZen && this.patchType === OperatorContextType.ZEN) {
       // then we are actually in at the top of a Zen Patch and thus should compile properly
@@ -150,6 +149,10 @@ export default class Subpatch extends PatchImpl implements SubPatch {
       }
     }
 
+    if (outputNumber === undefined) {
+      return;
+    }
+
     let outlet = this.parentNode.outlets[outputNumber - 1];
     this.parentNode.send(outlet, statement);
     if (outlet && outlet.callback) {
@@ -157,6 +160,11 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
   }
 
+  /**
+   * This is called when a parameter-setting message is received
+   * @param message 
+   * @returns 
+   */
   processMessageForParam(message: Message) {
     if (typeof message === "string") {
       const tokens = message.split(" ").filter((x) => x.length > 0);
@@ -187,9 +195,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         (x) => x.name === "attrui" && x.arguments[0] === paramName,
       );
       for (const attriUI of attriUIs) {
-        //attriUI.receive(attriUI.inlets[0], paramValue);
-        //attriUI.arguments[1] = paramValue;
-        //attriUI.inlets[1].lastMessage = paramValue;
         let text = attriUI.text.split(" ");
         text[2] = paramValue.toString();
         attriUI.text = text.join(" ");
@@ -224,6 +229,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   setupAudioPatch() {
+    console.log('setup audio patch called', this);
     let inputMerger = this.audioContext.createChannelMerger(16);
     let outputMerger = this.audioContext.createChannelMerger(16);
     let parentNode = (this as SubPatch).parentNode;
@@ -234,6 +240,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
     this.audioNode = outputMerger;
     if (parentNode) {
+      console.log('setting up audio patch', parentNode);
       parentNode.useAudioNode(this.audioNode);
       //this.audioNode.connect(this.audioContext.destination);
     }
