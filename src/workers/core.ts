@@ -1,7 +1,7 @@
 import { Message } from "@/lib/nodes/types";
 import { handleWorkerOperation } from "./operations";
 import type { WorkerOperation } from "./types";
-/**/
+/*
 import init, {
   new_mgmt,
   new_node,
