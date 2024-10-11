@@ -1,4 +1,4 @@
-import type { SubPatch, ObjectNode, Message, Lazy } from "../../types";
+import type { SubPatch, ObjectNode, Message, Lazy, NodeFunction } from "../../types";
 import { OperatorContextType } from "@/lib/nodes/context";
 import * as queue from "@/lib/messaging/queue";
 import { doc } from "./doc";
@@ -75,11 +75,11 @@ doc("patchmessage", {
   numberOfOutlets: 1,
   description: "sends message out of this patch's outlet",
 });
-export const patchmessage = (node: ObjectNode) => {
+export const patchmessage: NodeFunction = (node: ObjectNode) => {
   return (message: Message) => {
     // just pipe it out of this node's patch'
-    let patch = node.patch as SubPatch;
-    let n = patch.parentNode;
+    const patch = node.patch as SubPatch;
+    const n = patch.parentNode;
     n?.send(n?.outlets[0], message);
     return [];
   };

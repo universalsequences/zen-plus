@@ -1,10 +1,6 @@
 import React, { useEffect, useCallback, useRef, useState } from "react";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import {
-  FilesQueryResult,
-  Project,
-  useStorage,
-} from "@/contexts/StorageContext";
+import { FilesQueryResult, Project, useStorage } from "@/contexts/StorageContext";
 import Files from "@/components/files/Files";
 import TreePath from "./TreePath";
 import { File } from "@/lib/files/types";
@@ -16,10 +12,10 @@ import {
   Cross2Icon,
 } from "@radix-ui/react-icons";
 import { BoxModelIcon, CubeIcon } from "@radix-ui/react-icons";
-import { SubPatch, Patch } from "@/lib/nodes/types";
+import type { SubPatch, Patch } from "@/lib/nodes/types";
 import SubPatchImpl from "@/lib/nodes/Subpatch";
 import { usePatches } from "@/contexts/PatchesContext";
-import { Slot } from "@/lib/nodes/definitions/audio/slots";
+import type { Slot } from "@/lib/nodes/definitions/audio/slots";
 
 interface HasSlots {
   slots: Slot[];
@@ -41,16 +37,7 @@ const Tree: React.FC<{
   searchTerm: string;
   hide: () => void;
   idx: number;
-}> = ({
-  searchTerm,
-  patch,
-  hide,
-  idx,
-  cursor,
-  patchOpened,
-  dragging,
-  setDragging,
-}) => {
+}> = ({ searchTerm, patch, hide, idx, cursor, patchOpened, dragging, setDragging }) => {
   let { patches, expandPatch, selectedPatch, setSelectedPatch } = usePatches();
 
   useEffect(() => {
@@ -63,12 +50,11 @@ const Tree: React.FC<{
       if (e.key === "Enter" && cursor === idx) {
         if (
           searchTerm !== "" &&
-          (!patch.name ||
-            !patch.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          (!patch.name || !patch.name.toLowerCase().includes(searchTerm.toLowerCase()))
         ) {
           return;
         }
-        patch.justExpanded = true;
+        (patch as SubPatch).justExpanded = true;
         expandPatch((patch as SubPatch).parentNode);
         hide();
       }
@@ -110,9 +96,7 @@ const Tree: React.FC<{
               x.subpatch &&
               (searchTerm === "" ||
                 (x.subpatch.name &&
-                  x.subpatch
-                    .name!.toLowerCase()
-                    .includes(searchTerm.toLowerCase()))),
+                  x.subpatch.name!.toLowerCase().includes(searchTerm.toLowerCase()))),
           ) || [];
       if (searchTerm !== "") {
         if (
@@ -128,28 +112,24 @@ const Tree: React.FC<{
       }
     }
   }
-  let isPresenting =
-    patch.presentationMode ||
-    ((patch as SubPatch).parentNode &&
-      (patch as SubPatch).parentNode.attributes["Custom Presentation"]);
-  let type =
-    (patch as SubPatch).parentNode &&
-    (patch as SubPatch).parentNode.attributes.type;
+  const isPresenting =
+    (patch as Patch).presentationMode ||
+    (patch as SubPatch).parentNode?.attributes["Custom Presentation"];
+
+  const type = (patch as SubPatch).parentNode?.attributes.type;
 
   const onDrop = useCallback(() => {
     if (patch === dragging) {
       return;
     }
     console.log("DROP!", dragging, patch);
-    let sub = dragging as SubPatch;
+    const sub = dragging as SubPatch;
     if (sub.parentPatch) {
-      let node = sub.parentNode;
-      sub.parentPatch.objectNodes = sub.parentPatch.objectNodes.filter(
-        (x) => x !== node,
-      );
-      sub.parentPatch = patch;
-      node.patch = patch;
-      patch.objectNodes.push(node);
+      const node = sub.parentNode;
+      sub.parentPatch.objectNodes = sub.parentPatch.objectNodes.filter((x) => x !== node);
+      sub.parentPatch = patch as Patch;
+      node.patch = patch as Patch;
+      (patch as Patch).objectNodes.push(node);
       expandPatch(node);
     }
   }, [dragging, patch]);
@@ -159,11 +139,10 @@ const Tree: React.FC<{
   return (
     <div>
       {(searchTerm === "" ||
-        (patch.name &&
-          patch.name.toLowerCase().includes(searchTerm.toLowerCase()))) && (
+        (patch.name && patch.name.toLowerCase().includes(searchTerm.toLowerCase()))) && (
         <div
           onKeyUp={(e) => 0}
-          onClick={(e: any) => {
+          onClick={(e: React.MouseEvent<HTMLDivElement>) => {
             e.stopPropagation();
 
             if (!(patch as SubPatch).parentNode) {
@@ -172,20 +151,20 @@ const Tree: React.FC<{
             if (patchOpened && selectedPatch) {
               (patch as SubPatch).parentPatch = selectedPatch;
               (patch as SubPatch).parentNode.patch = selectedPatch;
-              let node = (patch as SubPatch).parentNode;
+              const node = (patch as SubPatch).parentNode;
               selectedPatch.objectNodes.push(node);
 
               // clear all outlets and inlets
-              for (let inlet of node.inlets) {
+              for (const inlet of node.inlets) {
                 inlet.connections = [];
               }
-              for (let outlet of node.outlets) {
+              for (const outlet of node.outlets) {
                 outlet.connections = [];
               }
 
-              patch.initialLoadCompile();
-              patch.id = "10232123";
-              let _selectedPatch = selectedPatch;
+              (patch as Patch).initialLoadCompile(false);
+              (patch as SubPatch).id = "10232123";
+              const _selectedPatch = selectedPatch;
               expandPatch((patch as SubPatch).parentNode);
               setSelectedPatch(selectedPatch);
             } else {
@@ -194,7 +173,7 @@ const Tree: React.FC<{
             // hide();
           }}
           draggable="true"
-          onDragStart={() => setDragging(patch)}
+          onDragStart={() => setDragging(patch as Patch)}
           onDragOver={(e: any) => {
             e.preventDefault();
             setDraggingOver(true);
@@ -212,9 +191,7 @@ const Tree: React.FC<{
               : {}
           }
           className={
-            (patches.includes(patch)
-              ? " bg-black-clear2 border border-zinc-600 "
-              : "") +
+            (patches.includes(patch as Patch) ? " bg-black-clear2 border border-zinc-600 " : "") +
             (draggingOver ? "bg-zinc-400 " : "") +
             (cursor === idx ? "   " : "") +
             " pl-3  my-1 cursor-pointer flex py-1 overflow-hidden whitespace-nowrap " +
@@ -235,8 +212,7 @@ const Tree: React.FC<{
             ) : (
               <CubeIcon className="mr-2 w-3 my-auto" />
             )}{" "}
-            {patch.name ||
-              ((patch as SubPatch).parentPatch ? "subpatch" : "base patch")}
+            {patch.name || ((patch as SubPatch).parentPatch ? "subpatch" : "base patch")}
             <div
               className={`w-1 h-1 rounded-full ${type === "audio" ? "bg-yellow-300" : type === "gl" ? "bg-purple-500" : "bg-teal-200"} my-auto ml-2`}
             />
@@ -244,9 +220,7 @@ const Tree: React.FC<{
           {<TreePath patch={patch as SubPatch} />}
         </div>
       )}
-      {dragging !== patch && (
-        <div className={searchTerm === "" ? "ml-2" : ""}>{trees}</div>
-      )}
+      {dragging !== patch && <div className={searchTerm === "" ? "ml-2" : ""}>{trees}</div>}
     </div>
   );
 };

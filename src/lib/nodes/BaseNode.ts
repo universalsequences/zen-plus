@@ -13,6 +13,7 @@ import {
   type ObjectNode,
   type Node,
   type Attributes,
+  SubPatch,
 } from "./types";
 import { OperatorContextType, isCompiledType } from "./context";
 import { v4 as uuidv4 } from "uuid";
@@ -140,8 +141,10 @@ export class BaseNode implements Node {
       (isCompiledType(outlet.connectionType) || isCompiledType(inlet.connectionType))
     ) {
       if (
+        !(this.patch as SubPatch).parentPatch || 
+        (
         (this.patch as SubPatch).patchType === OperatorContextType.ZEN ||
-        (this.patch as SubPatch).patchType === OperatorContextType.GL
+        (this.patch as SubPatch).patchType === OperatorContextType.GL)
       ) {
         this.patch.recompileGraph();
       }

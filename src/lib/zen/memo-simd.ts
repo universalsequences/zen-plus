@@ -1,13 +1,12 @@
-import { UGen, Generated, Arg } from "./zen";
+import type { UGen, Generated, Arg } from "./zen";
 import {
   deepestContext,
   getParentContexts,
-  getAllContexts,
   mergeMemoized,
-  PartialUGen,
-  SIMDUGen,
+  type PartialUGen,
+  type SIMDUGen,
 } from "./memo";
-import { LoopContext, Context, SIMDContext } from "./context";
+import type { LoopContext, Context, SIMDContext } from "./context";
 import { CodeFragment } from "./emitter";
 import { uuid } from "./uuid";
 import { determineMemoization } from "./memo-helpers";
@@ -42,10 +41,7 @@ const getDeepestHistoryContext = (context: Context): Context | null => {
   return historyContext;
 };
 
-const getContextWritingToHistory = (
-  context: Context,
-  history: string,
-): Context | null => {
+const getContextWritingToHistory = (context: Context, history: string): Context | null => {
   /*
     if (history.split(" ").length > 1) {
         history = history.split(" ")[1];
@@ -54,10 +50,7 @@ const getContextWritingToHistory = (
   return _getContextWritingToHistory(context, history);
 };
 
-const _getContextWritingToHistory = (
-  context: Context,
-  history: string,
-): Context | null => {
+const _getContextWritingToHistory = (context: Context, history: string): Context | null => {
   if (context.historiesEmitted.has(history)) {
     return context;
   }
@@ -72,11 +65,7 @@ const _getContextWritingToHistory = (
   return null;
 };
 
-export const simdMemo = (
-  scalarGen: PartialUGen,
-  simdGen?: SIMDUGen,
-  ...args: Arg[]
-): UGen => {
+export const simdMemo = (scalarGen: PartialUGen, simdGen?: SIMDUGen, ...args: Arg[]): UGen => {
   // when we evaluate the arguments we store the histories that are being used here
   // that way, when we-- possibly-- re-evaluate this function w/ a different context, that
   // happens to match one of the downstream histories, we can know to properly re-evaluate
@@ -99,10 +88,7 @@ export const simdMemo = (
    * When recursive dependencies (i.e. a history loop) is detected, we
    */
 
-  const evaluateArgs = (
-    context: Context,
-    historiesBeingWrittenTo: Set<string>,
-  ): ContextualArgs => {
+  const evaluateArgs = (context: Context, historiesBeingWrittenTo: Set<string>): ContextualArgs => {
     let contextToUse: Context = context;
     let evaluatedArgs: Generated[] = [];
     let downstreamHistories: Set<string> = new Set();
@@ -190,13 +176,8 @@ export const simdMemo = (
     if (context.target === Target.C) {
       for (let arg of evaluatedArgs) {
         // go one further
-        if (
-          arg.codeFragments[0] &&
-          arg.codeFragments[0].context !== contextToUse
-        ) {
-          let allContexts = arg.codeFragments[0].dependencies.flatMap(
-            (x) => x.context,
-          );
+        if (arg.codeFragments[0] && arg.codeFragments[0].context !== contextToUse) {
+          let allContexts = arg.codeFragments[0].dependencies.flatMap((x) => x.context);
           let parents = getParentContexts(contextToUse);
           if (allContexts.some((x) => parents.has(x))) {
             contextToUse = allContexts.find((x) => parents.has(x)) as Context;
@@ -256,10 +237,6 @@ export const simdMemo = (
       );
 
       const b = new Date().getTime();
-      if (window.determineTime === undefined) {
-        window.determineTime = 0;
-      }
-      window.determineTime += b - a;
       if (memoizationResult.memoization) {
         // no need to re-calculate
         return memoizationResult.memoization;
@@ -272,8 +249,7 @@ export const simdMemo = (
     lastHistoriesWritten = historiesBeingWrittenTo.size;
 
     if (simdGen && !skipSIMD && !context.forceScalar) {
-      let simdContext: SIMDContext =
-        _simdContext || (context.useContext(true) as SIMDContext);
+      let simdContext: SIMDContext = _simdContext || (context.useContext(true) as SIMDContext);
       _simdContext = simdContext;
       let result = evaluateArgs(simdContext, historiesBeingWrittenTo);
       downstreamHistories = result.downstreamHistories;
@@ -282,23 +258,19 @@ export const simdMemo = (
         // this means we detected a history thats being written to in the args
         // and we must fall back on the scalar-version of this operation-- AND
         // use that history's context
-        const _context = result.context.isSIMD
-          ? result.context.useContext(false)
-          : result.context;
+        const _context = result.context.isSIMD ? result.context.useContext(false) : result.context;
         return emit(_context, scalarGen(_context, ...result.evaluatedArgs));
-      } else {
-        // no circular histories detected.
-        // this means we can simply try out the SIMD version
-        let simdResult = simdGen(simdContext, ...result.evaluatedArgs);
-
-        if (simdResult.type === "SUCCESS" && simdResult.generated) {
-          return emit(result.context, simdResult.generated);
-        } else {
-          // SIMD operation "failed" -- usually meaning, for a given operation, there
-          // was no SIMD version or it was all scalar constants (and thus calculated directly)
-          // so, we fall back on scalar below
-        }
       }
+      // no circular histories detected.
+      // this means we can simply try out the SIMD version
+      const simdResult = simdGen(simdContext, ...result.evaluatedArgs);
+
+      if (simdResult.type === "SUCCESS" && simdResult.generated) {
+        return emit(result.context, simdResult.generated);
+      }
+      // SIMD operation "failed" -- usually meaning, for a given operation, there
+      // was no SIMD version or it was all scalar constants (and thus calculated directly)
+      // so, we fall back on scalar below
     }
 
     // scalar path:
@@ -326,17 +298,11 @@ export const simdMemo = (
       result.context = context;
     }
 
-    return emit(
-      result.context,
-      scalarGen(result.context, ...result.evaluatedArgs),
-    );
+    return emit(result.context, scalarGen(result.context, ...result.evaluatedArgs));
   };
 };
 
-export const getContextWithHistory = (
-  history: string,
-  context: Context,
-): Context => {
+export const getContextWithHistory = (history: string, context: Context): Context => {
   if (context.historiesEmitted.has(history)) {
     return context;
   }
@@ -350,10 +316,7 @@ export const getContextWithHistory = (
   return context;
 };
 
-const getContextsWithHistory = (
-  history: string,
-  context: Context,
-): Context[] => {
+const getContextsWithHistory = (history: string, context: Context): Context[] => {
   const contexts: Context[] = [];
   if (context.historiesEmitted.has(history)) {
     contexts.push(context);

@@ -1,4 +1,4 @@
-import { Lazy, Message, ObjectNode } from "@/lib/nodes/types";
+import { Lazy, Message, NodeFunction, ObjectNode } from "@/lib/nodes/types";
 import { API } from "@/lib/nodes/context";
 import { getPoints } from "./utils";
 import { doc } from "../doc";
@@ -55,13 +55,12 @@ export const modeling_component = (
 
     if (node.inlets[0].connections.length > 0 && msg === "bang") {
       return [];
-    } else {
     }
 
     // if msg === "bang" (and not the initial bang) then we are just creating this... and this is the
     // entry point by design
 
-    let material: LazyMaterial = {
+    const material: LazyMaterial = {
       x: x() as Statement,
       y: y() as Statement,
       pitch: pitch() as Statement,
@@ -76,27 +75,27 @@ export const modeling_component = (
     // todo: all data needs to be stored in the node so that it persists
     // and can be saved...
 
-    let coeffBuffer: BlockGen = data(web.size, web.size, web.coeffs, true, "none");
+    const coeffBuffer: BlockGen = data(web.size, web.size, web.coeffs, true, "none");
     web.data = coeffBuffer;
-    let points = getPoints(web);
+    const points = getPoints(web);
     web.pointsData = data(points.length, 1, points, true, "none");
     web.points = points;
 
-    let modelComponent: LazyComponent = {
+    const modelComponent: LazyComponent = {
       web,
       material,
       connection: undefined,
       component: undefined,
     };
     if (msg !== "bang" && Array.isArray(msg)) {
-      let compoundOperator = msg[0] as CompoundOperator;
+      const compoundOperator = msg[0] as CompoundOperator;
       if (compoundOperator.modelComponent) {
         modelComponent.connection = compoundOperator.modelComponent;
         returnedUpstream = true;
       }
     }
 
-    let statement: Statement = [
+    const statement: Statement = [
       {
         name: "modeling.component",
         modelComponent,
@@ -105,7 +104,7 @@ export const modeling_component = (
 
     statement.node = node;
 
-    return [statement, web];
+    return [statement, web] as Message[];
   };
 };
 

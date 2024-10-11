@@ -30,8 +30,8 @@ export class MemoryBlock extends AbstractIndexer {
   waitingForResponse?: ContextMessageType;
   responseCallback?: (body: any) => void;
   name?: string;
-  min?: min;
-  max?: max;
+  min?: number;
+  max?: number;
 
   constructor(
     context: Context,

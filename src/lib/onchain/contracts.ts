@@ -73,7 +73,7 @@ const zoraGoerliContracts: Contracts = {
   //DropCreator: "0x86699fB76c8d513C0E324cf38aCD7F3Af9F910eb",
   //MetadataRenderer: "0xb7057E6590199AbF68B91b6817e9e73691E7eFD3",
   //ZenModule: "0x08047602036d96a0c8ef10f1d1fa4639929cc755"
-  DropCreator: "",
+  DropCreator: "0x6C13140fb666bF79110160c0b6DBFbF9D50D6089", // fake
   MetadataRenderer: "0x6C13140fb666bF79110160c0b6DBFbF9D50D6089",
   ZenModule: "0xb27db69fdb46bddcb6a63bc47edda186d4e1f3a",
 };

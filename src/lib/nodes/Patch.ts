@@ -79,7 +79,6 @@ export class PatchImpl implements Patch {
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
 
-
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
     this.isRecording = false;
@@ -161,19 +160,19 @@ export class PatchImpl implements Patch {
    * Gets all object nodes within a patch (including sub-patches)
    * @return {ObjectNode[]} list of objectNodes
    */
-  getAllNodes(visited = new Set<Patch>(), key = ID_COUNTER++): ObjectNode[] {
+  getAllNodes(visited = new Set<Patch>()): ObjectNode[] {
     if (visited.has(this as Patch)) {
       return [];
     }
     visited.add(this);
     const nodes = [...this.objectNodes];
     const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
-    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes(visited, key))];
+    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes(visited))];
     const slots = nodes.filter((x) => x.name === "slots~");
     for (const slotNode of slots) {
       if (slotNode.slots) {
         for (const slot of slotNode.slots) {
-          xyz.push(...(slot.subpatch?.getAllNodes(visited, key) || []));
+          xyz.push(...(slot.subpatch?.getAllNodes(visited) || []));
         }
       }
     }
@@ -364,7 +363,7 @@ export class PatchImpl implements Patch {
       doc: this.doc,
       docId: this.docId,
     };
-    const parentNode = (this as any as SubPatch).parentNode;
+    const parentNode = (this as Patch as SubPatch).parentNode;
     if (parentNode) {
       if (parentNode.attributes["Custom Presentation"]) {
         json.isCustomView = parentNode.attributes["Custom Presentation"] ? true : false;
@@ -372,7 +371,7 @@ export class PatchImpl implements Patch {
       }
       json.attributes = parentNode.attributes;
     }
-    json.patchType = (this as SubPatch).patchType;
+    json.patchType = (this as Patch as SubPatch).patchType;
     return json;
   }
 
@@ -386,10 +385,10 @@ export class PatchImpl implements Patch {
     this.presentationMode = x.presentationMode === undefined ? false : x.presentationMode;
 
     if (x.patchType) {
-      (this as SubPatch).patchType = x.patchType;
+      (this as Patch as SubPatch).patchType = x.patchType;
     }
 
-    const parentNode = (this as any as SubPatch).parentNode;
+    const parentNode = (this as Patch as SubPatch).parentNode;
     if (parentNode) {
       if (x.isCustomView) {
         parentNode.attributes["Custom Presentation"] = x.isCustomView;
@@ -529,9 +528,7 @@ export class PatchImpl implements Patch {
   async initialLoadCompile(base = true) {
     this.sendNumberNodes();
     const subpatch = this as unknown as SubPatch;
-    if (
-      !subpatch.parentPatch
-    ) {
+    if (!subpatch.parentPatch) {
       this.recompileGraph();
     }
 

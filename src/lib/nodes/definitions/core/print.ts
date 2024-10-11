@@ -1,9 +1,10 @@
-import { Message, ObjectNode } from "../../types";
+import type { Message, ObjectNode } from "../../types";
 import { doc } from "./doc";
 
 doc("print", {
-  inletNames: "message to print",
+  inletNames: ["message to print"],
   numberOfInlets: 1,
+  numberOfOutlets: 0,
   description: "print message to console",
 });
 

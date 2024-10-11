@@ -99,7 +99,7 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
 
 export const recompileGraph = (patch: Patch) => {
   const parentNode = (patch as Patch as SubPatch).parentNode;
-  let parentPatch = (patch as Patch as SubPatch).parentPatch;
+  const parentPatch = (patch as Patch as SubPatch).parentPatch;
 
   patch.sendNumberNodes();
   if (parentNode && parentNode.attributes.type === "core") {
@@ -118,7 +118,7 @@ export const recompileGraph = (patch: Patch) => {
     // we are in a zen node so we proceed as usual
     for (const node of objectNodes) {
       if (node.subpatch && node.subpatch.patchType !== OperatorContextType.AUDIO) {
-        node.subpatch.recompileGraph(true);
+        node.subpatch.recompileGraph();
       }
     }
   } else {
@@ -126,7 +126,7 @@ export const recompileGraph = (patch: Patch) => {
     // only compile gl subpatches
     for (const node of objectNodes) {
       if (node.subpatch && node.subpatch.patchType === OperatorContextType.GL) {
-        node.subpatch.recompileGraph(true);
+        node.subpatch.recompileGraph();
       }
     }
   }
@@ -290,10 +290,13 @@ export const mapReceive = (nodes: ObjectNode[], message: Message = "bang") => {
 const executeAndSend = (nodes: ObjectNode[], message: Message = "bang") => {
   for (const sourceNode of nodes) {
     if (sourceNode.fn) {
-      const ret: Message[] = sourceNode.fn(message);
+      const ret: (Message | undefined)[] = sourceNode.fn(message);
       for (let i = 0; i < ret.length; i++) {
         if (sourceNode.outlets[i]) {
-          sourceNode.send(sourceNode.outlets[i], ret[i]);
+          const value = ret[i];
+          if (value !== undefined) {
+            sourceNode.send(sourceNode.outlets[i], value);
+          }
         }
       }
     }

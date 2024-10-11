@@ -1,4 +1,4 @@
-import { ObjectNode, Message } from "../../types";
+import type { ObjectNode, Message, NodeFunction } from "../../types";
 import { doc } from "./doc";
 
 doc("fetch", {
@@ -7,10 +7,10 @@ doc("fetch", {
   description: "fetch url",
 });
 
-export const zfetch = (_node: ObjectNode) => {
+export const zfetch: NodeFunction = (_node: ObjectNode) => {
   let counter = 0;
   return (x: Message) => {
-    let id = ++counter;
+    const id = ++counter;
     // debouncing
     setTimeout(() => {
       if (id !== counter) return;

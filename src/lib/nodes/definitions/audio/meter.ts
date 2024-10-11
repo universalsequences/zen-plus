@@ -1,4 +1,4 @@
-import type { Message, ObjectNode } from "../../types";
+import type { Message, NodeFunction, ObjectNode } from "../../types";
 import { MutableValue } from "../core/MutableValue";
 import { doc } from "./doc";
 
@@ -8,7 +8,7 @@ doc("live.meter~", {
   numberOfInlets: 2,
   numberOfOutlets: 2,
 });
-export const live_meter = (node: ObjectNode) => {
+export const live_meter: NodeFunction = (node: ObjectNode) => {
   if (!node.size) {
     node.size = {
       width: 30,
@@ -46,10 +46,7 @@ export const live_meter = (node: ObjectNode) => {
 
   return (message: Message) => {
     if (typeof message === "number" && gainNode) {
-      gainNode.gain.linearRampToValueAtTime(
-        message,
-        node.patch.audioContext.currentTime + 0.01,
-      );
+      gainNode.gain.linearRampToValueAtTime(message, node.patch.audioContext.currentTime + 0.01);
       if (node.custom) {
         node.custom.value = message;
       }

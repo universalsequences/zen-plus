@@ -43,9 +43,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   );
 
   useEffect(() => {
-    let _sorted = [...onchainSubPatches].sort((a, b) =>
-      b.createdAt.seconds - a.createdAt.seconds
-    );
+    let _sorted = [...onchainSubPatches].sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
     setSubPatches(
       _sorted.filter(
         (x) =>
@@ -84,7 +82,9 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               )}
               <div className="ml-3 flex">
                 {x.tags?.map((x) => (
-                  <span className="underline mx-1">{x}</span>
+                  <span key={x} className="underline mx-1">
+                    {x}
+                  </span>
                 ))}
               </div>
               <div className="w-20  text-right ml-1 text-zinc-500">

@@ -196,7 +196,7 @@ export type ObjectNode = Positioned &
     getJSON: () => SerializedObjectNode;
     fromJSON: (x: SerializedObjectNode) => void;
     size?: Size;
-    audioNode?: AudioNode; // output for node 
+    audioNode?: AudioNode; // output for node
     auxAudioNodes?: AudioNode[];
     useAudioNode: (x: AudioNode) => void;
     operatorContextType: OperatorContextType;
@@ -241,7 +241,7 @@ export type MessageNode = Positioned &
 
 // for now, only Zen patches are allowed
 export enum PatchType {
-  Zen,
+  Zen = 0,
 }
 
 export type Patch = Identifiable & {
@@ -301,11 +301,11 @@ export type Patch = Identifiable & {
   exportedAudioUnit?: ExportedAudioUnit;
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
-  //onUpdateSize: (id: string, size: Size) => void;
   sendNumberNodes: () => void;
   docId?: string;
   doc?: PatchDoc;
   isInsideSlot?: boolean;
+  onUpdateSize?: (id: string, size: Size) => void;
 };
 
 export type SubPatch = Patch & {
@@ -370,15 +370,15 @@ export type SerializedMessageNode = Identifiable & {
 };
 
 export enum MessageType {
-  Number,
-  Message,
-  Toggle,
+  Number = 0,
+  Message = 1,
+  Toggle = 2,
 }
 
 export enum Orientation {
-  X,
-  Y,
-  XY,
+  X = 0,
+  Y = 1,
+  XY = 2,
 }
 
 export type IO = "trig" | "velocity" | "control" | "ramp" | "duration";

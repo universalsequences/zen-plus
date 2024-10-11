@@ -8,40 +8,24 @@ interface DuplicateArgs {
   updatePosition: (id: string, position: Coordinate) => void;
 }
 
-export const duplicate = ({
-  objectNode,
-  newObjectNode,
-  updatePosition,
-}: DuplicateArgs) => {
+export const duplicate = ({ objectNode, newObjectNode, updatePosition }: DuplicateArgs) => {
   const copied = new ObjectNodeImpl(objectNode.patch);
   if (objectNode.name === "zen") {
     let attr = "";
-    if (
-      objectNode.subpatch &&
-      objectNode.subpatch.patchType === OperatorContextType.ZEN
-    ) {
+    if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.ZEN) {
       attr = " @type zen";
     }
-    if (
-      objectNode.subpatch &&
-      objectNode.subpatch.patchType === OperatorContextType.GL
-    ) {
+    if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.GL) {
       attr = " @type gl";
     }
-    if (
-      objectNode.subpatch &&
-      objectNode.subpatch.patchType === OperatorContextType.CORE
-    ) {
+    if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.CORE) {
       attr = " @type core";
     }
-    if (
-      objectNode.subpatch &&
-      objectNode.subpatch.patchType === OperatorContextType.AUDIO
-    ) {
+    if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.AUDIO) {
       attr = " @type audio";
     }
-    copied.parse("zen" + attr);
-    let json = objectNode.getJSON();
+    copied.parse(`zen${attr}`);
+    const json = objectNode.getJSON();
     if (copied.subpatch && json.subpatch) {
       copied.subpatch.fromJSON(json.subpatch, true);
       // loadSubPatch(json.subpatch, "zen");
@@ -58,8 +42,7 @@ export const duplicate = ({
       copied.size = { ...size };
     }
   }
-  copied.position.x =
-    objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15;
+  copied.position.x = objectNode.position.x;
   copied.position.y = objectNode.position.y;
   newObjectNode(copied, copied.position);
   updatePosition(copied.id, copied.position);

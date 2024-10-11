@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import { ObjectNode, Lazy, Message } from "../../types";
+import type { ObjectNode, Lazy, Message, NodeFunction } from "../../types";
 
 doc("key.down", {
   numberOfInlets: 2,
@@ -8,9 +8,9 @@ doc("key.down", {
   description: "outputs bang if key matches",
 });
 
-export const keydown = (node: ObjectNode, key: Lazy) => {
+export const keydown: NodeFunction = (node: ObjectNode, key: Lazy) => {
   window.addEventListener("keydown", (e: KeyboardEvent) => {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
       return; // Ignore the event if it's from an input field or text box
     }
     const _key = key() === "space" ? " " : key();

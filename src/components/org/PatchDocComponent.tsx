@@ -90,7 +90,11 @@ export const PatchDocComponent = (props: Props) => {
           <span className="text-zinc-500 mr-2">tags</span>
           <div className="flex">
             {doc.tags?.map((x) => (
-              <span onClick={() => setTagToEdit(x)} className="mx-1 underline cursor-pointer">
+              <span
+                key={x}
+                onClick={() => setTagToEdit(x)}
+                className="mx-1 underline cursor-pointer"
+              >
                 {x}
               </span>
             ))}

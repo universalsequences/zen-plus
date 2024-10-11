@@ -33,7 +33,8 @@ function mergeBuffers(chunks: Chunk[]): Float32Array[] | undefined {
       if (!chunk.buffers[channel]) {
         return undefined;
       }
-      for (const buffer of chunk.buffers[channel]) {
+      for (let i = 0; i < chunk.buffers[channel].length; i++) {
+        const buffer = chunk.buffers[channel][i] as unknown as ArrayLike<number>;
         arr.set(buffer, off);
         off += buffer.length;
       }

@@ -9,7 +9,7 @@ interface Props {
 
 export const SelectedNodeInfo = (props: Props) => {
   const [opened, setOpened] = useState(false);
-  const name = props.node.name;
+  const name = (props.node as ObjectNode).name;
   return (
     <div
       onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {

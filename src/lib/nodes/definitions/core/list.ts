@@ -1,5 +1,5 @@
 import { API } from "../../context";
-import type { Lazy, Message, ObjectNode } from "../../types";
+import type { Lazy, Message, NodeFunction, ObjectNode } from "../../types";
 import { doc } from "./doc";
 
 doc("unpack", {
@@ -12,7 +12,8 @@ export const unpack = (node: ObjectNode, ...args: Lazy[]) => {
   return (message: Message): Message[] => {
     if (Array.isArray(message)) {
       return message as Message[];
-    } else if (ArrayBuffer.isView(message)) {
+    }
+    if (ArrayBuffer.isView(message)) {
       return Array.from(message);
     }
     return [];
@@ -50,7 +51,7 @@ doc("list.length", {
 
 export const list_length = (node: ObjectNode, ...args: Lazy[]) => {
   return (message: Message): Message[] => {
-    return [(message as any[]).length] as Message[];
+    return [(message as Float32Array | Message[]).length] as Message[];
   };
 };
 
@@ -286,9 +287,9 @@ doc("concat", {
 const concat = (node: ObjectNode, b: Lazy) => (msg: Message) => {
   const _b = b();
   if (Array.isArray(msg) && Array.isArray(_b)) {
-    return [[...msg, ..._b]];
+    return [[...msg, ..._b]] as Message[];
   }
-  return [];
+  return [] as Message[];
 };
 
 doc("list.shift", {
@@ -319,14 +320,17 @@ doc("list.reverse", {
   defaultValue: 1,
 });
 
-const list_reverse = (node: ObjectNode, reverse: Lazy) => (msg: Message) => {
-  if (!Array.isArray(msg)) {
-    return [];
-  }
-  if (reverse()) {
-    return [[...msg].reverse()];
-  }
-  return [msg];
+const list_reverse = (node: ObjectNode, reverse: Lazy) => {
+  return (msg: Message): Message[] => {
+    if (!Array.isArray(msg)) {
+      return [] as Message[];
+    }
+    if (reverse()) {
+      const reversed: Message[] = [...msg].reverse() as Message[];
+      return [reversed as Message[]];
+    }
+    return [msg as Message[]];
+  };
 };
 
 export const lists: API = {

@@ -1,4 +1,4 @@
-import { ListPool } from "./ListPool";
+import type { ListPool } from "./ListPool";
 import { isSymbol } from "./types";
 import type {
   Expression,
@@ -25,11 +25,13 @@ export const createContext = (pool: ListPool) => {
     const e = () => {
       if (Array.isArray(expr)) {
         return evaluateList(expr, env);
-      } else if (typeof expr === "object" && expr !== null) {
+      }
+      if (typeof expr === "object" && expr !== null) {
         if ("type" in expr) {
           if (expr.type === "object") {
             return evaluateObject(expr, env);
-          } else if (expr.type === "function") {
+          }
+          if (expr.type === "function") {
             return defineFunctionInEnv(expr, env);
           }
         }
@@ -44,7 +46,7 @@ export const createContext = (pool: ListPool) => {
     if (list.length === 0) {
       return null;
     }
-    let [_func, ...args] = list;
+    const [_func, ...args] = list;
     const func = evaluateExpression(_func, env) || _func;
 
     if (typeof func === "function") {
@@ -70,21 +72,23 @@ export const createContext = (pool: ListPool) => {
           if (!Array.isArray(args[1])) {
             throw new Error("defun requires list as first arg");
           }
-          const funcName = args[0];
-          const _params = args[1];
-          const defunBody = args[2];
-          if (!isSymbol(funcName)) {
-            throw new Error("Function name must be a symbol");
+          {
+            const funcName = args[0];
+            const _params = args[1];
+            const defunBody = args[2];
+            if (!isSymbol(funcName)) {
+              throw new Error("Function name must be a symbol");
+            }
+            return defineFunctionInEnv(
+              {
+                type: "function",
+                params: [funcName as Symbol, ...(_params as Symbol[])],
+                body: defunBody,
+              },
+              env,
+            );
           }
-          return defineFunctionInEnv(
-            {
-              type: "function",
-              params: [funcName as Symbol, ...(_params as Symbol[])],
-              body: defunBody,
-            },
-            env,
-          );
-        case "lambda":
+        case "lambda": {
           if (args.length !== 2 || !Array.isArray(args[0])) {
             throw new Error("Lambda expression must have parameter list and body");
           }
@@ -102,7 +106,8 @@ export const createContext = (pool: ListPool) => {
               });
               return evaluateExpression(body, localEnv);
             };
-        case "let":
+        }
+        case "let": {
           if (args.length < 2) {
             throw new Error("Let requires at least two arguments: bindings and body");
           }
@@ -134,14 +139,16 @@ export const createContext = (pool: ListPool) => {
             result = evaluateExpression(expr, localEnv);
           }
           return result;
-        case "fill":
+        }
+        case "fill": {
           if (args.length !== 2) {
             throw new Error("fill requires exactly two arguments: a function and a list");
           }
           const fillSize = evaluateExpression(args[0], env);
           const fillValue = evaluateExpression(args[1], env);
           return new Array(fillSize as number).fill(fillValue);
-        case "map":
+        }
+        case "map": {
           if (args.length !== 2) {
             throw new Error("Map requires exactly two arguments: a function and a list");
           }
@@ -164,12 +171,14 @@ export const createContext = (pool: ListPool) => {
             }
             throw new Error("Unexpected error: mapFunc is not a function");
           });
-        case "+":
+        }
+        case "+": {
           return args.reduce(
             (sum, arg) => (sum as number) + Number(evaluateExpression(arg, env)),
             0,
           );
-        case "-":
+        }
+        case "-": {
           if (args.length === 1) {
             return -Number(evaluateExpression(args[0], env));
           }
@@ -177,63 +186,71 @@ export const createContext = (pool: ListPool) => {
             (evaluateExpression(args[0], env) as number) -
               (evaluateExpression(args[1], env) as number),
           );
-        case "*":
+        }
+        case "*": {
           return args.reduce(
             (product, arg) => (product as number) * Number(evaluateExpression(arg, env)),
             1,
           );
-        case "/":
+        }
+        case "/": {
           return Number(
             (evaluateExpression(args[0], env) as number) /
               (evaluateExpression(args[1], env) as number),
           );
-        case "exp2":
-          return Number(Math.pow(2, evaluateExpression(args[0], env) as number));
-        case "pow":
-          return Number(
-            Math.pow(
-              evaluateExpression(args[0], env) as number,
-              evaluateExpression(args[1], env) as number,
-            ),
+        }
+        case "exp2": {
+          return 2 ** (evaluateExpression(args[0], env) as number);
+        }
+        case "pow": {
+          return (
+            (evaluateExpression(args[0], env) as number) **
+            (evaluateExpression(args[1], env) as number)
           );
-        case "%":
+        }
+        case "%": {
           if (args.length !== 2) {
             throw new Error("Modulo operation requires exactly two arguments");
           }
           return (
             Number(evaluateExpression(args[0], env)) % Number(evaluateExpression(args[1], env))
           );
-        case "floor":
+        }
+        case "floor": {
           if (args.length !== 1) {
             throw new Error("floor operation requires exactly one arguments");
           }
           return Math.floor(Number(evaluateExpression(args[0], env)));
-        case "ceil":
+        }
+        case "ceil": {
           if (args.length !== 1) {
             throw new Error("floor operation requires exactly one arguments");
           }
           return Math.ceil(Number(evaluateExpression(args[0], env)));
+        }
         case "random":
           return Math.random();
-        case ">":
+        case ">": {
           return (
             Number(evaluateExpression(args[0], env)) > Number(evaluateExpression(args[1], env))
           );
+        }
         case "<":
           return (
             Number(evaluateExpression(args[0], env)) < Number(evaluateExpression(args[1], env))
           );
-        case ">=":
+        case ">=": {
           const [a1, b1] = [
             Number(evaluateExpression(args[0], env)),
             Number(evaluateExpression(args[1], env)),
           ];
           return a1 >= b1;
+        }
         case "<=":
           return (
             Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env))
           );
-        case "slice":
+        case "slice": {
           let array = evaluateExpression(args[0], env);
           if (ArrayBuffer.isView(array)) {
             array = Array.from(array as Float32Array);
@@ -247,13 +264,14 @@ export const createContext = (pool: ListPool) => {
                 Number(evaluateExpression(args[2], env)),
               )
             : array.slice(Number(evaluateExpression(args[1], env)));
+        }
         case "==":
           return evaluateExpression(args[0], env) === evaluateExpression(args[1], env);
         case "!=":
           return evaluateExpression(args[0], env) !== evaluateExpression(args[1], env);
         case "and":
           return args.every((arg) => Boolean(evaluateExpression(arg, env)));
-        case "or":
+        case "or": {
           let i = 0;
           let _last: Message | null = null;
           for (const arg of args) {
@@ -265,20 +283,22 @@ export const createContext = (pool: ListPool) => {
             i++;
           }
           return _last;
+        }
         case "not":
           if (args.length !== 1) {
             throw new Error("Not operation requires exactly one argument");
           }
-          return !Boolean(evaluateExpression(args[0], env));
-        case "if":
+          return !evaluateExpression(args[0], env);
+        case "if": {
           if (args.length !== 3) {
             throw new Error("If statement requires exactly three arguments");
           }
           const cond = evaluateExpression(args[0], env);
           return cond ? evaluateExpression(args[1], env) : evaluateExpression(args[2], env);
+        }
         case "list":
           return args.map((arg) => evaluateExpression(arg, env));
-        case "car":
+        case "car": {
           if (args.length !== 1) {
             throw new Error("First operation requires exactly one argument");
           }
@@ -286,16 +306,19 @@ export const createContext = (pool: ListPool) => {
           if (!Array.isArray(firstArg) && !ArrayBuffer.isView(firstArg)) {
             throw new Error("car operation requires a list argument");
           }
-          return firstArg[0] ?? null;
-        case "s":
+          if (Array.isArray(firstArg)) {
+            return firstArg[0] ?? null;
+          }
+          return (firstArg as Float32Array)[0] ?? null;
+        }
+        case "s": {
           let last: Message | undefined = undefined;
-          for (let arg of args) {
+          for (const arg of args) {
             last = evaluateExpression(arg, env);
           }
-          if (last) {
-            return last;
-          }
-        case "get":
+          return last as Message;
+        }
+        case "get": {
           if (args.length !== 2) {
             throw new Error("get operation requires exactly two arguments");
           }
@@ -304,8 +327,13 @@ export const createContext = (pool: ListPool) => {
             typeof args[1] === "string"
               ? toStringLiteral(args[1])
               : evaluateExpression(args[1], env);
-          return a[b];
-        case "cdr":
+
+          if (Array.isArray(a)) {
+            return a?.[b as number];
+          }
+          return (a as Record<string, Message>)[b as string];
+        }
+        case "cdr": {
           if (args.length !== 1) {
             throw new Error("cdr operation requires exactly one argument");
           }
@@ -314,27 +342,28 @@ export const createContext = (pool: ListPool) => {
           if (!Array.isArray(cdrArg) && !ArrayBuffer.isView(cdrArg)) {
             throw new Error("cdr operation requires a list argument");
           }
-          if (cdrArg.length <= 1) {
+          if (((cdrArg as Message[]) || Float32Array).length <= 1) {
             // If the list has 0 or 1 elements, return an empty list from the pool
             return pool.get();
-          } else {
-            // Create a new list from the pool for the result
-            const cdrResult = pool.get();
-
-            // If it's a TypedArray, convert to a regular array first
-            if (ArrayBuffer.isView(cdrArg)) {
-              cdrArg = Array.from(cdrArg);
-            }
-
-            // Copy all elements except the first one
-            for (let i = 1; i < cdrArg.length; i++) {
-              cdrResult[i - 1] = cdrArg[i];
-            }
-            cdrResult.length = cdrArg.length - 1; // Ensure correct length
-
-            return cdrResult;
           }
-        case "cons":
+
+          // Create a new list from the pool for the result
+          const cdrResult = pool.get();
+
+          // If it's a TypedArray, convert to a regular array first
+          if (ArrayBuffer.isView(cdrArg)) {
+            cdrArg = Array.from(cdrArg as Float32Array);
+          }
+
+          // Copy all elements except the first one
+          for (let i = 1; i < (cdrArg as Message[] | Float32Array).length; i++) {
+            cdrResult[i - 1] = (cdrArg as Message[] | Float32Array)[i];
+          }
+          cdrResult.length = (cdrArg as Message[] | Float32Array).length - 1; // Ensure correct length
+
+          return cdrResult;
+        }
+        case "cons": {
           if (args.length !== 2) {
             throw new Error("cons operation requires exactly 2 arguments");
           }
@@ -352,7 +381,8 @@ export const createContext = (pool: ListPool) => {
           }
 
           return cons;
-        case "nil":
+        }
+        case "nil": {
           if (args.length !== 1) {
             throw new Error("nul operation requires exactly 1 arguments");
           }
@@ -361,12 +391,13 @@ export const createContext = (pool: ListPool) => {
             return _nil.length === 0;
           }
           return _nil === null || Number.isNaN(_nil) || _nil === undefined;
+        }
         case "concat":
           return args.reduce((result, arg) => {
             const evaluated = evaluateExpression(arg, env);
             return Array.isArray(evaluated) ? result.concat(evaluated) : [...result, evaluated];
-          }, []);
-        case "length":
+          }, [] as Message[]);
+        case "length": {
           if (args.length !== 1) {
             throw new Error("Length operation requires exactly one argument");
           }
@@ -376,10 +407,11 @@ export const createContext = (pool: ListPool) => {
             Array.isArray(lengthArg) ||
             ArrayBuffer.isView(lengthArg)
           ) {
-            return lengthArg.length;
+            return (lengthArg as Message[] | Float32Array | string).length;
           }
           throw new Error("Length operation requires a string or list argument");
-        case "set":
+        }
+        case "set": {
           if (args.length !== 2) {
             throw new Error("set operation requires exactly two arguments");
           }
@@ -389,10 +421,12 @@ export const createContext = (pool: ListPool) => {
           const setSymbol = (args[0] as Symbol).value;
           env[setSymbol] = evaluateExpression(args[1], env);
           return env[setSymbol];
-        case "print":
+        }
+        case "print": {
           const printResult = args.map((arg) => evaluateExpression(arg, env));
           console.log(printResult);
           return printResult[printResult.length - 1] ?? null;
+        }
         default:
           console.log("missing function def=", func);
           throw new Error(`Unknown function: ${func}`);
@@ -474,7 +508,7 @@ export const createContext = (pool: ListPool) => {
     return x.trim().startsWith('"') && x.trim().endsWith('"');
   };
   const toStringLiteral = (x: string) => {
-    let trimmed = x.trim();
+    const trimmed = x.trim();
     return trimmed.slice(1, trimmed.length - 1);
   };
   return evaluate;

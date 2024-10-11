@@ -13,13 +13,6 @@ export class ListPool {
   private usedArrays: Float32Array[] = [];
   private warning = false;
 
-  constructor() {
-    if (!window.pools) {
-      window.pools = [];
-    }
-    window.pools.push(this);
-  }
-
   borrow(x: Message) {
     return;
     let index = -1;
@@ -67,11 +60,10 @@ export class ListPool {
       }
       this.usedObjects.push(obj);
       return obj;
-    } else {
-      const obj = this.objectPool.pop();
-      this.usedObjects.push(obj);
-      return obj;
     }
+    const obj = this.objectPool.pop() || {};
+    this.usedObjects.push(obj);
+    return obj;
   }
 
   getEnv(): Record<string, any> {

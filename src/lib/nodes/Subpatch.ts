@@ -32,7 +32,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     this.setupConnectionTypes();
 
     if (patchType === OperatorContextType.AUDIO) {
-      console.log('setting up audio patch');
+      console.log("setting up audio patch");
       this.setupAudioPatch();
     } else {
       this._setupInitialNodes();
@@ -44,10 +44,13 @@ export default class Subpatch extends PatchImpl implements SubPatch {
       this.setupPatchType(parentNodeType);
     } else {
       const parentSubPatch = this.parentPatch as SubPatch;
-      if (parentSubPatch.parentPatch &&
-          (parentSubPatch.patchType === OperatorContextType.ZEN ||
-           parentSubPatch.patchType === OperatorContextType.GL)) {
-        this.patchType = parentNodeType === "zen" ? OperatorContextType.ZEN : parentSubPatch.patchType;
+      if (
+        parentSubPatch.parentPatch &&
+        (parentSubPatch.patchType === OperatorContextType.ZEN ||
+          parentSubPatch.patchType === OperatorContextType.GL)
+      ) {
+        this.patchType =
+          parentNodeType === "zen" ? OperatorContextType.ZEN : parentSubPatch.patchType;
       }
     }
     return this.patchType;
@@ -57,8 +60,8 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     if (this.patchType !== OperatorContextType.ZEN) {
       this.parentNode.operatorContextType = this.patchType;
       const connectionType = toConnectionType(this.patchType);
-      this.parentNode.inlets.forEach(inlet => inlet.connectionType = connectionType);
-      this.parentNode.outlets.forEach(outlet => outlet.connectionType = connectionType);
+      this.parentNode.inlets.forEach((inlet) => (inlet.connectionType = connectionType));
+      this.parentNode.outlets.forEach((outlet) => (outlet.connectionType = connectionType));
     }
   }
 
@@ -162,8 +165,8 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
   /**
    * This is called when a parameter-setting message is received
-   * @param message 
-   * @returns 
+   * @param message
+   * @returns
    */
   processMessageForParam(message: Message) {
     if (typeof message === "string") {
@@ -183,10 +186,10 @@ export default class Subpatch extends PatchImpl implements SubPatch {
       for (const x of params) {
         x.receive(x.inlets[0], time !== undefined ? [paramValue, time] : paramValue);
       }
-      const tagParams = nodes.filter((x) => x.attributes["tag"] === paramName);
+      const tagParams = nodes.filter((x) => x.attributes.tag === paramName);
       for (const param of tagParams) {
-        const max = param.attributes["max"] as number;
-        const min = param.attributes["min"] as number;
+        const max = param.attributes.max as number;
+        const min = param.attributes.min as number;
         const val = min + (max - min) * paramValue;
         param.receive(param.inlets[0], time !== undefined ? [val, time] : val);
       }
@@ -195,7 +198,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
         (x) => x.name === "attrui" && x.arguments[0] === paramName,
       );
       for (const attriUI of attriUIs) {
-        let text = attriUI.text.split(" ");
+        const text = attriUI.text.split(" ");
         text[2] = paramValue.toString();
         attriUI.text = text.join(" ");
         attriUI.arguments[1] = paramValue;
@@ -211,10 +214,10 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
   clearState() {
     // re-parse every node so that we "start from scratch"
-    for (let node of this.objectNodes) {
-      node.inlets.forEach((n) => {
+    for (const node of this.objectNodes) {
+      for (const n of node.inlets) {
         n.lastMessage = undefined;
-      });
+      }
       node.parse(node.text, OperatorContextType.ZEN, false);
     }
   }
@@ -229,10 +232,9 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   setupAudioPatch() {
-    console.log('setup audio patch called', this);
-    let inputMerger = this.audioContext.createChannelMerger(16);
-    let outputMerger = this.audioContext.createChannelMerger(16);
-    let parentNode = (this as SubPatch).parentNode;
+    const inputMerger = this.audioContext.createChannelMerger(16);
+    const outputMerger = this.audioContext.createChannelMerger(16);
+    const parentNode = (this as SubPatch).parentNode;
     if (parentNode) {
       parentNode.merger = inputMerger;
       //merger.connect(ret.workletNode);
@@ -240,7 +242,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
     this.audioNode = outputMerger;
     if (parentNode) {
-      console.log('setting up audio patch', parentNode);
+      console.log("setting up audio patch", parentNode);
       parentNode.useAudioNode(this.audioNode);
       //this.audioNode.connect(this.audioContext.destination);
     }

@@ -1,7 +1,7 @@
 import { ListPool } from "@/lib/lisp/ListPool";
 import { doc } from "./doc";
 import { publish } from "@/lib/messaging/queue";
-import { Message, ObjectNode } from "@/lib/nodes/types";
+import type { Message, ObjectNode } from "@/lib/nodes/types";
 
 export interface Point {
   x: number;
@@ -30,9 +30,9 @@ export class FunctionEditor {
     return this.points.map((pt) => ({ ...pt }));
   }
 
-  fromJSON(x: any) {
-    if (x) {
-      this.points = x;
+  fromJSON(x: Message) {
+    if (Array.isArray(x)) {
+      this.points = x as Point[];
       if (this.objectNode) {
         this.objectNode.receive(this.objectNode.inlets[0], "bang");
         this.updateUX();
@@ -78,11 +78,11 @@ export class FunctionEditor {
       return new Float32Array([]);
     }
     this.listPool.releaseUsed();
-    let interpolatedList = this.listPool.get() as number[];
+    const interpolatedList = this.listPool.get() as number[];
     for (let i = 0; i < 1000; i++) {
       interpolatedList[i] = 0;
     }
-    let sortedPoints = [...this.points].sort((a, b) => a.x - b.x);
+    const sortedPoints = [...this.points].sort((a, b) => a.x - b.x);
 
     let currentSegmentIndex = 0;
     for (let i = 0; i < 1000; i++) {
@@ -92,8 +92,8 @@ export class FunctionEditor {
         (sortedPoints[currentSegmentIndex + 1].x - sortedPoints[currentSegmentIndex].x);
 
       if (t >= 0 && t <= 1) {
-        let a = sortedPoints[currentSegmentIndex];
-        let b = sortedPoints[currentSegmentIndex + 1];
+        const a = sortedPoints[currentSegmentIndex];
+        const b = sortedPoints[currentSegmentIndex + 1];
         // If within the current segment, perform Bézier interpolation
 
         if (!a.c && !b.c) {
@@ -124,13 +124,13 @@ export class FunctionEditor {
   }
 
   toList() {
-    let points = [...this.points].sort((a, b) => a.x - b.x);
-    let _points: number[] = [];
+    const points = [...this.points].sort((a, b) => a.x - b.x);
+    const _points: number[] = [];
     let prevX = 0;
 
     for (let i = 1; i < points.length; i++) {
-      let pt = points[i];
-      let x = pt.x - prevX;
+      const pt = points[i];
+      const x = pt.x - prevX;
       _points.push(x);
       _points.push(pt.y);
 
@@ -166,13 +166,13 @@ export class FunctionEditor {
   }
 
   toSVGPaths(width: number, height: number): string[] {
-    let pts = this.points.map((pt) => ({
+    const pts = this.points.map((pt) => ({
       x: (width * pt.x) / 1000,
       y: (1 - pt.y) * height,
       c: pt.c,
     }));
-    let sortedPoints = [...pts].sort((a, b) => a.x - b.x);
-    let paths: string[] = [];
+    const sortedPoints = [...pts].sort((a, b) => a.x - b.x);
+    const paths: string[] = [];
 
     for (let i = 0; i < sortedPoints.length - 1; i++) {
       const point1 = sortedPoints[i];
@@ -318,12 +318,11 @@ export const function_editor = (node: ObjectNode) => {
           const val = Number.parseFloat(tokens[1]);
           if (Number.isNaN(val)) return [];
           return op(val);
-        } else {
-          const a = Number.parseFloat(tokens[1]);
-          const b = Number.parseFloat(tokens[2]);
-          if (Number.isNaN(a) || Number.isNaN(b)) return [];
-          return op(a, b);
         }
+        const a = Number.parseFloat(tokens[1]);
+        const b = Number.parseFloat(tokens[2]);
+        if (Number.isNaN(a) || Number.isNaN(b)) return [];
+        return op(a, b);
       }
     }
     if (msg === "bang") {

@@ -55,7 +55,7 @@ export const XYControlComponent = (props: Props) => {
 
   useValue();
   const points = (objectNode.custom as XYControl).points;
-  const labels = objectNode.attributes["labels"].split(",");
+  const labels = (objectNode.attributes.labels as string).split(",");
 
   const minX = objectNode.attributes.minX as number;
   const maxX = objectNode.attributes.maxX as number;
@@ -97,7 +97,7 @@ export const XYControlComponent = (props: Props) => {
           <line key={`y-${i}`} x1={0} y1={y} x2={100} y2={y} stroke="#4f4f4f" strokeWidth={0.5} />
         ))}
         {points.map((x, i) => (
-          <g>
+          <g key={`point-${i}`}>
             <circle
               onMouseDown={() => setDragging(x)}
               cx={x.x * 100}

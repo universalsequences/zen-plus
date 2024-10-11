@@ -201,11 +201,7 @@ const ShaderWaveform: React.FC<WaveformProps> = ({
         width * 2,
       );
 
-      if (
-        !texture ||
-        !texture.image ||
-        texture.image.data.length !== ret.image.data.length
-      ) {
+      if (!texture || !texture.image || texture.image.data.length !== ret.image.data.length) {
         // Create a new DataTexture if it doesn't exist or the size has changed
         const newTexture = new THREE.DataTexture(
           ret.image.data,
@@ -218,7 +214,7 @@ const ShaderWaveform: React.FC<WaveformProps> = ({
         waveformTextureRef.current = newTexture;
       } else {
         // Update the existing texture
-        const data = texture.image.data as Float32Array;
+        const data = texture.image.data as unknown as Float32Array;
         data.set(ret.image.data);
         texture.needsUpdate = true;
       }

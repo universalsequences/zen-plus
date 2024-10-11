@@ -9,34 +9,34 @@ export const getRootPatch = (patch: Patch) => {
 };
 
 const expandConnections = (connection: IOConnection): IOConnection[] => {
-  let { destination, destinationInlet } = connection;
+  const { destination, destinationInlet } = connection;
 
-  let subpatch = (destination as ObjectNode).subpatch;
+  const subpatch = (destination as ObjectNode).subpatch;
   if (subpatch) {
-    let inletNumber = destination.inlets.indexOf(connection.destinationInlet);
-    let inObject = subpatch.objectNodes.find(
+    const inletNumber = destination.inlets.indexOf(connection.destinationInlet);
+    const inObject = subpatch.objectNodes.find(
       (x) => x.name === "in" && x.arguments[0] === inletNumber + 1,
     );
-    if (inObject && inObject.outlets[0]) {
+    if (inObject?.outlets[0]) {
       return inObject.outlets[0].connections;
     }
   }
 
   // if its an out inside a subpatch we need to find that outlets connections
   if ((destination as ObjectNode).name === "out") {
-    let patch = destination.patch;
-    let subpatchNode = (patch as SubPatch).parentNode;
+    const patch = destination.patch;
+    const subpatchNode = (patch as SubPatch).parentNode;
     if (subpatchNode) {
       // then we are
       if (patch.isZenBase()) {
         return [];
       }
-      let outletNumber = (destination as ObjectNode).arguments[0] as number;
-      let outlet = subpatchNode.outlets[outletNumber - 1];
+      const outletNumber = (destination as ObjectNode).arguments[0] as number;
+      const outlet = subpatchNode.outlets[outletNumber - 1];
       if (outlet) {
         let c1: IOConnection[] = [];
-        for (let connection of outlet.connections) {
-          let c2 = expandConnections(connection);
+        for (const connection of outlet.connections) {
+          const c2 = expandConnections(connection);
           c1 = [...c1, ...c2];
         }
         return c1;
@@ -51,12 +51,12 @@ export const isForwardCycle = (
   originalNode: Node = node,
   visited: Set<Node> = new Set<Node>(),
 ): boolean => {
-  let ins: Node[] = [node];
+  const ins: Node[] = [node];
   visited.add(node);
-  for (let outlet of node.outlets) {
-    let _connections = outlet.connections.flatMap((x) => expandConnections(x));
-    for (let connection of _connections) {
-      let { destination } = connection;
+  for (const outlet of node.outlets) {
+    const _connections = outlet.connections.flatMap((x) => expandConnections(x));
+    for (const connection of _connections) {
+      const { destination } = connection;
 
       if (destination === originalNode) {
         return true;
@@ -78,10 +78,10 @@ export const traverseBackwards = (node: Node, visited: Set<Node> = new Set<Node>
   }
   let ins: Node[] = [node];
   visited.add(node);
-  for (let inlet of node.inlets) {
-    for (let connection of inlet.connections) {
-      let { source } = connection;
-      let subpatch = (source as ObjectNode).subpatch;
+  for (const inlet of node.inlets) {
+    for (const connection of inlet.connections) {
+      const { source } = connection;
+      const subpatch = (source as ObjectNode).subpatch;
       if (subpatch) {
         ins = [...ins, ...traverseBackwards(source, visited), ...subpatch.getAllNodes()];
       } else {
@@ -100,10 +100,10 @@ export const traverseForwards = (
 ): Node[] => {
   let ins: Node[] = [node];
   visited.add(node);
-  for (let outlet of node.outlets) {
-    let _connections = outlet.connections.flatMap((x) => expandConnections(x));
-    for (let connection of _connections) {
-      let { destination } = connection;
+  for (const outlet of node.outlets) {
+    const _connections = outlet.connections.flatMap((x) => expandConnections(x));
+    for (const connection of _connections) {
+      const { destination } = connection;
 
       if (destination === originalNode) {
         continue;

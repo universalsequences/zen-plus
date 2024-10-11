@@ -1,4 +1,4 @@
-import { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
+import type { ObjectNode, Message, Lazy, NodeFunction } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
@@ -10,7 +10,7 @@ doc("attrui", {
   numberOfOutlets: 1,
 });
 
-export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
+export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) => {
   node.needsLoad = true;
 
   let custom: MutableValue;
@@ -40,15 +40,16 @@ export const attrui = (node: ObjectNode, name: Lazy, value: Lazy) => {
       return [`${name()} ${value} ${time}`];
     }
     if (typeof _message === "number" && name()) {
-      let msg = `${name()} ${value()}`;
+      const msg = `${name()} ${value()}`;
       return [msg];
     }
     if (name() && value() !== undefined) {
-      let msg = `${name()} ${value()}`;
+      const msg = `${name()} ${value()}`;
       custom.value = value() as Message;
       return [msg];
-    } else if (name() && node.storedMessage !== undefined) {
-      let msg = `${name()} ${node.storedMessage}`;
+    }
+    if (name() && node.storedMessage !== undefined) {
+      const msg = `${name()} ${node.storedMessage}`;
       custom.value = node.storedMessage;
       return [msg];
     }

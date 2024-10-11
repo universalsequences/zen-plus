@@ -647,20 +647,25 @@ export const _compileStatement = (
     } else if (name === "defun") {
       let size: number = compoundOperator.value!;
       let name: string = compoundOperator.variableName!;
-      output = defun(name, size, ...(compiledArgs as UGen[]));
+      output = defun(name, size, ...(compiledArgs as UGen[])) as unknown as UGen;
     } else if (name === "call") {
       let invocationNumber: number = compoundOperator.value!;
       let body = compiledArgs[0];
       let args = compiledArgs.slice(1);
       _name = name;
-      output = call(body as LazyFunction, invocationNumber, ...(args as UGen[]));
+      output = call(body as unknown as LazyFunction, invocationNumber, ...(args as UGen[]));
     } else if (name === "latchcall") {
       let invocationNumber: number = compoundOperator.value!;
       let body = compiledArgs[0];
       let args = compiledArgs.slice(1);
       _name = name;
       let _args = args as UGen[];
-      output = latchcall(body as LazyFunction, invocationNumber, _args[0], ..._args.slice(1));
+      output = latchcall(
+        body as unknown as LazyFunction,
+        invocationNumber,
+        _args[0],
+        ..._args.slice(1),
+      );
     } else if (name === "message") {
       output = message(
         compoundOperator.params as string,
@@ -764,7 +769,7 @@ export const _compileStatement = (
 
         console.log("model components=", modelComponents);
         if (modelComponent && modelComponent.component) {
-            console.log('compiling with ', compiledArgs, modelComponents);
+          console.log("compiling with ", compiledArgs, modelComponents);
           output = s(
             compiledArgs[0] as Arg,
             ...modelComponents.flatMap((c) =>

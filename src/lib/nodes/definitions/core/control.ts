@@ -1,4 +1,4 @@
-import { ObjectNode, Message, Lazy } from "../../types";
+import type { ObjectNode, Message, Lazy, NodeFunction } from "../../types";
 import { doc } from "./doc";
 
 doc("filter.=", {
@@ -9,13 +9,13 @@ doc("filter.=", {
   description: "passes message if message matches condition",
 });
 
-export const filter_eq = (node: ObjectNode, condition: Lazy) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+export const filter_eq: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (message: Message) => {
-    let { field } = node.attributes;
-    let data = field !== "" ? (message as any)[field as string] : message;
+    const { field } = node.attributes;
+    const data = field !== "" ? (message as Record<string, Message>)[field as string] : message;
     if (data === condition()) {
       return [message, undefined];
     }
@@ -31,13 +31,13 @@ doc("filter.!=", {
   description: "passes message if message does not match condition",
 });
 
-export const filter_neq = (node: ObjectNode, condition: Lazy) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+export const filter_neq: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (message: Message) => {
-    let { field } = node.attributes;
-    let data = field !== "" ? (message as any)[field as string] : message;
+    const { field } = node.attributes;
+    const data = field !== "" ? (message as Record<string, Message>)[field as string] : message;
     if (data !== condition()) {
       return [message];
     }
@@ -52,12 +52,9 @@ doc("filter.i=", {
   numberOfInlets: 3,
   description: "passes message if message matches condition",
 });
-export const filter_arg_eq = (_node: ObjectNode, arg: Lazy, condition: Lazy) => {
+export const filter_arg_eq: NodeFunction = (_node: ObjectNode, arg: Lazy, condition: Lazy) => {
   return (message: Message) => {
     if (arg() === condition()) {
-      if (_node.attributes["debug"]) {
-        console.log(message);
-      }
       return [message];
     }
     return [];
@@ -72,13 +69,13 @@ doc("filter.<", {
   description: "passes message if message matches condition",
 });
 
-export const filter_lt = (node: ObjectNode, condition: Lazy) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+export const filter_lt: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (message: Message) => {
-    let { field } = node.attributes;
-    let data = field !== "" ? (message as any)[field as string] : message;
+    const { field } = node.attributes;
+    const data = field !== "" ? (message as Record<string, Message>)[field as string] : message;
     if (data < condition()) {
       return [message];
     }
@@ -94,13 +91,13 @@ doc("filter.<=", {
   description: "passes message if message matches condition",
 });
 
-export const filter_lte = (node: ObjectNode, condition: Lazy) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+export const filter_lte: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (message: Message) => {
-    let { field } = node.attributes;
-    let data = field !== "" ? (message as any)[field as string] : message;
+    const { field } = node.attributes;
+    const data = field !== "" ? (message as Record<string, Message>)[field as string] : message;
     if (data <= condition()) {
       return [message];
     }
@@ -116,13 +113,13 @@ doc("filter.>=", {
   description: "passes message if message matches condition",
 });
 
-export const filter_gte = (node: ObjectNode, condition: Lazy) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+export const filter_gte: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (message: Message) => {
-    let { field } = node.attributes;
-    let data = field !== "" ? (message as any)[field as string] : message;
+    const { field } = node.attributes;
+    const data = field !== "" ? (message as Record<string, Message>)[field as string] : message;
     if (data >= condition()) {
       return [message];
     }
@@ -138,14 +135,15 @@ doc("filter.%=", {
   description: "passes message if message matches condition",
 });
 
-export const filter_mod_eq = (node: ObjectNode, divisor: Lazy, condition: Lazy) => {
-  if (!node.attributes["field"]) {
-    node.attributes["field"] = "";
+export const filter_mod_eq: NodeFunction = (node: ObjectNode, divisor: Lazy, condition: Lazy) => {
+  if (!node.attributes.field) {
+    node.attributes.field = "";
   }
   return (message: Message) => {
-    let { field } = node.attributes;
-    let data = field !== "" ? (message as any)[field as string] : message;
-    if (data % (divisor() as number) === condition()) {
+    const { field } = node.attributes;
+    const data: Message =
+      field !== "" ? (message as Record<string, Message>)[field as string] : message;
+    if (typeof data === "number" && data % (divisor() as number) === condition()) {
       return [message];
     }
     return [undefined, message];
@@ -157,7 +155,7 @@ doc("identity", {
   numberOfInlets: 1,
   numberOfOutlets: 1,
 });
-export const identity = (_node: ObjectNode) => (x: Message) => [x];
+export const identity: NodeFunction = (_node: ObjectNode) => (x: Message) => [x];
 
 doc("==", {
   description: "outputs 1 if equal and 0 if not",
@@ -165,7 +163,7 @@ doc("==", {
   numberOfOutlets: 1,
 });
 
-export const eq = (node: ObjectNode, arg: Lazy) => {
+export const eq: NodeFunction = (node: ObjectNode, arg: Lazy) => {
   return (message: Message) => {
     if (arg() === message) {
       return [1];
@@ -180,7 +178,7 @@ doc("<", {
   numberOfOutlets: 1,
 });
 
-export const lt = (node: ObjectNode, arg: Lazy) => {
+export const lt: NodeFunction = (node: ObjectNode, arg: Lazy) => {
   return (message: Message) => {
     if (message < arg()) {
       return [1];
@@ -195,7 +193,7 @@ doc("||", {
   numberOfOutlets: 1,
 });
 
-export const or = (node: ObjectNode, arg: Lazy) => {
+export const or: NodeFunction = (node: ObjectNode, arg: Lazy) => {
   return (message: Message) => {
     return [arg() || message];
   };

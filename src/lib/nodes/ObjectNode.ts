@@ -661,7 +661,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       isCompiling = true;
     }
 
-    if (!isCompiling) {
+    if (!isCompiling && !OperatorContextType.GL) {
       return;
     }
     if (!inlet.markedMessages) {
@@ -871,6 +871,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       return;
     }
 
+    if (message === undefined) {
+      return;
+    }
+
     if (indexOf === 0) {
       // we are sending through the main inlet, i.e. run the function
       if (
@@ -880,24 +884,23 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       ) {
         return;
       }
-      const a = new Date().getTime();
-      const ret: Message[] = this.fn(message);
-      const b = new Date().getTime();
-      if (b - a > 25) {
-        //console.log("function %s id=%s took %s ms", this.name, this.id, b - a, a, b, this);
-      }
+      const result: (Message | undefined)[] = this.fn(message);
 
-      for (let i = 0; i < ret.length; i++) {
+      for (let i = 0; i < result.length; i++) {
         let outlet = this.outlets[i];
         if (outlet) {
-          this.send(outlet, ret[i]);
+          const outletResult = result[i];
+          if (outletResult === undefined) {
+            continue;
+          }
+          this.send(outlet, outletResult);
           if (outlet.callback) {
-            outlet.callback(ret[i]);
+            outlet.callback(outletResult);
           }
         }
       }
-      if (ret[0]) {
-        this.lastSentMessage = ret[0];
+      if (result[0]) {
+        this.lastSentMessage = result[0];
       }
     } else if (indexOf > 0) {
       // store the message in arguments
@@ -916,20 +919,19 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       // run the function (assuming its a "hot inlet" for now)
       const lastMessage = this.inlets[0] && this.inlets[0].lastMessage;
       if (lastMessage !== undefined) {
-        const a = new Date().getTime();
-        const ret: Message[] = this.fn(lastMessage);
-        const b = new Date().getTime();
-
-        if (b - a > 5) {
-          console.log("function %s took %s ms", this.name, b - a, a, b, this);
-        }
-        for (let i = 0; i < ret.length; i++) {
+        const result: (Message | undefined)[] = this.fn(lastMessage);
+        
+        for (let i = 0; i < result.length; i++) {
+          const outletResult = result[i];
+          if (outletResult === undefined) {
+            continue;
+          }
           if (this.outlets[i]) {
-            this.send(this.outlets[i], ret[i]);
+            this.send(this.outlets[i], outletResult);
           }
         }
-        if (ret[0]) {
-          this.lastSentMessage = ret[0];
+        if (result[0]) {
+          this.lastSentMessage = result[0];
         }
       }
     }
@@ -960,7 +962,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (this.buffer && this.name !== "buffer" && this.name !== "waveform") {
-      if (ArrayBuffer.isView(this.buffer) || Array.isArray(this.buffer)) {
+      if (ArrayBuffer.isView(this.buffer)) { 
+        json.buffer = Array.from(this.buffer);
+      } else if (Array.isArray(this.buffer)) {
         json.buffer = Array.from(this.buffer);
       } else {
         json.buffer = [...this.buffer];

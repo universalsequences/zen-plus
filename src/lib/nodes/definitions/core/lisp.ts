@@ -1,8 +1,8 @@
-import { Lazy, Message, ObjectNode } from "../../types";
+import type { Lazy, Message, ObjectNode, NodeFunction } from "../../types";
 import { parse } from "@/lib/lisp/parse";
 import { createContext } from "@/lib/lisp/eval";
 import { doc } from "./doc";
-import { AST, Environment } from "@/lib/lisp/types";
+import type { AST, Environment } from "@/lib/lisp/types";
 import { ListPool } from "@/lib/lisp/ListPool";
 
 doc("car", {
@@ -11,10 +11,10 @@ doc("car", {
   description: "returns first element of list",
 });
 
-export const car = () => {
+export const car: NodeFunction = (node: ObjectNode) => {
   return (message: Message) => {
-    if (Array.isArray(message)) {
-      return [message[0]];
+    if (Array.isArray(message) && message.length > 0) {
+      return [message[0] as Message];
     }
     return [];
   };
@@ -26,10 +26,10 @@ doc("cdr", {
   description: "returns rest of list",
 });
 
-export const cdr = () => {
+export const cdr: NodeFunction = (node: ObjectNode) => {
   return (message: Message) => {
-    if (Array.isArray(message)) {
-      return [message.slice(1)];
+    if (Array.isArray(message) && message.length > 0) {
+      return [message.slice(1) as Message];
     }
     return [];
   };
@@ -38,15 +38,16 @@ export const cdr = () => {
 doc("lisp", {
   numberOfInlets: (x) => x + 1,
   numberOfOutlets: 2,
-  description: "script",
+  description:
+    "evaluates lisp code, processing messages coming in. each inlet is a variable: $1, $2, $3, etc.",
   outletNames: ["evaluated output", "scope"],
   isHot: false,
 });
 
-export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
+export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   let env: Environment = {};
   let lastEnv: Environment = {};
-  let counter = 0;
+  const counter = 0;
   let lastText: string | undefined = undefined;
   let lastParsed: AST;
   const pool = node.pool || new ListPool();
@@ -71,7 +72,7 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
       lastEnv = getEnvFromMessages();
       env = {}; //pool.getObject();
       Object.assign(env, lastEnv);
-      return empty;
+      return empty as Message[];
       // return [];
     }
 
@@ -92,30 +93,25 @@ export const lisp_node = (node: ObjectNode, ...args: Lazy[]) => {
         const parsed = node.script === lastText ? lastParsed : parse(node.script);
         lastParsed = parsed;
         lastText = node.script;
-        env["$1"] = msg;
+        env.$1 = msg;
         for (let i = 0; i < args.length; i++) {
           if (args[i]() !== undefined) {
             const value = args[i]();
             env[`$${i + 2}`] = ArrayBuffer.isView(value) ? value : value;
           }
         }
-        let a = new Date().getTime();
         const ret = evaluate(parsed, env);
-        let b = new Date().getTime();
-        if (b - a > 100) {
-          console.log("lisp took %s ms", b - a, b);
-        }
-        out[0] = ret;
-        out[1] = env;
+        out[0] = ret as Message;
+        out[1] = env as Message;
 
         pool.borrow(ret);
-        return out;
-        // return [ret, env];
+        return out as Message[];
       } catch (e) {
         console.log("error", e, node);
-        return [];
+        // TODO: show error in UI
       }
     }
+    return empty;
   };
 };
 

@@ -1,4 +1,5 @@
-import { API } from '@/lib/nodes/context';
+import type { API } from "@/lib/nodes/context";
+/*
 import { projection } from './projection';
 import { ADD_SOURCE_SHADER } from './source';
 import { DIFFUSION_SHADER, ADVECT_A_SHADER, ADVECT_B_SHADER } from './navier';
@@ -328,11 +329,6 @@ const device = (node: ObjectNode) => {
         runPipeline(projectionAPipeline, 1);
         runPipeline(projectionBPipeline, iterations);
         runPipeline(projectionCPipeline, 1);
-        /*
-        runPipeline(projectionA2Pipeline, 1);
-        runPipeline(projectionB2Pipeline, iterations);
-        runPipeline(projectionC2Pipeline, 1);
-        */
         const commandEncoder = device.createCommandEncoder();
 
         commandEncoder.copyBufferToBuffer(outputBuffer3, 0, inputBuffer1, 0, bufferSize);
@@ -384,6 +380,7 @@ const device = (node: ObjectNode) => {
         return [];
     };
 };
+*/
 export const api: API = {
-    fluid: device
+  //fluid: device
 };

@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import type { ObjectNode, Message } from "../../types";
+import type { ObjectNode, Message, NodeFunction } from "../../types";
 import { arrayBufferToArray } from "@/lib/audio/arrayBufferToArray";
 
 doc("buffer", {
@@ -15,7 +15,7 @@ type Cache = {
 
 const cache: Cache = {};
 
-export const buffer = (node: ObjectNode) => {
+export const buffer: NodeFunction = (node: ObjectNode) => {
   if (!node.attributes["data format"]) {
     node.attributes["data format"] = "byte";
   }
@@ -101,16 +101,15 @@ export const buffer = (node: ObjectNode) => {
       return [];
     }
     if (ArrayBuffer.isView(message)) {
-      //_size = message.length;
       if (!node.buffer) {
         node.buffer = message;
       }
       return [message as Float32Array, message.length];
-    } else if (message === "bang" && node.buffer) {
-      //_size = message.length;
-      return [node.buffer, node.buffer.length];
-    } else {
-      return [];
     }
+
+    if (message === "bang" && node.buffer) {
+      return [node.buffer, node.buffer.length];
+    }
+    return [];
   };
 };

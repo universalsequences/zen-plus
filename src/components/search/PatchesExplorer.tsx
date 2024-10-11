@@ -46,12 +46,12 @@ export const PatchesExplorer = () => {
       setLoading(true);
       const serializedSubPatch = await fetchSubPatchForDoc(selectedPatch.id);
       if (serializedSubPatch) {
-        let objectNode = new ObjectNodeImpl(ret.selectedPatch);
+        const objectNode = new ObjectNodeImpl(ret.selectedPatch);
         objectNode.parse(selectedPatch.name, getType(serializedSubPatch), true, serializedSubPatch);
         objectNode.position = { x: 100, y: 100 };
         ret.selectedPatch.objectNodes.push(objectNode);
         ret.setCounter(Math.random());
-        objectNode.subpatch?.initialLoadCompile();
+        objectNode.subpatch?.initialLoadCompile(false);
         setLoading(false);
       }
     }
@@ -85,9 +85,9 @@ const Tag: React.FC<{
   isSelected: boolean;
   setSelectedTag: React.Dispatch<React.SetStateAction<string | null>>;
 }> = ({ name, isSelected, setSelectedTag }) => {
-  let bg = isSelected ? "bg-zinc-300" : "bg-zinc-900";
-  let fg = isSelected ? "text-zinc-900" : "text-zinc-100";
-  let className = `px-4 py-1 rounded-full cursor-pointer transition-all whitespace-nowrap ${bg} ${fg}`;
+  const bg = isSelected ? "bg-zinc-300" : "bg-zinc-900";
+  const fg = isSelected ? "text-zinc-900" : "text-zinc-100";
+  const className = `px-4 py-1 rounded-full cursor-pointer transition-all whitespace-nowrap ${bg} ${fg}`;
   return (
     <div
       onClick={() => (isSelected ? setSelectedTag(null) : setSelectedTag(name))}

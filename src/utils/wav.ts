@@ -20,7 +20,8 @@ const mergeBuffers = (chunks: Chunk[]): Float32Array[] | undefined => {
       if (!chunk.buffers[channel]) {
         return undefined;
       }
-      for (const buffer of chunk.buffers[channel]) {
+      for (let i = 0; i < chunk.buffers[channel].length; i++) {
+        const buffer = chunk.buffers[channel][i] as unknown as ArrayLike<number>;
         arr.set(buffer, off);
         off += buffer.length;
       }
@@ -30,10 +31,7 @@ const mergeBuffers = (chunks: Chunk[]): Float32Array[] | undefined => {
   return buffers;
 };
 
-export const mergeAndExportToWav = async (
-  chunks: Chunk[],
-  sampleRate: number,
-) => {
+export const mergeAndExportToWav = async (chunks: Chunk[], sampleRate: number) => {
   const worker = new Worker(new URL("../workers/mergeWorker", import.meta.url));
   // Wrap worker operations in a Promise for async handling
   const result = await new Promise<Blob | null>((resolve) => {
@@ -51,10 +49,7 @@ export const mergeAndExportToWav = async (
   return result;
 };
 
-export const _mergeAndExportToWav = (
-  chunks: Chunk[],
-  sampleRate: number,
-): Blob | undefined => {
+export const _mergeAndExportToWav = (chunks: Chunk[], sampleRate: number): Blob | undefined => {
   const buffers = mergeBuffers(chunks);
   if (buffers) {
     return bufferToWavBlob(buffers, sampleRate);
@@ -62,10 +57,7 @@ export const _mergeAndExportToWav = (
   return undefined;
 };
 
-export const bufferToWavBlob = (
-  buffers: Float32Array[],
-  sampleRate: number,
-): Blob => {
+export const bufferToWavBlob = (buffers: Float32Array[], sampleRate: number): Blob => {
   // Assuming mono audio for simplicity, adjust as needed
   const wav = new WaveFile();
   wav.fromScratch(2, sampleRate, "32f", buffers);

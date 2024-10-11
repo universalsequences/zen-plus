@@ -328,13 +328,12 @@ const PatchComponent: React.FC<{
           {!isCustomView && (
             <>
               <div
-                onMouseDown={(e: any) => {
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                   setSelectedPatch(patch);
                   e.preventDefault();
                   e.stopPropagation();
                   setResizingPatch({
-                    startSize:
-                      (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
+                    startSize: (patch as SubPatch).parentNode?.size,
                     startPosition: { x: e.pageX, y: e.pageY },
                     gridTemplate,
                     resizeType: PatchResizeType.South,
@@ -343,13 +342,12 @@ const PatchComponent: React.FC<{
                 className="w-full h-1 absolute bottom-0 cursor-ns-resize z-30"
               />
               <div
-                onMouseDown={(e: any) => {
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                   setSelectedPatch(patch);
                   e.preventDefault();
                   e.stopPropagation();
                   setResizingPatch({
-                    startSize:
-                      (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
+                    startSize: (patch as SubPatch).parentNode?.size,
                     startPosition: { x: e.pageX, y: e.pageY },
                     gridTemplate,
                     resizeType: PatchResizeType.North,
@@ -358,13 +356,12 @@ const PatchComponent: React.FC<{
                 className="w-full h-1 absolute top-0 cursor-ns-resize z-30"
               />
               <div
-                onMouseDown={(e: any) => {
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                   setSelectedPatch(patch);
                   e.preventDefault();
                   e.stopPropagation();
                   setResizingPatch({
-                    startSize:
-                      (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
+                    startSize: (patch as SubPatch).parentNode?.size,
                     startPosition: { x: e.pageX, y: e.pageY },
                     gridTemplate,
                     resizeType: PatchResizeType.East,
@@ -374,13 +371,12 @@ const PatchComponent: React.FC<{
               />
               {!isCustomView && (
                 <div
-                  onMouseDown={(e: any) => {
+                  onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                     setSelectedPatch(patch);
                     e.preventDefault();
                     e.stopPropagation();
                     setResizingPatch({
-                      startSize:
-                        (patch as SubPatch).parentNode && (patch as SubPatch).parentNode.size,
+                      startSize: (patch as SubPatch).parentNode?.size,
                       startPosition: { x: e.pageX, y: e.pageY },
                       gridTemplate,
                       resizeType: PatchResizeType.West,
@@ -399,13 +395,12 @@ const PatchComponent: React.FC<{
             zoomRef={zoomRef}
             zoomableRef={zoomableRef}
           />
-          {!isCustomView &&
-            !isWindow && (
-              <>
-                {" "}
-                <Toolbar patch={patch} />{" "}
-              </>,
-            )}
+          {!isCustomView && !isWindow && (
+            <>
+              {" "}
+              <Toolbar patch={patch} />{" "}
+            </>
+          )}
 
           <AssistantSidebar />
         </div>

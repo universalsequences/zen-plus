@@ -29,7 +29,7 @@ const PatchExplorer: React.FC<{
       }
       mockPatch.fromJSON(x, true);
       if (x.id === "1") {
-        basePatch.initialLoadCompile();
+        basePatch.initialLoadCompile(true);
       }
       setPatchOpened(mockPatch as Patch);
     });

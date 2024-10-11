@@ -261,52 +261,51 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
           node.size.width = width;
           updateSize(node.id, { ...node.size });
         } else if (resizingNodeRef.current.orientation === Orientation.Y) {
-          let { node } = resizingNodeRef.current;
-          let position = presentationMode
+          const { node } = resizingNodeRef.current;
+          const position = presentationMode
             ? node.presentationPosition || node.position
             : node.position;
-          let y = scrollRef.current.scrollTop + client.y; //- offset.y;
+          const y = scrollRef.current.scrollTop + client.y; //- offset.y;
           if (!node.size) {
             node.size = sizeIndexRef.current[node.id];
             // position`
           }
-          let height = y - position.y;
+          const height = y - position.y;
           node.size.height = height;
           updateSize(node.id, { ...node.size });
-          if (node.updateSize) {
-            node.updateSize({... node.size});
+          if ((node as ObjectNode).updateSize) {
+            (node as ObjectNode).updateSize({ ...node.size });
           }
-
         } else {
-          let { node } = resizingNodeRef.current;
-          let position = presentationMode
+          const { node } = resizingNodeRef.current;
+          const position = presentationMode
             ? node.presentationPosition || node.position
             : node.position;
-          let x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current; // - offset.x;
-          let y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
+          const x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current; // - offset.x;
+          const y = (scrollRef.current.scrollTop + client.y) / zoomRef.current; //- offset.y;
           if (!node.size) {
             node.size = sizeIndexRef.current[node.id];
             // position`
           }
-          let height = y - position.y;
-          let width = x - position.x;
+          const height = y - position.y;
+          const width = x - position.x;
           node.size.height = height;
           node.size.width = width;
           updateSize(node.id, { ...node.size });
 
-          if (node.updateSize) {
-            node.updateSize({... node.size});
+          if ((node as ObjectNode).updateSize) {
+            (node as ObjectNode).updateSize({ ...node.size });
           }
-          for (let __node of selectedNodes) {
+          for (const __node of selectedNodes) {
             if ((__node as ObjectNode).size) {
-              let _node: ObjectNode = __node as ObjectNode;
+              const _node: ObjectNode = __node as ObjectNode;
               if (_node.size) {
                 _node.size.height = height;
                 _node.size.width = width;
                 updateSize(_node.id, { ..._node.size });
 
-                if (node.updateSize) {
-                  node.updateSize({... node.size});
+                if ((_node as ObjectNode).updateSize) {
+                  (_node as ObjectNode).updateSize({ ..._node.size });
                 }
               }
             }
@@ -315,23 +314,23 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
       }
 
       if (draggingNodeRef.current) {
-        let { node, offset } = draggingNodeRef.current;
+        const { node, offset } = draggingNodeRef.current;
         let x = scrollRef.current.scrollLeft + client.x - offset.x;
         let y = scrollRef.current.scrollTop + client.y - offset.y;
         x /= zoomRef.current;
         y /= zoomRef.current;
 
-        let position = presentationMode
+        const position = presentationMode
           ? node.presentationPosition || node.position
           : node.position;
-        let diffX = x - position.x;
-        let diffY = y - position.y;
+        const diffX = x - position.x;
+        const diffY = y - position.y;
 
         position.x = Math.max(0, x);
         position.y = Math.max(0, y);
 
-        let updates: any = {};
-        let nodeMap: any = {};
+        const updates: any = {};
+        const nodeMap: any = {};
 
         for (let _node of selectedNodesRef.current) {
           if (selectedNodesRef.current.length > 1) {

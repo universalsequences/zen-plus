@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { useLocked } from "@/contexts/LockedContext";
 import { useSelection } from "@/contexts/SelectionContext";
-import { ObjectNode } from "@/lib/nodes/types";
+import type { ObjectNode } from "@/lib/nodes/types";
 import { usePosition } from "@/contexts/PositionContext";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { nightOwl } from "react-syntax-highlighter/dist/cjs/styles/prism";
@@ -17,7 +17,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const current = useRef(0);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const syntaxHighlighterRef = useRef<HTMLDivElement>(null);
-  const syntaxRef = useRef<HTMLDivElement>(null);
+  const syntaxRef = useRef<HTMLPreElement>(null);
 
   const { width, height } = objectNode.size || { width: 100, height: 100 };
   const fontStyles = {
@@ -245,8 +245,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               padding: "0px",
               width,
               height,
-              //whiteSpace: "pre-wrap",
-              overflow: "hidden",
               ...fontStyles,
               position: "absolute",
               pointerEvents: "none",

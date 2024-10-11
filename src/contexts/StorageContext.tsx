@@ -30,7 +30,7 @@ interface IStorageContext {
     searchText?: string,
   ) => Promise<FilesQueryResult>;
   fetchProject: (id: string, email: string) => Promise<File | null>;
-  fetchPatch: (x: any, y: boolean) => Promise<SerializedPatch>;
+  fetchPatch: (x: any, y?: boolean) => Promise<SerializedPatch>;
   fetchSubPatchForDoc: (id: string) => Promise<SerializedPatch | null>;
   fetchRevisions: (head: any) => Promise<File[]>;
   loadSubPatches: () => void;

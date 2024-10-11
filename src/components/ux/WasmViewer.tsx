@@ -9,23 +9,19 @@ import { usePosition } from "@/contexts/PositionContext";
 import type { ObjectNode } from "@/lib/nodes/types";
 import { CopyIcon } from "@radix-ui/react-icons";
 
-export const WasmViewer: React.FC<{ objectNode: ObjectNode }> = ({
-  objectNode,
-}) => {
+export const WasmViewer: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { patch } = usePatch();
   const { zenCode } = usePatches();
 
   const { sizeIndex } = usePosition();
 
   const { width, height } = objectNode.size || { width: 500, height: 500 };
-  let text = patch.wasmCode
-    ? patch.wasmCode.slice(patch.wasmCode.indexOf("void process"))
-    : "";
+  let text = patch.wasmCode ? patch.wasmCode.slice(patch.wasmCode.indexOf("void process")) : "";
   const lines = patch.wasmCode ? patch.wasmCode.split("\n") : [];
   // Ref to measure line height
   const measureRef = useRef(null);
 
-  const Row = ({ index, style }) => (
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => (
     <div className="relative" style={style}>
       <div className="absolute text-zinc-600 left-2 z-30 left-0 my-auto flex w-16">
         <div>{index + 1}</div>
@@ -47,10 +43,7 @@ export const WasmViewer: React.FC<{ objectNode: ObjectNode }> = ({
   );
 
   return (
-    <div
-      className="overflow-scroll w-500 h-500 bg-zinc-800"
-      style={{ width, height }}
-    >
+    <div className="overflow-scroll w-500 h-500 bg-zinc-800" style={{ width, height }}>
       <CopyIcon
         color="white"
         onClick={() => {

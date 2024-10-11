@@ -216,14 +216,16 @@ const mergeAdjacentBlocks = (blocks: CodeBlock[]): CodeBlock[] => {
           }
         }
         const fullInbound: string[] = [];
-        for (const inb of Array.from(currentBlock.fullInboundDependencies)) {
+        for (const inb of Array.from(currentBlock?.fullInboundDependencies || [])) {
           if (!currentBlock?.outboundDependencies.has(inb)) {
             fullInbound.push(inb);
           }
         }
 
-        currentBlock.fullInboundDependencies = new Set(fullInbound);
-        currentBlock.inboundDependencies = new Set(inbound);
+        if (currentBlock) {
+          currentBlock.fullInboundDependencies = new Set(fullInbound);
+          currentBlock.inboundDependencies = new Set(inbound);
+        }
       } else {
         _blocks.push(currentBlock);
         if (block.context.isFunctionCaller || block.codeFragment.code === "") {
@@ -253,7 +255,7 @@ ${returnType} process(${args})`;
 export const printUserFunction = (func: Function, target: Target): string => {
   const name = func.name;
   const args = [...func.functionArguments].sort((a, b) => a.num - b.num);
-  const argPrefix = func.context!.forceScalar ? "" : "*";
+  const argPrefix = func.context?.forceScalar ? "" : "*";
   const varKeyword = target === Target.C ? "float" : "";
   const printedArgs = args.map((x) => `${varKeyword} ${argPrefix}${x.name} `).join(",");
   const outputs = countOutputs(func.codeFragments);

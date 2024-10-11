@@ -63,13 +63,15 @@ export const ZequencerInfo: React.FC<{ objectNode: ObjectNode }> = ({ objectNode
       {zequencer &&
         selectedSteps &&
         selectedSteps[0] &&
-        schema.map((field) => <SchemaField node={zequencer} steps={selectedSteps} field={field} />)}
+        schema.map((field) => (
+          <SchemaField key={field.name} node={zequencer} steps={selectedSteps} field={field} />
+        ))}
       {zequencer &&
         selectedSteps &&
         selectedSteps[0] &&
         Object.values(pLocks).map((plockValue) => (
           <SchemaField
-            key={plockValue.id}
+            key={plockValue.node.id}
             node={zequencer}
             steps={selectedSteps}
             plockValue={plockValue}
@@ -77,7 +79,10 @@ export const ZequencerInfo: React.FC<{ objectNode: ObjectNode }> = ({ objectNode
         ))}
       <div style={{ fontSize: 8 }} className="flex gap-1">
         {selectedSteps?.slice(0, 1).map((x) => (
-          <span className="px-1 bg-zinc-800 px-1  rounded-full">step {x.stepNumber + 1}</span>
+          <span
+            key={x.stepNumber}
+            className="px-1 bg-zinc-800 px-1  rounded-full"
+          >{`step ${x.stepNumber + 1}`}</span>
         ))}
       </div>
     </div>

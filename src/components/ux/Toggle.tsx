@@ -31,8 +31,10 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
     <div
       onClick={toggle}
       style={{
-        color: value ? strokeColor : interpolateHexColors(fillColor, strokeColor, 0.35),
-        backgroundColor: fillColor,
+        color: value
+          ? (strokeColor as string)
+          : interpolateHexColors(fillColor as string, strokeColor as string, 0.35),
+        backgroundColor: fillColor as string,
         width: size.width,
         height: size.height,
       }}

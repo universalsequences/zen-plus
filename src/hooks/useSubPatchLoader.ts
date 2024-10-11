@@ -113,16 +113,14 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
 
         const parentPatch = objectNode.subpatch?.parentPatch;
         const isInsideSlot = objectNode.subpatch?.isInsideSlot;
-        console.log("old subpatch=", objectNode.subpatch);
         objectNode.subpatch = undefined;
         objectNode.parse(name, OperatorContextType.ZEN, true, serializedSubPatch);
         if (parentPatch && objectNode.subpatch) {
           (objectNode.subpatch as SubPatch).parentPatch = parentPatch;
           (objectNode.subpatch as SubPatch).isInsideSlot = isInsideSlot;
         }
-        //objectNode.id = uuid();
         if (objectNode.subpatch) {
-          objectNode.subpatch.id = uuid();
+          (objectNode.subpatch as SubPatch).id = uuid();
         }
 
         const getMatchingIO = (ioType: string, node: ObjectNode, name: string): ObjectNode[] => {

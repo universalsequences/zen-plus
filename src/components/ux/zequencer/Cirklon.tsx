@@ -23,6 +23,7 @@ export const Cirklon = (props: Props) => {
     <div className="flex h-full">
       {steps.map((step) => (
         <CirklonStep
+          key={`step-${step.stepNumber}`}
           objectNode={objectNode}
           setMouseStartY={setMouseStartY}
           mouseStartY={mouseStartY}

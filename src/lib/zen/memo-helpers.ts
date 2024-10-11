@@ -6,10 +6,9 @@ import {
   PartialUGen,
   SIMDUGen,
 } from "./memo";
-import { SIMDContext, Context } from "./context";
-import { Generated } from "./zen";
+import type { SIMDContext, Context } from "./context";
+import type { Generated } from "./zen";
 import { getContextWithHistory, getHistoriesBeingWrittenTo } from "./memo-simd";
-import { Target } from "./targets";
 
 interface MemoizationResult {
   context: Context;
@@ -71,9 +70,7 @@ export const determineMemoization = (
     );
     const matchingDownstreamHistories = matchingDownstreamHistoriesA.length > 0;
 
-    const caseA =
-      !getParentContexts(context).has(memoized.context) &&
-      matchingDownstreamHistories;
+    const caseA = !getParentContexts(context).has(memoized.context) && matchingDownstreamHistories;
 
     if (caseA) {
       // there are "some" downstream histories being written to "context",
@@ -84,10 +81,7 @@ export const determineMemoization = (
 
       // determine the root history context (starting from the memoized.context)
       context = memoized.context!;
-      while (
-        (context as SIMDContext).context &&
-        context.historiesEmitted.size == 0
-      ) {
+      while ((context as SIMDContext).context && context.historiesEmitted.size == 0) {
         let parent = (context as SIMDContext).context;
         // TODO: for "LoopContext" we gotta clear this out and also avoid newBase
         context = (context as SIMDContext).context;
@@ -143,10 +137,7 @@ export const determineMemoization = (
     }
 
     if (memoized.incomingContext === context) {
-      if (
-        lastHistoriesWritten === historiesBeingWrittenTo.size ||
-        !matchingDownstreamHistories
-      ) {
+      if (lastHistoriesWritten === historiesBeingWrittenTo.size || !matchingDownstreamHistories) {
         count(4);
         return {
           memoization: memoized,
@@ -187,12 +178,10 @@ export const determineMemoization = (
 
     // extreme ugly hack to avoid circular dependency loop and speed up
     if (
-      (memoized.context.id === 1 ||
-        (memoized.incomingContext === context && context.isSIMD)) &&
+      (memoized.context.id === 1 || (memoized.incomingContext === context && context.isSIMD)) &&
       historiesBeingWrittenTo.size - lastHistoriesWritten <=
         (memoized.context.id === 1
-          ? matchingDownstreamHistories &&
-            (memoized.incomingContext === context || context.isSIMD)
+          ? matchingDownstreamHistories && (memoized.incomingContext === context || context.isSIMD)
             ? 4
             : 1
           : 1)
@@ -224,15 +213,7 @@ export const determineMemoization = (
   };
 };
 
-const count = (num: number) => {
-  if (!window.stats) {
-    window.stats = {};
-  }
-  if (!window.stats[num]) {
-    window.stats[num] = 0;
-  }
-  window.stats[num]++;
-};
+const count = (num: number) => {};
 
 export const getDownstreamHistories = (...args: Generated[]): string[] => {
   let downstreamHistories: string[] = [];

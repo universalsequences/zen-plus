@@ -27,7 +27,7 @@ export const speakers = (node: ObjectNode) => {
   if (typeof node.attributes.channels === "number") {
     for (let i = 0; i < node.attributes.channels; i++) {
       if (!node.inlets[i]) {
-        node.newInlet("channel input" + (i + 1), ConnectionType.AUDIO);
+        node.newInlet(`channel input ${i + 1}`, ConnectionType.AUDIO);
       }
     }
   }
@@ -42,8 +42,10 @@ export const speakers = (node: ObjectNode) => {
     // need to create an audio node that connects to speakers
     const ctxt = node.patch.audioContext;
     const splitter = ctxt.createChannelMerger((node.attributes.channels || 1) as number);
-    node.audioNode = splitter; //node.patch.audioContext.destination;
+    node.audioNode = splitter;
+
     splitter.connect(ctxt.destination);
+
     const root = getRootPatch(node.patch);
     if (root.recorderWorklet) {
       console.log("conecting to worklet");
@@ -90,9 +92,9 @@ export const scope_tilde = (node: ObjectNode) => {
   return (_message: Message) => [];
 };
 
-let init: any = {};
+const init: Record<string, boolean> = {};
 export const createWorklet = async (node: ObjectNode, path: string, processor: string) => {
-  let audioContext = node.patch.audioContext;
+  const audioContext = node.patch.audioContext;
   if (!init[processor]) {
     await audioContext.audioWorklet.addModule(path);
     init[processor] = true;

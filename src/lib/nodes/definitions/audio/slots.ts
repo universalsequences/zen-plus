@@ -115,7 +115,7 @@ const connectInputs = (node: ObjectNode) => {
     _splitter.connect(first.merger, 0, 0);
     _splitter.connect(first.merger, 1, 1);
   }
-}
+};
 
 const connectSlotPair = (current: ObjectNode, next: ObjectNode) => {
   for (let j = 0; j < current.outlets.length; j++) {
@@ -126,14 +126,15 @@ const connectSlotPair = (current: ObjectNode, next: ObjectNode) => {
 };
 
 const setupOutputs = (node: ObjectNode) => {
-  const last = node.slots![node.slots!.length - 1];
+  const last = node.slots?.[node.slots?.length - 1];
+  if (!last) return;
   const splitter = node.patch.audioContext.createChannelSplitter(2);
 
   last.audioNode?.connect(splitter);
   if (node.audioNode) {
     splitter.connect(node.audioNode, 0, 0);
     splitter.connect(node.audioNode, 1, 1);
-  } 
+  }
 
   last.outlets[0].callback = (message: Message) => {
     node.send(node.outlets[0], message);
@@ -147,19 +148,19 @@ const handleMessage = (node: ObjectNode, message: Message) => {
   }
   if (message === "reconnect" && node.slots) {
     reconnect(node);
-  } else if (node.slots && node.slots[0]) {
+  } else if (node.slots?.[0]) {
     node.slots[0].receive(node.slots[0].inlets[0], message);
   }
   return [];
 };
 
 const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode => {
-  let wrapperNode: ObjectNode = new ObjectNodeImpl(node.patch);
+  const wrapperNode: ObjectNode = new ObjectNodeImpl(node.patch);
   wrapperNode.parse("zen @type audio");
   if (wrapperNode.subpatch) {
     const subpatch = wrapperNode.subpatch;
     subpatch.isZen = false;
-    let objectNode: ObjectNode = new ObjectNodeImpl(subpatch);
+    const objectNode: ObjectNode = new ObjectNodeImpl(subpatch);
     subpatch.objectNodes.push(objectNode);
     if (patchType === OperatorContextType.AUDIO) {
       objectNode.parse("zen @type audio");
@@ -179,7 +180,7 @@ const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode
 };
 
 export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
-  node.slots = y.map(serialized => {
+  node.slots = y.map((serialized) => {
     const _node = newPatch(node, serialized.subpatch?.patchType);
     _node.fromJSON(serialized);
     if (_node.subpatch && _node.subpatch.patchType !== OperatorContextType.ZEN) {
@@ -193,11 +194,11 @@ export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNod
 const compileSlots = async (node: ObjectNode) => {
   if (!node.slots) return;
 
-  for (let slot of node.slots) {
+  for (const slot of node.slots) {
     if (slot.subpatch?.patchType === OperatorContextType.ZEN) {
       slot.subpatch?.recompileGraph();
     } else {
-      slot.subpatch?.initialLoadCompile();
+      slot.subpatch?.initialLoadCompile(false);
     }
   }
 

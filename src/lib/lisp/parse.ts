@@ -1,4 +1,12 @@
-import type { Atom, Expression, List, ObjectLiteral, AST, FunctionDefinition } from "./types";
+import type {
+  Atom,
+  Expression,
+  List,
+  ObjectLiteral,
+  AST,
+  FunctionDefinition,
+  Symbol,
+} from "./types";
 
 // Update the Atom type to include a new 'Symbol' type
 
@@ -62,13 +70,14 @@ function parseExpression(tokens: string[]): Expression {
   }
   if (token === "(") {
     return parseList(tokens);
-  } else if (token === "{") {
-    return parseObjectLiteral(tokens);
-  } else if (token === ")" || token === "}") {
-    throw new Error("Unexpected closing bracket");
-  } else {
-    return parseAtom(token);
   }
+  if (token === "{") {
+    return parseObjectLiteral(tokens);
+  }
+  if (token === ")" || token === "}") {
+    throw new Error("Unexpected closing bracket");
+  }
+  return parseAtom(token);
 }
 
 function parseList(tokens: string[]): List | FunctionDefinition {
@@ -83,7 +92,7 @@ function parseList(tokens: string[]): List | FunctionDefinition {
   if (list[0] === "defun" && list.length === 3 && Array.isArray(list[1])) {
     return {
       type: "function",
-      params: list[1] as string[],
+      params: list[1] as unknown as Symbol[],
       body: list[2],
     };
   }
@@ -109,14 +118,17 @@ function parseObjectLiteral(tokens: string[]): ObjectLiteral {
       throw new Error("Unexpected end of input: missing closing brace");
     }
     const key = parseExpression(tokens);
-    if (typeof key !== "string" && !(typeof key === "object" && key.type === "Symbol")) {
+    if (
+      typeof key !== "string" &&
+      !(typeof key === "object" && (key as Symbol).type === "Symbol")
+    ) {
       throw new Error("Object key must be a string or symbol");
     }
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing value for key");
     }
     const value = parseExpression(tokens);
-    obj.properties[typeof key === "string" ? key : key.value] = value;
+    obj.properties[typeof key === "string" ? key : (key as Symbol).value] = value;
   }
   tokens.shift(); // Remove closing brace
   return obj;

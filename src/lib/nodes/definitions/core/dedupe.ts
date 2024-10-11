@@ -1,4 +1,4 @@
-import type { Message } from "../../types";
+import type { Message, NodeFunction } from "../../types";
 import { doc } from "./doc";
 
 doc("dedupe", {
@@ -8,7 +8,7 @@ doc("dedupe", {
   description: "dedupe messages",
 });
 
-export const dedupe = () => {
+export const dedupe: NodeFunction = () => {
   let lastMessage: Message | null = null;
   return (message: Message) => {
     if (lastMessage === message) {

@@ -1,4 +1,4 @@
-import type { Message, ObjectNode } from "../../types";
+import type { Message, NodeFunction, ObjectNode } from "../../types";
 import { MutableValue } from "../core/MutableValue";
 import { doc } from "./doc";
 
@@ -8,7 +8,8 @@ doc("gate~", {
   numberOfInlets: (x) => x,
   numberOfOutlets: 1,
 });
-export const gate = (node: ObjectNode) => {
+
+export const gate: NodeFunction = (node: ObjectNode) => {
   const gainNodes: GainNode[] = [];
   const ctx = node.patch.audioContext;
   let splitter: ChannelSplitterNode;
@@ -16,7 +17,6 @@ export const gate = (node: ObjectNode) => {
     if (node.merger) {
       node.merger.disconnect();
     }
-    console.log("creating merger with =", numberOfInputs);
     node.merger = ctx.createChannelMerger(numberOfInputs + 1);
 
     splitter = ctx.createChannelSplitter(numberOfInputs + 1);
@@ -69,7 +69,7 @@ doc("route~", {
   numberOfOutlets: (x) => x,
 });
 
-export const route = (node: ObjectNode) => {
+export const route: NodeFunction = (node: ObjectNode) => {
   const gainNodes: GainNode[] = [];
   const ctx = node.patch.audioContext;
   let merger: ChannelMergerNode;
@@ -79,7 +79,6 @@ export const route = (node: ObjectNode) => {
       node.merger.disconnect();
     }
 
-    console.log("creating merger with =", numberOfOutputs);
     node.merger = ctx.createChannelMerger(1);
     merger = ctx.createChannelMerger(numberOfOutputs);
 

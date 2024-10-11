@@ -5,6 +5,7 @@ doc("oscilloscope~", {
   description: "meter attentuator",
   defaultValue: 1,
   numberOfInlets: 2,
+  numberOfOutlets: 0,
 });
 
 export const oscilloscope = (node: ObjectNode) => {

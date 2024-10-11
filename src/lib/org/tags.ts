@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/db/firebase";
 
 export const tagDoc = async (docId: string, tag: string): Promise<void> => {
