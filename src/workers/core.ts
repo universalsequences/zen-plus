@@ -1,6 +1,7 @@
 import { Message } from "@/lib/nodes/types";
 import { handleWorkerOperation } from "./operations";
 import type { WorkerOperation } from "./types";
+/**/
 import init, {
   new_mgmt,
   new_node,
@@ -11,6 +12,7 @@ import init, {
   get_node_state,
   run_event_loop,
 } from "zen_rust";
+*/
 
 /**
  * what is the point of this worker stuff?
@@ -61,6 +63,7 @@ const serialize = (message: Message) => {
   };
 };
 self.onmessage = async (e: MessageEvent) => {
+  /*
   console.log("on message e.data=", e.data);
   if (e.data.type === "register_new_node") {
     console.log("yas");
@@ -141,6 +144,6 @@ self.onmessage = async (e: MessageEvent) => {
       //console.log("state received=", state);
     }
   }
-
+  */
   //handleWorkerOperation(operation);
 };
