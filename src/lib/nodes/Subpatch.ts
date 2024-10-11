@@ -32,7 +32,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     this.setupConnectionTypes();
 
     if (patchType === OperatorContextType.AUDIO) {
-      console.log("setting up audio patch");
       this.setupAudioPatch();
     } else {
       this._setupInitialNodes();
@@ -116,24 +115,31 @@ export default class Subpatch extends PatchImpl implements SubPatch {
       return;
     }
     if (force) {
+      console.log("forcing super.subpatch recompile", this);
       super.recompileGraph();
       return;
     }
 
     // NOTE: THIS MIGHT BE WRONG! (I HAVE NO IDEA WHAT IM DOING)
     if (this.isZenBase()) {
+      console.log("isZEnBase() so super.recompile", this);
       super.recompileGraph();
       return;
     }
 
     if (!this.parentPatch.isZen) {
       if (this.patchType !== OperatorContextType.ZEN) {
+        console.log("not zen so parentPatch.recompile", this);
         this.parentPatch.recompileGraph();
       } else {
+        console.log("is zen so super.recompile", this);
         super.recompileGraph();
       }
     } else {
+      console.log("!isZen so super.recompile", this);
+      //if (!this.parentPatch.isCompiling) {
       this.parentPatch.recompileGraph();
+      //}
     }
   }
 
@@ -242,7 +248,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
     this.audioNode = outputMerger;
     if (parentNode) {
-      console.log("setting up audio patch", parentNode);
       parentNode.useAudioNode(this.audioNode);
       //this.audioNode.connect(this.audioContext.destination);
     }

@@ -255,7 +255,7 @@ export type Patch = Identifiable & {
   lockedMode?: boolean;
   compile: (x: Statement, outputNumber?: number) => void;
   assistant: Assistant;
-  recompileGraph: () => void;
+  recompileGraph: (force?: boolean) => void;
   type: PatchType;
   isZenBase: () => boolean;
   audioContext: AudioContext;

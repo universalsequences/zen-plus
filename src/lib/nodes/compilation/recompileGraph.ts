@@ -118,7 +118,7 @@ export const recompileGraph = (patch: Patch) => {
     // we are in a zen node so we proceed as usual
     for (const node of objectNodes) {
       if (node.subpatch && node.subpatch.patchType !== OperatorContextType.AUDIO) {
-        node.subpatch.recompileGraph();
+        node.subpatch.recompileGraph(true);
       }
     }
   } else {
@@ -126,7 +126,7 @@ export const recompileGraph = (patch: Patch) => {
     // only compile gl subpatches
     for (const node of objectNodes) {
       if (node.subpatch && node.subpatch.patchType === OperatorContextType.GL) {
-        node.subpatch.recompileGraph();
+        node.subpatch.recompileGraph(true);
       }
     }
   }

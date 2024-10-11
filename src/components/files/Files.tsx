@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Timestamp } from "firebase/firestore";
 import { HeartIcon, HeartFilledIcon } from "@radix-ui/react-icons";
 import FileComponent from "./File";
-import { File } from "@/lib/files/types";
+import type { File } from "@/lib/files/types";
 import {
   ArrowDownIcon,
   MagnifyingGlassIcon,
@@ -10,10 +10,10 @@ import {
   PlusCircledIcon,
 } from "@radix-ui/react-icons";
 import { useNav, NavOption } from "@/contexts/NavContext";
-import { Patch } from "@/lib/nodes/types";
+import type { Patch } from "@/lib/nodes/types";
 import { useAuth } from "@/contexts/AuthContext";
 import PatchExplorer from "./PatchExplorer";
-import { FilesQueryResult, useStorage } from "@/contexts/StorageContext";
+import { type FilesQueryResult, useStorage } from "@/contexts/StorageContext";
 
 const Files: React.FC<{
   fileExpanded: File | null;

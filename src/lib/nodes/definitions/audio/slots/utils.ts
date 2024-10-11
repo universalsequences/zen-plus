@@ -16,7 +16,6 @@ export const slotsout: NodeFunction = (node: ObjectNode) => {
     }
     if (currentPatch.parentNode.parentSlots) {
       const slots = currentPatch.parentNode.parentSlots;
-      console.log("send out of slots=", slots);
       slots.send(slots.outlets[0], message);
     }
     return [];

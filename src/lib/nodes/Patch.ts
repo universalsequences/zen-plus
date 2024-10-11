@@ -520,7 +520,9 @@ export class PatchImpl implements Patch {
     const loadBangs = this.objectNodes.filter(
       (x) => x.operatorContextType === OperatorContextType.CORE && x.needsLoad,
     );
-    loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));
+    for (const x of loadBangs) {
+      x.receive(x.inlets[0], "bang");
+    }
 
     return _connections;
   }
@@ -530,6 +532,8 @@ export class PatchImpl implements Patch {
     const subpatch = this as unknown as SubPatch;
     if (!subpatch.parentPatch) {
       this.recompileGraph();
+    } else if (subpatch.patchType === OperatorContextType.CORE) {
+      return;
     }
 
     const compiled: Patch[] = [];

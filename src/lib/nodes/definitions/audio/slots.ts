@@ -170,7 +170,6 @@ const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode
     objectNode.setAttribute("slotview", true);
     if (objectNode.subpatch) {
       objectNode.subpatch.name = "";
-      console.log("setting isInsideSlot", objectNode.subpatch, objectNode);
       objectNode.subpatch.isInsideSlot = true;
     }
     objectNode.parentSlots = node;
