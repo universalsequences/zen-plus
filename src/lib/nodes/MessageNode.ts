@@ -45,6 +45,8 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
       }
     });
 
+    this.newAttribute("hide data", false);
+
     this.message = "";
 
     this.newInlet(TRIGGER, ConnectionType.CORE);
@@ -98,7 +100,6 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
   parse(text: string) {
     if (text.includes("(") && text.includes(")")) {
       const lisp = parseLispExpression(text);
-      console.log("lisp=",lisp);
       this.receive(this.inlets[1], lisp);
       return lisp;
     }

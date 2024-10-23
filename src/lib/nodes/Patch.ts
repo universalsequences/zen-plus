@@ -528,6 +528,7 @@ export class PatchImpl implements Patch {
   }
 
   async initialLoadCompile(base = true) {
+    console.log("initial load compile", base);
     this.sendNumberNodes();
     const subpatch = this as unknown as SubPatch;
     if (!subpatch.parentPatch) {

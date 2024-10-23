@@ -1,30 +1,23 @@
 import type { Message } from "./types";
 
-let counter = 0;
-
 export class ListPool {
   private pool: Message[][] = [];
   private used: Message[][] = [];
-  private objectPool: Record<string, any>[] = [];
-  private envPool: Record<string, any>[] = [];
-  private usedObjects: Record<string, any>[] = [];
-  private usedEnvs: Record<string, any>[] = [];
+  private objectPool: Record<string, unknown>[] = [];
+  private envPool: Record<string, unknown>[] = [];
+  private usedObjects: Record<string, unknown>[] = [];
+  private usedEnvs: Record<string, unknown>[] = [];
   private arrayPool: Float32Array[] = [];
   private usedArrays: Float32Array[] = [];
-  private warning = false;
+  private maxObjectPoolSize = 256; // Set a maximum size for the object pool
 
-  borrow(x: Message) {
-    return;
-    let index = -1;
-    for (let i = 0; i < this.usedObjects.length; i++) {
-      if (this.usedObjects[i] === x) {
-        index = i;
-        break;
-      }
+  borrow(x: Message) {}
+
+  createObject(): Record<string, unknown> {
+    if (this.objectPool.length > 500) {
+      console.log("Creating new object", this);
     }
-    if (index > -1) {
-      this.usedObjects.splice(index, 1);
-    }
+    return {};
   }
 
   getFloat32Array(size: number) {
@@ -43,52 +36,43 @@ export class ListPool {
     return list;
   }
 
-  getObject(forceNew = false): Record<string, any> {
-    if (this.objectPool.length === 0) {
-      if (this.warning) {
-        console.log(
-          "warning but objectPool.length=%s",
-          this.objectPool.length,
-          [...this.objectPool],
-          [...this.usedObjects],
-        );
-      }
-      const obj = Object.create(null);
-      counter++;
-      if (counter % 1000 === 0) {
-        console.log("created object #%s", counter);
-      }
-      this.usedObjects.push(obj);
-      return obj;
+  getObject(): Record<string, unknown> {
+    let obj: Record<string, unknown>;
+    if (this.objectPool.length > 0) {
+      obj = this.objectPool.pop()!;
+    } else {
+      obj = this.createObject();
     }
-    const obj = this.objectPool.pop() || {};
     this.usedObjects.push(obj);
     return obj;
   }
 
-  getEnv(): Record<string, any> {
+  getEnv(): Record<string, unknown> {
     const obj = this.envPool.pop() || Object.create(null);
     this.usedEnvs.push(obj);
     return obj;
   }
 
   releaseUsed() {
-    for (let u of this.used) {
+    for (const u of this.used) {
       this.release(u);
     }
     this.used.length = 0;
 
-    for (let u of this.usedObjects) {
+    if (this.usedObjects.length > 50) {
+      console.log("releasing objects", this.usedObjects.length, this);
+    }
+    for (const u of this.usedObjects) {
       this.releaseObject(u);
     }
     this.usedObjects.length = 0;
 
-    for (let u of this.usedEnvs) {
+    for (const u of this.usedEnvs) {
       this.releaseEnv(u);
     }
     this.usedEnvs.length = 0;
 
-    for (let u of this.usedArrays) {
+    for (const u of this.usedArrays) {
       this.releaseArray(u);
     }
     this.usedArrays.length = 0;
@@ -98,17 +82,16 @@ export class ListPool {
     this.arrayPool.push(arr);
   }
 
-  releaseObject(obj: Record<string, any>): void {
+  releaseObject(obj: Record<string, unknown>): void {
     for (const key in obj) {
       delete obj[key];
     }
-    if (this.objectPool.length < 1000) {
+    if (this.objectPool.length < this.maxObjectPoolSize) {
       this.objectPool.push(obj);
     }
-    if (this.objectPool.length > 1000) this.warning = true;
   }
 
-  releaseEnv(obj: Record<string, any>): void {
+  releaseEnv(obj: Record<string, unknown>): void {
     for (const key in obj) {
       delete obj[key];
     }

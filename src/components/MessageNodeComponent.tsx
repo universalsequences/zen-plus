@@ -6,7 +6,14 @@ import { useSelection } from "@/contexts/SelectionContext";
 import Attributes from "./Attributes";
 import { ContextMenu, useThemeContext } from "@radix-ui/themes";
 import { useMessage } from "@/contexts/MessageContext";
-import { ObjectNode, Patch, Coordinate, Size, MessageNode, MessageType } from "@/lib/nodes/types";
+import {
+  type ObjectNode,
+  type Patch,
+  type Coordinate,
+  type Size,
+  type MessageNode,
+  MessageType,
+} from "@/lib/nodes/types";
 import PositionedComponent from "./PositionedComponent";
 import NumberBox from "./ux/NumberBox";
 
@@ -24,7 +31,12 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
   if (message === null) {
     message = messageNode.message as string;
   }
-  let lockedModeRef = useRef(lockedMode);
+
+  if (messageNode.attributes["hide data"]) {
+    message = "*stored data*";
+  }
+
+  const lockedModeRef = useRef(lockedMode);
   useEffect(() => {
     lockedModeRef.current = lockedMode;
   }, [lockedMode]);
@@ -34,13 +46,14 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
     message = Array.from(message as Float32Array | Uint8Array | Int8Array);
   }
 
-  let valueRef = useRef<number>();
+  const valueRef = useRef<number>();
+
   useEffect(() => {
     if (valueRef.current !== message) {
       setValue(message as number);
     }
     valueRef.current = message as number;
-  }, [message, setValue]);
+  }, [message]);
 
   const onValueChange = useCallback(
     (value: number) => {
@@ -50,10 +63,10 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
         messageNode.receive(messageNode.inlets[0], "bang");
       }
     },
-    [messageNode, messageNode],
+    [messageNode],
   );
 
-  let isSelected = selectedNodes.includes(messageNode);
+  const isSelected = selectedNodes.includes(messageNode);
 
   const onMouseDown = useCallback(() => {
     if (isCustomView) {
@@ -80,7 +93,7 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
   return React.useMemo(() => {
     return (
       <PositionedComponent
-        text={DEFAULT_TEXT} 
+        text={DEFAULT_TEXT}
         isCustomView={isCustomView}
         lockedModeRef={lockedModeRef}
         node={messageNode}

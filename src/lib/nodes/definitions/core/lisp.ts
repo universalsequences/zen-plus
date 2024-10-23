@@ -70,7 +70,9 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   return (msg: Message) => {
     if (msg === "clear") {
       lastEnv = getEnvFromMessages();
-      env = {}; //pool.getObject();
+      for (let key in env) {
+        delete env[key];
+      }
       Object.assign(env, lastEnv);
       return empty as Message[];
       // return [];
@@ -79,7 +81,9 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     const _env = getEnvFromMessages();
     if (_env !== lastEnv) {
       lastEnv = _env;
-      env = {}; //pool.getObject();
+      for (let key in env) {
+        delete env[key];
+      }
       Object.assign(env, _env);
     }
 

@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useState,
-  useContext,
-  useRef,
-  useCallback,
-  useEffect,
-} from "react";
+import { createContext, useState, useContext, useRef, useCallback, useEffect } from "react";
 import { useMessage } from "./MessageContext";
 import type { Message, Node, Patch } from "@/lib/nodes/types";
 
@@ -23,8 +16,7 @@ const LockedContext = createContext<ILockedContext | undefined>(undefined);
 
 export const useLocked = (): ILockedContext => {
   const context = useContext(LockedContext);
-  if (!context)
-    throw new Error("useLockedHandler must be used within LockedProvider");
+  if (!context) throw new Error("useLockedHandler must be used within LockedProvider");
   return context;
 };
 
@@ -38,10 +30,10 @@ export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
   );
 
   useEffect(() => {
-    patch.lockedMode = lockedMode;
-  }, [lockedMode, patch]);
-
-  useEffect(() => {
+    if (patch.lockedMode !== undefined) {
+      setLockedMode(patch.lockedMode);
+    }
+    /*
     if (
       patch.objectNodes.some((x) => x.attributes["Include in Presentation"]) &&
       patch.justExpanded
@@ -50,6 +42,14 @@ export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
       setTimeout(() => {
         patch.justExpanded = false;
       }, 100);
+    } else {
+      if (patch.lockedMode !== undefined) {
+        setLockedMode(patch.lockedMode);
+      }
+    }
+      */
+    if (patch.lockedMode !== undefined) {
+      setLockedMode(patch.lockedMode);
     }
   }, [patch]);
 

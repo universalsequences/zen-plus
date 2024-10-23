@@ -29,7 +29,13 @@ ${isLast ? "" : prettify("    ", printOutbound(block))}
   // inputs/outputs
   const histories =
     target === Target.Javascript
-      ? Array.from(new Set(block.histories.filter((h) => h.includes("let"))))
+      ? Array.from(
+          new Set(
+            block.histories
+              .filter((h) => h.includes("let"))
+              .map((x) => (x.includes("/* param") ? x.slice(0, x.indexOf("/*")) + ";\n" : x)),
+          ),
+        )
       : Array.from(
           new Set(
             block.histories
@@ -43,10 +49,11 @@ ${isLast ? "" : prettify("    ", printOutbound(block))}
                     return h.split(" ").some((h1) => h1 === y);
                   }),
               )
-              .map((x) => (x.includes("/* param */") ? x.slice(0, x.indexOf("/*")) + ";\n" : x)),
+              .map((x) => (x.includes("/* param") ? x.slice(0, x.indexOf("/*")) + ";\n" : x)),
           ),
         );
 
+  console.log("histories to print=", histories);
   const inbound = printInbound(block, histories, post);
   let code = "";
   const varKeyword = target === Target.C ? "int" : "let";

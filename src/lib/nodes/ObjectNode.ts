@@ -550,8 +550,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       if (this.subpatch) {
         // if this is a subpatch thats receiving messages...
         // we need to pass it off to subpatch
-        this.subpatch.processMessageForParam(message);
-        return true;
+        return this.subpatch.processMessageForParam(message);
       }
       if (this.attributes[attributeName] === undefined) {
         return;
@@ -661,7 +660,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       isCompiling = true;
     }
 
-    if (!isCompiling && !OperatorContextType.GL) {
+    if (!isCompiling && this.operatorContextType !== OperatorContextType.GL) {
       return;
     }
     if (!inlet.markedMessages) {
@@ -920,7 +919,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       const lastMessage = this.inlets[0] && this.inlets[0].lastMessage;
       if (lastMessage !== undefined) {
         const result: (Message | undefined)[] = this.fn(lastMessage);
-        
+
         for (let i = 0; i < result.length; i++) {
           const outletResult = result[i];
           if (outletResult === undefined) {
@@ -962,7 +961,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (this.buffer && this.name !== "buffer" && this.name !== "waveform") {
-      if (ArrayBuffer.isView(this.buffer)) { 
+      if (ArrayBuffer.isView(this.buffer)) {
         json.buffer = Array.from(this.buffer);
       } else if (Array.isArray(this.buffer)) {
         json.buffer = Array.from(this.buffer);

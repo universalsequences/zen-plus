@@ -1,5 +1,6 @@
 import { printLispExpression } from "@/lib/nodes/utils/lisp";
 import { Message } from "@/lib/nodes/types";
+import type { RegisteredPatch } from "@/lib/nodes/definitions/core/registry";
 
 const MAX_DEPTH = 10;
 const safePrint = (x: Message, depth = 0) => {
@@ -22,6 +23,18 @@ export const safeStringify = (message: Message, depth = 0) => {
   if (depth >= MAX_DEPTH) {
     return "...";
   }
+  if (
+    typeof message === "object" &&
+    message !== null &&
+    "patch" in message &&
+    "tags" in (message as RegisteredPatch)
+  ) {
+    return JSON.stringify({
+      patch: (message as RegisteredPatch).patch.name,
+      tags: (message as RegisteredPatch).tags,
+    });
+  }
+
   return typeof message === "string" || typeof message === "number"
     ? message.toString()
     : Array.isArray(message)

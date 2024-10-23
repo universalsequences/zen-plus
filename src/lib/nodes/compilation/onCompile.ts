@@ -135,6 +135,10 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
             patch.wasmCode = ret.wasm;
             patch.exportedAudioUnit = exportToAudioUnit(exportedParameters, ret.wasm);
           }
+          if ((patch as Patch as SubPatch).parentPatch?.isInsideSlot) {
+            (patch as Patch as SubPatch).parentPatch.isCompiling = false;
+          }
+
           ret.workletNode.port.onmessage = (e) => {
             if (e.data.type === "wasm-ready") {
               initMemory(zenGraph.context, worklet);

@@ -1,3 +1,6 @@
+import { type RegisteredPatch, registry } from "../nodes/definitions/core/registry";
+import * as Core from "../nodes/types";
+import { read } from "@/lib/messaging/queue";
 import type { ListPool } from "./ListPool";
 import { isSymbol } from "./types";
 import type {
@@ -216,11 +219,31 @@ export const createContext = (pool: ListPool) => {
             Number(evaluateExpression(args[0], env)) % Number(evaluateExpression(args[1], env))
           );
         }
+        case "read": {
+          if (args.length !== 1) {
+            throw new Error("read operation requires exactly two arguments");
+          }
+          const topic = evaluateExpression(args[0], env);
+          const msgs = read(topic as string);
+          return msgs;
+        }
         case "floor": {
           if (args.length !== 1) {
             throw new Error("floor operation requires exactly one arguments");
           }
           return Math.floor(Number(evaluateExpression(args[0], env)));
+        }
+        case "abs": {
+          if (args.length !== 1) {
+            throw new Error("abs operation requires exactly one arguments");
+          }
+          return Math.abs(Number(evaluateExpression(args[0], env)));
+        }
+        case "round": {
+          if (args.length !== 1) {
+            throw new Error("round operation requires exactly one arguments");
+          }
+          return Math.round(Number(evaluateExpression(args[0], env)));
         }
         case "ceil": {
           if (args.length !== 1) {
@@ -410,6 +433,32 @@ export const createContext = (pool: ListPool) => {
             return (lengthArg as Message[] | Float32Array | string).length;
           }
           throw new Error("Length operation requires a string or list argument");
+        }
+        case "querypatch": {
+          if (args.length !== 1) {
+            throw new Error("querypatch operation requires exactly one argument");
+          }
+          const tagList = evaluateExpression(args[0], env);
+          if (!Array.isArray(tagList)) {
+            throw new Error("querypatch operation requires a list of tags");
+          }
+          return registry.query(tagList as string[]);
+        }
+        case "sendpatch": {
+          if (args.length !== 2) {
+            throw new Error("sendpatch operation requires exactly two arguments");
+          }
+          const registeredPatch: RegisteredPatch = evaluateExpression(
+            args[0],
+            env,
+          ) as RegisteredPatch;
+
+          const message = evaluateExpression(args[1], env);
+          const patch = registeredPatch.patch;
+          const parentNode = patch.parentNode;
+          console.log("sending message to ", patch, message);
+          parentNode.receive(parentNode.inlets[0], message as Core.Message);
+          return message;
         }
         case "set": {
           if (args.length !== 2) {

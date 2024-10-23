@@ -111,35 +111,31 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   recompileGraph(force?: boolean): void {
+    // when recompile graph is called from the UI, we want to go up the tree of patches
+    // until we reach the top of the Zen Node this represents
     if (this.patchType === OperatorContextType.CORE) {
       return;
     }
     if (force) {
-      console.log("forcing super.subpatch recompile", this);
       super.recompileGraph();
       return;
     }
 
     // NOTE: THIS MIGHT BE WRONG! (I HAVE NO IDEA WHAT IM DOING)
     if (this.isZenBase()) {
-      console.log("isZEnBase() so super.recompile", this);
       super.recompileGraph();
       return;
     }
 
     if (!this.parentPatch.isZen) {
       if (this.patchType !== OperatorContextType.ZEN) {
-        console.log("not zen so parentPatch.recompile", this);
         this.parentPatch.recompileGraph();
       } else {
         console.log("is zen so super.recompile", this);
         super.recompileGraph();
       }
     } else {
-      console.log("!isZen so super.recompile", this);
-      //if (!this.parentPatch.isCompiling) {
       this.parentPatch.recompileGraph();
-      //}
     }
   }
 

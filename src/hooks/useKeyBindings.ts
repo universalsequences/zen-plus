@@ -151,6 +151,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
 
       if (e.key === "e" && e.metaKey) {
         if (!patchWindows.includes(selectedPatch)) {
+          selectedPatch.lockedMode = !lockedMode;
           setLockedMode(!lockedMode);
         }
       }

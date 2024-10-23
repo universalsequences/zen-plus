@@ -25,6 +25,7 @@ export const createWorklet = (
 ): Promise<ZenWorklet> => {
   return new Promise((resolve: (x: ZenWorklet) => void) => {
     const { code, wasm } = createWorkletCode(name, graph);
+    console.log(code);
     const workletCode = code;
     const workletBase64 = btoa(workletCode);
     const url = `data:application/javascript;base64,${workletBase64}`;

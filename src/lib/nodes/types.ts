@@ -1,4 +1,3 @@
-import type { BlockGen } from "../zen";
 import React from "react";
 import type { StateChange } from "@/lib/nodes/definitions/core/preset";
 import type Assistant from "@/lib/openai/assistant";
@@ -21,6 +20,7 @@ import type {
 } from "./definitions/core/zequencer/types";
 import { PatchDoc } from "../org/types";
 import { ListPool } from "../lisp/ListPool";
+import { RegisteredPatch } from "./definitions/core/registry";
 
 export interface Size {
   width: number;
@@ -71,7 +71,8 @@ export type Message =
   | MessageObject[]
   | ObjectNode
   | Coordinate
-  | ParameterLock;
+  | ParameterLock
+  | RegisteredPatch;
 
 export type Lazy = () => Message;
 

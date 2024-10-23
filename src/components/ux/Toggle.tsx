@@ -29,6 +29,11 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
   const { text, fillColor, strokeColor } = objectNode.attributes;
   return (
     <div
+      onMouseDown={(e: any) => {
+        if (lockedMode) {
+          e.stopPropagation();
+        }
+      }}
       onClick={toggle}
       style={{
         color: value

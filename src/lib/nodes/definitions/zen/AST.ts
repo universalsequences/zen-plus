@@ -614,7 +614,11 @@ export const _compileStatement = (
         compiledArgs[2] as Arg,
       );
     } else if (name === "simdMatSum") {
-      return simdMatSum(compoundOperator.block1!, compoundOperator.block2!);
+      return simdMatSum(
+        compoundOperator.block1 as BlockGen,
+        compoundOperator.block2 as BlockGen,
+        compoundOperator.block3 as BlockGen,
+      );
     } else if (name === "simdDotSum") {
       return simdDotSum(compoundOperator.block1!, compoundOperator.block2!);
     } else if (name === "simdDot") {

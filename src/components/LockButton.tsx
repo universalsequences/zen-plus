@@ -14,6 +14,7 @@ const LockButton = () => {
   return (
     <div
       onClick={() => {
+        patch.lockedMode = !lockedMode;
         setLockedMode(!lockedMode);
       }}
       className="cursor-pointer mr-3"

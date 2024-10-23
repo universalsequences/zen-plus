@@ -296,7 +296,6 @@ const InnerObjectNodeComponent: React.FC<{
       lastSubPatchClick.current = new Date().getTime();
       setSelection(null);
       if (isCustomView) {
-        // e.stopPropagation();
         return;
       }
       if (lockedModeRef.current) {

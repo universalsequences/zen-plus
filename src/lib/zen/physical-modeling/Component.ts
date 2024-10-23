@@ -1,9 +1,9 @@
-import { data, peek, BlockGen, poke, Gettable } from "../data";
-import { Context } from "../context";
+import { data, peek, type BlockGen, poke, type Gettable } from "../data";
+import type { Context } from "../context";
 import { float } from "../zen";
 import { zen_let } from "../let";
 import { print } from "../print";
-import { Structure } from "./web-maker";
+import type { Structure } from "./web-maker";
 import { breakIf } from "../break";
 import { zswitch } from "../switch";
 import {
@@ -30,7 +30,7 @@ import { noise } from "../noise";
 import { scale } from "../scale";
 import { accum } from "../accum";
 import { s } from "../seq";
-import { UGen, Arg } from "../zen";
+import type { UGen, Arg } from "../zen";
 
 export interface Membrane {
   membrane: UGen;
@@ -207,7 +207,8 @@ export class Component {
         this.u,
         idx,
         this.currentChannel,
-        div(atan(mult(0.6366197723675814, current)), 0.6366197723675814),
+        current,
+        //div(atan(mult(0.6366197723675814, current)), 0.6366197723675814),
       ),
       current,
     );
@@ -216,22 +217,23 @@ export class Component {
   lerpExcitementEnergy(idx: UGen, x: Arg, y: Arg): UGen {
     // we "excite" the membrane at an x,y point, though we need
     // to actually excite multiple nodes based on how close they are to that point
-    let xidx = mult(idx, 2);
-    let x1 = peek(this.web.pointsData!, xidx, 0);
-    let y1 = peek(this.web.pointsData!, add(xidx, 1), 0);
-    let distance = sqrt(add(pow(sub(x1, x), 2), pow(sub(y1, y), 2)));
-    let maxDistance = 80;
-    let energy = clamp(sub(1, div(distance, maxDistance)), 0, 1);
-    const neg = (x: Arg) => mult(-1, x);
-    let gaussianEnergy = exp(div(neg(pow(distance, 2)), mult(2, pow(div(maxDistance, 2), 2))));
+    const xidx = mult(idx, 2);
+    const x1 = peek(this.web.pointsData as BlockGen, xidx, 0);
+    const y1 = peek(this.web.pointsData as BlockGen, add(xidx, 1), 0);
+    const distance = sqrt(add(pow(sub(x1, x), 2), pow(sub(y1, y), 2)));
+    const maxDistance = 80;
+    const energy = clamp(sub(1, div(distance, maxDistance)), 0, 1);
+    //const neg = (x: Arg) => mult(-1, x);
+    //const gaussianEnergy = exp(div(neg(pow(distance, 2)), mult(2, pow(div(maxDistance, 2), 2))));
     return energy;
   }
 
-  calculateNeighborsEnergy(idx: UGen, val: UGen, input: UGen) {
-    let noiseParam = min(20, this.material.noise);
-    let noiseFactor = mult(scale(noise(), 0, 1, -1, 1), noiseParam);
-    if (this.connections[0] && this.connections[0].component.isEntryPoint) {
-      input = this.connections[0].component.excitementEnergy!;
+  calculateNeighborsEnergy(idx: UGen, val: UGen, _input: UGen) {
+    let input = _input;
+    const noiseParam = min(20, this.material.noise);
+    const noiseFactor = mult(scale(noise(), 0, 1, -1, 1), noiseParam);
+    if (this.connections[0]?.component.isEntryPoint) {
+      input = this.connections[0].component.excitementEnergy as UGen;
     }
 
     let neighborsEnergy = mult(
@@ -249,18 +251,18 @@ export class Component {
       ),
     );
 
-    for (let connection of this.connections) {
+    for (const connection of this.connections) {
       // if we are currently on a node that is "connected" to another
       // node in another component, then we need to do this:
       // calculate the difference of displacement
       // multiply it by "coupling coeff" and add it to this neighborsEnergy
       // so first how do we know
-      let { component, neighbors } = connection;
-      let connectedIdx = peek(neighbors, idx, 0); // neighbors defines
-      let isConnected = neq(connectedIdx, -1); // -1 means its not connected
-      let connectedValue = peek(component.u, connectedIdx, component.prevChannel);
-      let displacementDiff = sub(connectedValue, val);
-      let couplingForce = zswitch(
+      const { component, neighbors } = connection;
+      const connectedIdx = peek(neighbors, idx, 0); // neighbors defines
+      const isConnected = neq(connectedIdx, -1); // -1 means its not connected
+      const connectedValue = peek(component.u, connectedIdx, component.prevChannel);
+      const displacementDiff = sub(connectedValue, val);
+      const couplingForce = zswitch(
         isConnected,
         mult(displacementDiff, this.material.couplingCoefficient),
         0,
@@ -293,11 +295,10 @@ export class Component {
       (i) => {
         // whats the "index" of the i'th neighbor, according to
         // the "neighbors" matrix
-
-        let neighbor = peek(neighbors, add(mult(maxNeighbors, idx), i), 0);
+        const neighbor = peek(neighbors, add(mult(maxNeighbors, idx), i), 0);
 
         // whats the "coeff" of this neighbor w.r.t to this current node
-        let coeff = peek(coeffs, neighbor, idx);
+        const coeff = peek(coeffs, neighbor, idx);
 
         // if neighbor is not -1 then we have a valid neighbor
         return zswitch(
@@ -318,7 +319,7 @@ export class Component {
   }
 
   bidirectionalConnect(component: Component) {
-      console.log('bidrirectional connect');
+    console.log("bidrirectional connect");
     // what we need to do is this...
     // generate 2 way directions
 
@@ -378,12 +379,12 @@ export const generateStructure = (A: Component, B: Component): Structures => {
   // the component being connected is smaller then "this" one
   // A -> component/
   // B -> this
-  let neighborsA = new Float32Array(A.size);
+  const neighborsA = new Float32Array(A.size);
   for (let i = 0; i < A.size; i++) {
     neighborsA[i] = B.size - 1 - i;
   }
-  let neighborsB = new Float32Array(B.size);
-  let sizeDiff = B.size - A.size;
+  const neighborsB = new Float32Array(B.size);
+  const sizeDiff = B.size - A.size;
   for (let i = 0; i < B.size; i++) {
     if (i < sizeDiff) {
       neighborsB[i] = -1;
