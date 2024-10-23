@@ -501,12 +501,12 @@ export const createContext = (pool: ListPool) => {
       for (const key in env[obj.spread as string] as Record<string, Message>) {
         _env[key] = evaluateExpression(
           key,
-          evaluateExpression(obj.spread, _env) as Record<string, Message>,
+          evaluateExpression(obj.spread, _env as Environment) as Record<string, Message>,
         ); // (env[obj.spread as string] as Record<string, Message>)[key];
       }
     }
     for (const [key, value] of Object.entries(obj.properties)) {
-      result[key] = evaluateExpression(value, _env);
+      result[key] = evaluateExpression(value, _env as Environment);
     }
     return result;
   }
