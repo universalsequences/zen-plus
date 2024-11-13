@@ -21,7 +21,7 @@ new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.vari
 `;
       } else {
         code += `
-if (this.messageCounter % 8 === 0) {
+if (this.messageCounter % 256 === 0) {
 this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
 }
 `;

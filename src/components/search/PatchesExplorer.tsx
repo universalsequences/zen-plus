@@ -3,15 +3,12 @@ import { ExpandedPatch } from "./ExpandedPatch";
 import { File } from "@/lib/files/types";
 import { PatchOption } from "./PatchOption";
 import { useCallback, useState } from "react";
-import { useSubPatchLoader } from "@/hooks/useSubPatchLoader";
-import { fetchOnchainSubPatch } from "@/lib/onchain/fetch";
-import { usePatch } from "@/contexts/PatchContext";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatches } from "@/contexts/PatchesContext";
 import { SerializedPatch } from "@/lib/nodes/types";
 
-const getType = (patch: SerializedPatch) => {
+export const getSubPatchType = (patch: SerializedPatch) => {
   if (patch.attributes?.type === "zen") {
     return OperatorContextType.ZEN;
   } else if (patch.attributes?.type === "gl") {
@@ -47,7 +44,12 @@ export const PatchesExplorer = () => {
       const serializedSubPatch = await fetchSubPatchForDoc(selectedPatch.id);
       if (serializedSubPatch) {
         const objectNode = new ObjectNodeImpl(ret.selectedPatch);
-        objectNode.parse(selectedPatch.name, getType(serializedSubPatch), true, serializedSubPatch);
+        objectNode.parse(
+          selectedPatch.name,
+          getSubPatchType(serializedSubPatch),
+          true,
+          serializedSubPatch,
+        );
         objectNode.position = { x: 100, y: 100 };
         ret.selectedPatch.objectNodes.push(objectNode);
         ret.setCounter(Math.random());

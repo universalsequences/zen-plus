@@ -1,8 +1,4 @@
-import type {
-  ConnectionType,
-  Attributes,
-  AttributeOptions,
-} from "../nodes/types";
+import type { ConnectionType, Attributes, AttributeOptions } from "../nodes/types";
 import type { File } from "@/lib/files/types";
 import type { GLTypeCheck } from "@/lib/nodes/typechecker";
 import type { UGen, Arg } from "@/lib/gl/types";
@@ -46,6 +42,7 @@ export interface Definition {
   isHot?: boolean;
   file?: File;
   operations?: Operations;
+  examplePatch?: string;
 }
 
 export type API = {

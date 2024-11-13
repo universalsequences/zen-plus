@@ -375,6 +375,8 @@ const InnerObjectNodeComponent: React.FC<{
     ux = undefined as any;
   }
 
+  const splitText = text.split(" ");
+
   return (
     <PositionedComponent
       position={position}
@@ -481,7 +483,14 @@ const InnerObjectNodeComponent: React.FC<{
                     }}
                     className=" px-1 flex-1 inner-node-text  w-full text-zinc-100 bg-dark-transparent flex"
                   >
-                    <span className="my-auto">{text}</span>
+                    <span className="my-auto">
+                      <span
+                        className={`node-text node-operator-type-${objectNode.operatorContextType}`}
+                      >
+                        {splitText[0]}
+                      </span>
+                      <span className="">{" " + splitText.slice(1).join(" ")}</span>
+                    </span>
                   </div>
                 )}
                 {editing && (

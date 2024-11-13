@@ -1,18 +1,22 @@
 import React, { useEffect, useCallback, useState } from "react";
-import { getOperatorContext } from "@/lib/nodes/context";
+import { OperatorContextType, getOperatorContext } from "@/lib/nodes/context";
 import { ObjectNode, MessageNode } from "@/lib/nodes/types";
 import Attribute from "./Attribute";
-import { useSelection } from "@/contexts/SelectionContext";
 import { PatchDocComponent } from "./org/PatchDocComponent";
-import { MinusCircledIcon, PlusCircledIcon } from "@radix-ui/react-icons";
-import { usePosition } from "@/contexts/PositionContext";
+import { MinusCircledIcon, PlusCircledIcon, QuestionMarkCircledIcon } from "@radix-ui/react-icons";
+import { useStorage } from "@/contexts/StorageContext";
+import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
+import { getSubPatchType } from "./search/PatchesExplorer";
+import { usePatches } from "@/contexts/PatchesContext";
 
 const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
+  const { fetchSubPatchForDoc } = useStorage();
+  const { expandPatch } = usePatches();
   let attributes = node.attributes;
   let attributeNames = Object.keys(attributes);
-  const [inlets, setInlets] = useState(0);
+  const [_inlets, setInlets] = useState(0);
 
-  let doc =
+  const doc =
     (node as ObjectNode).operatorContextType !== undefined
       ? getOperatorContext((node as ObjectNode).operatorContextType).lookupDoc(
           (node as ObjectNode).name || "",
@@ -38,15 +42,36 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
     updateText(n);
   }, [node]);
 
+  const [loadingExample, setLoadingExample] = useState(false);
+  const openExample = useCallback(async () => {
+    if (!doc?.examplePatch) return;
+    setLoadingExample(true);
+    // look up doc
+    const serializedSubPatch = await fetchSubPatchForDoc(doc?.examplePatch);
+    if (serializedSubPatch) {
+      const type = serializedSubPatch.attributes?.type || "zen";
+      const objectNode = new ObjectNodeImpl(node.patch);
+      objectNode.parse(`zen @type ${type}`, OperatorContextType.ZEN, true, serializedSubPatch);
+      objectNode.position = { x: 100, y: 100 };
+      expandPatch(objectNode);
+
+      setTimeout(() => {
+        objectNode.subpatch?.recompileGraph(true);
+      }, 1000);
+      setLoadingExample(false);
+    }
+  }, [doc, node]);
+
   const removeInlet = useCallback(() => {
     const n = node as ObjectNode;
     const lastMessage = n.inlets[n.inlets.length - 1].lastMessage;
     n.inlets.splice(n.inlets.length - 1, 1);
-    n.inlets[n.inlets.length - 1].lastMessage = lastMessage ;
+    n.inlets[n.inlets.length - 1].lastMessage = lastMessage;
     updateText(n);
   }, [node]);
 
   const hasDynamicInlets = (node as ObjectNode).hasDynamicInlets;
+
   return (
     <div onClick={(e: any) => e.stopPropagation()} className=" p-1">
       <div className="w-full h-full text-xs">
@@ -55,8 +80,21 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
             {(node as ObjectNode).name} ( {node.id} )
           </div>
           {doc && <div className="mt-2 w-52">{doc.description}</div>}
+          {doc?.examplePatch && (
+            <button
+              onClick={openExample}
+              className={`${loadingExample ? "opacity-50 pointer-events-none" : ""} flex px-2 py-1 cursor-pointer rounded-lg bg-zinc-200 text-zinc-500 gap-2 my-2 active:scale-105 active:text-zinc-400 transition-al`}
+            >
+              {loadingExample ? (
+                " ... loading"
+              ) : (
+                <>
+                  <QuestionMarkCircledIcon className="w-4 h-4" /> <div>help</div>
+                </>
+              )}
+            </button>
+          )}
         </div>
-
         {hasDynamicInlets && (
           <div className="flex">
             <button

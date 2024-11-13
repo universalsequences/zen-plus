@@ -780,3 +780,41 @@ div:active {
         pointer-events: none;
     }
 }
+
+.flash {
+    span {
+        background-color: #1a111f;
+      animation: colorChangeBlue 500ms forwards;
+      color: white !important;
+    }
+}
+
+@keyframes colorChangeBlue {
+    0% {
+        background-color: initial;
+    }
+    50% {
+        background-color: #8af8ff;
+    }
+    100% {
+        background-color: initial;
+    }
+}
+
+    .node-operator-type-0 {
+        color: #ace8de;
+    }
+    .node-operator-type-1 {
+        color: #d2ff00;
+    }
+    .node-operator-type-7 {
+        color: #ffffff;
+    }
+
+    .node-operator-type-2 {
+        color: #acb3ff ;
+    }
+
+    .node-operator-type-6 {
+        color:#dac1f1;
+    }

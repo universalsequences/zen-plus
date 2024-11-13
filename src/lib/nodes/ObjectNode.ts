@@ -140,7 +140,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
    * arguments and sets the correct NodeFunction
    * called from the UI when user types into an object node box
    *
-   * @param {string} text - The text input by the user to parse
+   * @param _text {string} - The text input by the user to parse
    */
   parse(
     _text: string,
@@ -260,7 +260,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         //this.patch.recompileGraph();
         const parentNode = (this.patch as SubPatch).parentNode;
         if (!parentNode || parentNode.attributes.type !== "core") {
-          console.log("parse causing recompile", this, this.patch);
           this.patch.recompileGraph();
         }
       }
@@ -1067,7 +1066,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     this.id = json.id;
     if (this.name === "zequencer.core") {
       this.steps = json.steps;
-      console.log("json for zequencer = ", json, this.id, this);
     }
 
     if (!isPreset) {
@@ -1090,9 +1088,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       };
     }
     if (json.custom !== undefined && this.custom) {
-      if (this.name === "toggle") {
-        console.log("loading custom for toggle with json.custom=", json.custom);
-      }
       this.custom.fromJSON(json.custom);
     }
 

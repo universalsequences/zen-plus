@@ -50,6 +50,8 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     return specialForms.some((form) => line.trim().startsWith(`(${form}`));
   };
 
+  const [flash, setFlash] = useState(false);
+
   const getLineIndentation = (line: string): number => {
     const match = line.match(/^\s*/);
     return match ? match[0].length : 0;
@@ -60,6 +62,17 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
+
+      if (e.metaKey) {
+        console.log("sending code");
+        // in this case we want to flash and re-send
+        setFlash(true);
+        setTimeout(() => {
+          setFlash(false);
+        }, 500);
+        objectNode.receive(objectNode.inlets[0], objectNode.inlets[0].lastMessage || "bang");
+        return;
+      }
 
       const { selectionStart, value } = e.currentTarget;
       const lines = value.split("\n");
@@ -174,7 +187,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         //if (isSelected) e.stopPropagation();
       }}
       style={{ width, height }}
-      className="bg-zinc-800 relative flex"
+      className={`bg-zinc-800 relative flex ${flash ? "flash" : ""}`}
     >
       {objectNode.attributes["hide-code"] ? (
         <div className="m-auto text-white">code</div>

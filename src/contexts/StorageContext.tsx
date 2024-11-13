@@ -185,6 +185,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
   };
 
   const fetchSubPatchForDoc = async (id: string): Promise<SerializedPatch | null> => {
+    console.log("fetch subpatch for doc=", id);
     const docRef = doc(db, "patches", id);
     try {
       const docSnap = await getDoc(docRef);

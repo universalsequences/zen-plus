@@ -34,6 +34,7 @@ const typed_op = (
   fn: (...args: Arg[]) => UGen,
   typeChecker: GLTypeCheck,
   fnString?: string,
+  example?: string,
 ) => {
   doc(name, {
     numberOfInlets,
@@ -42,6 +43,7 @@ const typed_op = (
     fn,
     fnString,
     glTypeChecker: typeChecker,
+    examplePatch: example,
   });
 };
 
@@ -84,6 +86,7 @@ const strict_vec_op = (
   fn: (...args: Arg[]) => UGen,
   outputType: GLType,
   fnString?: string,
+  example?: string,
 ) =>
   typed_op(
     name,
@@ -96,6 +99,7 @@ const strict_vec_op = (
       [DataType.GL(GLType.Vec2), DataType.GL(GLType.Vec3), DataType.GL(GLType.Vec4)],
     ),
     fnString,
+    example,
   );
 
 const strict_float_op = (
@@ -133,7 +137,7 @@ flexible_op("%", 2, gl.mod, "mod");
 strict_vec_op("dot", 2, gl.dot, GLType.Float);
 flexible_op("pow", 2, gl.pow);
 strict_vec_op("length", 1, gl.length, GLType.Float);
-strict_vec_op("uv", 0, gl.uv, GLType.Vec2);
+strict_vec_op("uv", 0, gl.uv, GLType.Vec2, undefined, "UXTPW1tBUqVXFDr7yLg0");
 strict_vec_op("nuv", 0, gl.nuv, GLType.Vec2);
 strict_vec_op("resolution", 0, gl.resolution, GLType.Vec2);
 strict_vec_op("red", 0, gl.red, GLType.Vec4);

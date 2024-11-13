@@ -1,6 +1,6 @@
 import { type RegisteredPatch, registry } from "../nodes/definitions/core/registry";
 import * as Core from "../nodes/types";
-import { read } from "@/lib/messaging/queue";
+import { read, publish } from "@/lib/messaging/queue";
 import type { ListPool } from "./ListPool";
 import { isSymbol } from "./types";
 import type {
@@ -24,7 +24,7 @@ export const createContext = (pool: ListPool) => {
     return result;
   }
 
-  function evaluateExpression(expr: Expression, env: Environment): Message {
+  function evaluateExpression(expr: Expression, env: Environment, index = 1): Message {
     const e = () => {
       if (Array.isArray(expr)) {
         return evaluateList(expr, env);
@@ -39,18 +39,39 @@ export const createContext = (pool: ListPool) => {
           }
         }
       }
-      return evaluateAtom(expr, env);
+      return evaluateAtom(expr, env, index);
     };
     const r = e();
     return r;
   }
 
+  const shapeArgs = (args: Expression[], env: Environment): Expression[] => {
+    let _args: Expression[] = [];
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i] as Symbol;
+      if (arg.type === "Symbol" && arg.value === "...") {
+        i++;
+        const evaluated_arg = evaluateExpression(args[i], env, i);
+        if (Array.isArray(evaluated_arg)) {
+          for (const a of evaluated_arg) {
+            _args.push(a);
+          }
+        }
+      } else {
+        _args.push(args[i]);
+      }
+    }
+    return _args;
+  };
+
   function evaluateList(list: Expression[], env: Environment): Message {
     if (list.length === 0) {
       return null;
     }
-    const [_func, ...args] = list;
-    const func = evaluateExpression(_func, env) || _func;
+    const [_func, ..._args] = list;
+    const func = evaluateExpression(_func, env, 0) || _func;
+
+    const args = shapeArgs(_args, env);
 
     if (typeof func === "function") {
       const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
@@ -59,8 +80,10 @@ export const createContext = (pool: ListPool) => {
     }
     if (isSymbol(func)) {
       const symbol = (func as Symbol).value;
-      if (symbol in env) {
-        const fn = env[symbol];
+      const symbolFn = `${(func as Symbol).value}_fn`;
+
+      if (symbolFn in env) {
+        const fn = env[symbolFn];
         if (typeof fn === "function") {
           const evaluatedArgs = args.map((arg) => evaluateExpression(arg, env));
           return fn(env)(...evaluatedArgs);
@@ -177,8 +200,8 @@ export const createContext = (pool: ListPool) => {
         }
         case "+": {
           return args.reduce(
-            (sum, arg) => (sum as number) + Number(evaluateExpression(arg, env)),
-            0,
+            (sum, arg) => sum + evaluateExpression(arg, env),
+            typeof args[0] === "string" ? "" : 0,
           );
         }
         case "-": {
@@ -209,6 +232,12 @@ export const createContext = (pool: ListPool) => {
           return (
             (evaluateExpression(args[0], env) as number) **
             (evaluateExpression(args[1], env) as number)
+          );
+        }
+        case "max": {
+          return Math.max(
+            evaluateExpression(args[0], env) as number,
+            evaluateExpression(args[1], env) as number,
           );
         }
         case "%": {
@@ -273,6 +302,8 @@ export const createContext = (pool: ListPool) => {
           return (
             Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env))
           );
+        case "list?":
+          return Array.isArray(evaluateExpression(args[0], env));
         case "slice": {
           let array = evaluateExpression(args[0], env);
           if (ArrayBuffer.isView(array)) {
@@ -444,6 +475,15 @@ export const createContext = (pool: ListPool) => {
           }
           return registry.query(tagList as string[]);
         }
+        case "send": {
+          if (args.length !== 2) {
+            throw new Error("querypatch operation requires exactly one argument");
+          }
+          const messageType = evaluateExpression(args[0], env);
+          const message = evaluateExpression(args[1], env);
+          publish(messageType as string, message as string);
+          return message;
+        }
         case "sendpatch": {
           if (args.length !== 2) {
             throw new Error("sendpatch operation requires exactly two arguments");
@@ -456,9 +496,15 @@ export const createContext = (pool: ListPool) => {
           const message = evaluateExpression(args[1], env);
           const patch = registeredPatch.patch;
           const parentNode = patch.parentNode;
-          console.log("sending message to ", patch, message);
           parentNode.receive(parentNode.inlets[0], message as Core.Message);
           return message;
+        }
+        case "null?": {
+          const e = evaluateExpression(args[0], env);
+          if (Array.isArray(e) && e.length === 0) {
+            return true;
+          }
+          return false;
         }
         case "set": {
           if (args.length !== 2) {
@@ -473,15 +519,16 @@ export const createContext = (pool: ListPool) => {
         }
         case "print": {
           const printResult = args.map((arg) => evaluateExpression(arg, env));
-          console.log(printResult);
           return printResult[printResult.length - 1] ?? null;
         }
-        default:
-          console.log("missing function def=", func);
+        default: {
+          console.log("function missing", func);
           throw new Error(`Unknown function: ${func}`);
+        }
       }
     }
-    throw new Error(`Invalid function call: ${func}`);
+    return list;
+    //throw new Error(`Invalid function call: ${func}`);
   }
 
   function evaluateObject(obj: ObjectLiteral, env: Environment): Message {
@@ -511,9 +558,14 @@ export const createContext = (pool: ListPool) => {
     return result;
   }
 
-  function evaluateAtom(atom: Atom, env: Environment): Message {
+  function evaluateAtom(atom: Atom, env: Environment, index = 0): Message {
     if (isSymbol(atom)) {
       const inputKey = (atom as Symbol).value;
+      const fnKey = `${inputKey}_fn`;
+      if (index === 0 && fnKey in env) {
+        return env[fnKey];
+      }
+
       if (inputKey in env) {
         return env[inputKey];
       }
@@ -534,7 +586,7 @@ export const createContext = (pool: ListPool) => {
 
   function defineFunctionInEnv(funcDef: FunctionDefinition, env: Environment): Message {
     const { params, body } = funcDef;
-    env[params[0].value] = (callScope: Environment) => {
+    env[params[0].value + "_fn"] = (callScope: Environment) => {
       return (...args: Message[]) => {
         const localEnv = Object.create(null); //pool.getEnv();
 
@@ -542,9 +594,23 @@ export const createContext = (pool: ListPool) => {
 
         // const localEnv = Object.create({ ...env, ...callScope });
 
+        for (let i = 1; i < params.length; i++) {
+          const index = i - 1;
+          const param = params[i];
+          if (param.value === "...") {
+            i++;
+            const restParam = params[i].value;
+            const rest = args.slice(index);
+            localEnv[restParam as string] = rest;
+          } else {
+            localEnv[param.value as string] = args[index];
+          }
+        }
+        /*
         params.slice(1).forEach((param, index) => {
           localEnv[param.value as string] = args[index];
         });
+        */
         const result = evaluateExpression(body, localEnv);
         pool.releaseObject(localEnv);
         return result;
