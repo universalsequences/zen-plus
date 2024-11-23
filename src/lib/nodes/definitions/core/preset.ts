@@ -92,7 +92,6 @@ export class PresetManager {
       let stateChangePatch = _stateChange.node.patch;
       let presetPatch = this.objectNode.patch;
       if (isPatchBelow(presetPatch, stateChangePatch)) {
-        console.log("state changed ", _stateChange, this.currentPreset);
         this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
       }
     });
@@ -160,20 +159,28 @@ export const preset = (object: ObjectNode) => {
   };
 };
 
+const cache: { [x: string]: boolean } = {};
 /**
  * returns true if b is a descendent of a (or in the same patch)
  * */
 const isPatchBelow = (a: Patch, b: Patch): boolean => {
+  const key = `${a.id}.${b.id}`;
+  if (cache[key]) {
+    return cache[key];
+  }
   if (b === a) {
+    cache[key] = true;
     return true;
   }
 
   while ((b as SubPatch).parentPatch) {
     if (b === a) {
+      cache[key] = true;
       return true;
     }
     b = (b as SubPatch).parentPatch;
   }
 
+  cache[key] = false;
   return false;
 };

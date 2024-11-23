@@ -13,7 +13,8 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
   fullscreen,
 }) => {
   useSelection();
-  const { lockedMode } = useLocked();
+  const { lockedMode: _lockedMode } = useLocked();
+  const lockedMode = fullscreen ? true : _lockedMode;
   usePosition();
   const [text, setText] = useState(objectNode.script || "");
   const { selectedNodes, setSelectedNodes } = useSelection();
@@ -183,11 +184,11 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
 
   return (
     <div
-      onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+      onClick={(_e: React.MouseEvent<HTMLDivElement>) => {
         handleKeyUp();
         setSelectedNodes([objectNode]);
       }}
-      onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+      onMouseDown={(_e: React.MouseEvent<HTMLDivElement>) => {
         //const isSelected = selectedNodes?.includes(objectNode);
         //if (isSelected) e.stopPropagation();
       }}
@@ -277,7 +278,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
           </pre>
         </>
       )}
-      ;
     </div>
   );
 };

@@ -1,8 +1,8 @@
 import { RefObject } from "react";
 
 interface Props {
-  width: number;
-  height: number;
+  width: number | string;
+  height: number | string;
   text: string;
   cursor: number;
   style: any;

@@ -7,8 +7,7 @@ doc("matrix", {
   outletNames: ["matrix", "statechange", "peek"],
   numberOfOutlets: 3,
   numberOfInlets: 1,
-  description:
-    "creates a matrix UI element that sends its output to be used in data object",
+  description: "creates a matrix UI element that sends its output to be used in data object",
 });
 
 export class Matrix {
@@ -16,10 +15,7 @@ export class Matrix {
   buffer: Float32Array | Uint8Array | MessageObject[];
   counter: number;
   value: Message;
-  constructor(
-    objectNode: ObjectNode,
-    buffer: Float32Array | Uint8Array | MessageObject[],
-  ) {
+  constructor(objectNode: ObjectNode, buffer: Float32Array | Uint8Array | MessageObject[]) {
     this.objectNode = objectNode;
     this.buffer = buffer;
     this.counter = 77777777;
@@ -35,9 +31,7 @@ export class Matrix {
 
   getJSON() {
     return {
-      buffer: ArrayBuffer.isView(this.buffer)
-        ? Array.from(this.buffer)
-        : [...this.buffer],
+      buffer: ArrayBuffer.isView(this.buffer) ? Array.from(this.buffer) : [...this.buffer],
     };
   }
 
@@ -143,9 +137,7 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
       _type === "uint8"
         ? new Uint8Array(columns * rows)
         : _type === "object"
-          ? (new Array(columns * rows).fill(
-              {} as MessageObject,
-            ) as MessageObject[])
+          ? (new Array(columns * rows).fill({} as MessageObject) as MessageObject[])
           : new Float32Array(columns * rows);
   }
 
@@ -353,10 +345,7 @@ const changeLength = (list: Float32Array, size: number): Float32Array => {
   return newList;
 };
 
-const newObjectList = (
-  list: MessageObject[],
-  size: number,
-): MessageObject[] => {
+const newObjectList = (list: MessageObject[], size: number): MessageObject[] => {
   const newList = new Array(size).fill({} as MessageObject);
   for (let i = 0; i < size; i++) {
     const idx = i % list.length;

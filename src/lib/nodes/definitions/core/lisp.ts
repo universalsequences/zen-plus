@@ -91,6 +91,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     const evaluate = createContext(pool);
     // where do we store the script, in a attribute? lol
     //
+    let a = new Date().getTime();
     if (node.script) {
       // parse it and run...
       try {
@@ -109,6 +110,10 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
         out[1] = env as Message;
 
         pool.borrow(ret);
+        let b = new Date().getTime();
+        if (node.attributes["font-size"] < 11) {
+          console.log("lisp took %s ms", b - a);
+        }
         return out as Message[];
       } catch (e) {
         console.log("error", e, node);

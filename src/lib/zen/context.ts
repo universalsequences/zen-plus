@@ -211,9 +211,6 @@ export class Context {
   }
 
   postMessage(msg: ContextMessage, options?: StructuredSerializeOptions | undefined) {
-    if (options) {
-      console.log("detaching", msg);
-    }
     for (const worklet of this.worklets) {
       worklet.port.postMessage(msg, options);
     }

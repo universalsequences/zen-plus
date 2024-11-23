@@ -133,7 +133,6 @@ const PositionedComponent: React.FC<{
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       if (isCustomView) {
-        //e.stopPropagation();
         return;
       }
       selectPatch();
@@ -143,6 +142,7 @@ const PositionedComponent: React.FC<{
         let x = e.clientX - divRect.left;
         let y = e.clientY - divRect.top;
 
+        /*
         if (
           lockedModeRef.current &&
           !(node as ObjectNode).subpatch?.objectNodes.some((x) => x.name === "onPatchSelect")
@@ -159,12 +159,15 @@ const PositionedComponent: React.FC<{
             setSelectedNodes([node]);
           }
         }
+        */
 
         if (lockedModeRef.current) {
           e.stopPropagation();
           return;
         }
         initialPosition.current = { ...node.position };
+
+        setSelectedNodes([]);
 
         setDraggingNode({
           node: node,
@@ -185,8 +188,27 @@ const PositionedComponent: React.FC<{
       if (divRect) {
         e.stopPropagation();
       }
+      if (isCustomView) {
+        return;
+      }
+      if (
+        lockedModeRef.current &&
+        !(node as ObjectNode).subpatch?.objectNodes.some((x) => x.name === "onPatchSelect")
+      ) {
+        return;
+      }
+
+      if (!selectedNodes.includes(node)) {
+        if (e.shiftKey) {
+          setSelectedNodes((prev) =>
+            prev.includes(node) ? prev.filter((x) => x !== node) : [...prev, node],
+          );
+        } else {
+          setSelectedNodes([node]);
+        }
+      }
     },
-    [setDraggingNode, setSelectedNodes, node, maxZIndex],
+    [setDraggingNode, setSelectedNodes, node, maxZIndex, isCustomView],
   );
 
   const size = sizeIndex[node.id];
@@ -370,7 +392,7 @@ const PositionedComponent: React.FC<{
             )}
           </>
         )}
-        {!isCustomView && position !== "relative" && (
+        {!fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={false}
@@ -379,7 +401,7 @@ const PositionedComponent: React.FC<{
             iolets={node.inlets}
           />
         )}
-        {!isCustomView && position !== "relative" && (
+        {!fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={true}

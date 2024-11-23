@@ -351,28 +351,13 @@ const InnerObjectNodeComponent: React.FC<{
           }
           setSelectedNodes([]);
         }
-      } else {
-        /*
-        setSelectedPatch(objectNode.patch);
-        if (e.shiftKey) {
-          console.log("shift key...");
-          setSelectedNodes((prev) => [...prev, objectNode]);
-        } else {
-          setSelectedNodes([objectNode]);
-        }
-        */
       }
 
       if (editing) {
         e.stopPropagation();
       }
       if (!editing) {
-        let divRect = ref.current?.getBoundingClientRect();
-        if (divRect) {
-          let x = e.clientX - divRect.left;
-          let y = e.clientY - divRect.top;
-          initialPosition.current = { ...objectNode.position };
-        }
+        initialPosition.current = { ...objectNode.position };
       }
     },
     [editing, objectNode, isSelected, setSelectedNodes, setEditing, setPatch, setPatches, patches],
@@ -381,7 +366,6 @@ const InnerObjectNodeComponent: React.FC<{
   const showExample = useCallback(async (examplePatch: string) => {
     // look up doc
     const serializedSubPatch = await fetchSubPatchForDoc(examplePatch);
-    console.log("serialized subpatch=", serializedSubPatch);
     if (serializedSubPatch) {
       const type = serializedSubPatch.attributes?.type || "zen";
       const node = new ObjectNodeImpl(objectNode.patch);
