@@ -27,6 +27,9 @@ import { useAutoComplete } from "@/hooks/useAutoComplete";
 import { usePatch } from "@/contexts/PatchContext";
 import CustomSubPatchView from "./CustomSubPatchView";
 import { useStorage } from "@/contexts/StorageContext";
+import { lookupDoc } from "@/lib/nodes/definitions/core/doc";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { Definition } from "@/lib/docs/docs";
 
 const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode }> = ({
   objectNode,
@@ -106,6 +109,19 @@ const InnerObjectNodeComponent: React.FC<{
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [selected, setSelected] = useState(0);
   const { fetchSubPatchForDoc } = useStorage();
+
+  const [documentation, setDocumentation] = useState<Definition | null>(null);
+
+  useEffect(() => {
+    if (objectNode.name) {
+      const doc =
+        objectNode.operatorContextType !== undefined
+          ? getOperatorContext(objectNode.operatorContextType).lookupDoc(objectNode.name || "")
+          : undefined;
+
+      setDocumentation(doc || null);
+    }
+  }, [objectNode.name]);
 
   const { isCustomView, newObjectNode, setPatch } = usePatch();
   const [editing, setEditing] = useState(objectNode.text === "");
@@ -333,7 +349,6 @@ const InnerObjectNodeComponent: React.FC<{
             clicked.current = true;
             setEditing(true);
           }
-          console.log("setSelectedNodes([])");
           setSelectedNodes([]);
         }
       } else {
@@ -362,6 +377,26 @@ const InnerObjectNodeComponent: React.FC<{
     },
     [editing, objectNode, isSelected, setSelectedNodes, setEditing, setPatch, setPatches, patches],
   );
+
+  const showExample = useCallback(async (examplePatch: string) => {
+    // look up doc
+    const serializedSubPatch = await fetchSubPatchForDoc(examplePatch);
+    console.log("serialized subpatch=", serializedSubPatch);
+    if (serializedSubPatch) {
+      const type = serializedSubPatch.attributes?.type || "zen";
+      const node = new ObjectNodeImpl(objectNode.patch);
+      node.parse(`zen @type ${type}`, OperatorContextType.ZEN, true, serializedSubPatch);
+      node.position = { x: 100, y: 100 };
+      if (node.subpatch) {
+        node.subpatch.name = `example (${objectNode.name})`;
+      }
+      expandPatch(node);
+
+      setTimeout(() => {
+        node.subpatch?.recompileGraph(true);
+      }, 1000);
+    }
+  }, []);
 
   let CustomComponent = (objectNode.name
     ? index[objectNode.name]
@@ -431,12 +466,20 @@ const InnerObjectNodeComponent: React.FC<{
           >
             Select
           </ContextMenu.Item>
-          {objectNode.name === "wasmviewer" && (
+          {(objectNode.name === "wasmviewer" || objectNode.name === "lisp") && (
             <ContextMenu.Item
               onClick={() => setFullscreen(!fullscreen)}
               className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
             >
-              Full-Screen
+              {fullscreen ? "Exit Full-Screen" : "Full-Screen"}
+            </ContextMenu.Item>
+          )}
+          {documentation?.examplePatch && (
+            <ContextMenu.Item
+              onClick={() => showExample(documentation.examplePatch as string)}
+              className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer flex"
+            >
+              Help <InfoCircledIcon className="w-4 h-4 ml-2" />
             </ContextMenu.Item>
           )}
         </ContextMenu.Content>
@@ -455,7 +498,7 @@ const InnerObjectNodeComponent: React.FC<{
                 {isCustomSubPatchView ? (
                   <CustomSubPatchView objectNode={objectNode} />
                 ) : CustomComponent ? (
-                  <CustomComponent objectNode={objectNode} />
+                  <CustomComponent fullscreen={fullscreen} objectNode={objectNode} />
                 ) : editing ? (
                   <input
                     autoComplete={"off"}

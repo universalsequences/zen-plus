@@ -200,7 +200,7 @@ export const createContext = (pool: ListPool) => {
         }
         case "+": {
           return args.reduce(
-            (sum, arg) => sum + evaluateExpression(arg, env),
+            (sum, arg) => (sum as any) + evaluateExpression(arg, env),
             typeof args[0] === "string" ? "" : 0,
           );
         }

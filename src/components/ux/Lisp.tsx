@@ -8,7 +8,10 @@ import { nightOwl } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useValue } from "@/contexts/ValueContext";
 import { Syntax } from "./Syntax";
 
-const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
+  objectNode,
+  fullscreen,
+}) => {
   useSelection();
   const { lockedMode } = useLocked();
   usePosition();
@@ -19,7 +22,9 @@ const Lisp: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const syntaxHighlighterRef = useRef<HTMLDivElement>(null);
   const syntaxRef = useRef<HTMLPreElement>(null);
 
-  const { width, height } = objectNode.size || { width: 100, height: 100 };
+  const { width, height } = fullscreen
+    ? { width: "100%", height: "100%" }
+    : objectNode.size || { width: 100, height: 100 };
   const fontStyles = {
     fontFamily: "monospace",
     fontSize: `${objectNode.attributes["font-size"] as number}px`,

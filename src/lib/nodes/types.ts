@@ -146,7 +146,7 @@ export type AttributeCallbacks = {
   [x: string]: (x: string | number | boolean | number[]) => void;
 };
 
-export type AttributeValue = string | number | boolean | number[];
+export type AttributeValue = string | number | boolean | number[] | string[];
 
 export type Attributed = {
   attributes: Attributes;

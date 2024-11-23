@@ -8,12 +8,20 @@ import { useStorage } from "@/contexts/StorageContext";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import { getSubPatchType } from "./search/PatchesExplorer";
 import { usePatches } from "@/contexts/PatchesContext";
+import { useSelection } from "@/contexts/SelectionContext";
 
 const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
   const { fetchSubPatchForDoc } = useStorage();
   const { expandPatch } = usePatches();
   let attributes = node.attributes;
   let attributeNames = Object.keys(attributes);
+
+  useSelection();
+
+  if ((node as ObjectNode).name === "zen" && node.attributes.type !== "zen") {
+    attributeNames = attributeNames.filter((x) => x !== "target" && x !== "SIMD");
+  }
+
   const [_inlets, setInlets] = useState(0);
 
   const doc =

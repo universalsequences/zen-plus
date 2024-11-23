@@ -32,6 +32,7 @@ export class PresetManager {
   serializedPresets?: SerializedPreset[];
   currentPreset: number;
   value: Message;
+  switching = false;
 
   constructor(object: ObjectNode) {
     this.objectNode = object;
@@ -54,6 +55,7 @@ export class PresetManager {
   }
 
   switchToPreset(presetNumber: number) {
+    this.switching = true;
     let old = this.presets[this.currentPreset];
     let preset = this.presets[presetNumber];
     if (Object.keys(old).length > 0 && Object.keys(preset).length === 0) {
@@ -75,10 +77,14 @@ export class PresetManager {
         }
       }
     }
+    this.switching = false;
   }
 
   listen() {
     subscribe("statechanged", (stateChange: Message) => {
+      if (this.switching) {
+        return;
+      }
       let _stateChange = stateChange as StateChange;
 
       // ensure that the preset is "above" the object emitting the message
@@ -86,6 +92,7 @@ export class PresetManager {
       let stateChangePatch = _stateChange.node.patch;
       let presetPatch = this.objectNode.patch;
       if (isPatchBelow(presetPatch, stateChangePatch)) {
+        console.log("state changed ", _stateChange, this.currentPreset);
         this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
       }
     });

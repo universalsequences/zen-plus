@@ -38,7 +38,7 @@ export const PatchWindows = () => {
       style={{
         backgroundSize: "14px 14px",
         backgroundImage:
-          "radial-gradient(circle at center center, rgba(41, 41, 41, 0.44) 0%, rgba(28, 27, 27, 0.08) 11%, transparent 11%, transparent 100%), linear-gradient(90deg,#b8b8b8b0, #b9b6b6b0 )",
+          "radial-gradient(circle, rgb(197 186 186 / 44%) 0%, rgb(87 77 77 / 20%) 11%, transparent 11%, #00000003 100%), linear-gradient(90deg, #868fa5b0, #868fa5b0)",
         zIndex: 10000000000,
       }}
       className="transition-all w-full relative pl-10 left-0 pt-1 flex gap-2 border-t border-t-2 border-t-zinc-800 bg-zinc-900 "

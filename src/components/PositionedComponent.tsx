@@ -82,6 +82,7 @@ const PositionedComponent: React.FC<{
           (node as ObjectNode).name === "umenu" ||
           (node as ObjectNode).name === "slots" ||
           (node as ObjectNode).name === "wasmviewer" ||
+          (node as ObjectNode).name === "lisp" ||
           (node as ObjectNode).name === "matrix" ||
           (node as ObjectNode).name === "button") &&
         node.size
@@ -309,8 +310,8 @@ const PositionedComponent: React.FC<{
       _style.width = "100%";
       _style.height = "100vh";
       _style.left = 0;
-      _style.top = 40;
-      _style.zIndex = 1000000000000000;
+      _style.top = 0;
+      _style.zIndex = 10000000000000;
       className = "fixed top-0 left-0";
     }
 

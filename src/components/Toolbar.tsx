@@ -164,7 +164,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     );
   if (breadcrumbs.length === 1) {
     return (
-      <div style={{ zIndex: 1000000000000 }} className="flex  full w-full select-none ">
+      <div style={{ zIndex: 10000000 }} className="flex  full w-full select-none ">
         <div
           className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}
         >
@@ -193,7 +193,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
       onClick={(e: any) => e.stopPropagation()}
       onMouseDown={(e: any) => e.stopPropagation()}
       className="flex  full w-full select-none "
-      style={{ zIndex: 1000000000000 }}
+      style={{ zIndex: 10000000 }}
     >
       <div
         className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}

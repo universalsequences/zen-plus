@@ -14,18 +14,21 @@ const Attribute = (props: Props) => {
   let { node, attribute } = props;
   let [value, setValue] = useState(node.attributes[attribute]);
   let { updateAttributes, attributesIndex } = useSelection();
-  let isString = useRef(
-    isNaN(parseFloat(value as string)) && typeof value !== "boolean",
-  );
+  let isString = useRef(isNaN(parseFloat(value as string)) && typeof value !== "boolean");
 
   const onChange = useCallback(
     (e: any) => {
       let _val = e.target.value;
       if (typeof _val === "string" && _val.includes(",")) {
-        let tokens = _val.split(",").map(parseFloat) as number[];
-        if (tokens.every((x) => !isNaN(x))) {
-          updateValue(tokens);
-          return;
+        let toks = _val.split(",");
+        if (toks.some((x) => x.includes("/"))) {
+          updateValue(toks as string[]);
+        } else {
+          let tokens = _val.split(",").map(parseFloat) as number[];
+          if (tokens.every((x) => !isNaN(x))) {
+            updateValue(tokens);
+            return;
+          }
         }
       }
       if (isString.current) {
@@ -42,7 +45,7 @@ const Attribute = (props: Props) => {
   );
 
   const updateValue = useCallback(
-    (val: string | number | boolean | number[]) => {
+    (val: string | number | boolean | number[] | string[]) => {
       node.setAttribute(attribute, val);
       node.attributes = { ...node.attributes };
       updateAttributes(node.id, node.attributes);
@@ -83,11 +86,7 @@ const Attribute = (props: Props) => {
           )}
         </div>
       ) : options ? (
-        <select
-          className="text-white"
-          value={value as string}
-          onChange={onChangeOption}
-        >
+        <select className="text-white" value={value as string} onChange={onChangeOption}>
           {options.map((x) => (
             <option key={x} value={x as string}>
               {x}

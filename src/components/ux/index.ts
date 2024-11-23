@@ -33,6 +33,7 @@ import { ZequencerUI } from "./zequencer/ZequencerUI";
 
 export interface NodeProps {
   objectNode: ObjectNode;
+  fullscreen?: boolean;
 }
 
 type ComponentIndex = {

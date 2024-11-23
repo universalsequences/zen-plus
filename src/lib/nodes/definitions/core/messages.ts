@@ -54,7 +54,9 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
       (message as Message[]).splice(2, 1);
     }
     node.send(node.outlets[0], message);
-    lastMessage = message;
+    if (typeof message === "string") {
+      lastMessage = message;
+    }
   };
 
   return (x: Message) => {
