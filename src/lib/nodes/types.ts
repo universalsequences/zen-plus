@@ -307,6 +307,7 @@ export type Patch = Identifiable & {
   doc?: PatchDoc;
   isInsideSlot?: boolean;
   onUpdateSize?: (id: string, size: Size) => void;
+  scriptingNameToNodes: Record<string, ObjectNode[]>;
 };
 
 export type SubPatch = Patch & {

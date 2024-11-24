@@ -24,7 +24,7 @@ import { recompileGraph } from "./compilation/recompileGraph";
 import { mergeAndExportToWav } from "@/utils/wav";
 import { onCompile, sleep } from "./compilation/onCompile";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
-import { PatchDoc } from "../org/types";
+import type { PatchDoc } from "../org/types";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -76,6 +76,7 @@ export class PatchImpl implements Patch {
   justExpanded?: boolean;
   viewed?: boolean;
   isInsideSlot?: boolean;
+  scriptingNameToNodes: Record<string, ObjectNode[]> = {};
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
 

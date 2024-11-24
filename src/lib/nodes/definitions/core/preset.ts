@@ -1,6 +1,6 @@
 import { doc } from "./doc";
 import { subscribe } from "@/lib/messaging/queue";
-import { Node, ObjectNode, Message, Patch, SubPatch } from "../../types";
+import { Node, ObjectNode, Message, Patch, SubPatch, MessageNode } from "../../types";
 
 doc("preset", {
   numberOfInlets: 1,
@@ -70,10 +70,14 @@ export class PresetManager {
       for (let id in preset) {
         let { node, state } = preset[id];
 
-        // lets assume all are simply SerializableCustom
-        // except messages...
         if ((node as ObjectNode).custom) {
-          (node as ObjectNode).custom!.fromJSON(state);
+          if (
+            (node as MessageNode | ObjectNode).attributes["scripting name"] !== "" ||
+            (node as ObjectNode).name === "attrui"
+          ) {
+            // only nodes with scripting name or attrui
+            (node as ObjectNode).custom!.fromJSON(state);
+          }
         }
       }
     }
@@ -86,6 +90,10 @@ export class PresetManager {
         return;
       }
       let _stateChange = stateChange as StateChange;
+
+      if ((_stateChange.node as MessageNode | ObjectNode).attributes["scripting name"] === "") {
+        return;
+      }
 
       // ensure that the preset is "above" the object emitting the message
       // in the patch hierarchy

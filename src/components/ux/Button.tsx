@@ -60,7 +60,7 @@ const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         className={
           (animate ? "animate-color " : "") +
           (lockedMode ? " cursor-pointer " : "") +
-          " m-1 border border-2 rounded-full flex-1 flex"
+          " m-1 border border-1 rounded-full flex-1 flex"
         }
       >
         <div className="m-auto text-white">{label}</div>

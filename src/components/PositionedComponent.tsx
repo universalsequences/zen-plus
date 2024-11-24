@@ -43,7 +43,6 @@ const PositionedComponent: React.FC<{
   lockedModeRef,
   isHydrated,
 }) => {
-  const { setSelectedPatch } = usePatches();
   const { selectPatch } = usePatchSelector();
   const { patch } = usePatch();
   const { setSelectedNodes, selectedNodes } = useSelection();
@@ -142,24 +141,11 @@ const PositionedComponent: React.FC<{
         let x = e.clientX - divRect.left;
         let y = e.clientY - divRect.top;
 
-        /*
-        if (
-          lockedModeRef.current &&
-          !(node as ObjectNode).subpatch?.objectNodes.some((x) => x.name === "onPatchSelect")
-        ) {
-          return;
-        }
-
-        if (!selectedNodes.includes(node)) {
-          if (e.shiftKey) {
-            setSelectedNodes((prev) =>
-              prev.includes(node) ? prev.filter((x) => x !== node) : [...prev, node],
-            );
-          } else {
+        if ((node as MessageNode).messageType === MessageType.Message) {
+          if (!selectedNodes.includes(node)) {
             setSelectedNodes([node]);
           }
         }
-        */
 
         if (lockedModeRef.current) {
           e.stopPropagation();
@@ -167,7 +153,9 @@ const PositionedComponent: React.FC<{
         }
         initialPosition.current = { ...node.position };
 
-        setSelectedNodes([]);
+        if (selectedNodes.length === 1) {
+          setSelectedNodes([]);
+        }
 
         setDraggingNode({
           node: node,

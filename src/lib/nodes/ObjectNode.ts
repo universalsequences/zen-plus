@@ -6,7 +6,7 @@ import { BaseNode } from "./BaseNode";
 import { type OperatorContext, OperatorContextType, getOperatorContext } from "./context";
 import { createGLFunction } from "./definitions/create";
 import type { CompoundOperator, Operator, Statement } from "./definitions/zen/types";
-import type { MessageNode } from "./types";
+import type { AttributeValue, MessageNode } from "./types";
 import type { Node, SerializableCustom, SerializedPatch, Size } from "./types";
 
 import {
@@ -90,6 +90,14 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     this.newAttribute("font-size", 9);
     this.arguments = [];
     this.operatorContextType = OperatorContextType.ZEN;
+    this.newAttribute("scripting name", "", (x: AttributeValue) => {
+      console.log("on scripting name", x, this);
+      if (typeof x === "string") {
+        const patch = getRootPatch(this.patch);
+        patch.scriptingNameToNodes[x] = [...(patch.scriptingNameToNodes[x] || []), this];
+        console.log("patch.scriptingNameToNodes", patch.scriptingNameToNodes);
+      }
+    });
   }
 
   /**
@@ -1034,6 +1042,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         ...this.attributes,
         ...json.attributes,
       };
+      for (const name in json.attributes) {
+        this.setAttribute(name, json.attributes[name]);
+      }
     }
 
     this.position = json.position;

@@ -624,17 +624,21 @@ div:active {
 @keyframes colorChange {
     0% {
         background-color: initial;
+        margin: 0.25rem;
     }
     50% {
         background-color: white;
+        margin: 0.125rem;
     }
     100% {
         background-color: initial;
+        margin: 0.25rem;
     }
 }
 
 .animate-color {
     animation: colorChange 100ms forwards;
+     margin: 0.25rem;
 }
 
 /* Spinner Styles */

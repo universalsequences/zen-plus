@@ -12,10 +12,11 @@ import type {
   FunctionDefinition,
   Environment,
 } from "./types";
+import { getRootPatch } from "../nodes/traverse";
 
 const stringCache: { [x: string]: string } = {};
 
-export const createContext = (pool: ListPool) => {
+export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
   function evaluate(expressions: Expression[], env: Environment): Message {
     let result: Message = null;
     for (const expr of expressions) {
@@ -205,6 +206,62 @@ export const createContext = (pool: ListPool) => {
       return Number(
         (evaluateExpression(args[0], env) as number) / (evaluateExpression(args[1], env) as number),
       );
+    },
+
+    dot: (args: Expression[], env: Environment) => {
+      const a = evaluateExpression(args[0], env) as number[];
+      const b = evaluateExpression(args[1], env) as number[];
+      let sum = 0;
+      const len = Math.min(a.length, b.length);
+      for (let i = 0; i < len; i++) {
+        sum += a[i] * b[i];
+      }
+      return sum;
+    },
+
+    stride: (args: Expression[], env: Environment) => {
+      const arr = evaluateExpression(args[0], env) as number[];
+      const l = evaluateExpression(args[1], env) as number;
+      const off = evaluateExpression(args[2], env) as number;
+      const result = [];
+      for (let i = off; i < arr.length; i += l) {
+        if (arr[i] === undefined) break;
+        result.push(arr[i]);
+      }
+      return result;
+    },
+
+    cross: (args: Expression[], env: Environment) => {
+      const a = evaluateExpression(args[0], env) as number[];
+      const b = evaluateExpression(args[1], env) as number[];
+      const len = Math.min(a.length, b.length);
+      const result = new Array(len);
+      for (let i = 0; i < len; i++) {
+        result[i] = a[i] * b[i];
+      }
+      return result;
+    },
+
+    cross_sub: (args: Expression[], env: Environment) => {
+      const a = evaluateExpression(args[0], env) as number[];
+      const b = evaluateExpression(args[1], env) as number[];
+      const len = Math.min(a.length, b.length);
+      const result = new Array(len);
+      for (let i = 0; i < len; i++) {
+        result[i] = a[i] - b[i];
+      }
+      return result;
+    },
+
+    cross_add: (args: Expression[], env: Environment) => {
+      const a = evaluateExpression(args[0], env) as number[];
+      const b = evaluateExpression(args[1], env) as number[];
+      const len = Math.min(a.length, b.length);
+      const result = new Array(len);
+      for (let i = 0; i < len; i++) {
+        result[i] = a[i] + b[i];
+      }
+      return result;
     },
 
     exp2: (args: Expression[], env: Environment) => {
@@ -501,6 +558,45 @@ export const createContext = (pool: ListPool) => {
       const parentNode = patch.parentNode;
       parentNode.receive(parentNode.inlets[0], message as Core.Message);
       return message;
+    },
+
+    "get-state": (args: Expression[], env: Environment) => {
+      if (args.length !== 1) {
+        throw new Error("get-state operation requires exactly one argument");
+      }
+      const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
+      return node.getJSON();
+    },
+
+    "set-state": (args: Expression[], env: Environment) => {
+      if (args.length !== 2) {
+        throw new Error("set-state operation requires exactly two arguments");
+      }
+      const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
+      node.fromJSON(evaluateExpression(args[1], env) as Core.SerializedObjectNode);
+      return node.getJSON();
+    },
+
+    sendnode: (args: Expression[], env: Environment) => {
+      if (args.length !== 2) {
+        throw new Error("sendpatch operation requires exactly two arguments");
+      }
+      const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
+
+      const message = evaluateExpression(args[1], env);
+      node.receive(node.inlets[0], message as Core.Message);
+      return message;
+    },
+
+    "by-scripting-name": (args: Expression[], env: Environment) => {
+      if (args.length !== 1) {
+        throw new Error("by-scripting-name operation requires exactly one argument");
+      }
+      const scriptingName = evaluateExpression(args[0], env);
+      const patch = getRootPatch(objectNode.patch);
+      console.log("patch", patch);
+      const nodes = patch.scriptingNameToNodes[scriptingName as string];
+      return nodes;
     },
 
     "null?": (args: Expression[], env: Environment) => {
