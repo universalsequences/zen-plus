@@ -88,7 +88,7 @@
 .node-component.hydrated {
     /*background-color: blue;*/
 }
-.context-type-1 {
+.context-type-1, .node-component.context-type-1 {
     background-color: #d2ff00;
 }
 .context-type-1 {
@@ -99,15 +99,15 @@
     color: black;
 }
 
-.context-type-7 {
+.context-type-7, .node-component.context-type-7 {
     background-color: #ffffff;
 }
 
-.context-type-2 {
+.context-type-2, .node-component.context-type-2 {
     background-color: #0118ff;
 }
 
-.context-type-6 {
+.context-type-6, .node-component.context-type-6 {
     background-color: #8f18ff;
 }
 

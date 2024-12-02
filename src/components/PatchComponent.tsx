@@ -401,8 +401,6 @@ const PatchComponent: React.FC<{
               <Toolbar patch={patch} />{" "}
             </>
           )}
-
-          <AssistantSidebar />
         </div>
       </>
     );
