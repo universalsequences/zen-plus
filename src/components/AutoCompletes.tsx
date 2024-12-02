@@ -37,7 +37,9 @@ const AutoCompletes: React.FC<{
           key={index}
           className={(selected === index ? "bg-white text-black " : "") + " flex px-2 py-1 w-full"}
         >
-          <div className="mr-1 bg-black text-white px-1 rounded-full text-xs">
+          <div
+            className={`autocomplete-option context-type-${option.context?.type} ${!option.context ? "bg-slate-200 text-black" : "text-white"} mr-1 px-1 rounded-full text-xs`}
+          >
             {getContextName(option.context ? option.context.type : undefined) || "patch"}
           </div>
           <div className="flex-1">{option.definition.name}</div>
