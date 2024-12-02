@@ -179,6 +179,31 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       });
     },
 
+    filter: (args: Expression[], env: Environment) => {
+      if (args.length !== 2) {
+        throw new Error("Map requires exactly two arguments: a function and a list");
+      }
+      const mapFunc = evaluateExpression(args[0], env);
+      let mapList = evaluateExpression(args[1], env);
+
+      if (typeof mapFunc !== "function") {
+        throw new Error("First argument to map must be a function");
+      }
+      if (ArrayBuffer.isView(mapList)) {
+        mapList = Array.from(mapList as Float32Array);
+      }
+      if (!Array.isArray(mapList)) {
+        throw new Error("Second argument to map must be a list");
+      }
+
+      return mapList.filter((item, index) => {
+        if (typeof mapFunc === "function") {
+          return mapFunc(env)(item, index);
+        }
+        throw new Error("Unexpected error: mapFunc is not a function");
+      });
+    },
+
     "+": (args: Expression[], env: Environment) => {
       return args.reduce(
         (sum, arg) => (sum as any) + evaluateExpression(arg, env),
@@ -526,6 +551,36 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       throw new Error("Length operation requires a string or list argument");
     },
 
+    switch: (args: Expression[], env: Environment) => {
+      if (args.length < 2) {
+        throw new Error("Switch requires at least a condition and one case");
+      }
+
+      const condition = evaluateExpression(args[0], env);
+      const cases = args.slice(1);
+
+      // Handle the default case (last argument if it's not a pair)
+      const hasDefault = true;
+      const defaultCase = hasDefault ? cases.pop() : null;
+
+      // Check each case
+      for (const caseExpr of cases) {
+        if (!Array.isArray(caseExpr) || caseExpr.length !== 2) {
+          throw new Error("Switch cases must be pairs of [pattern, expression]");
+        }
+
+        const [pattern, expr] = caseExpr;
+        const patternValue = evaluateExpression(pattern, env);
+
+        if (patternValue === condition) {
+          return evaluateExpression(expr, env);
+        }
+      }
+
+      // If no matches found, evaluate default case if it exists
+      return defaultCase ? evaluateExpression(defaultCase, env) : null;
+    },
+
     querypatch: (args: Expression[], env: Environment) => {
       if (args.length !== 1) {
         throw new Error("querypatch operation requires exactly one argument");
@@ -594,7 +649,6 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       }
       const scriptingName = evaluateExpression(args[0], env);
       const patch = getRootPatch(objectNode.patch);
-      console.log("patch", patch);
       const nodes = patch.scriptingNameToNodes[scriptingName as string];
       return nodes;
     },
@@ -621,6 +675,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
 
     print: (args: Expression[], env: Environment) => {
       const printResult = args.map((arg) => evaluateExpression(arg, env));
+      console.log("lisp print=", printResult);
       return printResult[printResult.length - 1] ?? null;
     },
   };

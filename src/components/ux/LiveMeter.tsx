@@ -133,7 +133,11 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   let { width, height } = size;
 
   return (
-    <div style={{ width, height }} className="flex flex-col relative">
+    <div
+      onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+      style={{ width, height }}
+      className="flex flex-col relative"
+    >
       <div onMouseDown={onMouseDown} ref={containerRef} className="w-5 h-full bg-zinc-950 relative">
         <div
           style={{ bottom: `${value * 100}%` }}

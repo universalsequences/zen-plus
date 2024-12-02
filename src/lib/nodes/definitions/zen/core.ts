@@ -208,10 +208,20 @@ export const selector = (object: ObjectNode, ...args: Lazy[]) => {
 };
 
 doc("compressor", {
-  inletNames: ["input", "ratio", "threshold", "knee", "attack", "release"],
-  numberOfInlets: 6,
+  inletNames: [
+    "input",
+    "ratio",
+    "threshold",
+    "knee",
+    "attack",
+    "release",
+    "sidechain mode",
+    "sidechain input",
+  ],
+  numberOfInlets: 8,
   numberOfOutlets: 1,
-  description: "basic compressor",
+  description: "simple compressor, with sidechain compression",
+  defaultValue: 0,
   //saturation: '',
   //makeup_gain: '',
   //attack_mode: '',
@@ -224,8 +234,20 @@ export const compressor = (
   knee: Lazy,
   attack: Lazy,
   release: Lazy,
+  sidechainMode: Lazy,
+  sidechainInput: Lazy,
 ) => {
-  return memoZen(object, "compressor" as Operator, ratio, threshold, knee, attack, release);
+  return memoZen(
+    object,
+    "compressor" as Operator,
+    ratio,
+    threshold,
+    knee,
+    attack,
+    release,
+    sidechainMode,
+    sidechainInput,
+  );
 };
 
 export const core = {

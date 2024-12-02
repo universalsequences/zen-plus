@@ -143,7 +143,7 @@ export type Attributes = {
 };
 
 export type AttributeCallbacks = {
-  [x: string]: (x: string | number | boolean | number[]) => void;
+  [x: string]: (x: AttributeValue) => void;
 };
 
 export type AttributeValue = string | number | boolean | number[] | string[];
@@ -223,6 +223,7 @@ export type ObjectNode = Positioned &
     controllingParamNode?: ObjectNode; // any param nodes that are controleld by this node
     script?: string;
     pool?: ListPool;
+    renderJob?: RenderJob;
   };
 
 export interface SerializableCustom {

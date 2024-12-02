@@ -3,6 +3,7 @@ import { useStorage } from "@/contexts/StorageContext";
 import { Definition } from "@/lib/docs/docs";
 import { OperatorContextType, OperatorContext, getAllContexts } from "@/lib/nodes/context";
 import { SubPatch, ObjectNode } from "@/lib/nodes/types";
+import { Timestamp } from "firebase/firestore";
 
 export interface ContextDefinition {
   definition: Definition & { id?: string };
@@ -116,13 +117,14 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
         _options.push(option);
       }
     }
+
     options = _options;
     for (let elem of [...onchainSubPatches]) {
       let _name = elem.name.toLowerCase();
       if (_name.includes(_text)) {
         options.push({
           definition: {
-            description: "user generated supatch #" + elem.id,
+            description: `patched on ${formatFirestoreTimestamp(elem.createdAt)}`,
             name: elem.name as string,
             file: elem,
             numberOfInlets: 0,
@@ -141,3 +143,24 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
 
   return { autoCompletes, setAutoCompletes };
 };
+
+function formatFirestoreTimestamp(timestamp: Timestamp) {
+  // Check if timestamp is a Firestore Timestamp object
+  if (timestamp && typeof timestamp.toDate === "function") {
+    const date = timestamp.toDate();
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  }
+
+  // Handle case where input might be a regular Date object
+  if (timestamp instanceof Date) {
+    return `${timestamp.getMonth() + 1}/${timestamp.getDate()}/${timestamp.getFullYear()}`;
+  }
+
+  // Handle case where input might be a timestamp number (milliseconds since epoch)
+  if (typeof timestamp === "number") {
+    const date = new Date(timestamp);
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  }
+
+  return "Invalid timestamp";
+}

@@ -62,7 +62,9 @@ class Registry {
       if (matches === null) {
         matches = new Set(patchesWithTag);
       } else {
-        matches = new Set(Array.from(matches).filter((patch) => patchesWithTag.includes(patch)));
+        matches = new Set(
+          Array.from(matches).filter((patch) => patchesWithTag.includes(patch as RegisteredPatch)),
+        );
       }
 
       if (matches.size === 0) {

@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import { ObjectNode, Message } from "../../types";
+import { ObjectNode, Message, AttributeValue } from "../../types";
 import { MutableValue } from "./MutableValue";
 
 doc("divider", {
@@ -13,9 +13,7 @@ export const divider = (node: ObjectNode) => {
     node.attributes["orientation"] = "horizontal";
   }
   node.attributeOptions["orientation"] = ["horizontal", "vertical"];
-  node.attributeCallbacks["orientation"] = (
-    orientation: string | number | boolean | number[],
-  ): void => {
+  node.attributeCallbacks["orientation"] = (orientation: AttributeValue): void => {
     if (orientation === "vertical") {
       node.size = {
         height: 100,

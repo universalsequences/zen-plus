@@ -16,6 +16,7 @@ import {
 } from "@/lib/nodes/types";
 import PositionedComponent from "./PositionedComponent";
 import NumberBox from "./ux/NumberBox";
+import { publish } from "@/lib/messaging/queue";
 
 const DEFAULT_TEXT = "";
 const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: MessageNode }> = ({
@@ -62,6 +63,10 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
       if (!messageNode.attributes["is parameter"]) {
         messageNode.receive(messageNode.inlets[0], "bang");
       }
+      publish("statechanged", {
+        node: messageNode,
+        state: value,
+      });
     },
     [messageNode],
   );

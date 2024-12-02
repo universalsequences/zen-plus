@@ -47,7 +47,6 @@ doc("lisp", {
 export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   let env: Environment = {};
   let lastEnv: Environment = {};
-  const counter = 0;
   let lastText: string | undefined = undefined;
   let lastParsed: AST;
   const pool = node.pool || new ListPool();
@@ -62,6 +61,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   const out: Message[] = [];
 
   node.newAttribute("hide-code", false);
+  node.newAttribute("release-nodes", true);
 
   const getEnvFromMessages = () => {
     return args[args.length - 1]() as Environment;
@@ -87,7 +87,9 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
       Object.assign(env, _env);
     }
 
-    pool.releaseUsed();
+    if (node.attributes["release-nodes"]) {
+      pool.releaseUsed();
+    }
     const evaluate = createContext(pool, node);
     // where do we store the script, in a attribute? lol
     //
@@ -111,7 +113,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 
         pool.borrow(ret);
         let b = new Date().getTime();
-        if (node.attributes["font-size"] < 11) {
+        if ((node.attributes["font-size"] as number) < 11) {
           console.log("lisp took %s ms", b - a);
         }
         return out as Message[];

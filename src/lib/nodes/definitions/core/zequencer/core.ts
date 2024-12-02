@@ -1,4 +1,4 @@
-import type { Message, ObjectNode } from "@/lib/nodes/types";
+import type { AttributeValue, Message, ObjectNode } from "@/lib/nodes/types";
 import { doc } from "../doc";
 import { MutableValue } from "../MutableValue";
 import {
@@ -35,7 +35,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     node.attributes.length = 16;
   }
 
-  node.attributeCallbacks.length = (length: number | boolean | string | number[]) => {
+  node.attributeCallbacks.length = (length: AttributeValue) => {
     if (node.stepsSchema) {
       node.steps = setupSchema(node.stepsSchema, node.steps || [], length as number);
       node.stepsSchema = schema;

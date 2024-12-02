@@ -78,6 +78,10 @@ export class PresetManager {
             // only nodes with scripting name or attrui
             (node as ObjectNode).custom!.fromJSON(state);
           }
+        } else {
+          // todo -- handle other nodes other than number
+          node.receive(node.inlets[1], state);
+          node.receive(node.inlets[0], "bang");
         }
       }
     }
@@ -91,7 +95,10 @@ export class PresetManager {
       }
       let _stateChange = stateChange as StateChange;
 
-      if ((_stateChange.node as MessageNode | ObjectNode).attributes["scripting name"] === "") {
+      if (
+        (_stateChange.node as MessageNode | ObjectNode).attributes["scripting name"] === "" &&
+        (_stateChange.node as ObjectNode).name !== "attrui"
+      ) {
         return;
       }
 

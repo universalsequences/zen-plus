@@ -1,7 +1,7 @@
 import { ListPool } from "@/lib/lisp/ListPool";
 import { doc } from "./doc";
 import { publish } from "@/lib/messaging/queue";
-import type { Message, ObjectNode } from "@/lib/nodes/types";
+import type { AttributeValue, Message, ObjectNode } from "@/lib/nodes/types";
 
 export interface Point {
   x: number;
@@ -217,7 +217,7 @@ export const function_editor = (node: ObjectNode) => {
 
   node.attributeDefaults.adsr = false;
 
-  node.attributeCallbacks.adsr = (message: string | number | boolean | number[]) => {
+  node.attributeCallbacks.adsr = (message: AttributeValue) => {
     const editor = node.custom as FunctionEditor;
     if (message && editor) {
       if (editor.points.length === 5) {

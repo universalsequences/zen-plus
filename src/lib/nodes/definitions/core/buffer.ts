@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import type { ObjectNode, Message, NodeFunction } from "../../types";
+import type { ObjectNode, Message, NodeFunction, AttributeValue } from "../../types";
 import { arrayBufferToArray } from "@/lib/audio/arrayBufferToArray";
 
 doc("buffer", {
@@ -26,7 +26,7 @@ export const buffer: NodeFunction = (node: ObjectNode) => {
     node.attributes.channels = 1;
   }
 
-  node.attributeCallbacks["external-URL"] = (message: string | number | boolean | number[]) => {
+  node.attributeCallbacks["external-URL"] = (message: AttributeValue) => {
     if (lastDownload !== message) {
       node.buffer = undefined;
       node.receive(node.inlets[0], "bang");

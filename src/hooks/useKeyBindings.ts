@@ -120,7 +120,6 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       }
 
       if (e.key === "x" && e.ctrlKey) {
-        console.log("setting command");
         setCommand(true);
         return;
       }
@@ -131,7 +130,6 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       }
 
       if (e.key === "Enter" && selectedNodes[0]) {
-        console.log("enter called.");
         let node = selectedNodes[0];
         if ((node as ObjectNode).name === "zen") {
           expandPatch(node as ObjectNode, e.metaKey);
@@ -240,7 +238,6 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         segmentSelectedCable(selectedConnection);
       }
       if (e.key === "Backspace") {
-        console.log("selected steps=", selectedSteps);
         if (selectedSteps && selectedSteps.length > 0) {
           return;
         }
@@ -255,9 +252,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       }
 
       if (e.key === "o" && command && selectedPatch) {
-        console.log("select other patch...", patches);
         let i = patches.indexOf(selectedPatch);
-        console.log("i=%s", i);
         setSelectedPatch(patches[(i + 1) % patches.length]);
       }
 

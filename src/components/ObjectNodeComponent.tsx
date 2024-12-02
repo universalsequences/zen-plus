@@ -308,6 +308,9 @@ const InnerObjectNodeComponent: React.FC<{
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (e.shiftKey) {
+        return;
+      }
       let last = lastSubPatchClick.current;
       lastSubPatchClick.current = new Date().getTime();
       setSelection(null);
@@ -349,7 +352,7 @@ const InnerObjectNodeComponent: React.FC<{
             clicked.current = true;
             setEditing(true);
           }
-          setSelectedNodes([]);
+          // setSelectedNodes([]);
         }
       }
 

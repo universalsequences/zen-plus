@@ -91,11 +91,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     this.arguments = [];
     this.operatorContextType = OperatorContextType.ZEN;
     this.newAttribute("scripting name", "", (x: AttributeValue) => {
-      console.log("on scripting name", x, this);
       if (typeof x === "string") {
         const patch = getRootPatch(this.patch);
         patch.scriptingNameToNodes[x] = [...(patch.scriptingNameToNodes[x] || []), this];
-        console.log("patch.scriptingNameToNodes", patch.scriptingNameToNodes);
       }
     });
   }
@@ -1031,6 +1029,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     if (json.saveData) {
       this.storedMessage = json.saveData;
+      this.saveData = json.saveData;
     }
 
     if (json.size) {
@@ -1038,12 +1037,15 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (json.attributes) {
+      const prevAttributes = { ...this.attributes };
       this.attributes = {
         ...this.attributes,
         ...json.attributes,
       };
       for (const name in json.attributes) {
-        this.setAttribute(name, json.attributes[name]);
+        if (prevAttributes[name] !== json.attributes[name]) {
+          this.setAttribute(name, json.attributes[name]);
+        }
       }
     }
 

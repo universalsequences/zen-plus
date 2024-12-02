@@ -150,6 +150,14 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               onClick={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.stopPropagation();
                 if (objectNode.subpatch) {
+                  if (e.metaKey) {
+                    if (patches.includes(objectNode.subpatch)) {
+                      closePatch(objectNode.subpatch);
+                    } else {
+                      expandPatch(objectNode);
+                    }
+                    return;
+                  }
                   if (patchWindows.includes(objectNode.subpatch)) {
                     removePatchWindow(objectNode.subpatch);
                     return;

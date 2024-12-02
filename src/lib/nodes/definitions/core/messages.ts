@@ -27,11 +27,16 @@ doc("subscribe", {
 
 export const subscribe = (node: ObjectNode, name: Lazy) => {
   let initialized = false;
-  const lastName = "";
+  let lastName = "";
   node.needsLoad = true;
 
   let lastMessage: Message | null = null;
   const onMessage = (message: Message) => {
+    if (lastName !== name()) {
+      console.log("unsubscrivbing", lastName, name());
+      queue.unsubscribe(lastName, onMessage);
+      return;
+    }
     // received the message
     const patchType = node.patch ? (node.patch as SubPatch).patchType : undefined;
     if (Array.isArray(message) && patchType === OperatorContextType.ZEN) {
@@ -59,7 +64,7 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     }
   };
 
-  return (x: Message) => {
+  return (_x: Message) => {
     if (lastName && name() !== lastName) {
       queue.unsubscribe(lastName, onMessage);
       initialized = false;
@@ -67,6 +72,7 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     }
     if (!initialized) {
       queue.subscribe(name() as string, onMessage);
+      lastName = name() as string;
       initialized = true;
     }
     const ret = queue.read(name() as string);

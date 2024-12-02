@@ -131,21 +131,43 @@ const PositionedComponent: React.FC<{
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-      if (isCustomView) {
+      const selectedNodes = selectedNodesRef.current;
+      if (e.shiftKey) {
+        e.stopPropagation();
+        if (!selectedNodes.includes(node)) {
+          setSelectedNodes([...selectedNodes, node]);
+        }
         return;
       }
-      selectPatch();
-      e.stopPropagation();
       let divRect = ref.current?.getBoundingClientRect();
       if (divRect) {
         let x = e.clientX - divRect.left;
         let y = e.clientY - divRect.top;
 
-        if ((node as MessageNode).messageType === MessageType.Message) {
-          if (!selectedNodes.includes(node)) {
-            setSelectedNodes([node]);
+        const objectNode = node as ObjectNode;
+        const isZenCustom =
+          objectNode.name === "zen" &&
+          objectNode.attributes["Custom Presentation"] &&
+          !objectNode.attributes["slotview"];
+        if (isCustomView || isZenCustom) {
+          if (isZenCustom) {
+            e.stopPropagation();
           }
+          setDraggingNode({
+            node: node,
+            offset: { x, y },
+            origin: { ...node.position },
+          });
+
+          return;
         }
+        selectPatch();
+        e.stopPropagation();
+        //if ((node as MessageNode).messageType === MessageType.Message) {
+        if (!selectedNodes.includes(node)) {
+          setSelectedNodes([node]);
+        }
+        //}
 
         if (lockedModeRef.current) {
           e.stopPropagation();
@@ -153,9 +175,9 @@ const PositionedComponent: React.FC<{
         }
         initialPosition.current = { ...node.position };
 
-        if (selectedNodes.length === 1) {
-          setSelectedNodes([]);
-        }
+        //if (selectedNodes.length === 1 && !) {
+        //  setSelectedNodes([]);
+        //}
 
         setDraggingNode({
           node: node,
@@ -167,11 +189,17 @@ const PositionedComponent: React.FC<{
         updateZIndex(node.id, node.zIndex);
       }
     },
-    [setDraggingNode, selectedNodes, patch, selectPatch],
+    [setDraggingNode, setSelectedNodes, selectedNodes, patch, selectPatch, isCustomView],
   );
+
+  const selectedNodesRef = useRef<(ObjectNode | MessageNode)[]>([]);
+  useEffect(() => {
+    selectedNodesRef.current = selectedNodes;
+  }, [selectedNodes]);
 
   const onClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      const selectedNodes = selectedNodesRef.current;
       let divRect = ref.current?.getBoundingClientRect();
       if (divRect) {
         e.stopPropagation();
@@ -334,7 +362,9 @@ const PositionedComponent: React.FC<{
       <div
         ref={ref}
         onClick={onClick}
-        onMouseDown={onMouseDown}
+        onMouseDown={(e) => {
+          onMouseDown(e);
+        }}
         style={_style}
         className={className}
       >

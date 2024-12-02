@@ -315,6 +315,10 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
 
       if (draggingNodeRef.current) {
         const { node, offset } = draggingNodeRef.current;
+
+        if (selectedNodesRef.current.length === 0) {
+          setSelectedNodes([draggingNodeRef.current.node]);
+        }
         let x = scrollRef.current.scrollLeft + client.x - offset.x;
         let y = scrollRef.current.scrollTop + client.y - offset.y;
         x /= zoomRef.current;

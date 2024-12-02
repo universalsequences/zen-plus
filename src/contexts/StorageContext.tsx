@@ -137,6 +137,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
           }),
         }).then(async (resp) => {
           let json = await resp.json();
+          console.log("json = ", json);
           let files: File[] = json.projects.map((x: any) => ({
             ...x,
             tags: x.tags,

@@ -30,11 +30,16 @@ import WasmViewer from "./WasmViewer";
 import { LiveMeter } from "./LiveMeter";
 import { Toggle } from "./Toggle";
 import { ZequencerUI } from "./zequencer/ZequencerUI";
+import { ModSelector } from "./ModSelector";
 
-export interface NodeProps {
-  objectNode: ObjectNode;
-  fullscreen?: boolean;
-}
+export type NodeProps =
+  | {
+      objectNode: ObjectNode;
+    }
+  | {
+      objectNode: ObjectNode;
+      fullscreen: boolean;
+    };
 
 type ComponentIndex = {
   [x: string]: React.ComponentType<NodeProps>;
@@ -66,9 +71,10 @@ export const index: ComponentIndex = {
   preset: Preset,
   color: Color,
   "live.meter~": LiveMeter,
-  lisp: Lisp,
+  lisp: Lisp as React.ComponentType<NodeProps>,
   buttonoptions: ButtonOptions,
   "zequencer.info": ZequencerInfo,
+  modselector: ModSelector,
 };
 
 export const optionalIndex: ComponentIndex = {

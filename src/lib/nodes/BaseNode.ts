@@ -141,10 +141,9 @@ export class BaseNode implements Node {
       (isCompiledType(outlet.connectionType) || isCompiledType(inlet.connectionType))
     ) {
       if (
-        !(this.patch as SubPatch).parentPatch || 
-        (
+        !(this.patch as SubPatch).parentPatch ||
         (this.patch as SubPatch).patchType === OperatorContextType.ZEN ||
-        (this.patch as SubPatch).patchType === OperatorContextType.GL)
+        (this.patch as SubPatch).patchType === OperatorContextType.GL
       ) {
         this.patch.recompileGraph();
       }
@@ -174,21 +173,24 @@ export class BaseNode implements Node {
 
   connectAudioNode(connection: IOConnection) {
     const { destination, sourceOutlet, destinationInlet } = connection;
-    const sourceNode = (this as any as ObjectNode).audioNode;
-    let destNode = (destination as any as ObjectNode).audioNode;
+    // todo -- figure out why BaseNode is not being typed as ObjectNode
+    const sourceNode = (this as unknown as ObjectNode).audioNode;
+    let destNode = (destination as unknown as ObjectNode).audioNode;
     if (sourceNode && destNode) {
       const splitter = this.patch.audioContext.createChannelSplitter(this.outlets.length);
       connection.splitter = splitter;
       sourceNode.connect(splitter);
 
       if ((connection.destination as ObjectNode).merger) {
-        destNode = (connection.destination as ObjectNode).merger!;
+        destNode = (connection.destination as ObjectNode).merger;
       }
-      splitter.connect(
-        destNode,
-        this.outlets.indexOf(sourceOutlet),
-        destination.inlets.indexOf(destinationInlet),
-      );
+      if (destNode) {
+        splitter.connect(
+          destNode,
+          this.outlets.indexOf(sourceOutlet),
+          destination.inlets.indexOf(destinationInlet),
+        );
+      }
     }
   }
 

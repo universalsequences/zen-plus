@@ -529,13 +529,12 @@ export class PatchImpl implements Patch {
   }
 
   async initialLoadCompile(base = true) {
-    console.log("initial load compile", base);
     this.sendNumberNodes();
     const subpatch = this as unknown as SubPatch;
     if (!subpatch.parentPatch) {
       this.recompileGraph();
     } else if (subpatch.patchType === OperatorContextType.CORE) {
-      return;
+      // return;
     }
 
     const compiled: Patch[] = [];
@@ -548,7 +547,7 @@ export class PatchImpl implements Patch {
         if (subpatch.patchType === OperatorContextType.ZEN) {
           continue;
         }
-        node.subpatch.recompileGraph();
+        node.subpatch.recompileGraph(true);
         let i = 0;
         while (!node.audioNode) {
           await sleep(10);

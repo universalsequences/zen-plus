@@ -419,7 +419,6 @@ doc("argument", {
 export const argument = (node: ObjectNode, name: Lazy, num: Lazy, type: Lazy) => {
   node.needsLoad = true;
   return (message: Message) => {
-    console.log("argument called");
     const statement: Statement = [
       { name: "argument", value: num() as number } as CompoundOperator,
       name() as Statement,
@@ -456,7 +455,6 @@ export const loopAccumulator = (node: ObjectNode, name: Lazy) => {
     } else {
       statement.type = (message as Statement).type;
     }
-    console.log("loop accumulator type=", statement, message);
     return [statement];
   };
 };
@@ -614,6 +612,10 @@ export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: La
     "draw type": ["TRIANGLE_STRIP", "LINE_STRIP"],
   };
 
+  if (!objectNode.size) {
+    objectNode.size = { width: 100, height: 100 };
+  }
+
   return (message: Message) => {
     let statement = message as Statement;
 
@@ -652,6 +654,7 @@ export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: La
         if (objectNode.patch.onNewMessage) {
           objectNode.patch.onNewMessage(objectNode.id, generated);
         }
+        objectNode.renderJob = generated;
       } else {
         // there is also a vertex statement
         const vertexCompiled = compileStatement(vertexStatement);
@@ -667,6 +670,7 @@ export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: La
           if (objectNode.patch.onNewMessage) {
             objectNode.patch.onNewMessage(objectNode.id, generated);
           }
+          objectNode.renderJob = generated;
         }
       }
     }

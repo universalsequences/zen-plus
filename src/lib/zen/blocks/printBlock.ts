@@ -53,7 +53,6 @@ ${isLast ? "" : prettify("    ", printOutbound(block))}
           ),
         );
 
-  console.log("histories to print=", histories);
   const inbound = printInbound(block, histories, post);
   let code = "";
   const varKeyword = target === Target.C ? "int" : "let";
