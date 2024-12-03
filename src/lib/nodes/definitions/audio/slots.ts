@@ -10,6 +10,7 @@ import { doc } from "./doc";
 import ObjectNodeImpl from "../../ObjectNode";
 import { sleep } from "../../compilation/onCompile";
 import { OperatorContextType } from "../../context";
+import { getRootPatch } from "../../traverse";
 
 doc("slots~", {
   description: "connect subpatches in series",
@@ -205,6 +206,12 @@ const compileSlots = async (node: ObjectNode) => {
 
   for (const slot of node.slots) {
     slot.subpatch?.setupPostCompile(true);
+  }
+
+  const rootPatch = getRootPatch(node.patch);
+  const modselectors = rootPatch.getAllNodes().filter((x) => x.name === "modselector");
+  for (const modselector of modselectors) {
+    modselector.receive(modselector.inlets[0], "bang");
   }
 
   node.receive(node.inlets[0], "reconnect");

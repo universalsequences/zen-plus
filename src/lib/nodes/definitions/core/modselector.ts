@@ -95,6 +95,22 @@ export const modselector = (node: ObjectNode) => {
   };
 
   return (message: Message) => {
+    if (message === "bang") {
+      if (node.saveData) {
+        const { source, outlet } = node.saveData as MessageObject;
+        const root = getRootPatch(node.patch);
+        const allNodes = root
+          .getAllNodes()
+          .flatMap((x) => (x.name === "slots~" ? (x as ObjectNode).slots || x : x));
+
+        const sourceNode = allNodes.find((x) => x.id === (source as string));
+        if (sourceNode) {
+          useSource(sourceNode, outlet as number);
+          console.log("using source node for load", sourceNode, outlet, node);
+          return [];
+        }
+      }
+    }
     if (message === "clear") {
       disconnect();
       return [];
