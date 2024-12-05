@@ -106,7 +106,6 @@ export const modselector = (node: ObjectNode) => {
         const sourceNode = allNodes.find((x) => x.id === (source as string));
         if (sourceNode) {
           useSource(sourceNode, outlet as number);
-          console.log("using source node for load", sourceNode, outlet, node);
           return [];
         }
       }

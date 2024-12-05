@@ -39,7 +39,13 @@ const Sidebar = () => {
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Tab" && selectedNodes.length > 0) {
+      const target = (e.target as HTMLElement)?.tagName.toLowerCase();
+      if (
+        e.key === "Tab" &&
+        selectedNodes.length > 0 &&
+        target !== "input" &&
+        target !== "textarea"
+      ) {
         e.preventDefault();
         setOpened(opened ? null : selectedNodes[0]);
       }

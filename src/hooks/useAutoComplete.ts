@@ -82,8 +82,8 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
 
   useEffect(() => {
     if (text === "") {
-      setAutoCompletes([]);
-      return;
+      //setAutoCompletes([]);
+      //return;
     }
     let _text = text.split(" ")[0].toLowerCase();
     let options: ContextDefinition[] = [];
@@ -94,7 +94,7 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
     let startsWithMatches = match(_text, contexts, (a: string, b: string) => a.startsWith(b));
     let perfectMatches = match(_text, contexts, (a: string, b: string) => b === a);
 
-    if (text.includes("zen")) {
+    if (text.includes("zen") || text === "") {
       // need to add this one
       let allContexts = getAllContexts();
       let context = allContexts.find((x) => x.type === OperatorContextType.ZEN);
@@ -121,7 +121,7 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
     options = _options;
     for (let elem of [...onchainSubPatches]) {
       let _name = elem.name.toLowerCase();
-      if (_name.includes(_text)) {
+      if (_name.includes(_text) || _text === "") {
         options.push({
           definition: {
             description: `patched on ${formatFirestoreTimestamp(elem.createdAt)}`,

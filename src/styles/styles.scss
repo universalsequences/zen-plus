@@ -95,9 +95,27 @@
     background-color: #d2ff00;
 }
 
+.autocomplete-option.context-type-0 {
+    background-color: #000000a3;
+}
 .autocomplete-option.context-type-1 {
     color: black;
+
 }
+
+.bg-rainbow {
+
+}
+
+.bg-rainbow {
+  background: linear-gradient(
+    124deg,
+    #26ffe4,
+    #f6ffe4,
+  );
+  background-size: 180% 180%;
+}
+
 
 .context-type-7, .node-component.context-type-7 {
     background-color: #ffffff;
@@ -125,6 +143,8 @@
 }
 
 .light-mode {
+    .bg-zinc-950 {
+    }
     .border-zinc-800 {
         border-color: #ffffff61;
     }
@@ -137,13 +157,7 @@
     }
 
     .node-component {
-        box-shadow:
-            2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
-            6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
-            12.5px 12.5px 10px rgba(0, 0, 0, 0.035),
-            22.3px 22.3px 17.9px rgba(0, 0, 0, 0.042),
-            41.8px 41.8px 33.4px rgba(0, 0, 0, 0.05),
-            100px 100px 80px rgba(0, 0, 0, 0.07);
+        box-shadow: none;
     }
 }
 
@@ -335,11 +349,14 @@ body {
 
 
     .node-component.border-zinc-900 {
-        border-color: #bebbbbcf;
+        border-color: #64646b;
     }
     .node-component {
         .bg-zinc-800 {
             background-color: #000000b0;
+        }
+        .bg-zinc-950 {
+            background-color: #857f7f;
         }
     }
 
@@ -827,3 +844,6 @@ div:active {
     .node-operator-type-6 {
         color:#dac1f1;
     }
+.bg-zinc-920 {
+    background-color: #161616;
+}

@@ -19,9 +19,9 @@ export const SelectedNodeInfo = (props: Props) => {
         e.stopPropagation();
         setOpened(!opened);
       }}
-      className={`cursor-pointer flex text-xs my-auto w-full ${opened ? "underline" : ""}`}
+      className={`cursor-pointer flex text-xs my-auto pr-2 w-full ${opened ? "underline" : ""}`}
     >
-      <div className="flex-1 my-auto pl-3">{name}</div>
+      <div className="flex-1 my-auto mx-auto ">{name}</div>
       <InfoCircledIcon className="w-4 h-4 my-auto ml-auto" />
       {opened && (
         <div

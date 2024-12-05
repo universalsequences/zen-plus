@@ -20,6 +20,7 @@ import { Operator, CompoundOperator, Statement } from "@/lib/nodes/definitions/z
 import { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
 import * as gl from "@/lib/gl/index";
 import { registerFunction, compileStatement } from "@/lib/nodes/definitions/gl/AST";
+import { PatchImpl } from "../../Patch";
 
 export const doc = (name: string, definition: Definition, registerName: string = name) => {
   DOC.doc(name, definition);
@@ -136,7 +137,7 @@ flexible_op("/", 2, gl.div, "div");
 flexible_op("%", 2, gl.mod, "mod");
 strict_vec_op("dot", 2, gl.dot, GLType.Float);
 flexible_op("pow", 2, gl.pow);
-strict_vec_op("length", 1, gl.length, GLType.Float);
+strict_vec_op("length", 1, gl.length, GLType.Float, undefined, "eebMePMf0By1wjKMFHWR");
 strict_vec_op("uv", 0, gl.uv, GLType.Vec2, undefined, "UXTPW1tBUqVXFDr7yLg0");
 strict_vec_op("nuv", 0, gl.nuv, GLType.Vec2);
 strict_vec_op("resolution", 0, gl.resolution, GLType.Vec2);

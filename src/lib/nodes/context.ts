@@ -71,7 +71,7 @@ export const getAllContexts = (): OperatorContext[] => {
   const svg = getOperatorContext(OperatorContextType.SVG);
   const onchain = getOperatorContext(OperatorContextType.ONCHAIN);
   const gl = getOperatorContext(OperatorContextType.GL);
-  const contexts = [zen, audio, core, gpu, svg, onchain, gl];
+  const contexts = [zen, audio, core, gl];
   return contexts;
 };
 
@@ -102,9 +102,7 @@ export const getContextName = (type?: OperatorContextType): string | null => {
   }
 };
 
-export const getOperatorContext = (
-  type: OperatorContextType,
-): OperatorContext => {
+export const getOperatorContext = (type: OperatorContextType): OperatorContext => {
   if (type === OperatorContextType.ZEN) {
     return {
       type,
@@ -157,9 +155,7 @@ export const getOperatorContext = (
   }
 };
 
-export const isCompiledType = (
-  type: OperatorContextType | ConnectionType | undefined,
-): boolean => {
+export const isCompiledType = (type: OperatorContextType | ConnectionType | undefined): boolean => {
   if (
     type === OperatorContextType.ZEN ||
     type === ConnectionType.ZEN ||

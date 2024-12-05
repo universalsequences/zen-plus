@@ -81,6 +81,7 @@ export const storePatch = async (
   }
   addDoc(collection(db, "patches"), document).then((doc) => {
     let docId = doc.id;
+    console.log("added doc=", docId);
     patch.previousDocId = docId;
     patch.previousSerializedPatch = patch.getJSON();
     window.history.pushState(null, "", `/editor/${docId}`);

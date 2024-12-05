@@ -43,7 +43,7 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
         width: size.width,
         height: size.height,
       }}
-      className={`flex cursor-pointer border border-zinc-${value ? 700 : 900} text-xs`}
+      className={`flex cursor-pointer border border-zinc-${value ? 900 : 700} text-xs`}
     >
       {text !== "" ? (
         <span className="m-auto text-xs">{text}</span>

@@ -120,7 +120,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     cursor?: Timestamp,
     searchText?: string,
   ): Promise<FilesQueryResult> => {
-    console.log("fetch patches for email = ", email, searchText);
     return new Promise((resolve) => {
       user.getIdToken().then((token: string) => {
         fetch("/api/files/query", {

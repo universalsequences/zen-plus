@@ -293,7 +293,7 @@ export class PatchImpl implements Patch {
 
   sendAttributeMessages() {
     const nodes = this.getAllNodes();
-    const attruis = nodes.filter((x) => x.name === "attrui");
+    const attruis = nodes.filter((x) => x.name === "attrui" || x.name === "color");
     for (const attrui of attruis) {
       attrui.receive(attrui.inlets[0], "bang");
     }

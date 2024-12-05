@@ -110,8 +110,8 @@ const PatchesComponent: React.FC<{
               ) : (
                 ""
               )}
-              <PatchWindows />
             </div>
+            <PatchWindows />
           </div>
           <Sidebar />
           {showSearch && <SearchWindow hide={() => setShowSearch(false)} />}

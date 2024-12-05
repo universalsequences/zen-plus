@@ -240,57 +240,6 @@ const PatchComponent: React.FC<{
     }
 
     let isFloatingCustom = false;
-    if (!isCustomView && (patch as SubPatch).parentNode && lockedMode) {
-      let node = (patch as SubPatch).parentNode;
-      if (false && node.attributes["Custom Presentation"] && node.size && presentationMode) {
-        let parent = (patch as SubPatch).parentPatch;
-        let parentNode = (parent as SubPatch).parentNode;
-        //if (!parentNode || (!parentNode.attributes["Custom Presentation"])) {
-        isFloatingCustom = lockedMode;
-        const size = node.size || { width: 90, height: 90 };
-        style = {
-          width: size.width + "px",
-          height: size.height + "px",
-          maxWidth: size.width + "px",
-          maxHeight: size.height + "px",
-          overflow: "hidden",
-          margin: "auto",
-        };
-
-        // }
-      }
-    }
-
-    if (tile && tile.parent && tileRef) {
-      let matches = tile.parent.children.filter(
-        (x) =>
-          x.patch &&
-          (x.patch as SubPatch).parentNode &&
-          (x.patch as SubPatch).parentNode.attributes["Custom Presentation"] &&
-          (x.patch as SubPatch).presentationMode,
-      );
-      if (matches.length > 0) {
-        // theres some presentatio mode here...
-
-        if (false && isFloatingCustom && (patch as SubPatch).parentNode) {
-          style.minWidth = (patch as any).parentNode.size.width + "px";
-          style.minHeight = (patch as any).parentNode.size.height + "px";
-        } else if (tileRef.current) {
-          let size = (matches[0].patch as SubPatch).parentNode.size;
-          let tile_height = tileRef.current.offsetHeight;
-          let tile_width = tileRef.current.offsetWidth;
-          if (size) {
-            let remainingHeight = tile_height - size.height - 20;
-            let remainingWidth = tile_width - size.width - 20;
-            style.minWidth = remainingWidth + "px";
-            style.minHeight = remainingHeight + "px";
-          }
-        } else {
-          style.minWidth = undefined;
-          style.minHeight = undefined;
-        }
-      }
-    }
 
     return (
       <>

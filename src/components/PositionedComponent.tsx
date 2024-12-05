@@ -153,6 +153,9 @@ const PositionedComponent: React.FC<{
           if (isZenCustom) {
             e.stopPropagation();
           }
+          if (!selectedNodes.includes(node)) {
+            setSelectedNodes([]);
+          }
           setDraggingNode({
             node: node,
             offset: { x, y },
@@ -163,7 +166,6 @@ const PositionedComponent: React.FC<{
         }
         selectPatch();
         e.stopPropagation();
-        //if ((node as MessageNode).messageType === MessageType.Message) {
         if (!selectedNodes.includes(node)) {
           setSelectedNodes([node]);
         }

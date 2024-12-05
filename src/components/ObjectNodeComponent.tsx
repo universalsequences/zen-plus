@@ -139,6 +139,14 @@ const InnerObjectNodeComponent: React.FC<{
 
   const { loadSubPatch } = useSubPatchLoader(objectNode);
 
+  useEffect(() => {
+    if (objectNode.text === "") {
+      setSelectedNodes([objectNode]);
+      setTimeout(() => {
+        setEditing(true);
+      }, 10);
+    }
+  }, []);
   const _expandPatch = useCallback(() => {
     if (objectNode.subpatch) {
       expandPatch(objectNode);
@@ -183,6 +191,10 @@ const InnerObjectNodeComponent: React.FC<{
     },
     [setEditing, setError, setParsedText],
   );
+
+  useEffect(() => {
+    if (!isSelected) setEditing(false);
+  }, [isSelected]);
 
   const onKeyDown = useCallback(
     (e: any) => {
@@ -351,6 +363,7 @@ const InnerObjectNodeComponent: React.FC<{
           if (!objectNode.name || !index[objectNode.name]) {
             clicked.current = true;
             setEditing(true);
+            setSelectedNodes([objectNode]);
           }
           // setSelectedNodes([]);
         }
@@ -523,22 +536,24 @@ const InnerObjectNodeComponent: React.FC<{
                     </span>
                   </div>
                 )}
-                {editing && (
-                  <AutoCompletes
-                    setAutoCompletes={setAutoCompletes}
-                    selected={selected}
-                    autoCompletes={autoCompletes}
-                    selectOption={(x: ContextDefinition) => {
-                      let name = (x.definition.alias || x.definition.name) as string;
-                      if (text.split(" ")[0] === name) {
-                        name = text;
-                      }
-                      setText(name);
-                      enterText(name, x.context, x.definition.file);
-                      setAutoCompletes([]);
-                    }}
-                  />
-                )}
+                {editing &&
+             (
+                    <AutoCompletes
+                      text={text}
+                      setAutoCompletes={setAutoCompletes}
+                      selected={selected}
+                      autoCompletes={autoCompletes}
+                      selectOption={(x: ContextDefinition) => {
+                        let name = (x.definition.alias || x.definition.name) as string;
+                        if (text.split(" ")[0] === name) {
+                          name = text;
+                        }
+                        setText(name);
+                        enterText(name, x.context, x.definition.file);
+                        setAutoCompletes([]);
+                      }}
+                    />,
+                  )}
                 {((typeError && !(typeError as TypeSuccess).success) || (editing && error)) && (
                   <div
                     style={{ left: "0px", bottom: "-20px" }}

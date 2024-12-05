@@ -166,14 +166,14 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     return (
       <div style={{ zIndex: 10000000 }} className="flex  full w-full select-none ">
         <div
-          className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}
+          className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
         >
           <PatchDropdown patch={patch}>
             <GlobeIcon className="w-4 h-4 my-auto mr-3 cursor-pointer" />
           </PatchDropdown>
           <div
-            style={{ borderLeft: "1px solid white" }}
-            className="ml-auto flex top-0 bottom my-auto right-0 pl-3 flex w-28 "
+            style={{ minWidth: "100px" }}
+            className="ml-auto flex top-0 bottom my-auto right-0 pl-3 flex h-full bg-zinc-800"
           >
             {rightPart}
           </div>
@@ -196,7 +196,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
       style={{ zIndex: 10000000 }}
     >
       <div
-        className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex px-2  top-toolbar h-full `}
+        className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
       >
         <PatchDropdown patch={patch}>
           <GlobeIcon className="w-4 h-4 my-auto mr-3 cursor-pointer" />
@@ -223,8 +223,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           </div>
         }
         <div
-          style={{ borderLeft: "1px solid white" }}
-          className="ml-auto flex top-0 bottom my-auto  right-0 flex w-32 flex "
+          style={{ minWidth: "80px" }}
+          className="ml-auto flex top-0 bottom my-auto  right-0 flex w-32 flex h-full bg-zinc-800"
         >
           <div className="flex w-full">{rightPart}</div>
         </div>
