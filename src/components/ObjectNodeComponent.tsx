@@ -536,24 +536,23 @@ const InnerObjectNodeComponent: React.FC<{
                     </span>
                   </div>
                 )}
-                {editing &&
-             (
-                    <AutoCompletes
-                      text={text}
-                      setAutoCompletes={setAutoCompletes}
-                      selected={selected}
-                      autoCompletes={autoCompletes}
-                      selectOption={(x: ContextDefinition) => {
-                        let name = (x.definition.alias || x.definition.name) as string;
-                        if (text.split(" ")[0] === name) {
-                          name = text;
-                        }
-                        setText(name);
-                        enterText(name, x.context, x.definition.file);
-                        setAutoCompletes([]);
-                      }}
-                    />,
-                  )}
+                {editing && (
+                  <AutoCompletes
+                    text={text}
+                    setAutoCompletes={setAutoCompletes}
+                    selected={selected}
+                    autoCompletes={autoCompletes}
+                    selectOption={(x: ContextDefinition) => {
+                      let name = (x.definition.alias || x.definition.name) as string;
+                      if (text.split(" ")[0] === name) {
+                        name = text;
+                      }
+                      setText(name);
+                      enterText(name, x.context, x.definition.file);
+                      setAutoCompletes([]);
+                    }}
+                  />
+                )}
                 {((typeError && !(typeError as TypeSuccess).success) || (editing && error)) && (
                   <div
                     style={{ left: "0px", bottom: "-20px" }}

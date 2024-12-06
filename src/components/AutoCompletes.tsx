@@ -63,15 +63,15 @@ const AutoCompletes: React.FC<{
         <div className="italic">hit enter to create a constant number</div>
       )}
       {groupTypes.map((type, idx) => (
-        <div className="flex flex-col">
+        <div key={idx} className="flex flex-col">
           <div className="text-base p-2">{type}</div>
           {groups.get(type)?.map((option, index) => (
             <div
+              key={index}
               onClick={() => {
                 selectOption(option);
                 setAutoCompletes([]);
               }}
-              key={index}
               className={
                 (selected === getIndex(idx, index) ? "bg-white text-black " : "") +
                 " flex px-2 py-1 w-full"
