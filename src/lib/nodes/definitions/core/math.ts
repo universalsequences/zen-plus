@@ -17,7 +17,7 @@ export const add = (node: ObjectNode, a: Lazy) => {
 doc("-", {
   numberOfOutlets: 1,
   numberOfInlets: 2,
-  description: "subtracks two messages together",
+  description: "subtracts two messages together",
 });
 
 export const sub = (node: ObjectNode, a: Lazy) => {

@@ -50,8 +50,8 @@ const wagmiConfig = createConfig({
 });
 
 interface Props {
-  docId: string;
-  commit: string;
+  docId?: string;
+  commit?: string;
 }
 
 export default function ExamplePatch({ docId, commit }: Props) {
@@ -67,7 +67,7 @@ export default function ExamplePatch({ docId, commit }: Props) {
   const [fileToOpen, setFileToOpen] = useState<File | null>(null);
 
   useEffect(() => {
-    if (docId && basePatch) {
+    if (docId && basePatch && commit) {
       const file: File = {
         id: docId,
         name: "example",
@@ -87,7 +87,7 @@ export default function ExamplePatch({ docId, commit }: Props) {
     };
   }, []);
 
-  if (!basePatch || !fileToOpen) {
+  if (!basePatch || (!fileToOpen && docId)) {
     return <></>;
   }
   return (

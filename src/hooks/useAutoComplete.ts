@@ -106,7 +106,16 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
         });
       }
     }
-    options = [...options, ...perfectMatches, ...startsWithMatches];
+    options = [
+      ...(options.sort((a, b) => a.definition.name?.localeCompare(b.definition.name as string)) ||
+        0),
+      ...perfectMatches.sort(
+        (a, b) => a.definition.name?.localeCompare(b.definition.name as string) || 0,
+      ),
+      ...startsWithMatches.sort(
+        (a, b) => a.definition.name?.localeCompare(b.definition.name as string) || 0,
+      ),
+    ];
 
     // make sure theres no duplicates
     let _options: ContextDefinition[] = [];

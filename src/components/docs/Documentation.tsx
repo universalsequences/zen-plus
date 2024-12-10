@@ -65,7 +65,7 @@ const Documentation = () => {
           </ol>
         </P>
         <P>
-          <div className="space-y-6">
+          <div className="flex gap-2 items-start">
             <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm w-2/3">
               <h3 className="text-lg font-semibold mb-4">Creating an Object Node</h3>
               <p className="mb-2">
@@ -73,6 +73,10 @@ const Documentation = () => {
                 You&apos;ll see a list of available <White>operators</White>, grouped by{" "}
                 <White>operator type</White>.
               </p>
+            </div>
+
+            <div className="w-full h-72 ">
+              <ExamplePatch />
             </div>
           </div>
         </P>
@@ -95,7 +99,9 @@ const Documentation = () => {
               <div className="w-16 items-start">
                 <div className="table bg-zinc-800 px-2 py-1 rounded-full">zen</div>
               </div>
-              <div className="italic">creating optimized audio nodes</div>
+              <div className="italic">
+                creating optimized audio nodes (can only be used inside zen subpatches)
+              </div>
             </li>
             <li className="my-2 flex gap-2">
               <div className="w-16 items-start">

@@ -71,7 +71,7 @@ export const getAllContexts = (): OperatorContext[] => {
   const svg = getOperatorContext(OperatorContextType.SVG);
   const onchain = getOperatorContext(OperatorContextType.ONCHAIN);
   const gl = getOperatorContext(OperatorContextType.GL);
-  const contexts = [zen, audio, core, gl];
+  const contexts = [core, zen, audio, audio, gl];
   return contexts;
 };
 
