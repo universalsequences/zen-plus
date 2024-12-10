@@ -69,8 +69,8 @@ const Documentation = () => {
             <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm w-2/3">
               <h3 className="text-lg font-semibold mb-4">Creating an Object Node</h3>
               <p className="mb-2">
-                To create an empty <White>object node</White>, double click the patch editor. You'll
-                see a list of available <White>operators</White>, grouped by{" "}
+                To create an empty <White>object node</White>, double click the patch editor.
+                You&apos;ll see a list of available <White>operators</White>, grouped by{" "}
                 <White>operator type</White>.
               </p>
             </div>

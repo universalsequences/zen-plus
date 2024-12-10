@@ -86,7 +86,7 @@ const FileComponent: React.FC<{
           <div className="text-zinc-500">{getTime(file.createdAt.toDate())}</div>
           {file.isPublic && <div className="text-teal-500 ml-2">public</div>}
           {file.tags?.map((tag) => (
-            <div style={{ fontSize: 8 }} className="text-zinc-200 ml-2">
+            <div key={tag} style={{ fontSize: 8 }} className="text-zinc-200 ml-2">
               {tag}
             </div>
           ))}
