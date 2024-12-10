@@ -1,7 +1,7 @@
 import type { Statement } from "./definitions/zen/types";
 import { toConnectionType, OperatorContextType } from "./context";
 import { PatchImpl } from "./Patch";
-import type { ObjectNode, Message, Patch, SubPatch } from "./types";
+import { type ObjectNode, type Message, type Patch, type SubPatch, PatchType } from "./types";
 import ObjectNodeImpl from "./ObjectNode";
 import { MutableValue } from "./definitions/core/MutableValue";
 
@@ -122,7 +122,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
 
     // NOTE: THIS MIGHT BE WRONG! (I HAVE NO IDEA WHAT IM DOING)
-    if (this.isZenBase()) {
+    if (this.isZenBase() && this.patchType !== OperatorContextType.GL) {
       super.recompileGraph();
       return;
     }

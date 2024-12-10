@@ -14,6 +14,8 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
   const { logout, user } = useAuth();
   let isSubPatch: boolean = (patch as SubPatch).parentPatch !== undefined;
 
+  const [isFork, setIsFork] = useState(false);
+
   let [name, setName] = useState("");
   const save = useCallback(async () => {
     setLoading(true);
@@ -35,7 +37,7 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
         captureAndSendCanvas(canvas as HTMLCanvasElement, true).then((screenshot: any) => {
           if (name) {
             console.log("storing patch with screenshot=", screenshot);
-            storePatch(name, patch, isSubPatch, user.email, screenshot).then(() => {
+            storePatch(name, patch, isSubPatch, user.email, screenshot, isFork).then(() => {
               setLoading(false);
               hide();
             });
@@ -56,7 +58,7 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
             .then((response) => response.json())
             .then((data) => {
               let screenshot = data.url;
-              storePatch(name, patch, isSubPatch, user.email, screenshot).then(() => {
+              storePatch(name, patch, isSubPatch, user.email, screenshot, isFork).then(() => {
                 setLoading(false);
                 hide();
               });
@@ -67,14 +69,14 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
               hide();
             });
         } else {
-          storePatch(name, patch, isSubPatch, user.email).then(() => {
+          storePatch(name, patch, isSubPatch, user.email, undefined, isFork).then(() => {
             setLoading(false);
             hide();
           });
         }
       }
     }
-  }, [patch, name, isSubPatch, setLoading]);
+  }, [patch, name, isSubPatch, setLoading, isFork]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -84,6 +86,11 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
     },
     [save],
   );
+
+  const handleChangeFork = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const newValue = event.target.checked;
+    setIsFork(newValue);
+  };
 
   useEffect(() => {
     window.addEventListener("keydown", onKeyDown);
@@ -136,6 +143,19 @@ const SavePatch: React.FC<{ patch: Patch; hide: () => void }> = ({ hide, patch }
           />
         ))}
       </svg>
+      <div className="flex items-center gap-2 ">
+        <input
+          type="checkbox"
+          id="public-option"
+          checked={isFork}
+          onChange={handleChangeFork}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <label htmlFor="public-option" className="text-xs ">
+          fork
+        </label>
+      </div>
+
       <div
         className="save-connect"
         style={{ display: "flex", marginTop: 25, justifyContent: "flex-end" }}

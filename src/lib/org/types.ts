@@ -3,4 +3,5 @@ export type PatchDoc = {
   commits?: string[];
   patch?: string;
   tags?: string[];
+  isPublic?: boolean;
 };

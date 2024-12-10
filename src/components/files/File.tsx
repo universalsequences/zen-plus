@@ -4,6 +4,7 @@ import { db } from "@/lib/db/firebase"; // Ensure you have a firebase config fil
 import { CommitIcon, HeartIcon, HeartFilledIcon } from "@radix-ui/react-icons";
 import { getTime } from "@/components/ProjectOption";
 import { File } from "@/lib/files/types";
+import { PatchDocComponent } from "../org/PatchDocComponent";
 
 const FileComponent: React.FC<{
   isMini: boolean;
@@ -15,7 +16,17 @@ const FileComponent: React.FC<{
   file: File;
   setFileToOpen: (x: any | null) => void;
   setRevisions: (x: File[]) => void;
-}> = ({ file, setRevisions, fileExpanded, setFileExpanded, openFile, className, isRevision }) => {
+  showAttributes?: boolean;
+}> = ({
+  file,
+  showAttributes,
+  setRevisions,
+  fileExpanded,
+  setFileExpanded,
+  openFile,
+  className,
+  isRevision,
+}) => {
   const [favorited, setFavorited] = useState(file.favorited);
   const toggleHeart = useCallback(
     async (e: any) => {
@@ -73,6 +84,12 @@ const FileComponent: React.FC<{
       {
         <div className="flex">
           <div className="text-zinc-500">{getTime(file.createdAt.toDate())}</div>
+          {file.isPublic && <div className="text-teal-500 ml-2">public</div>}
+          {file.tags?.map((tag) => (
+            <div style={{ fontSize: 8 }} className="text-zinc-200 ml-2">
+              {tag}
+            </div>
+          ))}
           {(favorited || isRevision) && (
             <div onClick={toggleHeart} className="ml-auto cursor-pointer">
               {favorited ? (

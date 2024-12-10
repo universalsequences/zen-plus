@@ -14,4 +14,5 @@ export interface File {
   outputs?: string[];
   moduleType?: string;
   tags?: string[];
+  isPublic?: boolean;
 }

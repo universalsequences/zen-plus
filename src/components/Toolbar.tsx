@@ -152,16 +152,18 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     basePatch = (basePatch as SubPatch).parentPatch;
   }
 
-  const rightPart =
-    selectedNodes && selectedNodes[0] ? (
-      <SelectedNodeInfo node={selectedNodes[0]} />
-    ) : (
+  const rightPart = (
+    <>
+      {selectedNodes && selectedNodes[0]?.patch === patch && (
+        <SelectedNodeInfo node={selectedNodes[0]} />
+      )}
       <div className="flex ml-3">
         <LockButton />
         <PresentationMode />
         {basePatch && <RecorderToolbar patch={basePatch} />}
       </div>
-    );
+    </>
+  );
   if (breadcrumbs.length === 1) {
     return (
       <div style={{ zIndex: 10000000 }} className="flex  full w-full select-none ">
@@ -173,7 +175,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           </PatchDropdown>
           <div
             style={{ minWidth: "100px" }}
-            className="ml-auto flex top-0 bottom my-auto right-0 pl-3 flex h-full bg-zinc-800"
+            className="ml-auto flex top-0 bottom my-auto right-0 flex h-full bg-zinc-800"
           >
             {rightPart}
           </div>
@@ -210,8 +212,12 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             className="w-3 h-3 absolute top-0 bottom-0 my-auto right-2 cursor-pointer"
           />
         </div>
-        {
-          <div className="absolute right-28 bottom-0 top-0  mr-3 my-auto  right-0 px-5 flex  flex w-36 text-right">
+        {}
+        <div
+          style={{ minWidth: "100px" }}
+          className="ml-auto flex top-0 bottom my-auto right-0 flex h-full "
+        >
+          <div className={` my-0 top-0  mr-3 my-auto  right-0 px-5 flex  flex w-36 text-right`}>
             <div className="text-xs my-auto ml-auto text-zinc-400">
               {__patch.zenCode
                 ? `compiled (${(__patch as SubPatch).parentNode.attributes["target"]})`
@@ -221,12 +227,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
               className={`w-2 h-2 rounded-full ${type === "audio" ? "bg-yellow-300" : type === "gl" ? "bg-purple-500" : "bg-teal-200"} my-auto ml-2`}
             ></div>
           </div>
-        }
-        <div
-          style={{ minWidth: "80px" }}
-          className="ml-auto flex top-0 bottom my-auto  right-0 flex w-32 flex h-full bg-zinc-800"
-        >
-          <div className="flex w-full">{rightPart}</div>
+
+          <div className="flex w-full bg-zinc-800">{rightPart}</div>
         </div>
       </div>
     </div>

@@ -197,9 +197,9 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
         reconnectIO2(false);
 
         if (objectNode.subpatch) {
-          if ((objectNode.subpatch as SubPatch).isInsideSlot) {
-            (objectNode.subpatch as SubPatch).recompileGraph();
-          } 
+          //if ((objectNode.subpatch as SubPatch).isInsideSlot) {
+          (objectNode.subpatch as SubPatch).recompileGraph();
+          //}
           (objectNode.subpatch as Patch).initialLoadCompile(false);
         }
       }

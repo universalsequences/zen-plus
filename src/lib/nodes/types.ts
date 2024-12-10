@@ -185,6 +185,7 @@ export type ObjectNode = Positioned &
     name?: string; // the name of the object - i.e. what it is
     text: string; // the literal text inputed in the object box (used to parse)
     fn?: InstanceFunction; // the function associated with the object name (to be run on message receive)
+    justCreated?: boolean;
     parse: (
       x: string,
       operatorContextType?: OperatorContextType,

@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Timestamp } from "firebase/firestore";
 import {
+  or,
+  and,
   limit,
   startAfter,
   DocumentData,
@@ -50,8 +52,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               )
             : query(
                 collectionRef,
-                where("user", "==", email),
-                where("isSubPatch", "==", isSubPatch),
+                and(
+                  or(where("user", "==", email), where("isPublic", "==", true)),
+                  where("isSubPatch", "==", isSubPatch),
+                  where("hasNewVersion", "==", false),
+                ),
                 orderBy("createdAt", "desc"),
                 startAfter(
                   req.body.cursor
@@ -59,7 +64,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     : Timestamp.fromMillis(new Date().getTime()),
                 ),
                 limit(isSubPatch ? 1000 : _limit),
-                where("hasNewVersion", "==", false),
               );
 
       try {
@@ -106,6 +110,7 @@ const docToFile = (id: string, x: DocumentData): File => {
     inputs: x.inputs,
     outputs: x.outputs,
     moduleType: x.moduleType,
-    tags: x.tags
+    tags: x.tags,
+    isPublic: x.isPublic,
   };
 };

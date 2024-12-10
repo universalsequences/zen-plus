@@ -247,7 +247,7 @@ const SearchWindow: React.FC<{ hide: () => void }> = ({ hide }) => {
         <div className="text-xs flex-1 relative flex overflow-hidden">
           <div ref={scrollRef} className="text-xs flex-1 overflow-scroll flex-1">
             {!patchOpened && option === SearchOption.Patches ? (
-              <PatchesExplorer />
+              <PatchesExplorer text={text} />
             ) : !patchOpened && option === SearchOption.Files ? (
               <div className="flex flex-col w-full h-full">
                 <Files

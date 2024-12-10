@@ -2,6 +2,8 @@ import { ObjectNode, Node, MessageNode } from "@/lib/nodes/types";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import Attributes from "./Attributes";
+import { OperatorContextType, getContextName } from "@/lib/nodes/context";
+import { useSelection } from "@/contexts/SelectionContext";
 
 interface Props {
   node: Node;
@@ -10,6 +12,8 @@ interface Props {
 export const SelectedNodeInfo = (props: Props) => {
   const [opened, setOpened] = useState(false);
   const name = (props.node as ObjectNode).name;
+
+  useSelection();
   return (
     <div
       onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
@@ -19,10 +23,17 @@ export const SelectedNodeInfo = (props: Props) => {
         e.stopPropagation();
         setOpened(!opened);
       }}
-      className={`cursor-pointer flex text-xs my-auto pr-2 w-full ${opened ? "underline" : ""}`}
+      style={{ minWidth: 60 }}
+      className={`cursor-pointer bg-zinc-800 border-r border-zinc-600 flex text-xs px-2 pr-2 w-full ${opened ? "underline" : ""}`}
     >
-      <div className="flex-1 my-auto mx-auto ">{name}</div>
-      <InfoCircledIcon className="w-4 h-4 my-auto ml-auto" />
+      <div
+        className={`rounded-full px-3 mr-2 text-xs h-5 my-auto border border-zinc-700 context-type-${(props.node as ObjectNode).operatorContextType}`}
+      >
+        {getContextName((props.node as ObjectNode).operatorContextType as OperatorContextType)}
+      </div>
+      <div className="flex-1 my-auto mx-auto pr-3 text-xs  my-auto  ">
+        {(props.node as ObjectNode).subpatch?.name || name}
+      </div>
       {opened && (
         <div
           style={{

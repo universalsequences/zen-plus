@@ -140,11 +140,12 @@ const InnerObjectNodeComponent: React.FC<{
   const { loadSubPatch } = useSubPatchLoader(objectNode);
 
   useEffect(() => {
-    if (objectNode.text === "") {
+    if (objectNode.text === "" && objectNode.justCreated) {
       setSelectedNodes([objectNode]);
       setTimeout(() => {
         setEditing(true);
       }, 10);
+      objectNode.justCreated = false;
     }
   }, []);
   const _expandPatch = useCallback(() => {
@@ -536,7 +537,7 @@ const InnerObjectNodeComponent: React.FC<{
                     </span>
                   </div>
                 )}
-                {editing && (
+                {editing && isSelected && (
                   <AutoCompletes
                     text={text}
                     setAutoCompletes={setAutoCompletes}

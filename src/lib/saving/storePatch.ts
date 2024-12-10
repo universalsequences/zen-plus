@@ -11,6 +11,7 @@ export const storePatch = async (
   isSubPatch: boolean,
   email: string,
   screenshot?: string,
+  isFork?: boolean,
 ) => {
   let json: SerializedPatch | Operation[] = patch.getJSON();
 
@@ -67,7 +68,10 @@ export const storePatch = async (
   if (docId) {
     const docRef = doc(db, "patches", docId);
     try {
-      await updateDoc(docRef, { hasNewVersion: true });
+      if (!isFork) {
+        console.log("setting has new version!");
+        await updateDoc(docRef, { hasNewVersion: true });
+      }
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         let previousDoc = docSnap.data();

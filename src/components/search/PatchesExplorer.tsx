@@ -2,7 +2,7 @@ import { useStorage } from "@/contexts/StorageContext";
 import { ExpandedPatch } from "./ExpandedPatch";
 import { File } from "@/lib/files/types";
 import { PatchOption } from "./PatchOption";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatches } from "@/contexts/PatchesContext";
@@ -21,7 +21,10 @@ export const getSubPatchType = (patch: SerializedPatch) => {
   return OperatorContextType.ZEN;
 };
 
-export const PatchesExplorer = () => {
+interface Props {
+  text: string;
+}
+export const PatchesExplorer = ({ text }: Props) => {
   const { fetchSubPatchForDoc, onchainSubPatches } = useStorage();
 
   const [subpatches, setSubPatches] = useState(
@@ -32,7 +35,9 @@ export const PatchesExplorer = () => {
   );
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  const filtered = subpatches.filter((x) => (selectedTag ? x.tags?.includes(selectedTag) : x));
+  const filtered = subpatches
+    .filter((x) => text === "" || x.name.toLowerCase().includes(text.toLowerCase()))
+    .filter((x) => (selectedTag ? x.tags?.includes(selectedTag) : x));
   const [selectedPatch, setSelectedPatch] = useState<File | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -59,12 +64,30 @@ export const PatchesExplorer = () => {
     }
   }, [selectedPatch, ret.selectedPatch]);
 
+  useEffect(() => {
+    setSelectedPatch(null);
+  }, [selectedTag]);
+
   return (
     <div className="pt-10">
-      <div className="flex gap-2 absolute top-0 w-full overflow-x-auto py-1 no-scrollbar">
-        {tags.map((x) => (
-          <Tag key={x} name={x} isSelected={selectedTag === x} setSelectedTag={setSelectedTag} />
-        ))}
+      <div className="flex gap-2 absolute top-0 w-full ">
+        <div>
+          {selectedTag && (
+            <Tag name={selectedTag} isSelected={true} setSelectedTag={setSelectedTag} />
+          )}
+        </div>
+        <div className="flex-1 overflow-x-auto py-1 no-scrollbar flex gap-2">
+          {tags
+            .filter((x) => x !== selectedTag)
+            .map((x) => (
+              <Tag
+                key={x}
+                name={x}
+                isSelected={selectedTag === x}
+                setSelectedTag={setSelectedTag}
+              />
+            ))}
+        </div>
       </div>
       {selectedPatch ? (
         <ExpandedPatch

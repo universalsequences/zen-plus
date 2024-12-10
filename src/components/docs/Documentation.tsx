@@ -5,6 +5,8 @@ import Image from "next/image";
 import API from "./API";
 import * as zen from "@/lib/nodes/definitions/zen/doc";
 import * as gl from "@/lib/nodes/definitions/gl/doc";
+import * as audio from "@/lib/nodes/definitions/audio/doc";
+import * as core from "@/lib/nodes/definitions/core/doc";
 
 const White: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="text-white font-bold">{children}</span>
@@ -14,6 +16,16 @@ const P: React.FC<{ className?: string; children: React.ReactNode }> = ({
   className = "",
 }) => <p className={"my-4 " + className}>{children}</p>;
 
+const Core = () => {
+  return <span className="table context-type-2 px-2 py-0.5 rounded-full items-start">core</span>;
+};
+
+const AudioNode = () => {
+  return (
+    <div className="table context-type-1 px-2 py-1 text-black rounded-full items-start">core</div>
+  );
+};
+
 const Documentation = () => {
   return (
     <div className="pl-40 pt-10 overflow-scroll max-h-screen w-full text-zinc-200">
@@ -22,32 +34,142 @@ const Documentation = () => {
           <White>zen+</White> is a visual programming environment.
         </P>
         <P>
-          A <White>Patch</White> represents a self contained work. Within a <White>Patch</White>,
-          there are <White>Nodes</White> and <White>Cables</White>.
+          Instead of programming with text, we code by <White>patching</White>.
         </P>
         <P>
-          There are several sets of <White>Nodes</White> for different tasks like{" "}
-          <White>Audio</White> and <White>Visuals</White> (GLSL). Nodes are color coded by their
-          type (<span className="text-purple-500">GLSL</span>,{" "}
-          <span className="text-zinc-600">Audio</span>,{" "}
-          <span className="text-zinc-400">Number</span> or{" "}
-          <span className="text-blue-600">Core</span>)
+          Patches are made up of <White>nodes</White> which are connected together with{" "}
+          <White>Cables</White>.
         </P>
-        <div className="flex">
-          <P className="w-96">
-            <p>
-              A <White>Node</White> can be thought as a function, representing an operation to data
-              coming in through its <White>inlets</White>, outputting its results through its{" "}
-              <White>outlets</White>.
-            </p>
-            <p className="mt-10 text-xs">
-              For example, the patch to the right represents a phasor going from 0-1 at 432 HZ (i.e.
-              a sawtooth wave), transforming into a sine wave going at the same rate.
-            </p>
-          </P>
+        <P>
+          <h2 className="text-xl font-semibold mb-4">Nodes</h2>
+          There are 2 types of <White>nodes</White>:
+          <ol>
+            <li>
+              1. <White>message nodes</White> represent a piece of data, called a{" "}
+              <White>message</White> (a string, number, list etc)
+              <ul className="list-disc pl-6 space-y-1">
+                <li>
+                  <White>message nodes</White> are used to pass messages between nodes.
+                </li>
+                <li>
+                  <White>number nodes</White> are used to output number messages.
+                </li>
+                <li className="italic">
+                  Right-click the editor to create either type of message node.
+                </li>
+              </ul>
+            </li>
+            <li>
+              2. <White>object nodes</White> represents an operation.
+            </li>
+          </ol>
+        </P>
+        <P>
+          <div className="space-y-6">
+            <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm w-2/3">
+              <h3 className="text-lg font-semibold mb-4">Creating an Object Node</h3>
+              <p className="mb-2">
+                To create an empty <White>object node</White>, double click the patch editor. You'll
+                see a list of available <White>operators</White>, grouped by{" "}
+                <White>operator type</White>.
+              </p>
+            </div>
+          </div>
+        </P>
+        <P>
+          There are 4 <White>operator types</White>:
+          <ul>
+            <li className="my-2 flex gap-2 items-start">
+              <div className="w-16 items-start">
+                <div className="table context-type-2 px-2 py-1 rounded-full items-start">core</div>
+              </div>
+              <div className="italic">processing messages</div>
+            </li>
+            <li className="my-2 flex gap-2">
+              <div className="w-16 items-start">
+                <div className="table context-type-1 px-2 py-1 rounded-full text-black">audio</div>
+              </div>
+              <div className="italic">processing audio</div>
+            </li>
+            <li className="my-2 flex gap-2">
+              <div className="w-16 items-start">
+                <div className="table bg-zinc-800 px-2 py-1 rounded-full">zen</div>
+              </div>
+              <div className="italic">creating optimized audio nodes</div>
+            </li>
+            <li className="my-2 flex gap-2">
+              <div className="w-16 items-start">
+                <div className="table context-type-6 px-2 py-1 rounded-full">gl</div>
+              </div>
+              <div className="italic">creating shaders</div>
+            </li>
+          </ul>
+        </P>
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Editing Modes</h2>
 
-          <Image alt="Nodes Connecting" src="/doc-nodes-1.png" width={100} height={100} />
+          <div className="gap-4 flex">
+            <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm">
+              <h3 className="text-lg font-semibold mb-2">Edit Mode (Unlocked)</h3>
+              <p className="mb-2">
+                This is where you build and modify your patches. In Edit Mode, you can:
+              </p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Create new nodes</li>
+                <li>Connect nodes with cables</li>
+                <li>Move nodes around</li>
+                <li>Select and organize nodes</li>
+                <li>Delete nodes and connections</li>
+              </ul>
+            </div>
+
+            <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm">
+              <h3 className="text-lg font-semibold mb-2">Performance Mode (Locked)</h3>
+              <p className="mb-2">
+                This is where you interact with and use your patch. In Performance Mode, you can:
+              </p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Adjust values in number boxes</li>
+                <li>Click message boxes to trigger events</li>
+                <li>Interact with matrices and controls</li>
+                <li>Run and test your patch</li>
+                <li>Focus on using the patch without accidentally modifying its structure</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-6">
+            Switch between modes using <White>⌘-E </White>to lock/unlock the patch editor. You can
+            also click the lock icon at the right of the bottom toolbar.
+          </p>
+          <p className="mt-4">
+            This clear distinction between building (Edit Mode) and using (Performance Mode) helps
+            prevent accidental modifications while performing or testing your patches.
+          </p>
         </div>
+        <P>
+          <h2 className="text-xl font-semibold mb-4">Cables</h2>
+          <P>Cables are used to connect nodes together.</P>
+          <div className="flex gap-4">
+            <div className="w-72">
+              An <White>object node</White> can be thought as a function, representing an operation
+              to data coming in through its <White>inlets</White>, outputting its results through
+              its <White>outlets</White>.
+            </div>
+            <div className="w-72">
+              To connect two <White>Nodes</White>, click on an <White>outlet</White> (the little
+              circle at the bottom of a node), and drag the cable to another nodes{" "}
+              <White>inlet</White> (the little circle at the top of a node).
+            </div>
+          </div>
+          <P className="italic my-4 flex">
+            <Core />{" "}
+            <span className="ml-2">
+              When an <White>object node</White> receives messages from all its{" "}
+              <White>inlets</White>, it outputs its result to its <White>outlets</White>.
+            </span>
+          </P>
+        </P>
         <div className="flex">
           <P className="w-64">
             To create a <White>Node</White> in the editor, simply double click anywhere on the patch
@@ -180,13 +302,21 @@ const Documentation = () => {
           This connects audio to visuals tightly, as values are emitted every 20ms.
         </P>
         <div className="text-3xl my-4">List of All Operators</div>
-        <div className="text-3xl my-4">audio</div>
+        <div className="text-3xl my-4">core</div>
+        <p>
+          <API api={core.api} />
+        </p>
+        <div className="text-3xl my-4">zen</div>
         <p>
           <API api={zen.api} />
         </p>
         <div className="text-3xl my-4">GLSL</div>
         <p>
           <API api={gl.api} />
+        </p>
+        <div className="text-3xl my-4">audio</div>
+        <p>
+          <API api={audio.api} />
         </p>
       </div>
     </div>

@@ -14,6 +14,7 @@ import type { Patch } from "@/lib/nodes/types";
 import { useAuth } from "@/contexts/AuthContext";
 import PatchExplorer from "./PatchExplorer";
 import { type FilesQueryResult, useStorage } from "@/contexts/StorageContext";
+import { PatchDocComponent } from "../org/PatchDocComponent";
 
 const Files: React.FC<{
   fileExpanded: File | null;
@@ -323,12 +324,16 @@ const Files: React.FC<{
                     <div className="my-auto">Download Image</div>
                   </button>
                 )}
+                <div className="h-8">
+                  <PatchDocComponent isFlexRow={true} docId={fileExpanded.id} doc={fileExpanded} />
+                </div>
               </div>
             )}
             <div ref={revisionsRef} className="flex overflow-x-scroll content-start">
               {fileExpanded &&
                 [fileExpanded, ...[...revisions]].map((x) => (
                   <FileComponent
+                    showAttributes={x === fileExpanded}
                     isRevision={true}
                     key={x.id}
                     setRevisions={setRevisions}

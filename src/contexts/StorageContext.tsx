@@ -136,10 +136,10 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
           }),
         }).then(async (resp) => {
           let json = await resp.json();
-          console.log("json = ", json);
           let files: File[] = json.projects.map((x: any) => ({
             ...x,
             tags: x.tags,
+            isPublic: x.isPublic,
             createdAt: Timestamp.fromMillis(
               x.createdAt.seconds * 1000 + x.createdAt.nanoseconds / 1000000,
             ),
@@ -185,7 +185,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
   };
 
   const fetchSubPatchForDoc = async (id: string): Promise<SerializedPatch | null> => {
-    console.log("fetch subpatch for doc=", id);
     const docRef = doc(db, "patches", id);
     try {
       const docSnap = await getDoc(docRef);
@@ -196,6 +195,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
           commit: doc.commit,
           commits: doc.commits,
           tags: doc.tags,
+          isPublic: doc.isPublic,
         };
         const patch = await fetchPatch(document, true);
         patch.docId = id;

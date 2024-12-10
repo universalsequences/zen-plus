@@ -467,6 +467,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
     (objectNode: ObjectNode, position: Coordinate) => {
       objectNode.position = position;
       patch.objectNodes = [...patch.objectNodes, objectNode];
+      objectNode.justCreated = true;
       setObjectNodes(patch.objectNodes);
     },
     [setObjectNodes, patch],
