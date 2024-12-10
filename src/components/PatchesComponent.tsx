@@ -20,6 +20,7 @@ const PatchesComponent: React.FC<{
   fileToOpen: any | null;
   setFileToOpen: (x: any | null) => void;
 }> = ({ fileToOpen, setFileToOpen }) => {
+  console.log("file to open=", fileToOpen);
   const { patchWindows } = useWindows();
   let { rootTile, selectedPatch, patches } = usePatches();
   let { gridTemplate } = useTilesContext();

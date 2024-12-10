@@ -107,7 +107,7 @@ const Documentation = () => {
         </P>
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">Editing Modes</h2>
-
+          <P>In order to start patching, you must first understand two editing modes.</P>
           <div className="gap-4 flex">
             <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm">
               <h3 className="text-lg font-semibold mb-2">Edit Mode (Unlocked)</h3>
@@ -120,6 +120,7 @@ const Documentation = () => {
                 <li>Move nodes around</li>
                 <li>Select and organize nodes</li>
                 <li>Delete nodes and connections</li>
+                <li>Edit node names (by double clicking an object node)</li>
               </ul>
             </div>
 
@@ -146,6 +147,17 @@ const Documentation = () => {
             This clear distinction between building (Edit Mode) and using (Performance Mode) helps
             prevent accidental modifications while performing or testing your patches.
           </p>
+        </div>
+        <P>
+          The following patch demonstrates these two modes. Click the lock icon to switch between
+          them. While in <White>Performance Mode</White>, you can click the <White>toggle</White>{" "}
+          object (the node with the x) to turn on the <White>metro</White> object.
+        </P>
+        <div className="w-full h-64">
+          <ExamplePatch
+            commit="patches/4ca73a2b-d8d6-4259-a759-5d9606006ca7"
+            docId="aN7tLdgtRy8JvhMEts37"
+          />
         </div>
         <P>
           <h2 className="text-xl font-semibold mb-4">Cables</h2>
@@ -181,11 +193,9 @@ const Documentation = () => {
             little circle at the top of a node).
           </P>
         </div>
-        Try it out below, by double clicking and typing <White>cycle</White> to create a{" "}
-        <White>cycle</White> node and then double clicking and typing any number (followed by enter)
-        <div className="w-full h-64">
-          <ExamplePatch />
-        </div>
+        Try it out below, by double clicking and typing <White>button</White> to create a{" "}
+        <White>button</White> node and then creating another <White>button</White> node, and
+        connecting them.
         <div className="flex mt-5">
           <P className="w-96">
             <p>

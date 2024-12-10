@@ -28,6 +28,9 @@ import {
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { infuraProvider } from "wagmi/providers/infura";
 import { publicProvider } from "wagmi/providers/public";
+import Toolbar from "../Toolbar";
+import { File } from "@/lib/files/types";
+import { Timestamp } from "firebase/firestore";
 
 const { chains, publicClient } = configureChains(
   [goerli],
@@ -46,14 +49,35 @@ const wagmiConfig = createConfig({
   publicClient,
 });
 
-export default function ExamplePatch() {
+interface Props {
+  docId: string;
+  commit: string;
+}
+
+export default function ExamplePatch({ docId, commit }: Props) {
   const [basePatch, setBasePatch] = useState<Patch | null>(null);
   const patchRef = useRef<Patch | null>(null);
+
   useEffect(() => {
-    let p = new PatchImpl(new AudioContext({ sampleRate: 44100 }));
+    const p = new PatchImpl(new AudioContext({ sampleRate: 44100 }));
     patchRef.current = p;
     setBasePatch(p);
   }, [setBasePatch]);
+
+  const [fileToOpen, setFileToOpen] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (docId && basePatch) {
+      const file: File = {
+        id: docId,
+        name: "example",
+        commit,
+        user: "example",
+        createdAt: Timestamp.now(),
+      };
+      setFileToOpen(file);
+    }
+  }, [docId, basePatch]);
 
   useEffect(() => {
     return () => {
@@ -63,7 +87,7 @@ export default function ExamplePatch() {
     };
   }, []);
 
-  if (!basePatch) {
+  if (!basePatch || !fileToOpen) {
     return <></>;
   }
   return (
@@ -76,7 +100,7 @@ export default function ExamplePatch() {
                 <TilesProvider>
                   <StepsProvider>
                     <main className="flex w-full h-full example-patch">
-                      <PatchesComponent fileToOpen={null} setFileToOpen={(x: any) => {}} />
+                      <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={(x: any) => {}} />
                     </main>
                   </StepsProvider>
                 </TilesProvider>
