@@ -107,13 +107,17 @@ export const useAutoComplete = (text: string, objectNode: ObjectNode, editing: b
       }
     }
     options = [
-      ...(options.sort((a, b) => a.definition.name?.localeCompare(b.definition.name as string)) ||
-        0),
+      ...(options.sort(
+        (a: ContextDefinition, b: ContextDefinition) =>
+          a.definition.name?.localeCompare(b.definition.name as string) || 0,
+      ) || 0),
       ...perfectMatches.sort(
-        (a, b) => a.definition.name?.localeCompare(b.definition.name as string) || 0,
+        (a: ContextDefinition, b: ContextDefinition) =>
+          a.definition.name?.localeCompare(b.definition.name as string) || 0,
       ),
       ...startsWithMatches.sort(
-        (a, b) => a.definition.name?.localeCompare(b.definition.name as string) || 0,
+        (a: ContextDefinition, b: ContextDefinition) =>
+          a.definition.name?.localeCompare(b.definition.name as string) || 0,
       ),
     ];
 
