@@ -95,10 +95,11 @@ export const scope_tilde = (node: ObjectNode) => {
 const init: Record<string, boolean> = {};
 export const createWorklet = async (node: ObjectNode, path: string, processor: string) => {
   const audioContext = node.patch.audioContext;
-  if (!init[processor]) {
-    await audioContext.audioWorklet.addModule(path);
-    init[processor] = true;
-  }
+  //if (!init[processor]) {
+  await audioContext.audioWorklet.addModule(path);
+  //  init[processor] = true;
+  //}
+  console.log("processor", init);
   node.audioNode = new AudioWorkletNode(audioContext, processor);
 };
 

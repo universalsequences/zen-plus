@@ -15,23 +15,12 @@ import { PatchesProvider } from "@/contexts/PatchesContext";
 import { SelectionProvider } from "@/contexts/SelectionContext";
 import PatchesComponent from "@/components/PatchesComponent";
 import { Theme } from "@radix-ui/themes";
-import {
-  Patch,
-  IOlet,
-  MessageNode,
-  IOConnection,
-  ObjectNode,
-  Coordinate,
-} from "@/lib/nodes/types";
+import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from "@/lib/nodes/types";
 import { PatchImpl } from "@/lib/nodes/Patch";
 import "@/styles/radix.scss";
 import "@rainbow-me/rainbowkit/styles.css";
 
-import {
-  getDefaultWallets,
-  RainbowKitProvider,
-  darkTheme,
-} from "@rainbow-me/rainbowkit";
+import { getDefaultWallets, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { mainnet, zora, zoraSepolia, baseSepolia } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
@@ -40,10 +29,7 @@ import { publicProvider } from "wagmi/providers/public";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia, zora, mainnet, baseSepolia],
-  [
-    infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
-    publicProvider(),
-  ],
+  [infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }), publicProvider()],
 );
 
 const { connectors } = getDefaultWallets({
@@ -60,6 +46,7 @@ const wagmiConfig = createConfig({
 
 interface Props {
   projectId?: string;
+  showDocs: boolean;
 }
 
 export default function App(props: Props) {
@@ -74,10 +61,9 @@ export default function App(props: Props) {
           })}
           chains={chains}
         >
-      
           <AuthProvider>
             <StorageProvider>
-              <NavProvider>
+              <NavProvider showDocs={props.showDocs}>
                 <Home projectId={props.projectId} />
               </NavProvider>
             </StorageProvider>

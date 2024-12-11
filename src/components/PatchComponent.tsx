@@ -72,7 +72,9 @@ const PatchComponent: React.FC<{
 
   useEffect(() => {
     if (fileToOpen) {
-      loadPatch(fileToOpen);
+      if (!(patch as SubPatch).parentPatch) {
+        loadPatch(fileToOpen);
+      }
       setFileToOpen(null);
     }
   }, [fileToOpen]);

@@ -86,7 +86,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           className="text-white bg-black-clear outline-none px-1"
         />
       ) : (
-        patch.name || "current patch"
+        patch.name || "subpatch"
       )}
     </div>,
   );
@@ -166,7 +166,12 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   );
   if (breadcrumbs.length === 1) {
     return (
-      <div style={{ zIndex: 10000000 }} className="flex  full w-full select-none ">
+      <div
+        onClick={(e: any) => e.stopPropagation()}
+        onMouseDown={(e: any) => e.stopPropagation()}
+        style={{ zIndex: 10000000 }}
+        className="flex  full w-full select-none "
+      >
         <div
           className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
         >

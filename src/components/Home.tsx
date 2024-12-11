@@ -60,6 +60,7 @@ const wagmiConfig = createConfig({
 
 interface Props {
   projectId?: string;
+  showDocs?: boolean;
 }
 
 export default function App(props: Props) {
@@ -141,16 +142,15 @@ export default function App(props: Props) {
               <WorkerProvider patch={basePatch}>
                 <TilesProvider>
                   <StepsProvider>
-                  <main className="flex min-h-screen flex-col h-full w-full">
-                    <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
-                  </main>
+                    <main className="flex min-h-screen flex-col h-full w-full">
+                      <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
+                    </main>
                   </StepsProvider>
                 </TilesProvider>
               </WorkerProvider>
             </WindowsProvider>
           </PatchesProvider>
         </SelectionProvider>
-
       </MessageProvider>
     </SettingsProvider>
   );

@@ -31,6 +31,7 @@ import { publicProvider } from "wagmi/providers/public";
 import Toolbar from "../Toolbar";
 import { File } from "@/lib/files/types";
 import { Timestamp } from "firebase/firestore";
+import { PatchDoc } from "@/lib/org/types";
 
 const { chains, publicClient } = configureChains(
   [goerli],
@@ -60,6 +61,7 @@ export default function ExamplePatch({ docId, commit }: Props) {
 
   useEffect(() => {
     const p = new PatchImpl(new AudioContext({ sampleRate: 44100 }));
+    (p as Patch).isExamplePatch = true;
     patchRef.current = p;
     setBasePatch(p);
   }, [setBasePatch]);

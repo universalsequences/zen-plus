@@ -505,6 +505,7 @@ svg {
 }
 
 .example-patch {
+    transform: translate(0); /* or any transform value */
     .mt-5 {
         margin: 0px;
     }

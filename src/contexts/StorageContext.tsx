@@ -102,7 +102,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             projectId,
           }),
         }).then(async (resp) => {
-          let json = await resp.json();
+          const json = await resp.json();
           console.log("fetched=", json);
           resolve({
             ...json,

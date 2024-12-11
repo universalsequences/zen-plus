@@ -310,6 +310,7 @@ export type Patch = Identifiable & {
   isInsideSlot?: boolean;
   onUpdateSize?: (id: string, size: Size) => void;
   scriptingNameToNodes: Record<string, ObjectNode[]>;
+  isExamplePatch?: boolean;
 };
 
 export type SubPatch = Patch & {

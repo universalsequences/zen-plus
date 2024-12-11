@@ -62,6 +62,9 @@ const AutoCompletes: React.FC<{
       {isNumber(text) && groupTypes.length === 0 && (
         <div className="italic">hit enter to create a constant number</div>
       )}
+      {text === "zen" && groupTypes.length === 1 && (
+        <div className="p-2 italic">hit enter to create a subpatch</div>
+      )}
       {groupTypes.map((type, idx) => (
         <div key={idx} className="flex flex-col">
           <div className="text-base p-2">{type}</div>
