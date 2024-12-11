@@ -15,8 +15,9 @@ export const Subpatches = () => {
         The root patch that contains all the subpatches is called the <White>base patch</White>.
       </P>
       <P>
-        To create a <White>subpatch</White>, create a new <White>object node</White> and type "zen"
-        and press enter. In other words, <White>zen</White> is the subpatch operator.
+        To create a <White>subpatch</White>, create a new <White>object node</White> and type{" "}
+        <White>zen</White> and press enter. In other words, <White>zen</White> is the subpatch
+        operator.
       </P>
       <P>Subpatches can contain any number of nodes, including other subpatches.</P>
       <div className="flex gap-4">
@@ -66,8 +67,8 @@ export const Subpatches = () => {
                 as the <White>speakers~</White>~ node) or even other zen nodes!
               </P>
               <P>
-                They are inspired by Max MSP's gen~ object, and allow you to create custom DSP
-                nodes, from a wide range of built-in operators.
+                They are inspired by Max MSPs gen~ object, and allow you to create custom DSP nodes,
+                from a wide range of built-in operators.
               </P>
             </>
           )}
@@ -91,7 +92,9 @@ export const Subpatches = () => {
           )}
         </Card>
       </div>
-      <P>Try it out by double clicking the patch and typing "zen" and pressing enter</P>
+      <P>
+        Try it out by double clicking the patch and typing <White>zen</White> and pressing enter
+      </P>
       <div className="h-96">
         <ExamplePatch />
       </div>
@@ -101,7 +104,8 @@ export const Subpatches = () => {
             Once created, you can double click the <White>zen</White> node you created to expand it.
           </P>
           <P>
-            Alternatively, you can right-click the <White>zen</White> node and select "Expand".
+            Alternatively, you can right-click the <White>zen</White> node and select{" "}
+            <White>Expand</White>
           </P>
         </div>
         <div className="w-96">
@@ -131,7 +135,7 @@ export const Subpatches = () => {
       <P>
         You can quickly create a subpatch out of a selection of nodes by first selecting multiple
         nodes-- by dragging your mouse to select them-- and then right clicking and choosing
-        "encapsulate nodes"
+        <White>encapsulate nodes</White>
       </P>
     </div>
   );

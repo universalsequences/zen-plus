@@ -46,7 +46,7 @@ const wagmiConfig = createConfig({
 
 interface Props {
   projectId?: string;
-  showDocs: boolean;
+  showDocs?: boolean;
 }
 
 export default function App(props: Props) {
@@ -63,7 +63,7 @@ export default function App(props: Props) {
         >
           <AuthProvider>
             <StorageProvider>
-              <NavProvider showDocs={props.showDocs}>
+              <NavProvider showDocs={props.showDocs ?? false}>
                 <Home projectId={props.projectId} />
               </NavProvider>
             </StorageProvider>

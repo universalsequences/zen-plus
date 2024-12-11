@@ -34,11 +34,7 @@ import "@/styles/radix.scss";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@/styles/styles.scss";
 import "./globals.css";
-import {
-  getDefaultWallets,
-  RainbowKitProvider,
-  darkTheme,
-} from "@rainbow-me/rainbowkit";
+import { getDefaultWallets, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { mainnet, goerli, zora, zoraSepolia } from "wagmi/chains";
 import { infuraProvider } from "wagmi/providers/infura";
@@ -46,10 +42,7 @@ import { publicProvider } from "wagmi/providers/public";
 
 const { chains, publicClient } = configureChains(
   [mainnet, zoraSepolia, zora],
-  [
-    infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }),
-    publicProvider(),
-  ],
+  [infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }), publicProvider()],
 );
 
 const { connectors } = getDefaultWallets({
@@ -64,9 +57,7 @@ const wagmiConfig = createConfig({
   publicClient,
 });
 
-const CollectionPage: React.FC<{ collection: WorkOption }> = ({
-  collection,
-}) => {
+const CollectionPage: React.FC<{ collection: WorkOption }> = ({ collection }) => {
   if (!collection) {
     // If the collection does not exist, you can redirect, or return null
     // Redirecting in getServerSideProps is a better approach, though.
@@ -103,7 +94,7 @@ const CollectionPage: React.FC<{ collection: WorkOption }> = ({
           >
             <AuthProvider>
               <StorageProvider>
-                <NavProvider>
+                <NavProvider showDocs={false}>
                   <Works setShowNav={() => 0} defaultWork={collection} />
                 </NavProvider>
               </StorageProvider>

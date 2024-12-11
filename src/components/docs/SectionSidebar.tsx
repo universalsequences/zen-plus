@@ -14,7 +14,7 @@ const SectionOption: React.FC<{
   return (
     <button
       type="button"
-      onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         setSection(section);
       }}
