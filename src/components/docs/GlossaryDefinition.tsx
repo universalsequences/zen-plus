@@ -8,12 +8,12 @@ import * as core from "@/lib/nodes/definitions/core/doc";
 import type { Definition } from "@/lib/docs/docs";
 
 export const GlossaryDefinition = ({ name }: { name: string }) => {
+  const { setSelectedTerm } = useGlossary();
   const item: GlossaryItem | Definition =
     glossary[name] || core.api[name] || zen.api[name] || gl.api[name] || audio.api[name];
   if (!item) return null;
 
   const definition = item.definition || (item as unknown as Definition).description;
-  const { setSelectedTerm } = useGlossary();
 
   const renderDefinitionText = (text: string) => {
     const parts = text.split(/(\[\[.*?\]\])/);
