@@ -1,5 +1,6 @@
-import { White, Core, AudioNode, P } from "./ui";
+import { White, Core, AudioNode, P, Card } from "./ui";
 import ExamplePatch from "./ExamplePatch";
+import { GlossaryDefinition } from "./GlossaryDefinition";
 
 export const Intro = () => {
   return (
@@ -12,48 +13,47 @@ export const Intro = () => {
       </P>
       <P>
         Patches are made up of <White>nodes</White> which are connected together with{" "}
-        <White>Cables</White>.
+        <White link="cables">cables</White>.
       </P>
+      <GlossaryDefinition name="node" />
       <P>
-        <h2 className="text-xl font-semibold mb-4">Nodes</h2>
-        There are 2 types of <White>nodes</White>:
-        <ol>
-          <li>
-            1. <White>message nodes</White> represent a piece of data, called a{" "}
-            <White>message</White> (a string, number, list etc)
-            <ul className="list-disc pl-6 space-y-1">
-              <li>
-                <White>message nodes</White> are used to pass messages between nodes.
-              </li>
-              <li>
-                <White>number nodes</White> are used to output number messages.
-              </li>
-              <li className="italic">
-                Right-click the editor to create either type of message node.
-              </li>
-            </ul>
-          </li>
-          <li>
-            2. <White>object nodes</White> represents an operation.
-          </li>
-        </ol>
+        There are 3 types of <White>nodes</White>: <White link="message box">message box</White>,{" "}
+        <White link="number box">number box</White> and <White link="object">object</White>.
       </P>
       <div className="flex gap-2 items-start w-full">
-        <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm w-2/3">
-          <h3 className="text-lg font-semibold mb-4">Creating an Object Node</h3>
-          <p className="mb-2">
-            To create an empty <White>object node</White>, double click the patch editor.
-            You&apos;ll see a list of available <White>operators</White>, grouped by{" "}
-            <White>operator type</White>.
-          </p>
+        <div className="w-1/2 flex flex-col gap-4">
+          <Card>
+            <h3 className="text-lg font-semibold mb-4">Creating an Object</h3>
+            <p className="mb-2">
+              To create an empty <White link="object">object</White>, double click the patch editor.
+              You&apos;ll see a list of available <White>operators</White>, grouped by{" "}
+              <White>operator type</White>.
+            </p>
+          </Card>
+          <Card>
+            <h3 className="text-lg font-semibold mb-4">Creating an Message Box</h3>
+            <p className="mb-2">
+              To create an empty <White link="message box">message box</White>, right click the
+              editor and select {'"'}new message box{'"'}
+            </p>
+          </Card>
         </div>
 
-        <div className="w-full h-72 ">
-          <ExamplePatch />
+        <div className="flex-col flex gap-4">
+          <div className="w-full h-72 ">
+            <ExamplePatch />
+          </div>
+          <Card>
+            <h3 className="text-lg font-semibold mb-4">Creating an Number Box</h3>
+            <p className="mb-2">
+              To create an empty <White link="number box">number box</White>, right click the editor
+              and select {'"'}new number box{'"'}
+            </p>
+          </Card>
         </div>
       </div>
       <P>
-        There are 4 <White>operator types</White>:
+        There are 4 <White link="operator type">operator types</White>:
         <ul>
           <li className="my-2 flex gap-2 items-start">
             <div className="w-16 items-start">
@@ -143,17 +143,21 @@ export const Intro = () => {
       </div>
       <P>
         <h2 className="text-xl font-semibold mb-4">Cables</h2>
-        <P>Cables are used to connect nodes together.</P>
+        <P>
+          <White link="cables">Cables</White> are used to connect nodes together.
+        </P>
         <div className="flex gap-4">
           <div className="w-72">
-            An <White>object node</White> can be thought as a function, representing an operation to
-            data coming in through its <White>inlets</White>, outputting its results through its{" "}
-            <White>outlets</White>.
+            An <White link="object">object</White> can be thought as a function, representing an{" "}
+            <White link="operation">operation</White> to data coming in through its{" "}
+            <White link="inlet">inlets</White>, outputting its results through its{" "}
+            <White link="outlet">outlets</White>.
           </div>
           <div className="w-72">
-            To connect two <White>Nodes</White>, click on an <White>outlet</White> (the little
-            circle at the bottom of a node), and drag the cable to another nodes{" "}
-            <White>inlet</White> (the little circle at the top of a node).
+            To connect two <White>Nodes</White> with a <White link="cables">cable</White>, click on
+            an <White link="outlet">outlet</White> (the little circle at the bottom of a node), and
+            drag the cable to another nodes <White link="inlet">inlet</White> (the little circle at
+            the top of a node).
           </div>
         </div>
         <P className="italic my-4 flex">

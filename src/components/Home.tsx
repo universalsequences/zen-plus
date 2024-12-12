@@ -40,6 +40,8 @@ import { publicProvider } from "wagmi/providers/public";
 import { WorkerProvider } from "@/contexts/WorkerContext";
 import PatchWindow from "./PatchWindow";
 import { WindowsProvider } from "@/contexts/WindowsContext";
+import { GlossaryDefinition } from "./docs/GlossaryDefinition";
+import { GlossaryProvider } from "@/contexts/GlossaryContext";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia],
@@ -134,24 +136,26 @@ export default function App(props: Props) {
   }
 
   return (
-    <SettingsProvider>
-      <MessageProvider>
-        <SelectionProvider>
-          <PatchesProvider basePatch={basePatch}>
-            <WindowsProvider>
-              <WorkerProvider patch={basePatch}>
-                <TilesProvider>
-                  <StepsProvider>
-                    <main className="flex min-h-screen flex-col h-full w-full">
-                      <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
-                    </main>
-                  </StepsProvider>
-                </TilesProvider>
-              </WorkerProvider>
-            </WindowsProvider>
-          </PatchesProvider>
-        </SelectionProvider>
-      </MessageProvider>
-    </SettingsProvider>
+    <GlossaryProvider>
+      <SettingsProvider>
+        <MessageProvider>
+          <SelectionProvider>
+            <PatchesProvider basePatch={basePatch}>
+              <WindowsProvider>
+                <WorkerProvider patch={basePatch}>
+                  <TilesProvider>
+                    <StepsProvider>
+                      <main className="flex min-h-screen flex-col h-full w-full">
+                        <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
+                      </main>
+                    </StepsProvider>
+                  </TilesProvider>
+                </WorkerProvider>
+              </WindowsProvider>
+            </PatchesProvider>
+          </SelectionProvider>
+        </MessageProvider>
+      </SettingsProvider>
+    </GlossaryProvider>
   );
 }

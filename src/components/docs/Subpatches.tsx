@@ -9,15 +9,17 @@ export const Subpatches = () => {
   return (
     <div>
       <P>
-        Patches can be organized into distinct units of logic, via <White>subpatches</White>.
+        Patches can be organized into distinct units of logic, via{" "}
+        <White link="subpatch">subpatches</White>.
       </P>
       <P>
-        The root patch that contains all the subpatches is called the <White>base patch</White>.
+        The root patch that contains all the subpatches is called the{" "}
+        <White link="base patch">base patch</White>.
       </P>
       <P>
-        To create a <White>subpatch</White>, create a new <White>object node</White> and type{" "}
-        <White>zen</White> and press enter. In other words, <White>zen</White> is the subpatch
-        operator.
+        To create a <White link="subpatch">subpatch</White>, create a new{" "}
+        <White link="object">object</White> and type <White>zen</White> and press enter. In other
+        words, <White>zen</White> is the subpatch operator.
       </P>
       <P>Subpatches can contain any number of nodes, including other subpatches.</P>
       <div className="flex gap-4">

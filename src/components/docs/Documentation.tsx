@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Intro } from "./Intro";
 
@@ -10,10 +10,27 @@ import { Other } from "./Other";
 import { APIs } from "./APIs";
 import { Subpatches } from "./Subpatches";
 import { Zen } from "./Zen";
+import { useGlossary } from "@/contexts/GlossaryContext";
+import { GlossaryDefinition } from "./GlossaryDefinition";
+import { GL } from "./GL";
 
 const Documentation = () => {
-  const [section, setSection] = useState<Section>(Section.Intro);
-  const getSection = (section: Section) => {
+  const { selectedTerm, setSelectedTerm } = useGlossary();
+  const [section, setSection] = useState<Section | null>(Section.Intro);
+
+  useEffect(() => {
+    if (selectedTerm) {
+      setSection(null);
+    }
+  }, [selectedTerm]);
+
+  useEffect(() => {
+    if (section !== null) {
+      setSelectedTerm(null);
+    }
+  }, [section]);
+
+  const getSection = (section: Section | null) => {
     switch (section) {
       case Section.Intro:
         return <Intro />;
@@ -23,14 +40,21 @@ const Documentation = () => {
         return <Subpatches />;
       case Section.Zen:
         return <Zen />;
+      case Section.GL:
+        return <GL />;
       default:
-        return <Other />;
+        return <div />;
     }
   };
   return (
     <div className="pl-40 pt-10 overflow-scroll max-h-screen w-full text-zinc-200 ">
       <SectionSidebar section={section} setSection={setSection} />
-      <div style={{ maxWidth: 900 }}>{getSection(section)}</div>
+
+      {selectedTerm ? (
+        <GlossaryDefinition name={selectedTerm} />
+      ) : (
+        <div style={{ maxWidth: 900 }}>{getSection(section)}</div>
+      )}
     </div>
   );
 };

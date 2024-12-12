@@ -7,11 +7,13 @@ export const Zen = () => {
   return (
     <div>
       <P>
-        Subpatches of type <White>zen</White> allow you to build up custom DSP nodes.
+        <White link="subpatch">Subpatches</White> of <White link="patch type">patch type</White>{" "}
+        <White link="zen">zen</White> allow you to build up custom DSP nodes.
       </P>
       <P>
-        Under the hood, these subpatches are compiled into an <White>AudioWorklet</White> that can
-        be connected to other audio objects or even other zen objects.
+        Under the hood, these types of subpatches are compiled into an{" "}
+        <White link="audioworklet">AudioWorklet</White> that can be connected to other audio objects
+        or even other zen <White link="object">objects</White>.
       </P>
       <P>
         Below is an example of a <White>zen subpatch</White>. It is a fm synthesizer. To hear it,
@@ -24,24 +26,28 @@ export const Zen = () => {
         />
       </div>
       <div className="flex gap-6 mt-6">
-        <Card className="w-full">
+        <Card info={true} className="w-full">
           <P>
             Note that the <White>zen</White> object (whose expanded patch is shown above to the
-            right) outputs audio. Because of this, it can be connected to other audio nodes.
+            right) outputs audio signal from it{"'s"} outlets. Because of this, it can be connected
+            to other <White link="object">objects</White> that accept audio (i.e.{" "}
+            <White link="audio">audio</White> objects and even other <White link="zen">zen</White>{" "}
+            objects).
           </P>
           <P>
             In this example, the <White>zen</White> object is connected to a{" "}
-            <White>live.meter~</White> object (which controls volume), which is then connected to a{" "}
-            <White>speakers~</White> object and a <White>scope~</White> object.
+            <White link="live.meter~">live.meter~</White> object (which controls volume), which is
+            finally connected to a <White link="speakers~">speakers~</White> object and a{" "}
+            <White link="scope~">scope~</White> object.
           </P>
         </Card>
       </div>
       <div className="flex mt-5">
         <P className="w-96">
           <P>
-            Each <White>inlet</White> can receive inputs from one node, providing inputs to the
-            desired operation. Nodes just containing numbers simply output that number to other
-            nodes.
+            Each <White link="inlet">inlet</White> can receive inputs from one node, providing
+            inputs to the desired operation. Nodes just containing numbers simply output that number
+            to other nodes.
           </P>
           <P className="mt-10 text-xs">
             For example, this one represents a phasor (sawtooth) and cycle (sine wave) mixed evenly
@@ -56,10 +62,10 @@ export const Zen = () => {
       </P>
       <div className="text-3xl my-4">the compiler</div>
       <P>
-        Its important to note that <White>Nodes</White> <span className="italic">do not</span>{" "}
-        process literal audio signal. Instead, they form mathematical expressions that compile into
-        efficient audio graphs. Looked at another way, a <White>zen subpatch</White> is simply code
-        represented visually. More on this later.
+        While in a zen subpatch, it is important to note that <White link="object">objects</White>{" "}
+        <span className="italic">do not</span> process literal audio signal. Instead, they form
+        mathematical expressions that compile into efficient audio graphs. Looked at another way, a{" "}
+        <White>zen subpatch</White> is simply code represented visually.
       </P>
       <P className="mr-2">
         <P>

@@ -9,6 +9,7 @@ doc("phasor", {
   numberOfInlets: 2,
   numberOfOutlets: 1,
   defaultValue: 0,
+  inletNames: ["frequency rate", "reset"],
 });
 const phasor = (_node: ObjectNode, ...args: Lazy[]) => {
   return (message: Message) => {
@@ -40,7 +41,7 @@ doc("param", {
   description: "sets a parameter",
   numberOfInlets: 2,
   numberOfOutlets: 1,
-  inletNames: ["parameter value"],
+  inletNames: ["parameter value", "name"],
 });
 
 export const zen_param = (object: ObjectNode, name: Lazy) => {
