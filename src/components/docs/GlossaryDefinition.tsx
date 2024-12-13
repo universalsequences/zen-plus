@@ -49,7 +49,8 @@ export const GlossaryDefinition = ({ name, blur = false }: { name: string; blur?
 
   return (
     <Card className="w-full p-4" blur={blur}>
-      <h3 className="text-xl font-semibold mb-2">{name}</h3>
+      <h3 className="text-xl font-semibold">{name}</h3>
+      <div className="opacity-20 text-xs mb-2 italic">definition</div>
       {operatorType && (
         <P>
           An <White link="operator">operator</White> of type{" "}

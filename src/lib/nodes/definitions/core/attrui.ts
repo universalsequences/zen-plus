@@ -5,7 +5,8 @@ import { MutableValue } from "./MutableValue";
 import { getNodesControllableByAttriUI } from "../../utils/getNodesControllableByAttriUI";
 
 doc("attrui", {
-  description: "control parameters/attribitues with ui",
+  description:
+    "control parameters/attruibtes with a UI. Connect to a [[param]] or [[p]], to control specific values",
   numberOfInlets: 3,
   numberOfOutlets: 1,
 });

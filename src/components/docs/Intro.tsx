@@ -6,13 +6,13 @@ export const Intro = () => {
   return (
     <>
       <P>
-        <White>zen+</White> is a visual programming environment.
+        <White>zen+</White> is a visual programming environment, focused on creative coding.
       </P>
       <P>
         Instead of programming with text, we code by <White>patching</White>.
       </P>
       <P>
-        Patches are made up of <White>nodes</White> which are connected together with{" "}
+        Patches are made up of <White link="node">nodes</White> which are connected together with{" "}
         <White link="cables">cables</White>.
       </P>
       <GlossaryDefinition name="node" />
@@ -87,7 +87,7 @@ export const Intro = () => {
         <h2 className="text-xl font-semibold mb-4">Editing Modes</h2>
         <P>In order to start patching, you must first understand two editing modes.</P>
         <div className="gap-4 flex">
-          <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm">
+          <Card>
             <h3 className="text-lg font-semibold mb-2">Edit Mode (Unlocked)</h3>
             <p className="mb-2">
               This is where you build and modify your patches. In Edit Mode, you can:
@@ -106,9 +106,8 @@ export const Intro = () => {
                 Edit node names (by double clicking an <White link="object">object</White>)
               </li>
             </ul>
-          </div>
-
-          <div className="border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm">
+          </Card>
+          <Card>
             <h3 className="text-lg font-semibold mb-2">Performance Mode (Locked)</h3>
             <p className="mb-2">
               This is where you interact with and use your patch. In Performance Mode, you can:
@@ -127,7 +126,7 @@ export const Intro = () => {
               <li>Run and test your patch</li>
               <li>Focus on using the patch without accidentally modifying its structure</li>
             </ul>
-          </div>
+          </Card>
         </div>
       </div>
       <div className="flex mt-6 gap-2">

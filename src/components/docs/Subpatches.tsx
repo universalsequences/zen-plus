@@ -107,34 +107,41 @@ export const Subpatches = () => {
       <div className="flex gap-4 mt-6">
         <div className="w-96">
           <P>
-            Once created, you can double click the <White>zen</White> node you created to expand it.
+            Once created, you can double click the <White>p</White>{" "}
+            <White link="object">object</White> you created to expand it.
           </P>
           <P>
-            Alternatively, you can right-click the <White>zen</White> node and select{" "}
-            <White>Expand</White>
+            Alternatively, you can right-click the <White>p</White>{" "}
+            <White link="object">object</White> and select <White>Expand</White>
           </P>
         </div>
         <div className="w-96">
-          <P>Inside the new subpatch window, try creating some new nodes.</P>
+          <P>
+            Inside the new subpatch window, try creating some new{" "}
+            <White link="object">objects</White>.
+          </P>
         </div>
       </div>
+      <P>You can rename and close the subpatch in the bottom bar of the subpatch window.</P>
       <Card className="w-full">
         <h2 className="text-xl font-semibold mb-4">Attributes</h2>
         <P>
-          Each <White>node</White> has <White>attributes</White> that can be used to configure them.
+          Each <White link="node">node</White> has <White link="attributes">attributes</White> that
+          can be used to configure them.
         </P>
         <P>
-          When a <White>node</White> is selected, you can click on the sidebar button w/ the cube
-          icon (shown below) to open the attribute editor.
+          When a <White link="node">node</White> is selected, you can click on the sidebar button w/
+          the cube icon (shown below) to open the <White link="inspector">inspector</White>.
           <CubeIcon className="mt-4" />
         </P>
         <P>
-          You can also press the <White>tab</White> key to open the attribute editor for the
-          selected node.
+          You can also press the <White>tab</White> key to open the{" "}
+          <White link="inspector">inspector</White> for the selected node.
         </P>
         <P>
-          The zen node has a <White>type</White> attribute, which can be used to select the type of
-          the subpatch.
+          The <White link="p">p</White> <White link="object">object</White> has a{" "}
+          <White link="type">type</White> attribute, which can be used to select the type of the
+          subpatch.
         </P>
       </Card>
       <h2 className="text-xl font-semibold my-4">Encapsulating Nodes</h2>

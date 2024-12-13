@@ -9,17 +9,17 @@ export const glossary: {
   node: {
     name: "node",
     definition: [
-      "A unit of code that performs a specific task.",
+      "A unit of computation that performs a specific task.",
       "They can either be a [[message box]], [[number box]], or [[object]]",
+      "Each node has a set of [[attributes]] that can be set in the [[inspector]].",
     ],
   },
   object: {
     name: "object",
     definition: [
-      "A basic programming element in Zen+ that performs a specific function, such as mathematical operations, audio processing, or data manipulation.",
-      "Objects appear as boxes in the patcher window and can be connected to other objects, via [[cables]], through inlets and outlets to create more complex behaviors.",
+      "A basic programming element in Zen+ that performs a specific function (via it's [[operator]]), such as mathematical operations, audio processing, or data manipulation.",
+      "Objects appear as boxes in the patcher window and can be connected to other objects, via [[cables]], to create more complex behaviors.",
       "Examples include [[+]] for addition, [[metro]] for timing, and [[speakers~]] for sending audio to speakers.",
-      "Each object has a set of [[attributes]] that can be set in the [[inspector]].",
       "Objects can be created by double clicking the patch editor, or by right clicking the editor and selecting 'new object'.",
       "Typing into an empty object chooses the [[operator]] for the object, which are grouped by [[operator type]].",
     ],
@@ -27,8 +27,8 @@ export const glossary: {
   operator: {
     name: "operator",
     definition: [
-      "An operator is a function that performs a specific task on the data it receives.",
-      "An operator is typed to an [[object]] and can be changed by double clicking the [[object]] and typing the new operator.",
+      "An operator is a function that performs a specific task on the data it receives. It defines the behavior of an [[object]].",
+      "An operator is linked to an [[object]] and can be changed by double clicking the [[object]] and typing in a new operator, and pressing enter.",
       "Operators are the basic building blocks of Zen+.",
       "Examples include [[+]] for addition, [[metro]] for timing, and [[speakers~]] for sending audio to speakers.",
       "Operators are grouped by [[operator type]].",
@@ -41,6 +41,7 @@ export const glossary: {
       'For example, the "+" operator acts differently when typed to the [[gl]] operator type vs the [[core]] operator type.',
       "This is closely related to [[patch type]].",
       "There are four operator types: [[core]], [[gl]], [[zen]], and [[audio]].",
+      "[[object]]s of each operator type are colored differently, to help you identify them.",
     ],
   },
   "patch type": {
@@ -134,7 +135,7 @@ export const glossary: {
       "A small patch that can be embedded within a larger patch.",
       "Subpatches can be used to organize code, create reusable modules, or encapsulate functionality for easier management and reuse.",
       "They can be created by selecting a section of code and right-clicking, selecting 'encapsulated' in the dropdown menu.",
-      "hey help reduce visual clutter and make patches more modular and reusable.",
+      "They help reduce visual clutter and make patches more modular and reusable.",
       "Subpatches can have their own inlets and outlets to communicate with the parent patch, and they can be opened for editing by double-clicking.",
     ],
   },
@@ -216,8 +217,8 @@ export const glossary: {
     name: "shader",
     definition: [
       "A shader is a program that runs on the GPU",
-      "It is used to process audio data in real-time",
-      "Shaders are used to create custom audio processing algorithms",
+      "Shaders are used to create custom visualizers.",
+      "In Zen+, shaders are created by connecting [[gl]] [[object]]s to a [[canvas]] object.",
     ],
   },
 };

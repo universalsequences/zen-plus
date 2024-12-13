@@ -16,8 +16,9 @@ export const Zen = () => {
         or even other zen <White link="object">objects</White>.
       </P>
       <P>
-        Below is an example of a <White>zen subpatch</White>. It is a fm synthesizer. To hear it,
-        press the play button (which is actually a <White>toggle</White> object!)
+        Below is an example of a <White>zen subpatch</White>. It is a fm synthesizer, made up of 2
+        sine-wave oscillators (the <White link="cycle">cycle</White> operators). To hear it, press
+        the play button (which is actually a <White link="toggle">toggle</White> object)
       </P>
       <div className="h-96">
         <ExamplePatch

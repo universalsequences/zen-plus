@@ -67,7 +67,6 @@ const AutoCompletes: React.FC<{
       )}
       {groupTypes.map((type, idx) => (
         <div key={idx} className="flex flex-col">
-          <div className="text-base p-2">{type}</div>
           {groups.get(type)?.map((option, index) => (
             <div
               key={index}
@@ -80,10 +79,13 @@ const AutoCompletes: React.FC<{
                 " flex px-2 py-1 w-full"
               }
             >
-              <div
-                className={`autocomplete-option context-type-${option.context?.type} ${!option.context ? "bg-rainbow text-black" : "text-white"} mr-1 px-1 rounded-full text-xs`}
-              >
-                {getContextName(option.context ? option.context.type : undefined) || "patch"}
+              <div className="w-10">
+                <div
+                  style={{ fontSize: 8 }}
+                  className={`autocomplete-option context-type-${option.context?.type} ${!option.context ? "bg-zinc-900 text-white" : "text-white"} mr-1 px-1 rounded-full text-xs text-center`}
+                >
+                  {getContextName(option.context ? option.context.type : undefined) || "patch"}
+                </div>
               </div>
               <div className="flex-1">
                 {text === "p" && option.definition.aliases?.includes("p")
@@ -96,7 +98,7 @@ const AutoCompletes: React.FC<{
                   "flex-1 ml-auto"
                 }
               >
-                {option.definition.description.trim()}{" "}
+                {option.definition.description.trim().slice(0, 80)}{" "}
               </div>
             </div>
           ))}

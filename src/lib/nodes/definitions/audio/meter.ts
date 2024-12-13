@@ -3,8 +3,9 @@ import { MutableValue } from "../core/MutableValue";
 import { doc } from "./doc";
 
 doc("live.meter~", {
-  description: "meter attentuator",
+  description: "a volume controller with a visual meter",
   defaultValue: 0,
+  inletNames: ["volume"],
   numberOfInlets: 2,
   numberOfOutlets: 2,
 });
