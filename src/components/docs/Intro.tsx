@@ -6,13 +6,13 @@ export const Intro = () => {
   return (
     <>
       <P>
-        <White>zen+</White> is a visual programming environment, focused on creative coding.
+        <White>zen+</White> is a visual programming environment, made for creative coding.
       </P>
       <P>
-        Instead of programming with text, we code by <White>patching</White>.
+        Instead of programming with text, we program by <White>patching</White>.
       </P>
       <P>
-        Patches are made up of <White link="node">nodes</White> which are connected together with{" "}
+        Patches are made up of <White link="node">nodes</White> connected together with{" "}
         <White link="cables">cables</White>.
       </P>
       <GlossaryDefinition name="node" />

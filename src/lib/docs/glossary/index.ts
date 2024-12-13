@@ -117,7 +117,9 @@ export const glossary: {
       "A special type of [[node]] in Zen+ that stores and sends data when triggered.",
       "Represented by a rectangular box with rounded corners, message boxes can contain numbers, symbols, or lists that are sent to other objects.",
       "They can be triggered by clicking them directly or receiving input from other objects. Message boxes are also commonly used to initialize parameters and store preset values.",
-      "Unlike standard objects, message boxes can be edited during runtime by double-clicking and typing new values.",
+      "Can be edited during runtime by double-clicking and typing new values.",
+      "When the left [[inlet]] receives a [[bang]], it sends the [[message]] stored in the message box out through it's [[outlet]].",
+      "The right [[inlet]] receives messages, and stores them in the message box, replacing the previous value.",
     ],
   },
   "number box": {
@@ -132,7 +134,7 @@ export const glossary: {
   subpatch: {
     name: "subpatch",
     definition: [
-      "A small patch that can be embedded within a larger patch.",
+      "A patch is embedded within a larger patch.",
       "Subpatches can be used to organize code, create reusable modules, or encapsulate functionality for easier management and reuse.",
       "They can be created by selecting a section of code and right-clicking, selecting 'encapsulated' in the dropdown menu.",
       "They help reduce visual clutter and make patches more modular and reusable.",
@@ -180,7 +182,7 @@ export const glossary: {
     name: "bang",
     definition: [
       "A fundamental message type in Max that triggers events or actions",
-      "Represented by both a message type and an object ([bang] or [b])",
+      "Represented by both a message type and an object ([[b]] or [[button]])",
       "Essentially a signal that tells an object to 'do its thing'",
       "Used to trigger outputs, perform operations, or initiate stored actions",
     ],
@@ -189,7 +191,7 @@ export const glossary: {
     name: "message",
     definition: [
       "The basic unit of data communication in Max that can be sent between objects",
-      "Can take various forms including numbers, symbols, lists, or bang signals",
+      "Can take various forms including numbers, symbols, lists, or [[bang]]",
       "Different message types trigger different behaviors in receiving objects",
       "Can contain variables using the '$' symbol for dynamic data handling",
       "Message timing and order is determined by Max's scheduling system and the hot/cold inlet behavior of objects",

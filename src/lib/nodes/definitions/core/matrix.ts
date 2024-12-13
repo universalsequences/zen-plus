@@ -308,8 +308,10 @@ export const matrix = (_node: ObjectNode) => {
 doc("button", {
   numberOfInlets: 1,
   numberOfOutlets: 1,
-  description: "button",
-  inletNames: ["bang"],
+  aliases: ["b"],
+  description: "button that when pressed, sends a [[bang]] message",
+  inletNames: ["trigger"],
+  outletNames: ["bang"],
 });
 
 export const button = (node: ObjectNode) => {
