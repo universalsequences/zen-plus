@@ -13,11 +13,13 @@ import { Zen } from "./Zen";
 import { useGlossary } from "@/contexts/GlossaryContext";
 import { GlossaryDefinition } from "./GlossaryDefinition";
 import { GL } from "./GL";
+import { Cross2Icon } from "@radix-ui/react-icons";
 
 const Documentation = () => {
   const { selectedTerm, setSelectedTerm } = useGlossary();
   const [section, setSection] = useState<Section | null>(Section.Intro);
 
+  /*
   useEffect(() => {
     if (selectedTerm) {
       setSection(null);
@@ -29,6 +31,7 @@ const Documentation = () => {
       setSelectedTerm(null);
     }
   }, [section]);
+  */
 
   const getSection = (section: Section | null) => {
     switch (section) {
@@ -50,11 +53,33 @@ const Documentation = () => {
     <div className="pl-40 pt-10 overflow-scroll max-h-screen w-full text-zinc-200 ">
       <SectionSidebar section={section} setSection={setSection} />
 
-      {selectedTerm ? (
-        <GlossaryDefinition name={selectedTerm} />
-      ) : (
-        <div style={{ maxWidth: 900 }}>{getSection(section)}</div>
+      {selectedTerm && (
+        <div
+          className="w-full fixed bottom-0 left-0 z-30 animate-slide-up"
+          style={{
+            animation: "slideUp 0.3s ease-out forwards",
+          }}
+        >
+          <button
+            onClick={() => setSelectedTerm(null)}
+            className="p-2 absolute top-2 right-2 cursor-pointer z-30 rounded-xl hover:bg-zinc-800"
+          >
+            <Cross2Icon className="z-30 w-5 h-5" />
+          </button>
+          <GlossaryDefinition blur={true} name={selectedTerm} />
+          <style jsx>{`
+            @keyframes slideUp {
+              from {
+                transform: translateY(100%);
+              }
+              to {
+                transform: translateY(0);
+              }
+            }
+          `}</style>
+        </div>
       )}
+      <div style={{ maxWidth: 900 }}>{getSection(section)}</div>
     </div>
   );
 };

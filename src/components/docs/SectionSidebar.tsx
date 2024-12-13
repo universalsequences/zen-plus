@@ -18,7 +18,7 @@ const SectionOption: React.FC<{
         e.preventDefault();
         setSection(section);
       }}
-      className={`${isSelected ? "underline text-white" : "text-zinc-400"} px-2 py-1`}
+      className={`${isSelected ? "underline text-white" : "text-zinc-400"} px-2 py-1 cursor-pointer hover:text-white transition-colors`}
     >
       {name}
     </button>

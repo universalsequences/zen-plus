@@ -13,19 +13,26 @@ export const Subpatches = () => {
         <White link="subpatch">subpatches</White>.
       </P>
       <P>
+        To create a <White link="subpatch">subpatch</White>, create a new{" "}
+        <White link="object">object</White> and type <White>p</White> (the subpatch operator) and
+        press enter.
+      </P>
+      <P>Subpatches can contain any number of nodes, including other subpatches.</P>
+      <P>
         The root patch that contains all the subpatches is called the{" "}
         <White link="base patch">base patch</White>.
       </P>
-      <P>
-        To create a <White link="subpatch">subpatch</White>, create a new{" "}
-        <White link="object">object</White> and type <White>zen</White> and press enter. In other
-        words, <White>zen</White> is the subpatch operator.
-      </P>
-      <P>Subpatches can contain any number of nodes, including other subpatches.</P>
       <div className="flex gap-4">
         <Card className="w-1/3">
           <h2 className="text-xl font-semibold mb-4">Types</h2>
-          Each subpatch has a distinct type, that matches the types of operators.
+          <P>
+            Each subpatch has a distinct <White link="patch type">type</White>, that matches the
+            types of operators.
+          </P>
+          <P>
+            Some subpatches behave differently, depending on their{" "}
+            <White link="patch type">type</White>.
+          </P>
           <div className="flex gap-2 mt-2">
             <div
               onClick={() => setSelectedType("zen")}
@@ -57,12 +64,9 @@ export const Subpatches = () => {
           {selectedType === "zen" && (
             <>
               <P>
-                A subpatch of a certain <White>type</White> will prioritize object nodes of that
-                type.
-              </P>
-              <P>
-                The <White>zen</White> type is particularly special, as subpatches of type{" "}
-                <White>zen</White> compile the entire subpatch into a single audio node.
+                The <White link="zen">zen</White> type is particularly special, as subpatches of
+                type <White link="zen">zen</White> compile the entire subpatch into a single audio
+                node.
               </P>
               <P>
                 The resulting <White>zen</White> object can be connected to other audio nodes (such
@@ -95,7 +99,7 @@ export const Subpatches = () => {
         </Card>
       </div>
       <P>
-        Try it out by double clicking the patch and typing <White>zen</White> and pressing enter
+        Try it out by double clicking the patch and typing <White>p</White> and pressing enter
       </P>
       <div className="h-96">
         <ExamplePatch />

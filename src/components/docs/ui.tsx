@@ -50,15 +50,21 @@ export const Zen = () => {
 };
 export const Card = ({
   info = false,
+  blur = false,
   children,
   className,
-}: { children: React.ReactNode; className?: string; info?: boolean }) => {
+}: { children: React.ReactNode; blur?: boolean; className?: string; info?: boolean }) => {
   return (
     <div
-      className={
-        "relative border rounded-lg border-zinc-700 p-6 bg-zinc-900 shadow-sm rounded-lg " +
-        className
+      style={
+        blur
+          ? {
+              backgroundColor: "#ffffff36",
+              backdropFilter: "blur(8px)",
+            }
+          : {}
       }
+      className={`relative border rounded-lg border-zinc-700 p-6 ${!blur ? "bg-zinc-900" : ""} shadow-sm rounded-lg ${className}`}
     >
       {info && <InfoCircledIcon className="w-4 h-4 absolute top-2 left-2" />}
       {children}

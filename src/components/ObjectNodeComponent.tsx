@@ -531,7 +531,7 @@ const InnerObjectNodeComponent: React.FC<{
                       <span
                         className={`node-text node-operator-type-${objectNode.operatorContextType}`}
                       >
-                        {splitText[0]}
+                        {splitText[0] === "zen" ? "p" : splitText[0]}
                       </span>
                       <span className="">{" " + splitText.slice(1).join(" ")}</span>
                     </span>

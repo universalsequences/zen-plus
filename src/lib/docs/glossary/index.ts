@@ -47,9 +47,9 @@ export const glossary: {
     name: "patch type",
     definition: [
       "The type of a [[subpatch]], which determines the set of [[operators]] available to the subpatch.",
-      'For subpatches of type "zen", the subpatch will recompile whenever the subpatch is edited and "complete".',
       "This is closely related to [[operator type]], but is used to describe the type of a [[subpatch]].",
       "There are four patch types: [[core]], [[gl]], [[zen]], and [[audio]].",
+      'For subpatches of type [[zen]], the subpatch will recompile whenever the subpatch is edited and "complete".',
       "The [[base patch]] has [[core]] as its [[patch type]], by default.",
       "You can only use [[zen]] operators in [[zen]] subpatches, however other [[operator type]]s can be used in other [[patch type]]s.",
     ],
@@ -64,9 +64,11 @@ export const glossary: {
   zen: {
     name: "zen",
     definition: [
-      "The [[patch type]] of a [[subpatch]] (and corresponding [[operator type]]) that is compiled into an [[AudioWorklet]].",
-      "The zen [[operator]] set of [[object]]s are used to create custom audio processing nodes, using a very similar framework as Max-MSP's gen~",
+      "One of the four [[patch type]]s and [[operator type]]s.",
+      "A [[subpatch]] of [[patch type]] zen [[patch type]] compiles into an [[AudioWorklet]].",
+      "The zen [[operator]] set of [[object]]s (only available in zen subpatches) are used to create custom audio processing nodes, using a very similar framework as Max-MSP's gen~",
       "These [[operator]]s mostly deal with math and buffers, to specify the exact, sample-accurate behavior of the audio processing.",
+      "It is the default [[patch type]] for [[subpatch]]s",
     ],
   },
   audio: {

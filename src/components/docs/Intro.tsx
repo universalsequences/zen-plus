@@ -93,12 +93,18 @@ export const Intro = () => {
               This is where you build and modify your patches. In Edit Mode, you can:
             </p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Create new nodes</li>
-              <li>Connect nodes with cables</li>
+              <li>
+                Create new <White link="node">nodes</White>
+              </li>
+              <li>
+                Connect <White link="node">nodes</White> with <White link="cables">cables</White>
+              </li>
               <li>Move nodes around</li>
               <li>Select and organize nodes</li>
               <li>Delete nodes and connections</li>
-              <li>Edit node names (by double clicking an object node)</li>
+              <li>
+                Edit node names (by double clicking an <White link="object">object</White>)
+              </li>
             </ul>
           </div>
 
@@ -108,9 +114,16 @@ export const Intro = () => {
               This is where you interact with and use your patch. In Performance Mode, you can:
             </p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Adjust values in number boxes</li>
-              <li>Click message boxes to trigger events</li>
-              <li>Interact with matrices and controls</li>
+              <li>
+                Adjust values in <White link="number box">number boxes</White>
+              </li>
+              <li>
+                Click <White link="message box">message boxes</White> to trigger events
+              </li>
+              <li>
+                Interact with <White link="matrix">matrices</White> and{" "}
+                <White link="attrui">attrui controls</White>
+              </li>
               <li>Run and test your patch</li>
               <li>Focus on using the patch without accidentally modifying its structure</li>
             </ul>

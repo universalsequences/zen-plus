@@ -85,7 +85,11 @@ const AutoCompletes: React.FC<{
               >
                 {getContextName(option.context ? option.context.type : undefined) || "patch"}
               </div>
-              <div className="flex-1">{option.definition.name}</div>
+              <div className="flex-1">
+                {text === "p" && option.definition.aliases?.includes("p")
+                  ? "p"
+                  : option.definition.name}
+              </div>
               <div
                 className={
                   (selected === getIndex(idx, index) ? "text-zinc-700 " : "text-zinc-400 ") +

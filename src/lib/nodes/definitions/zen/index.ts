@@ -243,9 +243,10 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 };
 
 doc("zen", {
-  description: "subpatch of patch",
+  description: "creates a new subpatch",
   numberOfInlets: 1,
   numberOfOutlets: 1,
+  aliases: ["p"],
   attributeOptions: {
     type: ["zen", "gl"],
     target: ["C", "JS"],
