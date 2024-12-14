@@ -9,7 +9,7 @@ const Skeleton: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex flex-1 w-full h-full bg-zinc-900 min-h-screen max-h-screen text-white">
-      <div className="min-h-screen w-52 border-r border-r-zinc-700 flex flex-col">
+      <div className="min-h-screen w-52 border-r border-r-zinc-900 flex flex-col">
         <div className="text-sm text-zinc-400 p-5 mb-10">{user ? user.email : <LoginButton />}</div>
         <div className="w-40">
           <Nav />

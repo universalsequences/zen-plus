@@ -16,23 +16,10 @@ import { GL } from "./GL";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Basics } from "./ZenTutorial/Basics";
 import { Counting } from "./ZenTutorial/Counting";
+import { Shaping } from "./ZenTutorial/Shaping";
 const Documentation = () => {
   const { selectedTerm, setSelectedTerm } = useGlossary();
   const [section, setSection] = useState<Section | null>(Section.Intro);
-
-  /*
-  useEffect(() => {
-    if (selectedTerm) {
-      setSection(null);
-    }
-  }, [selectedTerm]);
-
-  useEffect(() => {
-    if (section !== null) {
-      setSelectedTerm(null);
-    }
-  }, [section]);
-  */
 
   const getSection = (section: Section | null) => {
     switch (section) {
@@ -48,6 +35,8 @@ const Documentation = () => {
         return <GL />;
       case Section.Zen_Basics:
         return <Basics />;
+      case Section.Zen_Shaping:
+        return <Shaping />;
       case Section.Zen_Counting:
         return <Counting />;
       default:

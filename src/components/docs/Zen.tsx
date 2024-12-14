@@ -12,7 +12,7 @@ export const Zen = () => {
       </P>
       <P>
         Under the hood, these types of subpatches are compiled into an{" "}
-        <White link="audioworklet">AudioWorklet</White> that can be connected to other audio objects
+        <White link="AudioWorklet">AudioWorklet</White> that can be connected to other audio objects
         or even other zen <White link="object">objects</White>.
       </P>
       <P>

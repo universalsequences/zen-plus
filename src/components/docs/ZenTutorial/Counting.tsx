@@ -72,10 +72,12 @@ export const Counting = () => {
           </P>
           <P>
             We add <InlineCode>100</InlineCode> to it (via a <White link="param">param</White>{" "}
-            operator), to give us a nice set of frequencies.
+            operator), to give us a nice set of frequencies, starting at{" "}
+            <InlineCode>100 Hz</InlineCode>.
           </P>
           <P>
-            These frequency values are then fed into the <White link="cycle">cycle</White> operator.
+            These frequency values are then fed into the <White link="cycle">cycle</White> operator,
+            that is shaped by the same <White link="phasor">phasor</White> operator.
           </P>
         </Card>
         <Card>

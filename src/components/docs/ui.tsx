@@ -5,10 +5,10 @@ export const White: React.FC<{ link?: string; children: React.ReactNode }> = ({
   children,
   link,
 }) => {
-  const { setSelectedTerm } = useGlossary();
+  const { selectedTerm, setSelectedTerm } = useGlossary();
   return (
     <span
-      className={`font-bold ${link ? "cursor-pointer hover:underline text-blue-400" : "text-white "}`}
+      className={`font-bold ${selectedTerm === link ? "bg-blue-500 text-white" : ""} ${link ? "cursor-pointer hover:underline text-blue-400" : "text-white "}`}
       onClick={() => link && setSelectedTerm(link || "")}
       onKeyDown={(e) => {
         if (e.key === "Enter") {

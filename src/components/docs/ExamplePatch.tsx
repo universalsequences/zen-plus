@@ -68,6 +68,16 @@ export default function ExamplePatch({ docId, commit }: Props) {
       patchRef.current = p;
       setBasePatch(p);
     }
+    return () => {
+      if (patchRef.current) {
+        patchRef.current.objectNodes.forEach((node) => {
+          if ((node as ObjectNode).subpatch) {
+            (node as ObjectNode).subpatch.disconnectGraph();
+          } else {
+          }
+        });
+      }
+    };
   }, [audioContext, setBasePatch]);
 
   const [fileToOpen, setFileToOpen] = useState<File | null>(null);

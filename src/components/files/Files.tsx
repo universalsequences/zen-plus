@@ -227,7 +227,7 @@ const Files: React.FC<{
       {!isMini && (
         <div
           className={
-            (isMini ? "h-16" : "h-32") + " w-full  border-b border-b-zinc-700 flex flex-col"
+            (isMini ? "h-16" : "h-32") + " w-full  border-b border-b-zinc-900 flex flex-col"
           }
         >
           <div className="flex pl-5 pr-10 content-start my-auto">

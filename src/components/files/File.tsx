@@ -55,7 +55,7 @@ const FileComponent: React.FC<{
       }}
       className={
         (file === fileExpanded ? "bg-zinc-700 rounded-lg " : "") +
-        "flex flex-col m-3 text-sm border-zinc-800 border hover:border-zinc-200 transition-all p-4 cursor-pointer relative"
+        "flex flex-col m-3 text-sm  hover:bg-zinc-900 transition-all p-4 cursor-pointer relative"
       }
     >
       <div

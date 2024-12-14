@@ -230,4 +230,32 @@ export const glossary: {
       "In Zen+, DSP is used to process audio signals using [[zen]] [[object]]s.",
     ],
   },
+  ramp: {
+    name: "ramp",
+    definition: [
+      "A sawtooth-like waveform that goes from [0,1].",
+      "Can be used as a clock signal, oscillator, LFO and more.",
+      "The [[phasor]] operator generates pure ramps.",
+    ],
+  },
+  trig: {
+    name: "trig",
+    definition: [
+      "A signal of mostly zeroes, with sparse spikes of 1.",
+      "Can be used to trigger other events in a [[zen]] [[subpatch]].",
+    ],
+  },
+  "normalized signal": {
+    name: "Normalized Signal",
+    definition: [
+      "A signal that is scaled to the range [0,1].",
+      "This is the default range for most [[zen]] [[object]]s.",
+    ],
+  },
+  "unit shaping": {
+    name: "Unit Shaping",
+    definition: [
+      "Unit Shaping is the process of transforming a [[normalized signal]] into a different form.",
+    ],
+  },
 };
