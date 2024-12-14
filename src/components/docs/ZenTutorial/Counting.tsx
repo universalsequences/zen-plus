@@ -80,8 +80,12 @@ export const Counting = () => {
         </Card>
         <Card>
           <P>
-            Notice that the <White link="param">param</White> is controllable via the{" "}
-            <White link="attrui">attrui</White> object in the{" "}
+            <White link="param">Param</White> operators let you define variable values inside a
+            patch, including the range of accepted values.
+          </P>
+          <P>
+            Notice that the <InlineCode>baseFrequency</InlineCode> <White link="param">param</White>{" "}
+            is controllable via the <White link="attrui">attrui</White> object in the{" "}
             <White link="base patch">base patch</White>— the <White link="object">object</White>{" "}
             with the text <InlineCode>baseFrequency</InlineCode>
           </P>
