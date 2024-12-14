@@ -70,12 +70,11 @@ export default function ExamplePatch({ docId, commit }: Props) {
     }
     return () => {
       if (patchRef.current) {
-        patchRef.current.objectNodes.forEach((node) => {
-          if ((node as ObjectNode).subpatch) {
-            (node as ObjectNode).subpatch.disconnectGraph();
-          } else {
+        for (const node of patchRef.current.objectNodes) {
+          if (node.subpatch) {
+            node.subpatch.disconnectGraph();
           }
-        });
+        }
       }
     };
   }, [audioContext, setBasePatch]);
