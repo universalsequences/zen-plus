@@ -172,6 +172,28 @@ export const Shaping = () => {
           docId="G1XCd9QcSKUIn4afXdM1"
         />
       </div>
+      <P>
+        <h3 className="text-lg font-bold">Sigmoids</h3>
+      </P>
+      <P>
+        Sigmoids are a family of functions that are used to shape unruly input signals that exceed
+        the audio bounds of <InlineCode>[-1,1]</InlineCode>.
+      </P>
+      <P>
+        These functions keep the signal within the bounds of <InlineCode>[-1,1]</InlineCode>, and
+        produce a smooth curve (unlike hard clipping which just clips the signal to the bounds, very
+        harshly). This often sounds like distortion/saturation.
+      </P>
+      <P>
+        The example below demonstrates the simplest sigmoid function,{" "}
+        <White link="tanh">tanh</White>.
+      </P>
+      <div className="h-[450px] mt-6">
+        <ExamplePatch
+          commit="patches/6aa3954f-aa77-4aca-a01b-f8559d2400e2"
+          docId="4fdDpIt4Wi8nR5mu1yAW"
+        />
+      </div>
     </div>
   );
 };
