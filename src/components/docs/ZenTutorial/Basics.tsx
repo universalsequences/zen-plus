@@ -6,7 +6,9 @@ export const Basics = () => {
   return (
     <div>
       <h2 className="text-2xl font-bold">Digital Audio</h2>
-      <P>Digital audio is just numbers that changes over time - that's all an audio signal is!</P>
+      <P>
+        Digital audio is just numbers that changes over time - that&apos;s all an audio signal is!
+      </P>
       <P>
         The <White link="zen">zen</White> operators allow you to generate and shape audio in a
         number of ways, in a process known as{" "}
@@ -25,9 +27,10 @@ export const Basics = () => {
       </P>
       <h2 className="text-2xl font-bold">Audio Math</h2>
       <P>
-        <White link="Digital Signal Processing">DSP</White> is a fancy way of saying "audio math".
-        You can do so much with just basic arithmetic.
+        <White link="Digital Signal Processing">DSP</White> is a fancy way of saying{" "}
+        <InlineCode>audio math</InlineCode>.
       </P>
+      <P>You can do so much with just basic arithmetic.</P>
       <div className="flex  gap-4 w-full">
         <div className="w-1/3">
           <P>
@@ -62,7 +65,7 @@ export const Basics = () => {
       </P>
       <P>
         The <White link="cycle">cycle</White> operator outputs a sine wave from{" "}
-        <InlineCode>[-1, 1]</InlineCode> so it's important to keep the sum from going past{" "}
+        <InlineCode>[-1, 1]</InlineCode> so it&apos;s important to keep the sum from going past{" "}
         <InlineCode>[-1, 1]</InlineCode>. The <White link="*">*</White> operator is used to scale
         this sum to a safe range.
       </P>
