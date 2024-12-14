@@ -13,6 +13,13 @@ const NumberTilde: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     if (objectNode.audioNode) {
       const worklet = objectNode.audioNode as AudioWorkletNode;
       worklet.port.onmessage = onMessage;
+    } else {
+      setTimeout(() => {
+        if (objectNode.audioNode) {
+          const worklet = objectNode.audioNode as AudioWorkletNode;
+          worklet.port.onmessage = onMessage;
+        }
+      }, 500);
     }
     return () => {
       if (objectNode.audioNode) {

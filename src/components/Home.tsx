@@ -42,6 +42,7 @@ import PatchWindow from "./PatchWindow";
 import { WindowsProvider } from "@/contexts/WindowsContext";
 import { GlossaryDefinition } from "./docs/GlossaryDefinition";
 import { GlossaryProvider } from "@/contexts/GlossaryContext";
+import { useAudioContext } from "@/contexts/AudioContextContext";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia],
@@ -70,10 +71,13 @@ export default function App(props: Props) {
   const [fileToOpen, setFileToOpen] = useState<any | null>(null);
   const [fileOpened, setFileOpened] = useState<any | null>(null);
   const { fetchProject } = useStorage();
+  const { audioContext } = useAudioContext();
 
   useEffect(() => {
-    setBasePatch(new PatchImpl(new AudioContext({ sampleRate: 44100 })));
-  }, [setBasePatch]);
+    if (audioContext) {
+      setBasePatch(new PatchImpl(audioContext));
+    }
+  }, [setBasePatch, audioContext]);
 
   useEffect(() => {
     if (fileToOpen) {
@@ -145,7 +149,7 @@ export default function App(props: Props) {
                 <WorkerProvider patch={basePatch}>
                   <TilesProvider>
                     <StepsProvider>
-                      <main className="flex min-h-screen flex-col h-full w-full">
+                      <main className="flex min-h-screen flex-col h-full w-full text-white">
                         <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
                       </main>
                     </StepsProvider>

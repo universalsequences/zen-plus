@@ -26,6 +26,7 @@ import { mainnet, zora, zoraSepolia, baseSepolia } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { infuraProvider } from "wagmi/providers/infura";
 import { publicProvider } from "wagmi/providers/public";
+import { AudioContextProvider } from "@/contexts/AudioContextContext";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia, zora, mainnet, baseSepolia],
@@ -61,13 +62,15 @@ export default function App(props: Props) {
           })}
           chains={chains}
         >
-          <AuthProvider>
-            <StorageProvider>
-              <NavProvider showDocs={props.showDocs ?? false}>
-                <Home projectId={props.projectId} />
-              </NavProvider>
-            </StorageProvider>
-          </AuthProvider>
+          <AudioContextProvider>
+            <AuthProvider>
+              <StorageProvider>
+                <NavProvider showDocs={props.showDocs ?? false}>
+                  <Home projectId={props.projectId} />
+                </NavProvider>
+              </StorageProvider>
+            </AuthProvider>
+          </AudioContextProvider>
         </RainbowKitProvider>
       </WagmiConfig>
     </Theme>

@@ -14,7 +14,8 @@ import { useGlossary } from "@/contexts/GlossaryContext";
 import { GlossaryDefinition } from "./GlossaryDefinition";
 import { GL } from "./GL";
 import { Cross2Icon } from "@radix-ui/react-icons";
-
+import { Basics } from "./ZenTutorial/Basics";
+import { Counting } from "./ZenTutorial/Counting";
 const Documentation = () => {
   const { selectedTerm, setSelectedTerm } = useGlossary();
   const [section, setSection] = useState<Section | null>(Section.Intro);
@@ -45,6 +46,10 @@ const Documentation = () => {
         return <Zen />;
       case Section.GL:
         return <GL />;
+      case Section.Zen_Basics:
+        return <Basics />;
+      case Section.Zen_Counting:
+        return <Counting />;
       default:
         return <div />;
     }
@@ -79,7 +84,7 @@ const Documentation = () => {
           `}</style>
         </div>
       )}
-      <div style={{ maxWidth: 900 }}>{getSection(section)}</div>
+      <div style={{ maxWidth: 1100 }}>{getSection(section)}</div>
     </div>
   );
 };

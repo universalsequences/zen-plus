@@ -61,24 +61,28 @@ export const Zen = () => {
         zen+ is heavily inspired by Max-MSP, and its audio processing operators are very similar to
         the gen~ operators in Max.
       </P>
-      <div className="text-3xl my-4">the compiler</div>
-      <P>
-        While in a zen subpatch, it is important to note that <White link="object">objects</White>{" "}
-        <span className="italic">do not</span> process literal audio signal. Instead, they form
-        mathematical expressions that compile into efficient audio graphs. Looked at another way, a{" "}
-        <White>zen subpatch</White> is simply code represented visually.
-      </P>
-      <P className="mr-2">
+      <Card>
+        <h3 className="text-lg font-semibold">The Compiler</h3>
         <P>
-          Compilation is kicked off once a graph is connected to a{" "}
-          <span className="font-bold">out 1</span> node and/or any part of the patch is edited.
+          While in a zen <White link="subpatch">subpatch</White>, it is important to note that{" "}
+          <White link="object">objects</White> <span className="italic">do not</span> process
+          literal audio signal. Instead, they form mathematical expressions that compile into
+          efficient audio graphs. Looked at another way, a <White>zen subpatch</White> is simply
+          code represented visually.
         </P>
-        <P className="mt-5">
-          When this happens, a new <White>AudioWorklet</White> is generated (within milliseconds)
-          and connected to your speakers. The generated <White>AudioWorklet</White> is highly
-          optimized, and has the option to compiling C code (via WebAssembly).
+        <P className="mr-2">
+          <P>
+            Compilation is kicked off once a graph is connected to a{" "}
+            <span className="font-bold">out 1</span> node and/or any part of the patch is edited.
+          </P>
+          <P className="mt-5">
+            When this happens, a new <White link="AudioWorklet">AudioWorklet</White> is generated
+            (within milliseconds) and connected to your speakers. The generated{" "}
+            <White>AudioWorklet</White> is highly optimized, and has the option to compiling C code
+            (via WebAssembly).
+          </P>
         </P>
-      </P>
+      </Card>
     </div>
   );
 };

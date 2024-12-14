@@ -54,6 +54,19 @@ export const GL = () => {
           the common glsl operators work this exact way.
         </P>
       </Card>
+      <h2 className="text-xl font-bold mt-6">Types</h2>
+      <P>
+        GLSL is a staticly typed language, which means there are some restrictions on what{" "}
+        <White link="gl">gl</White> operators can be connected.
+      </P>
+      <P>
+        When the patch notices you've connected two operators that don't match, it will color the
+        mismatched <White link="object">object</White> orange, to mark them as "errored".
+      </P>
+      <P>
+        You can also see the type of an <White link="inlet">inlet</White> and{" "}
+        <White link="outlet">outlet</White> by hovering over it.
+      </P>
     </>
   );
 };

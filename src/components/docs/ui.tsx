@@ -76,3 +76,17 @@ export const Card = ({
     </div>
   );
 };
+
+// For inline code snippets
+export const InlineCode = ({ children }: { children: React.ReactNode }) => (
+  <code className="bg-zinc-800 px-1.5 py-0.5 rounded font-mono text-sm text-zinc-100">
+    {children}
+  </code>
+);
+
+// For code blocks
+export const CodeBlock = ({ children }: { children: React.ReactNode }) => (
+  <pre className="bg-zinc-800 p-4 rounded-lg overflow-x-auto font-mono text-sm text-zinc-100">
+    <code className="block">{children}</code>
+  </pre>
+);

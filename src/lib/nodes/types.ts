@@ -21,6 +21,7 @@ import type {
 import { PatchDoc } from "../org/types";
 import { ListPool } from "../lisp/ListPool";
 import { RegisteredPatch } from "./definitions/core/registry";
+import { Definition } from "../docs/docs";
 
 export interface Size {
   width: number;
@@ -225,6 +226,7 @@ export type ObjectNode = Positioned &
     script?: string;
     pool?: ListPool;
     renderJob?: RenderJob;
+    definition?: Definition;
   };
 
 export interface SerializableCustom {

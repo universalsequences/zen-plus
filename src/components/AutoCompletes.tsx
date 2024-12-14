@@ -87,18 +87,19 @@ const AutoCompletes: React.FC<{
                   {getContextName(option.context ? option.context.type : undefined) || "patch"}
                 </div>
               </div>
-              <div className="flex-1">
+              <div className="mr-5">
                 {text === "p" && option.definition.aliases?.includes("p")
                   ? "p"
                   : option.definition.name}
               </div>
               <div
+                style={{ maxWidth: 250 }}
                 className={
                   (selected === getIndex(idx, index) ? "text-zinc-700 " : "text-zinc-400 ") +
-                  "flex-1 ml-auto"
+                  "ml-auto break-words whitespace-pre-wrap table"
                 }
               >
-                {option.definition.description.trim().slice(0, 80)}{" "}
+                {option.definition.description.trim()}
               </div>
             </div>
           ))}

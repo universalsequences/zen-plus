@@ -18,6 +18,7 @@ export const GlossaryDefinition = ({ name, blur = false }: { name: string; blur?
   const outletNames = (item as unknown as Definition).outletNames;
 
   const getOperatorType = () => {
+    if (name === "message" || name === "zen") return null;
     if (core.api[name]) return "core";
     if (zen.api[name]) return "zen";
     if (gl.api[name]) return "gl";

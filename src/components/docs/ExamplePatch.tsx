@@ -32,6 +32,7 @@ import Toolbar from "../Toolbar";
 import { File } from "@/lib/files/types";
 import { Timestamp } from "firebase/firestore";
 import { PatchDoc } from "@/lib/org/types";
+import { useAudioContext } from "@/contexts/AudioContextContext";
 
 const { chains, publicClient } = configureChains(
   [goerli],
@@ -58,13 +59,16 @@ interface Props {
 export default function ExamplePatch({ docId, commit }: Props) {
   const [basePatch, setBasePatch] = useState<Patch | null>(null);
   const patchRef = useRef<Patch | null>(null);
+  const { audioContext } = useAudioContext();
 
   useEffect(() => {
-    const p = new PatchImpl(new AudioContext({ sampleRate: 44100 }));
-    (p as Patch).isExamplePatch = true;
-    patchRef.current = p;
-    setBasePatch(p);
-  }, [setBasePatch]);
+    if (audioContext) {
+      const p = new PatchImpl(audioContext);
+      (p as Patch).isExamplePatch = true;
+      patchRef.current = p;
+      setBasePatch(p);
+    }
+  }, [audioContext, setBasePatch]);
 
   const [fileToOpen, setFileToOpen] = useState<File | null>(null);
 

@@ -53,6 +53,33 @@ export enum GLType {
   Function,
 }
 
+export const glTypeToString = (type: GLType): string => {
+  switch (type) {
+    case GLType.Mat2:
+      return "mat2";
+    case GLType.Mat3:
+      return "mat3";
+    case GLType.Mat4:
+      return "mat4";
+    case GLType.Bool:
+      return "bool";
+    case GLType.Float:
+      return "float";
+    case GLType.Vec2:
+      return "vec2";
+    case GLType.Vec3:
+      return "vec3";
+    case GLType.Vec4:
+      return "vec4";
+    case GLType.Sampler2D:
+      return "sampler2D";
+    case GLType.Function:
+      return "function";
+    default:
+      return "unknown";
+  }
+};
+
 export const stringToType = (type: string): GLType => {
   if (type === "bool") {
     return GLType.Bool;

@@ -172,25 +172,11 @@ export const Intro = () => {
             the top of a node).
           </div>
         </div>
-        <P className="italic my-4 flex">
-          <Core />{" "}
-          <span className="ml-2">
-            When an <White>object node</White> receives messages from all its <White>inlets</White>,
-            it outputs its result to its <White>outlets</White>.
-          </span>
-        </P>
       </P>
-      <div className="flex">
-        <P className="w-64">
-          To create a <White>Node</White> in the editor, simply double click anywhere on the patch
-          and type into the node and press enter.
-        </P>
-        <P className="ml-10 w-64">
-          To connect two <White>Nodes</White>, click on an <White>inlet</White> (the little circle
-          at the bottom of a node), and drag the cable to another nodes <White>outlet</White> (the
-          little circle at the top of a node).
-        </P>
-      </div>
+      <Card className="mt-6 w-full">
+        When an <White link="object">object</White> receives messages from all its{" "}
+        <White>inlets</White>, it outputs its result to its <White>outlets</White>.
+      </Card>
     </>
   );
 };

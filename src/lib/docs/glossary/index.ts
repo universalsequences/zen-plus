@@ -17,7 +17,7 @@ export const glossary: {
   object: {
     name: "object",
     definition: [
-      "A basic programming element in Zen+ that performs a specific function (via it's [[operator]]), such as mathematical operations, audio processing, or data manipulation.",
+      "A basic programming element in Zen+ that performs a specific function (defined by it's [[operator]]), such as mathematical operations, audio processing, or data manipulation.",
       "Objects appear as boxes in the patcher window and can be connected to other objects, via [[cables]], to create more complex behaviors.",
       "Examples include [[+]] for addition, [[metro]] for timing, and [[speakers~]] for sending audio to speakers.",
       "Objects can be created by double clicking the patch editor, or by right clicking the editor and selecting 'new object'.",
@@ -221,6 +221,13 @@ export const glossary: {
       "A shader is a program that runs on the GPU",
       "Shaders are used to create custom visualizers.",
       "In Zen+, shaders are created by connecting [[gl]] [[object]]s to a [[canvas]] object.",
+    ],
+  },
+  "Digital Signal Processing": {
+    name: "Digital Signal Processing",
+    definition: [
+      "Digital Signal Processing (or DSP) refers to the processing of digital signals, such as audio or video, using algorithms and mathematical operations.",
+      "In Zen+, DSP is used to process audio signals using [[zen]] [[object]]s.",
     ],
   },
 };
