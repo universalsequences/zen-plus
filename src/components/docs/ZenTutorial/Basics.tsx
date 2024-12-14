@@ -120,7 +120,7 @@ export const Basics = () => {
       </div>
       <div className="my-6">
         Try editing the <White link="subpatch">subpatch</White> above to make the modulation sound
-        "faster", by editing the frequency of the slower <White link="cycle">cycle</White> operator.
+        faster, by editing the frequency of the slower <White link="cycle">cycle</White> operator.
       </div>
       <div className="my-6">What happens when the modulation signal is too fast?</div>
     </div>

@@ -61,7 +61,7 @@ export const GL = () => {
       </P>
       <P>
         When the patch notices you&apos;ve connected two operators that don&apos;t match, it will
-        color the mismatched <White link="object">object</White> orange, to mark them as "errored".
+        color the mismatched <White link="object">object</White> orange, to mark them as errored.
       </P>
       <P>
         You can also see the type of an <White link="inlet">inlet</White> and{" "}
