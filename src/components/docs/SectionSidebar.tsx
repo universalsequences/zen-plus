@@ -32,8 +32,8 @@ const sections = [
     subsections: [
       { name: "Basics", section: Section.Zen_Basics },
       { name: "Counting", section: Section.Zen_Counting },
-      { name: "Shaping", section: Section.Zen_Shaping },
-      { name: "Sequencing", section: Section.Zen_Sequencing },
+      { name: "Shaping I", section: Section.Zen_Shaping_I },
+      { name: "Shaping II", section: Section.Zen_Shaping_II },
       { name: "Feedback", section: Section.Zen_Feedback },
       { name: "Delay", section: Section.Zen_Delay },
     ],
@@ -52,8 +52,8 @@ export const SectionSidebar = (props: Props) => {
       currentSection === Section.Zen ||
       currentSection === Section.Zen_Basics ||
       currentSection === Section.Zen_Counting ||
-      currentSection === Section.Zen_Shaping ||
-      currentSection === Section.Zen_Sequencing ||
+      currentSection === Section.Zen_Shaping_I ||
+      currentSection === Section.Zen_Shaping_II ||
       currentSection === Section.Zen_Feedback ||
       currentSection === Section.Zen_Delay
     );

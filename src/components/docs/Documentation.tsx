@@ -17,6 +17,9 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Basics } from "./ZenTutorial/Basics";
 import { Counting } from "./ZenTutorial/Counting";
 import { Shaping } from "./ZenTutorial/Shaping";
+import { ShapingII } from "./ZenTutorial/ShapingII";
+import { Feedback } from "./ZenTutorial/Feedback";
+
 const Documentation = () => {
   const { selectedTerm, setSelectedTerm } = useGlossary();
   const [section, setSection] = useState<Section | null>(Section.Intro);
@@ -35,10 +38,14 @@ const Documentation = () => {
         return <GL />;
       case Section.Zen_Basics:
         return <Basics />;
-      case Section.Zen_Shaping:
+      case Section.Zen_Shaping_I:
         return <Shaping />;
+      case Section.Zen_Shaping_II:
+        return <ShapingII />;
       case Section.Zen_Counting:
         return <Counting />;
+      case Section.Zen_Feedback:
+        return <Feedback />;
       default:
         return <div />;
     }

@@ -55,7 +55,12 @@ export const Landing = () => {
 
   return (
     <GlossaryProvider>
-      <div className={"max-w-screen flex bg-black  min-h-screen " + (false ? "light-mode" : "")}>
+      <div
+        className={
+          `max-w-screen flex ${showNav && navOption === NavOption.Docs ? "bg-black" : "bg-black"} min-h-screen ` +
+          (false ? "light-mode" : "")
+        }
+      >
         {showNav && navOption === NavOption.Docs && (
           <div className="absolute top-10 left-20 h-16 z-30 ">
             <Nav />

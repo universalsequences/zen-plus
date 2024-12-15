@@ -258,7 +258,7 @@ const Files: React.FC<{
                 className="ml-10 active:scale-105 bg-violet-700 text-xs rounded-md px-3 py-1 flex cursor-pointer transition-colors hover:bg-violet-500"
               >
                 <PlusCircledIcon className="w-5 h-5 mr-3 my-auto" />
-                <div className="my-auto">New Project</div>
+                <div className="my-auto">New Patch</div>
               </button>
             )}
           </div>

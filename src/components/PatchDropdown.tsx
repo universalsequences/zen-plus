@@ -151,7 +151,7 @@ const PatchDropdown = React.memo((props: Props) => {
                 }}
                 className="DropdownMenuItem flex cursor-pointer pointer-events-auto"
               >
-                Go to Files{" "}
+                Go to Patches{" "}
                 <div className="RightSlot">
                   <ArrowLeftIcon className="w-5 h-5" />
                 </div>

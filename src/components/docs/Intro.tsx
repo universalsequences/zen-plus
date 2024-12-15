@@ -131,14 +131,13 @@ export const Intro = () => {
       </div>
       <div className="flex mt-6 gap-2">
         <div className="w-2/3">
-          <p className="">
-            Switch between modes using <White>⌘-E </White>to lock/unlock the patch editor. You can
-            also click the lock icon at the right of the bottom toolbar.
-          </p>
-          <p className="mt-4">
-            This clear distinction between building (Edit Mode) and using (Performance Mode) helps
-            prevent accidental modifications while performing or testing your patches.
-          </p>
+          <Card className="">
+            <h3 className="text-lg font-semibold mb-2">Switching Modes</h3>
+            <P>
+              Switch between modes using <White>⌘-E </White>to lock/unlock the patch editor. You can
+              also click the lock icon at the right of the bottom toolbar.
+            </P>
+          </Card>
           <P>
             The patch, to the right, demonstrates these two modes. Click the lock icon to switch
             between them. While in <White>Performance Mode</White>, you can click the{" "}

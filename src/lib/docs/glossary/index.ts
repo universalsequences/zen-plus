@@ -238,6 +238,20 @@ export const glossary: {
       "The [[phasor]] operator generates pure ramps.",
     ],
   },
+  pulse: {
+    name: "pulse",
+    definition: [
+      "A signal that is 1 for a single sample, and 0 for the rest of the samples in a buffer.",
+      "Can be used to trigger other events in a [[zen]] [[subpatch]].",
+    ],
+  },
+  feedback: {
+    name: "feedback",
+    definition: [
+      "Feedback is a technique of routing the output of some process back into the input of that same process.",
+      "In Zen+, feedback is created using the [[history]] operator.",
+    ],
+  },
   trig: {
     name: "trig",
     definition: [

@@ -64,7 +64,7 @@ export const Card = ({
             }
           : {}
       }
-      className={`relative border rounded-lg border-zinc-900 px-8 py-6 ${!blur ? "bg-zinc-950" : ""} shadow-sm rounded-lg ${className}`}
+      className={`relative border  border-zinc-900 px-8 py-6 ${!blur ? "bg-zinc-950" : ""} shadow-sm rounded-md ${className}`}
     >
       {info ? (
         <InfoCircledIcon className="w-4 h-4 absolute top-2 left-2" />

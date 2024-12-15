@@ -46,7 +46,7 @@ doc("history", {
   attributes: {
     initial: 0,
   },
-  description: "history",
+  description: "Allows you to store and access previous sample values.",
 });
 
 export const zen_history = (object: ObjectNode) => {
