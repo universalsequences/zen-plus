@@ -16,11 +16,13 @@ export const printCode = (statement: Statement): string => {
   const uniforms: Uniforms = {};
   const body = _printStatement(statement, variables, uniforms, 0);
   const _variables = Object.values(variables).sort((a, b) => a.idx - b.idx);
+  console.log("_variables=", _variables);
   let varOut = "";
   for (const variable of _variables) {
-    varOut += `let ${variable.name} ${variable.printed};
+    varOut += `let ${variable.name} = ${variable.printed};
 `;
   }
+  console.log("var out=", varOut);
 
   let uniformsString = "{";
   for (const name in uniforms) {
@@ -46,7 +48,8 @@ interface Variable {
 }
 
 export const getVariableName = (op: string, idx: number, zobject_id: string): string => {
-  return `${op[0]}${idx} `;
+  console.log("get variable name op=", op);
+  return `${op.trim()[0]}${idx} `;
 };
 
 export const _printStatement = (
@@ -72,6 +75,7 @@ export const _printStatement = (
   if (def?.fnString) {
     op = def.fnString;
   }
+  op = op.trim();
 
   const zobject = statement.node as ObjectNode;
   if (zobject && variables[zobject.id] !== undefined) {
@@ -90,7 +94,7 @@ export const _printStatement = (
     //opArgs = `"${(operator as CompoundOperator).variableName as string}"`;
   }
 
-  op = `gl. ${op}`;
+  op = `gl.${op}`;
   let exactArgs: string | undefined;
   if ((operator as CompoundOperator).value !== undefined) {
     opArgs = (operator as CompoundOperator).value?.toString() as string;

@@ -34,6 +34,8 @@ interface IPatchesContext {
   setPatchDragging: (x: Patch | undefined) => void;
   counter: number;
   setCounter: React.Dispatch<React.SetStateAction<number>>;
+  patchNames: { [x: string]: string };
+  setPatchNames: React.Dispatch<React.SetStateAction<{ [x: string]: string }>>;
 }
 
 interface Props {
@@ -61,6 +63,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   const [zenCode, setZenCode] = useState<string | null>(null);
   const [visualsCode, setVisualsCode] = useState<string | null>(null);
   const [gridLayout, setGridLayout] = useState<GridLayout[]>([{ gridArea: "1/1/1/1" }]);
+  const [patchNames, setPatchNames] = useState<{ [x: string]: string }>({});
 
   const [counter, setCounter] = useState(0);
   const [rootTile, setRootTile] = useState<Tile | null>(null);
@@ -436,6 +439,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   return (
     <PatchesContext.Provider
       value={{
+        setPatchNames,
+        patchNames,
         liftPatchTile,
         zenCode,
         selectedPatch,

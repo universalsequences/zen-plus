@@ -1,11 +1,6 @@
 "use client";
 import { PatchWindows } from "./PatchWindows";
-import AssistantSidebar from "./AssistantSidebar";
-import PatchWindow from "./PatchWindow";
-import { Landing } from "./landing/Landing";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSwitchNetwork } from "wagmi";
-import { zora } from "wagmi/chains";
 import SearchWindow from "./search/SearchWindow";
 import { useSettings } from "@/contexts/SettingsContext";
 import React, { useEffect, useState, useCallback } from "react";
@@ -29,7 +24,7 @@ const PatchesComponent: React.FC<{
     useSelection();
   let [showSearch, setShowSearch] = useState(false);
 
-  const { googleSignIn, user } = useAuth();
+  const { user } = useAuth();
   const { lightMode } = useSettings();
 
   useEffect(() => {

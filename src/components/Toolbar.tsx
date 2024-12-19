@@ -29,6 +29,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     closePatch,
     patches,
     setPatches,
+    patchNames,
+    setPatchNames,
   } = usePatches();
   const { assist } = usePatch();
   let breadcrumbs: any[] = [];
@@ -53,6 +55,10 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   const onChange = useCallback(
     (e: any) => {
       setPatchName(e.target.value);
+      setPatchNames((prev) => ({
+        ...prev,
+        [patchRef.current.id]: e.target.value,
+      }));
       patchRef.current.name = e.target.value;
     },
     [setPatchName, patch],

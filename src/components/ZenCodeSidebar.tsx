@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { useNetwork } from "wagmi";
 import { parseEther } from "viem";
-import { minify } from "@/lib/nodes/compilation/minify";
+import { minify, printAndMinify } from "@/lib/nodes/compilation/minify";
 import { db } from "@/lib/db/firebase";
 import {
   documentId,
@@ -36,7 +36,7 @@ interface Parameters {
 
 export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
   const { selectedPatch, patches, visualsCode } = usePatches();
-  let zenCode = selectedPatch ? selectedPatch.zenCode : "";
+  let zenCode = selectedPatch?.statementToExport;
   const account = useAccount();
   const [minting, setMinting] = useState(false);
   const [dropAddress, setDropAddress] = useState<string | null>(null);
@@ -59,13 +59,15 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
   const [compressedVisuals, setCompressedVisuals] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/deflate", {
-      method: "POST",
-      body: zenCode,
-    }).then(async (x) => {
-      let json = await x.json();
-      setCompressedDSP(json.compressed);
-    });
+    if (zenCode) {
+      fetch("/api/deflate", {
+        method: "POST",
+        body: printAndMinify(zenCode),
+      }).then(async (x) => {
+        let json = await x.json();
+        setCompressedDSP(json.compressed);
+      });
+    }
   }, [zenCode]);
 
   useEffect(() => {
@@ -345,7 +347,7 @@ export const ZenCodeSidebar: React.FC<{ hide: () => void }> = ({ hide }) => {
           style={{ maxHeight: 100, minHeight: 50 }}
           className="w-full h-full text-xs overflow-scroll relative my-5"
         >
-          <pre className="p-1">{zenCode}</pre>
+          <pre className="p-1">code</pre>
         </div>
         <div className="w-64 h-64 relative border border-zinc-400 overflow-hidden">
           {screenshot && <img src={screenshot} className="h-64" />}

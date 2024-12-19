@@ -156,6 +156,7 @@ strict_vec_op("xyy", 1, gl.unpack("xyy"), GLType.Vec3, `unpack("xyy")`);
 strict_vec_op("yyx", 1, gl.unpack("yyx"), GLType.Vec3, `unpack("yyx")`);
 strict_vec_op("yxy", 1, gl.unpack("yxy"), GLType.Vec3, `unpack("yxy")`);
 strict_vec_op("xxx", 1, gl.unpack("xxx"), GLType.Vec3, `unpack("xxx")`);
+strict_vec_op("yyx", 1, gl.unpack("yyx"), GLType.Vec3, `unpack("yyx")`);
 flexible_op("normalize", 1, gl.normalize);
 flexible_op("sin", 1, gl.sin);
 flexible_op("cos", 1, gl.cos);

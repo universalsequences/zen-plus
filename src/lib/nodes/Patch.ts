@@ -36,6 +36,7 @@ interface GraphContext {
 let ID_COUNTER = 0;
 export class PatchImpl implements Patch {
   type: PatchType;
+  statementToExport?: Statement;
   id: string;
   objectNodes: ObjectNode[];
   messageNodes: MessageNode[];

@@ -83,9 +83,9 @@ const baseSepoliaContracts: ContractVersions = {
   //MetadataRenderer: "0xb7057E6590199AbF68B91b6817e9e73691E7eFD3",
   //ZenModule: "0x08047602036d96a0c8ef10f1d1fa4639929cc755"
   2: {
-    DropCreator: "0x7e670183336d1371c85ae7c438e9d46556561c4a",
-    MetadataRenderer: "0x3a7eb800df5897fa71bb5696478832899f0f8418",
-    ZenModule: "0xb27db69fdb46bddcb6a63bc47edda186d4e1f3a",
+    DropCreator: "0xc5Eea83F0934321570aFB6238EA990c62B0bf8fB",
+    MetadataRenderer: "0x0579FaF5dBB366EEd82fDaaB2E820097621bf22c",
+    ZenModule: "0x414f2579f5F9B325F452D3DA29343EFD904D993A",
   },
 };
 

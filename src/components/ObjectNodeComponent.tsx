@@ -131,8 +131,16 @@ const InnerObjectNodeComponent: React.FC<{
       ? objectNode.text.replace("zen", objectNode.subpatch.name || "zen")
       : objectNode.text,
   );
+
+  const { setSelectedPatch, expandPatch, patches, setPatches, patchNames } = usePatches();
+
+  useEffect(() => {
+    if (objectNode.subpatch?.id && patchNames[objectNode.subpatch?.id]) {
+      setText(patchNames[objectNode.subpatch?.id]);
+    }
+  }, [patchNames]);
+
   const [parsedText, setParsedText] = useState("");
-  const { setSelectedPatch, expandPatch, patches, setPatches } = usePatches();
   const [includeInPresentation, setIncludeInPresentation] = useState(
     objectNode.attributes["Include in Presentation"],
   );

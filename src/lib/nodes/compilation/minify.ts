@@ -4,6 +4,8 @@ import { printStatement } from "../definitions/zen/AST";
 
 export const printAndMinify = (statement: Statement): string => {
   let inputFile = printStatement(statement);
+  console.log("printed=");
+  console.log(inputFile);
   inputFile = inputFile.replace(/zswitch(\d+)/g, (_, number) => `z${number}`);
   inputFile = inputFile.replace(/add(\d+)/g, (_, number) => `a${number}`);
   inputFile = inputFile.replace(/sub(\d+)/g, (_, number) => `q${number}`);

@@ -216,6 +216,8 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
             handlePublishers(parentNode);
           }
 
+          patch.statementToExport = statement;
+
           /*
           patch.zenCode = printAndMinify(statement);
           if (patch.setZenCode) {

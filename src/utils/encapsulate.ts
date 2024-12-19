@@ -1,4 +1,5 @@
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
+import { OperatorContextType } from "@/lib/nodes/context";
 import type {
   IOlet,
   Node,
@@ -6,35 +7,69 @@ import type {
   Patch,
   IOConnection,
   MessageNode,
+  AttributeValue,
 } from "@/lib/nodes/types";
+
+const getCommonType = (nodes: Node[]): OperatorContextType => {
+  const types = new Map<OperatorContextType, number>();
+  for (const node of nodes) {
+    const operatorContextType = (node as ObjectNode).operatorContextType;
+    if (operatorContextType !== undefined) {
+      types.set(operatorContextType, (types.get(operatorContextType) || 0) + 1);
+    }
+  }
+  let maxCount = -1;
+  let maxType: OperatorContextType | null = null;
+  for (const [type, value] of Array.from(types.entries())) {
+    if (maxCount < value) {
+      maxType = type;
+      maxCount = value;
+    }
+  }
+  return maxType === null ? OperatorContextType.ZEN : maxType;
+};
+
+const getTypeName = (type: OperatorContextType): string => {
+  switch (type) {
+    case OperatorContextType.ZEN:
+      return "zen";
+    case OperatorContextType.GL:
+      return "gl";
+    case OperatorContextType.AUDIO:
+      return "audio";
+    case OperatorContextType.CORE:
+      return "core";
+    default:
+      return "core";
+  }
+};
 
 export const encapsulateNodes = (
   nodesToEncapsulate: Node[],
   patch: Patch,
-  createObjectNode: () => ObjectNode,
+  createObjectNode: (attributes?: { [x: string]: AttributeValue }) => ObjectNode,
   registerConnection: (id: string, x: IOConnection) => void,
   deleteNodes: (x: (ObjectNode | MessageNode)[], y: boolean) => void,
 ) => {
   const nodes = nodesToEncapsulate.filter(
     (x) => (x as ObjectNode).name !== "in" && (x as ObjectNode).name !== "out",
   );
+  const commonType = getCommonType(nodes);
   const inboundConnections = nodes.flatMap((node) =>
     node.inlets.flatMap((inlet) =>
-      inlet.connections.filter(
-        (connection) => !nodes.includes(connection.source),
-      ),
+      inlet.connections.filter((connection) => !nodes.includes(connection.source)),
     ),
   );
 
   const outboundConnections = nodes.flatMap((node) =>
     node.outlets.flatMap((outlet) =>
-      outlet.connections.filter(
-        (connection) => !nodes.includes(connection.destination),
-      ),
+      outlet.connections.filter((connection) => !nodes.includes(connection.destination)),
     ),
   );
 
-  const objectNode = createObjectNode();
+  const objectNode = createObjectNode({
+    type: getTypeName(commonType),
+  });
   objectNode.parse("zen");
   patch.objectNodes = patch.objectNodes.filter((x) => !nodes.includes(x));
   patch.messageNodes = patch.messageNodes.filter((x) => !nodes.includes(x));
@@ -70,16 +105,16 @@ export const encapsulateNodes = (
     const node = inboundConnections[i].destination;
     const connection = inboundConnections[i];
 
-    connection.destinationInlet.connections =
-      connection.destinationInlet.connections.filter((x) => x !== connection);
-    connection.sourceOutlet.connections =
-      connection.sourceOutlet.connections.filter((x) => x !== connection);
+    connection.destinationInlet.connections = connection.destinationInlet.connections.filter(
+      (x) => x !== connection,
+    );
+    connection.sourceOutlet.connections = connection.sourceOutlet.connections.filter(
+      (x) => x !== connection,
+    );
 
     const existingIndex = incomingNodes.indexOf(connection.sourceOutlet);
     let inputNode: ObjectNode =
-      existingIndex >= 0
-        ? inputNodes[existingIndex]
-        : new ObjectNodeImpl(subpatch);
+      existingIndex >= 0 ? inputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
     if (i >= 2) {
       const position = (node as ObjectNode).position;
       if (existingIndex === -1) {
@@ -95,9 +130,7 @@ export const encapsulateNodes = (
         inletCounter++;
       }
     } else {
-      const n = subpatch.objectNodes.find((x) =>
-        x.text.includes(`in ${i + 1}`),
-      );
+      const n = subpatch.objectNodes.find((x) => x.text.includes(`in ${i + 1}`));
       if (!n) {
         continue;
       }
@@ -145,16 +178,16 @@ export const encapsulateNodes = (
     const connection = outboundConnections[i];
 
     // filter out this connection as we are gonna reconstruct it
-    connection.destinationInlet.connections =
-      connection.destinationInlet.connections.filter((x) => x !== connection);
-    connection.sourceOutlet.connections =
-      connection.sourceOutlet.connections.filter((x) => x !== connection);
+    connection.destinationInlet.connections = connection.destinationInlet.connections.filter(
+      (x) => x !== connection,
+    );
+    connection.sourceOutlet.connections = connection.sourceOutlet.connections.filter(
+      (x) => x !== connection,
+    );
 
     const existingIndex = outerNodes.indexOf(connection.sourceOutlet);
     let outputNode: ObjectNode =
-      existingIndex >= 0
-        ? outputNodes[existingIndex]
-        : new ObjectNodeImpl(subpatch);
+      existingIndex >= 0 ? outputNodes[existingIndex] : new ObjectNodeImpl(subpatch);
 
     if (i >= 1) {
       const position = (node as ObjectNode).position;
@@ -197,12 +230,7 @@ export const encapsulateNodes = (
     );
     registerConnection(connection.source.id, _connection);
 
-    connection.source.connect(
-      outputNode,
-      outputNode.inlets[0],
-      connection.sourceOutlet,
-      false,
-    );
+    connection.source.connect(outputNode, outputNode.inlets[0], connection.sourceOutlet, false);
   }
 
   for (const node of nodes) {
