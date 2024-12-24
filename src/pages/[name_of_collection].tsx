@@ -36,12 +36,12 @@ import "@/styles/styles.scss";
 import "./globals.css";
 import { getDefaultWallets, RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import { mainnet, goerli, zora, zoraSepolia } from "wagmi/chains";
+import { mainnet, goerli, zora, zoraSepolia, base, baseSepolia } from "wagmi/chains";
 import { infuraProvider } from "wagmi/providers/infura";
 import { publicProvider } from "wagmi/providers/public";
 
 const { chains, publicClient } = configureChains(
-  [mainnet, zoraSepolia, zora],
+  [zoraSepolia, zora, mainnet, baseSepolia, base],
   [infuraProvider({ apiKey: process.env.NEXT_PUBLIC_INFURA_ID as string }), publicProvider()],
 );
 
@@ -109,7 +109,9 @@ const CollectionPage: React.FC<{ collection: WorkOption }> = ({ collection }) =>
 const fetchCollection = (name: string) => {
   return new Promise((resolve) => {
     const collectionRef = collection(db, "drops");
+    console.log("name = ", name);
     const q = query(collectionRef, where("name", "==", name));
+    console.log("fetch collection q=", q);
     try {
       getDocs(q).then((querySnapshot) => {
         const documents: WorkOption[] = [];

@@ -28,10 +28,7 @@ import MintButton from "./MintButton";
 import { WorkOption } from "./Works";
 import { Step } from "./enum";
 
-const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
-  work,
-  close,
-}) => {
+const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({ work, close }) => {
   const account = useAccount();
   const [fullscreen, setFullScreen] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -59,6 +56,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
 
   useEffect(() => {
     if (switchNetwork) {
+      console.log("switching network=", work.chain);
       switchNetwork(work.chain);
     }
   }, [work, switchNetwork]);
@@ -196,15 +194,11 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                 >
                   <VideoIcon
                     className={
-                      (showVideo ? " stroke-green-200 " : " opacity-50 ") +
-                      "w-3 h-3 my-auto mr-2"
+                      (showVideo ? " stroke-green-200 " : " opacity-50 ") + "w-3 h-3 my-auto mr-2"
                     }
                   />{" "}
                   <span
-                    className={
-                      (showVideo ? " text-green-200 " : " text-zinc-400 ") +
-                      "my-auto"
-                    }
+                    className={(showVideo ? " text-green-200 " : " text-zinc-400 ") + "my-auto"}
                   >
                     video
                   </span>
@@ -219,9 +213,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                 >
                   {video && "click to view the rendered video version."}
                   <div className="my-auto  italic">
-                    {video
-                      ? "best for computers with weak GPU/CPU"
-                      : "video not available"}
+                    {video ? "best for computers with weak GPU/CPU" : "video not available"}
                   </div>
                   <Tooltip.Arrow fill="white" className="TooltipArrow" />
                 </Tooltip.Content>
@@ -237,15 +229,11 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                 >
                   <BoxIcon
                     className={
-                      (showVideo ? "opacity-50 " : " stroke-green-200 ") +
-                      "w-3 my-auto h-3 mr-2"
+                      (showVideo ? "opacity-50 " : " stroke-green-200 ") + "w-3 my-auto h-3 mr-2"
                     }
                   />{" "}
                   <span
-                    className={
-                      (!showVideo ? " text-green-200 " : " text-zinc-400 ") +
-                      "my-auto"
-                    }
+                    className={(!showVideo ? " text-green-200 " : " text-zinc-400 ") + "my-auto"}
                   >
                     realtime
                   </span>
@@ -259,8 +247,8 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                   sideOffset={5}
                 >
                   <div>
-                    click to view the realtime version of piece, with full
-                    resolution & infinite duration.
+                    click to view the realtime version of piece, with full resolution & infinite
+                    duration.
                   </div>
                   <div className="mt-2 italic">requires a strong GPU/CPU</div>
                   <Tooltip.Arrow fill="white" className="TooltipArrow" />
@@ -285,24 +273,15 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
       {!isMobile && !fullscreen && (
         <ArrowLeftIcon
           onClick={() => close()}
-          className={
-            (isMobile ? "top-5" : "bottom-8") +
-            " w-8 h-8 cursor-pointer absolute left-5"
-          }
+          className={(isMobile ? "top-5" : "bottom-8") + " w-8 h-8 cursor-pointer absolute left-5"}
         />
       )}
       {!isMobile && (
         <div className="absolute z-30 top-5 left-5 cursor-pointer">
           {fullscreen ? (
-            <ExitFullScreenIcon
-              className="w-8 h-8"
-              onClick={() => setFullScreen(false)}
-            />
+            <ExitFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(false)} />
           ) : (
-            <EnterFullScreenIcon
-              className="w-8 h-8"
-              onClick={() => setFullScreen(true)}
-            />
+            <EnterFullScreenIcon className="w-8 h-8" onClick={() => setFullScreen(true)} />
           )}
         </div>
       )}
@@ -350,10 +329,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
               <div className="left-10 bottom-0 top-0 my-auto table w-44 py-1 absolute  content-start">
                 <div className="flex flex-wrap">
                   {Object.keys(parameters).map((name) => (
-                    <div
-                      key={name}
-                      className="flex flex-col text-white text-xs m-1 text-center"
-                    >
+                    <div key={name} className="flex flex-col text-white text-xs m-1 text-center">
                       <div>{parameters[name]}</div>
                       <div className="text-zinc-500">{name}</div>
                     </div>
@@ -368,8 +344,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                 className="bg-zinc-900 px-2 py-1 text-white rounded-lg w-64 "
                 sideOffset={5}
               >
-                Randomized synthesis parameters for this piece (immutable &
-                generated onchain)
+                Randomized synthesis parameters for this piece (immutable & generated onchain)
                 <Tooltip.Arrow fill="white" className="TooltipArrow" />
               </Tooltip.Content>
             </Tooltip.Portal>
@@ -426,47 +401,40 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
             />
             <div className="flex flex-wrap text-base mt-2 w-full pr-5">
               {totalSupply
-                ? new Array(mintedToken ? mintedToken : _totalSupply)
-                    .fill(0)
-                    .map((a, i) => (
-                      <span
-                        key={i}
-                        onClick={() => setActiveAnimation(i + 1)}
-                        className={
-                          activeAnimation === i + 1
-                            ? " w-6 border-b border-b-zinc-300 mr-3 mb-1 text-center relative "
-                            : " text-center border border-zinc-800 w-6 mr-3 mb-1 cursor-pointer hover:border-b border-b-zinc-900 hover:border-b-zinc-300 relative  hover:bg-zinc-800 transition-colors"
-                        }
-                        onMouseLeave={() => setHovered(null)}
-                        onMouseOver={() => setHovered(i)}
-                      >
-                        <span
-                          className={
-                            fullscreen && hovered !== i ? "text-zinc-200" : ""
-                          }
-                        >
-                          {i + 1}
-                        </span>
-                        {hovered === i && (
-                          <div className="absolute -top-10  text-xs bg-zinc-700 text-white px-3 py-2 rounded-md z-30 pointer-events-none">
-                            <OwnerOf
-                              dropAddress={work.dropAddress}
-                              chainId={work.chain || 5}
-                              tokenId={i + 1}
-                            />
-                            <TriangleDownIcon
-                              color="#3f3f3f"
-                              className="w-8 h-8 absolute -bottom-4 left-0"
-                            />
-                          </div>
-                        )}
+                ? new Array(mintedToken ? mintedToken : _totalSupply).fill(0).map((a, i) => (
+                    <span
+                      key={i}
+                      onClick={() => setActiveAnimation(i + 1)}
+                      className={
+                        activeAnimation === i + 1
+                          ? " w-6 border-b border-b-zinc-300 mr-3 mb-1 text-center relative "
+                          : " text-center border border-zinc-800 w-6 mr-3 mb-1 cursor-pointer hover:border-b border-b-zinc-900 hover:border-b-zinc-300 relative  hover:bg-zinc-800 transition-colors"
+                      }
+                      onMouseLeave={() => setHovered(null)}
+                      onMouseOver={() => setHovered(i)}
+                    >
+                      <span className={fullscreen && hovered !== i ? "text-zinc-200" : ""}>
+                        {i + 1}
                       </span>
-                    ))
+                      {hovered === i && (
+                        <div className="absolute -top-10  text-xs bg-zinc-700 text-white px-3 py-2 rounded-md z-30 pointer-events-none">
+                          <OwnerOf
+                            dropAddress={work.dropAddress}
+                            chainId={work.chain || 5}
+                            tokenId={i + 1}
+                          />
+                          <TriangleDownIcon
+                            color="#3f3f3f"
+                            className="w-8 h-8 absolute -bottom-4 left-0"
+                          />
+                        </div>
+                      )}
+                    </span>
+                  ))
                 : ""}
             </div>
             <div className="text-zinc-500 text-sm mx-auto text-center mt-auto mb-4 flex">
-              <DashboardIcon className="w-6 h-6 mr-3" />{" "}
-              <div className="my-auto">gallery</div>
+              <DashboardIcon className="w-6 h-6 mr-3" /> <div className="my-auto">gallery</div>
             </div>
             <div className="absolute bottom-3 left-3 text-xs text-zinc-500 w-32">
               {!isMobile && "each minted token, is a unique composition"}
@@ -481,8 +449,8 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
               />
               <div>{work.description}</div>
               <div className="text-zinc-400 ml-5 mt-auto">
-                created with <span className="text-white">zen+</span>. all
-                sounds and visuals stored directly onchain.
+                created with <span className="text-white">zen+</span>. all sounds and visuals stored
+                directly onchain.
               </div>
             </div>
             <div className="flex mt-2">
@@ -500,9 +468,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                 zora
               </a>
               <ArrowTopRightIcon className="w-3 h-3 ml-2" />
-              <div className="ml-auto text-zinc-300">
-                {trunc(work.dropAddress)}
-              </div>
+              <div className="ml-auto text-zinc-300">{trunc(work.dropAddress)}</div>
               <CopyIcon
                 onClick={() => {
                   navigator.clipboard.writeText(work.dropAddress);
@@ -541,8 +507,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
             {!isMobile && !fullscreen && (
               <div
                 className={
-                  (fullscreen ? "w-24" : "w-50") +
-                  " text-zinc-300 ml-10 my-auto text-center flex"
+                  (fullscreen ? "w-24" : "w-50") + " text-zinc-300 ml-10 my-auto text-center flex"
                 }
               >
                 <div className="text-zinc-400 mr-5 flex">
@@ -582,10 +547,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                 ></div>
               )}
 
-              <Tooltip.Provider
-                disableHoverableContent={true}
-                delayDuration={200}
-              >
+              <Tooltip.Provider disableHoverableContent={true} delayDuration={200}>
                 <Tooltip.Root>
                   <Tooltip.Trigger asChild>
                     <div className="my-auto w-32 pl-4 flex">
@@ -624,9 +586,7 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
                   : wrongNetwork
                     ? "text-center right-0 w-38 "
                     : "right-0 w-32 ") +
-                (isMobile && (!account || !account.address)
-                  ? " -top-5 w-44"
-                  : " bottom-14 ") +
+                (isMobile && (!account || !account.address) ? " -top-5 w-44" : " bottom-14 ") +
                 " mx-auto flex flex-col fixed z-30"
               : "mx-auto fixed bottom-0 right-2 flex flex-col  z-30 w-64"
           }
@@ -660,5 +620,4 @@ const WorkPlayer: React.FC<{ close: () => void; work: WorkOption }> = ({
 
 export default WorkPlayer;
 
-export const trunc = (x: string) =>
-  x.slice(0, 5) + "..." + x.slice(x.length - 4);
+export const trunc = (x: string) => x.slice(0, 5) + "..." + x.slice(x.length - 4);
