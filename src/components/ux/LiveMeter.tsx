@@ -1,5 +1,6 @@
 import { useLocked } from "@/contexts/LockedContext";
 import { usePosition } from "@/contexts/PositionContext";
+import { useSelection } from "@/contexts/SelectionContext";
 import { ValueProvider, useValue } from "@/contexts/ValueContext";
 import { useInterval } from "@/hooks/useInterval";
 import type { ObjectNode } from "@/lib/nodes/types";
@@ -25,13 +26,15 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   const { lockedMode } = useLocked();
   const custom = objectNode.custom!;
   const [value, setValue] = useState(custom.value as number);
-
+  useSelection();
   useEffect(() => {
     setValue(custom.value as number);
   }, [custom.value]);
 
   const refLeft = useRef<HTMLDivElement>(null);
   const refRight = useRef<HTMLDivElement>(null);
+  const refLeftPeak = useRef<HTMLDivElement>(null);
+  const refRightPeak = useRef<HTMLDivElement>(null);
   const dataLeft = useRef(new Float32Array(128));
   const dataRight = useRef(new Float32Array(128));
 
@@ -73,6 +76,14 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     } else if (now - rightPeakTime.current > PEAK_HOLD_TIME) {
       rightPeak.current = Math.max(rightLevel, rightPeak.current - PEAK_FALL_RATE);
     }
+
+    // Update peak marker positions directly
+    if (refLeftPeak.current) {
+      refLeftPeak.current.style.bottom = `${leftPeak.current * 200}%`;
+    }
+    if (refRightPeak.current) {
+      refRightPeak.current.style.bottom = `${rightPeak.current * 200}%`;
+    }
   }, []);
 
   const onTick = useCallback(() => {
@@ -96,7 +107,6 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       rightLevel.current =
         rightLevel.current * SMOOTHING_FACTOR + normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
 
-      console.log("normalizedLoudnessA", normalizedLoudnessA);
       updatePeaks(leftLevel.current, rightLevel.current, Date.now());
 
       if (refLeft.current) {
@@ -158,15 +168,15 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   const { width, height } = size;
 
   // Generate decibel markers
-  const dbMarkers = [-60, -50, -40, -30, -20, -10, -3, 0];
+  const dbMarkers = height < 100 ? [-50, -40, -20, -30, -10, 0] : [-50, -40, -30, -20, -10, -3, 0];
 
   return (
     <div
       onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       style={{ width: width, height }}
-      className="flex flex-col relative"
+      className="flex flex-col "
     >
-      <div className="flex w-full h-full">
+      <div className="flex w-full h-full relative">
         <div
           onMouseDown={onMouseDown}
           ref={containerRef}
@@ -183,34 +193,31 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
           </div>
           <div className="absolute top-0 right-0 w-5 h-full overflow-hidden">
             {/* Peak markers */}
-            <div
-              style={{ bottom: `${leftPeak.current * 200}%` }}
-              className="absolute left-0 w-2 h-0.5 bg-red-500 z-20"
-            />
-            <div
-              style={{ bottom: `${rightPeak.current * 200}%` }}
-              className="absolute right-0 w-2 h-0.5 bg-red-500 z-20"
-            />
+            <div ref={refLeftPeak} className="absolute left-0 w-2 h-0.5 bg-red-500 z-20" />
+            <div ref={refRightPeak} className="absolute right-0 w-2 h-0.5 bg-red-500 z-20" />
             <div ref={refLeft} className="absolute bottom-0 left-0 w-2" />
             <div ref={refRight} className="absolute bottom-0 right-0 w-2" />
           </div>
         </div>
         {/* dB scale */}
-        <div className="relative ml-1 w-6 h-full text-[8px] text-zinc-400">
-          {dbMarkers.map((db) => {
-            const normalizedHeight = (db + 60) / 60;
-            return (
-              <div
-                key={db}
-                style={{ bottom: `${normalizedHeight * 100}%` }}
-                className="absolute -translate-y-1/2 flex items-center"
-              >
-                <div className="w-1 h-px bg-zinc-700 mr-1" />
-                <span>{db}</span>
-              </div>
-            );
-          })}
-        </div>
+        {objectNode.attributes.showMarkers && (
+          <div className="relative ml-1 w-6 h-full text-[8px] text-zinc-400">
+            {dbMarkers.map((db) => {
+              // Map -60 to 0 to 0 to 1, with 0dB at exactly 1 (100%)
+              const normalizedHeight = (db + 60) / 60;
+              return (
+                <div
+                  key={db}
+                  style={{ top: `${5 + 100 - normalizedHeight * 100}%` }}
+                  className="absolute -translate-y-1/2 flex items-center w-full"
+                >
+                  <div className="w-1 h-px bg-zinc-700 mr-1" />
+                  <span className="ml-auto">{db}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

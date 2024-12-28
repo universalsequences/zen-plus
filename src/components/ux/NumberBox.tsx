@@ -15,9 +15,11 @@ const NumberBox: React.FC<{
 }> = ({ isParameter, className, lockedModeRef, value, setValue, round, min, max, isSelected }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(false);
+  const [typedValue, setTypedValue] = useState("");
   const mouseRef = useRef<number>(0);
   const rounding = useRef<boolean>(true);
   const initValue = useRef<number>(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     window.addEventListener("mouseup", onMouseUp);
@@ -30,7 +32,9 @@ const NumberBox: React.FC<{
 
   const onMouseUp = useCallback(
     (e: MouseEvent) => {
-      setEditing(false);
+      if (!keyMode.current) {
+        setEditing(false);
+      }
       keyMode.current = false;
     },
     [setEditing],
@@ -40,11 +44,7 @@ const NumberBox: React.FC<{
 
   const onMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!editing) {
-        return;
-      }
-
-      if (keyMode.current) {
+      if (!editing || keyMode.current) {
         return;
       }
 
@@ -52,11 +52,9 @@ const NumberBox: React.FC<{
       let factor = rounding.current ? 10 : 100;
       let newValue = initValue.current + diff / factor;
       const pageHeight = document.body.clientHeight;
-      const mouseDelta = e.pageY - mouseRef.current; // Difference from initial Y position
-      const valueRange = max - min; // Total range of the value
+      const mouseDelta = e.pageY - mouseRef.current;
+      const valueRange = max - min;
 
-      // Calculate the value change proportional to the mouse movement
-      // Assuming moving the full height of the page covers the entire range
       factor = pageHeight - 15 - mouseRef.current;
 
       let _min = min;
@@ -68,9 +66,8 @@ const NumberBox: React.FC<{
         _max = initValue.current;
       }
       let valueChange = (mouseDelta / factor) * (_max - _min);
-      // Calculate new value based on initial value and the proportional change
-      newValue = initValue.current - valueChange; // Subtract because screen Y is inverted
-      // Clamp newValue to the min and max range
+      newValue = initValue.current - valueChange;
+
       if (rounding.current) {
         newValue = Math.round(newValue);
       }
@@ -83,23 +80,24 @@ const NumberBox: React.FC<{
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (editing) {
-        const num = Number.parseInt(e.key);
-        const off = e.shiftKey ? 10 : 1;
-        e.preventDefault();
-        if (!Number.isNaN(num)) {
-          setValue(num);
-          keyMode.current = true;
-        } else if (e.key === "ArrowUp") {
-          setValue(value + off);
-          keyMode.current = true;
-        } else if (e.key === "ArrowDown") {
-          setValue(value - off);
-          keyMode.current = true;
+      if (editing && keyMode.current) {
+        if (e.key === "Enter") {
+          const newValue = Number(typedValue);
+          if (!Number.isNaN(newValue)) {
+            const clampedValue = Math.max(min, Math.min(newValue, max));
+            setValue(clampedValue);
+          }
+          setEditing(false);
+          setTypedValue("");
+          keyMode.current = false;
+        } else if (e.key === "Escape") {
+          setEditing(false);
+          setTypedValue("");
+          keyMode.current = false;
         }
       }
     },
-    [editing, setValue, value],
+    [editing, setValue, typedValue, min, max],
   );
 
   const { selectPatch } = usePatchSelector();
@@ -114,51 +112,70 @@ const NumberBox: React.FC<{
   if (value < 0 && value > -1) {
     integer = "-0";
   }
+
+  const startEditing = (e: React.MouseEvent) => {
+    selectPatch();
+    if (!lockedModeRef.current) {
+      return;
+    }
+    e.stopPropagation();
+    setEditing(true);
+    mouseRef.current = e.pageY;
+    initValue.current = value;
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    keyMode.current = true;
+    setTypedValue((Math.round(value * 1000) / 1000).toString());
+    setEditing(true);
+    e.stopPropagation();
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
   return (
     <div ref={ref}>
       <div
-        className={
-          (className ? className : "m-y") +
-          " bg-zinc-900 flex flex-1 active:bg-zinc-700 cursor-ns-resize"
-        }
+        className={`${className ? className : "m-y"} bg-zinc-900 flex flex-1 active:bg-zinc-700 ${keyMode.current ? "cursor-text" : "cursor-ns-resize"}`}
       >
         <TriangleRightIcon
-          onMouseDown={(e: any) => {
-            selectPatch();
-            if (!lockedModeRef.current) {
-              return;
-            }
-            e.stopPropagation();
-            setEditing(true);
-            mouseRef.current = e.pageY;
-            initValue.current = value;
-          }}
+          onMouseDown={startEditing}
           className="w-5 h-5 mr-2 invert active:fill-red-500"
         />
         <div
-          onMouseDown={(e: any) => {
-            selectPatch();
-            if (!lockedModeRef.current) {
-              return;
-            }
-            e.stopPropagation();
-            setEditing(true);
-            mouseRef.current = e.pageY;
-            initValue.current = value;
-          }}
+          onMouseDown={startEditing}
+          onDoubleClick={handleDoubleClick}
           className="flex-1 active:text-green-200 text-white mt-0.5 w-10 flex"
         >
-          <div onMouseDown={() => (rounding.current = true)} className="">
-            {integer}
-          </div>
-          <div className="">.</div>
-          <div onMouseDown={() => (rounding.current = false)} className="flex-1">
-            {float !== undefined
-              ? value < 0
-                ? float.toString().slice(3)
-                : float.toString().slice(2)
-              : ""}
-          </div>
+          {keyMode.current && editing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={typedValue}
+              onChange={(e) => setTypedValue(e.target.value)}
+              className="bg-transparent outline-none w-full"
+              onBlur={() => {
+                setEditing(false);
+                setTypedValue("");
+              }}
+            />
+          ) : (
+            <>
+              <div onMouseDown={() => (rounding.current = true)} className="">
+                {integer}
+              </div>
+              <div className="">.</div>
+              <div onMouseDown={() => (rounding.current = false)} className="flex-1">
+                {float !== undefined
+                  ? value < 0
+                    ? float.toString().slice(3)
+                    : float.toString().slice(2)
+                  : ""}
+              </div>
+            </>
+          )}
           {isParameter && <TargetIcon className="mr-1 w-2 h-2 my-auto" />}
         </div>
       </div>

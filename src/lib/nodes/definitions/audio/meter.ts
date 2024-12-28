@@ -17,6 +17,11 @@ export const live_meter: NodeFunction = (node: ObjectNode) => {
     };
   }
 
+  if (!node.attributes.showMarkers) {
+    node.attributes.showMarkers = false;
+    node.attributeDefaults.showMarkers = false;
+  }
+
   node.isResizable = true;
 
   let gainNode: GainNode;
