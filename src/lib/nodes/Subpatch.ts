@@ -165,53 +165,84 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     }
   }
 
+  // Cache for parameter nodes
+  private paramNodesCache: {
+    params: ObjectNode[];
+    tagParams: ObjectNode[];
+    attruis: ObjectNode[];
+  } | null = null;
+
+  private buildParamNodesCache() {
+    const nodes = this.getAllNodes();
+    this.paramNodesCache = {
+      params: nodes.filter((x) => x.name === "param" || x.name === "uniform"),
+      tagParams: nodes.filter(
+        (x) => (x.name === "param" || x.name === "uniform") && x.attributes.tag,
+      ),
+      attruis: nodes.filter((x) => x.name === "attrui"),
+    };
+  }
+
   /**
    * This is called when a parameter-setting message is received
    * @param message
    * @returns
    */
   processMessageForParam(message: Message) {
-    if (typeof message === "string") {
-      const tokens = message.split(" ").filter((x) => x.length > 0);
-      const paramName = tokens[0];
-      const paramValue: number = Number.parseFloat(tokens[1]);
-      if (Number.isNaN(paramValue)) {
-        return false;
-      }
+    if (typeof message !== "string") {
+      return false;
+    }
 
-      const time: number | undefined =
-        tokens[2] !== undefined ? Number.parseFloat(tokens[2]) : undefined;
+    const tokens = message.split(" ").filter((x) => x.length > 0);
+    const paramName = tokens[0];
+    const paramValue: number = Number.parseFloat(tokens[1]);
+    if (Number.isNaN(paramValue)) {
+      return false;
+    }
 
-      // look for parameters in this patch
-      const nodes = this.getAllNodes().filter((x) => x.name === "param" || x.name === "uniform");
-      const params = nodes.filter((x) => x.arguments[0] === paramName);
-      for (const x of params) {
-        x.receive(x.inlets[0], time !== undefined ? [paramValue, time] : paramValue);
+    const time: number | undefined =
+      tokens[2] !== undefined ? Number.parseFloat(tokens[2]) : undefined;
+
+    // Build cache if needed
+    if (!this.paramNodesCache) {
+      this.buildParamNodesCache();
+    }
+
+    // Use cached nodes
+    const { params, tagParams, attruis } = this.paramNodesCache!;
+    let found = false;
+
+    // Handle params with matching name
+    for (const param of params) {
+      if (param.arguments[0] === paramName) {
+        param.receive(param.inlets[0], time !== undefined ? [paramValue, time] : paramValue);
+        found = true;
       }
-      const tagParams = nodes.filter((x) => x.attributes.tag === paramName);
-      for (const param of tagParams) {
+    }
+
+    // Handle params with matching tag
+    for (const param of tagParams) {
+      if (param.attributes.tag === paramName) {
         const max = param.attributes.max as number;
         const min = param.attributes.min as number;
         const val = min + (max - min) * paramValue;
         param.receive(param.inlets[0], time !== undefined ? [val, time] : val);
-      }
-
-      const attriUIs = this.getAllNodes().filter(
-        (x) => x.name === "attrui" && x.arguments[0] === paramName,
-      );
-      for (const attriUI of attriUIs) {
-        const text = attriUI.text.split(" ");
-        text[2] = paramValue.toString();
-        attriUI.text = text.join(" ");
-        attriUI.arguments[1] = paramValue;
-
-        (attriUI.custom as MutableValue).value = paramValue;
-      }
-      if (params.length > 0) {
-        return true;
+        found = true;
       }
     }
-    return false;
+
+    // Handle attruis with matching name
+    for (const attrui of attruis) {
+      if (attrui.arguments[0] === paramName) {
+        const text = attrui.text.split(" ");
+        text[2] = paramValue.toString();
+        attrui.text = text.join(" ");
+        attrui.arguments[1] = paramValue;
+        (attrui.custom as MutableValue).value = paramValue;
+      }
+    }
+
+    return found;
   }
 
   clearState() {

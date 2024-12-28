@@ -6,7 +6,7 @@ import { BaseNode } from "./BaseNode";
 import { type OperatorContext, OperatorContextType, getOperatorContext } from "./context";
 import { createGLFunction } from "./definitions/create";
 import type { CompoundOperator, Operator, Statement } from "./definitions/zen/types";
-import type { AttributeValue, MessageNode } from "./types";
+import type { AttributeValue, IOConnection, MessageNode } from "./types";
 import type { Node, SerializableCustom, SerializedPatch, Size } from "./types";
 
 import {
@@ -490,32 +490,67 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     return otherArguments;
   }
 
+  // Cache input nodes and their outlet connections for each inlet
+  inputNodeCache: {
+    [inletId: string]: {
+      inputNode: ObjectNode;
+      outlet: IOlet;
+      connections: IOConnection[];
+    } | null;
+  } = {};
+
+  inletIndexCache: { [key: string]: number } = {};
+
+  // Cache inlet indices to avoid indexOf calls
+
   pipeSubPatch(inlet: IOlet, _message: Message, fromNode?: Node) {
-    let message = _message;
-    const subpatch = this.subpatch;
-    if (!subpatch) {
+    if (!this.subpatch || _message === undefined) {
       return;
     }
-    const inputNodes = subpatch.objectNodes.filter((x) => x.name === "in");
-    const inputNumber = this.inlets.indexOf(inlet) + 1;
-    if (message !== undefined) {
-      const inputNode = inputNodes.find((x) => x.arguments[0] === inputNumber);
-      if (inputNode?.outlets[0]) {
-        const ogType = (message as Statement).type;
-        if (inputNode.attributes.min !== undefined) {
-          message = ["max" as Operator, inputNode.attributes.min as number, message as Statement];
-          (message as Statement).type = ogType;
-        }
-        if (inputNode.attributes.max !== undefined) {
-          message = ["min" as Operator, inputNode.attributes.max as number, message as Statement];
-          (message as Statement).type = ogType;
-        }
-        const outlet = inputNode.outlets[0];
-        for (const connection of outlet.connections) {
-          const { destination, destinationInlet } = connection;
-          destination.receive(destinationInlet, message, fromNode);
-        }
+
+    // Use cached inlet index or compute and cache it
+    const inletIndex =
+      this.inletIndexCache[inlet.id] ||
+      (this.inletIndexCache[inlet.id] = this.inlets.indexOf(inlet));
+    const inputNumber = inletIndex + 1;
+
+    // Use cached input node info or find and cache it
+    let cached = this.inputNodeCache[inlet.id];
+    if (!cached) {
+      const inputNode = this.subpatch.objectNodes.find(
+        (x) => x.name === "in" && x.arguments[0] === inputNumber,
+      );
+      if (!inputNode?.outlets[0]) {
+        this.inputNodeCache[inlet.id] = null;
+        return;
       }
+      cached = {
+        inputNode,
+        outlet: inputNode.outlets[0],
+        connections: inputNode.outlets[0].connections,
+      };
+      this.inputNodeCache[inlet.id] = cached;
+    } else if (cached === null) {
+      return;
+    }
+
+    let message = _message;
+    const { inputNode, connections } = cached;
+
+    // Apply min/max constraints if needed
+    const ogType = (message as Statement).type;
+    if (inputNode.attributes.min !== undefined) {
+      message = ["max" as Operator, inputNode.attributes.min as number, message as Statement];
+      (message as Statement).type = ogType;
+    }
+    if (inputNode.attributes.max !== undefined) {
+      message = ["min" as Operator, inputNode.attributes.max as number, message as Statement];
+      (message as Statement).type = ogType;
+    }
+
+    // Send message through all cached connections
+    for (const { destination, destinationInlet } of connections) {
+      destination.receive(destinationInlet, message, fromNode);
     }
   }
 
@@ -808,8 +843,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
   }
 
-  inletIndexCache: { [key: string]: number } = {};
-
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
     if (!this.fn) {
       return;
@@ -828,6 +861,17 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
     if (typeof message === "string" && message.startsWith("set-size")) {
       this.handleSizeMessage(message);
+      return;
+    }
+
+    if (this.subpatch) {
+      if (
+        this.processMessageForAttributes(message) &&
+        (!inlet.node || inlet.node.attributes.type !== "core")
+      ) {
+        return;
+      }
+      this.pipeSubPatch(inlet, message, fromNode);
       return;
     }
 
