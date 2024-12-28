@@ -8,6 +8,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 const SMOOTHING_FACTOR = 0.8; // Adjust this value to change the meter's responsiveness
 const SCALE_FACTOR = 2.5;
+const PEAK_HOLD_TIME = 1000; // Time in ms to hold peak before falling
+const PEAK_FALL_RATE = 0.05; // How fast the peak markers fall
 
 export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   return (
@@ -36,6 +38,10 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   const normalizedLevel = useRef(0);
   const leftLevel = useRef(0);
   const rightLevel = useRef(0);
+  const leftPeak = useRef(0);
+  const rightPeak = useRef(0);
+  const leftPeakTime = useRef(0);
+  const rightPeakTime = useRef(0);
 
   const getRMS = (data: Float32Array) => {
     let sum = 0;
@@ -46,18 +52,33 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   };
 
   const normalizeLoudness = (rms: number) => {
-    // Convert RMS to decibels
     const db = 20 * Math.log10(rms);
-    // Normalize decibels to a 0-1 range (assuming -60dB as the minimum audible level)
     const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
-    // Apply non-linear scaling for better visual representation
-    return Math.pow(normalized, SCALE_FACTOR);
+    return normalized ** SCALE_FACTOR;
   };
+
+  const updatePeaks = useCallback((leftLevel: number, rightLevel: number, now: number) => {
+    // Update left peak
+    if (leftLevel > leftPeak.current) {
+      leftPeak.current = leftLevel;
+      leftPeakTime.current = now;
+    } else if (now - leftPeakTime.current > PEAK_HOLD_TIME) {
+      leftPeak.current = Math.max(leftLevel, leftPeak.current - PEAK_FALL_RATE);
+    }
+
+    // Update right peak
+    if (rightLevel > rightPeak.current) {
+      rightPeak.current = rightLevel;
+      rightPeakTime.current = now;
+    } else if (now - rightPeakTime.current > PEAK_HOLD_TIME) {
+      rightPeak.current = Math.max(rightLevel, rightPeak.current - PEAK_FALL_RATE);
+    }
+  }, []);
 
   const onTick = useCallback(() => {
     if (objectNode.auxAudioNodes) {
-      let a = objectNode.auxAudioNodes[0] as AnalyserNode;
-      let b = objectNode.auxAudioNodes[1] as AnalyserNode;
+      const a = objectNode.auxAudioNodes[0] as AnalyserNode;
+      const b = objectNode.auxAudioNodes[1] as AnalyserNode;
       a.getFloatTimeDomainData(dataLeft.current);
       b.getFloatTimeDomainData(dataRight.current);
 
@@ -75,6 +96,9 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       rightLevel.current =
         rightLevel.current * SMOOTHING_FACTOR + normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
 
+      console.log("normalizedLoudnessA", normalizedLoudnessA);
+      updatePeaks(leftLevel.current, rightLevel.current, Date.now());
+
       if (refLeft.current) {
         refLeft.current.style.height = `${leftLevel.current * 200}%`;
         refLeft.current.style.backgroundColor = getMeterColor(normalizedLevel.current * 1.2);
@@ -84,7 +108,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
         refRight.current.style.backgroundColor = getMeterColor(normalizedLevel.current * 1.2);
       }
     }
-  }, [objectNode.auxAudioNodes]);
+  }, [objectNode.auxAudioNodes, updatePeaks]);
 
   useInterval(onTick, 60);
 
@@ -105,14 +129,15 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       if (!lockedMode || !containerRef.current || !down.current) {
         return;
       }
-      let rect = containerRef.current.getBoundingClientRect();
-      let y = e.clientY - rect.top;
-      let h = containerRef.current.offsetHeight;
-      let yy = h - y + 0;
-      let yyy = Math.max(0, Math.min(1, yy / h));
+      const rect = containerRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const h = containerRef.current.offsetHeight;
+      const yy = h - y + 0;
+      const yyy = Math.max(0, Math.min(1, yy / h));
+      console.log("yyy", yyy);
       setValue(yyy);
 
-      if (objectNode.fn) {
+      if (objectNode.fn && !Number.isNaN(yyy)) {
         objectNode.fn(yyy);
       }
     },
@@ -129,28 +154,62 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     };
   }, [onMouseMove, onMouseUp]);
 
-  let size = objectNode.size || { width: 20, height: 200 };
-  let { width, height } = size;
+  const size = objectNode.size || { width: 20, height: 200 };
+  const { width, height } = size;
+
+  // Generate decibel markers
+  const dbMarkers = [-60, -50, -40, -30, -20, -10, -3, 0];
 
   return (
     <div
       onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
-      style={{ width, height }}
+      style={{ width: width, height }}
       className="flex flex-col relative"
     >
-      <div onMouseDown={onMouseDown} ref={containerRef} className="w-5 h-full bg-zinc-950 relative">
+      <div className="flex w-full h-full">
         <div
-          style={{ bottom: `${value * 100}%` }}
-          className="translate-y-3 absolute w-10 h-10 -right-4 flex  z-10 "
+          onMouseDown={onMouseDown}
+          ref={containerRef}
+          className="w-5 h-full bg-zinc-950 relative"
         >
-          <TriangleLeftIcon
-            color={isDown ? "lime" : "white"}
-            className=" w-6 h-6 mt-auto mr-1 ml-auto"
-          />
+          <div
+            style={{ bottom: `${value * 100}%` }}
+            className="translate-y-3 absolute w-10 h-10 -right-4 flex z-10"
+          >
+            <TriangleLeftIcon
+              color={isDown ? "lime" : "white"}
+              className="w-6 h-6 mt-auto mr-1 ml-auto"
+            />
+          </div>
+          <div className="absolute top-0 right-0 w-5 h-full overflow-hidden">
+            {/* Peak markers */}
+            <div
+              style={{ bottom: `${leftPeak.current * 200}%` }}
+              className="absolute left-0 w-2 h-0.5 bg-red-500 z-20"
+            />
+            <div
+              style={{ bottom: `${rightPeak.current * 200}%` }}
+              className="absolute right-0 w-2 h-0.5 bg-red-500 z-20"
+            />
+            <div ref={refLeft} className="absolute bottom-0 left-0 w-2" />
+            <div ref={refRight} className="absolute bottom-0 right-0 w-2" />
+          </div>
         </div>
-        <div className="absolute top-0 right-0 w-5 h-full overflow-hidden">
-          <div ref={refLeft} className="absolute bottom-0 left-0 w-2"></div>
-          <div ref={refRight} className="absolute bottom-0 right-0 w-2"></div>
+        {/* dB scale */}
+        <div className="relative ml-1 w-6 h-full text-[8px] text-zinc-400">
+          {dbMarkers.map((db) => {
+            const normalizedHeight = (db + 60) / 60;
+            return (
+              <div
+                key={db}
+                style={{ bottom: `${normalizedHeight * 100}%` }}
+                className="absolute -translate-y-1/2 flex items-center"
+              >
+                <div className="w-1 h-px bg-zinc-700 mr-1" />
+                <span>{db}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -164,7 +223,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
  * @param dBMax - The maximum decibel value (e.g., 0 dB)
  * @returns The normalized value between 0 and 1
  */
-function normalizeDecibel(dBValue: number, dBMin: number = -100, dBMax: number = 0): number {
+function normalizeDecibel(dBValue: number, dBMin = -100, dBMax = 0) {
   if (dBMax === dBMin) {
     throw new Error("Decibel max and min values cannot be the same");
   }
