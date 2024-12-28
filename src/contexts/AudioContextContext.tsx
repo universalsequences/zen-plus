@@ -28,9 +28,7 @@ export const AudioContextProvider: React.FC<Props> = ({ children }) => {
       return;
     }
     const handleInteraction = async () => {
-      console.log("handle interaction called... state=", audioContext.state);
       if (audioContext.state === "suspended") {
-        console.log("resuming");
         await audioContext.resume();
       }
     };

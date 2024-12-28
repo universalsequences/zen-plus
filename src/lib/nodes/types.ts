@@ -70,6 +70,7 @@ export type Message =
   | Message[]
   | MessageObject
   | MessageObject[]
+  | Patch
   | ObjectNode
   | Coordinate
   | ParameterLock

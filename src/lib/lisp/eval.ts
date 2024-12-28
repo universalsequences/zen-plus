@@ -11,6 +11,7 @@ import type {
   Atom,
   FunctionDefinition,
   Environment,
+  Pattern,
 } from "./types";
 import { getRootPatch } from "../nodes/traverse";
 
@@ -18,6 +19,12 @@ const stringCache: { [x: string]: string } = {};
 
 export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
   function evaluate(expressions: Expression[], env: Environment): Message {
+    for (const key in env) {
+      if (key.endsWith("_patterns")) {
+        console.log("deleting pattern", key);
+        delete env[key];
+      }
+    }
     let result: Message = null;
     for (const expr of expressions) {
       result = evaluateExpression(expr, env);
@@ -68,7 +75,134 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     return _args;
   };
 
+  function isMap(value: Expression): boolean {
+    return (value as ObjectLiteral).type === "object";
+  }
+
+  /*
+  function matchPattern(pattern: Expression[], args: Message[]): boolean {
+    if (pattern.length !== args.length) return false;
+
+    for (let i = 0; i < pattern.length; i++) {
+      const p = pattern[i];
+      const arg = args[i];
+
+      if (isMap(p)) {
+        // Match object pattern like {type "note" pitch p}
+        if (typeof arg !== "object") return false;
+
+        const argObject = arg as Core.MessageObject;
+        const pObject = p as ObjectLiteral;
+
+        // Check each key in pattern exists in arg with matching value
+        for (const [key, value] of Object.entries(pObject.properties)) {
+          if (isSymbol(value)) continue; // Skip binding variables
+          if (argObject[key] !== value) return false;
+        }
+      } else if (isSymbol(p)) {
+        // Simple variable binding, always matches
+        continue;
+      } else {
+        // Literal value match
+        if (p !== arg) return false;
+      }
+    }
+    return true;
+  }
+    */
+
+  function matchPattern(pattern: Expression[], args: Message[]): boolean {
+    if (pattern.length !== args.length) return false;
+
+    for (let i = 0; i < pattern.length; i++) {
+      const p = pattern[i];
+      const arg = args[i];
+
+      if ((p as ObjectLiteral).type === "object") {
+        console.log("matching object pattern", p, arg);
+        if (typeof arg !== "object") {
+          console.log("arg is not an object", arg);
+          return false;
+        }
+        const argObject = arg as Record<string, Message>;
+        const pObject = p as ObjectLiteral;
+
+        for (const [key, value] of Object.entries(pObject.properties)) {
+          if (isSymbol(value)) continue;
+          // Compare actual values from AST nodes
+          const patternValue = typeof value === "number" ? value : trimString(value as string);
+          if (argObject[key] !== patternValue) {
+            return false;
+          }
+        }
+      } else if (isSymbol(p)) {
+        continue;
+      } else {
+        if (p !== arg) return false;
+      }
+    }
+    return true;
+  }
+
+  function bindMatchedValues(pattern: Expression[], args: Message[], env: Environment) {
+    // Bind original args to $1, $2 etc
+    args.forEach((arg, i) => {
+      env[`$${i + 1}`] = arg;
+    });
+
+    // Bind destructured values
+    for (let i = 0; i < pattern.length; i++) {
+      const p = pattern[i];
+      const arg = args[i];
+
+      if (isMap(p)) {
+        // Bind variables from object pattern
+        const pObject = p as ObjectLiteral;
+        const argObject = arg as Core.MessageObject;
+        for (const [key, value] of Object.entries(pObject.properties)) {
+          if (isSymbol(value)) {
+            env[(value as Symbol).value] = argObject[key];
+          }
+        }
+      } else if (isSymbol(p)) {
+        // Simple variable binding
+        env[(p as Symbol).value] = arg;
+      }
+    }
+  }
   const operators = {
+    def: (args: Expression[], env: Environment) => {
+      const funcName = args[0] as Symbol;
+      const params = args[1];
+      const body = args[2];
+
+      const key = `${funcName.value}_patterns`;
+      const patterns = (env[key] || []) as Pattern[];
+      // Add new pattern for this function
+      patterns.push({ params: params as Expression[], body });
+      env[key] = patterns;
+
+      // Create or update function that checks patterns
+      env[`${funcName.value}_fn`] = (callScope: Environment) => {
+        return (...args: Message[]) => {
+          const patterns = env[key] as Pattern[];
+          // Find matching pattern
+          for (const pattern of patterns) {
+            const matched = matchPattern(pattern.params, args);
+            if (matched) {
+              const localEnv = Object.create(null);
+              Object.assign(localEnv, env, callScope);
+              bindMatchedValues(pattern.params, args, localEnv);
+              const result = evaluateExpression(pattern.body, localEnv);
+              pool.releaseObject(localEnv);
+              return result;
+            }
+          }
+          throw new Error(`No matching pattern for ${funcName.value}`);
+        };
+      };
+      return null;
+    },
     defun: (args: Expression[], env: Environment) => {
       if (args.length !== 3) {
         throw new Error("defun requires a name, a list of parameters, and a body");
@@ -767,10 +901,13 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     }
     return atom;
   }
+  const trimString = (x: string) => {
+    return x.trim().slice(1, x.length - 1);
+  };
 
   function defineFunctionInEnv(funcDef: FunctionDefinition, env: Environment): Message {
     const { params, body } = funcDef;
-    env[params[0].value + "_fn"] = (callScope: Environment) => {
+    env[`${params[0].value}_fn`] = (callScope: Environment) => {
       return (...args: Message[]) => {
         const localEnv = Object.create(null);
 

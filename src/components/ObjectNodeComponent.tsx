@@ -203,7 +203,9 @@ const InnerObjectNodeComponent: React.FC<{
           }
           setText(name);
           setAutoCompletes([]);
-          enterText(name, def.context, def.definition.file);
+          if (e.key === "Enter") {
+            enterText(name, def.context, def.definition.file);
+          }
         } else if (e.key === "Enter") {
           enterText(text);
         }

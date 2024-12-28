@@ -16,5 +16,12 @@ export type FunctionDefinition = {
   params: Symbol[];
   body: Expression;
 };
-export type Environment = Record<string, Message | Function>;
+
+export interface Pattern {
+  params: Expression[]; // The pattern to match against
+  body: Expression;
+  predicates?: ((arg: Message) => boolean)[]; // Optional runtime checks
+}
+
+export type Environment = Record<string, Message | Function | Pattern[]>;
 export const isSymbol = (x: Message | Expression) => (x as Symbol).type === "Symbol";

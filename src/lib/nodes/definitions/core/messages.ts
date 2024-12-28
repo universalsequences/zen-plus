@@ -1,4 +1,4 @@
-import type { SubPatch, ObjectNode, Message, Lazy, NodeFunction } from "../../types";
+import type { SubPatch, ObjectNode, Message, Lazy, NodeFunction, Patch } from "../../types";
 import { OperatorContextType } from "@/lib/nodes/context";
 import * as queue from "@/lib/messaging/queue";
 import { doc } from "./doc";
@@ -12,8 +12,17 @@ doc("send", {
 });
 
 export const send = (node: ObjectNode, name: Lazy) => {
+  if (!node.attributes.scope) {
+    node.attributes.scope = "global";
+  }
+  node.attributeOptions.scope = ["global", "subtree"];
+
   return (message: Message) => {
-    queue.publish(name() as string, message);
+    if (node.attributes.scope === "subtree") {
+      queue.publish(name() as string, message, node.patch);
+    } else {
+      queue.publish(name() as string, message);
+    }
     return [];
   };
 };
@@ -30,10 +39,35 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
   let lastName = "";
   node.needsLoad = true;
 
+  const subcache: { [id: string]: boolean } = {};
+
   let lastMessage: Message | null = null;
-  const onMessage = (message: Message) => {
+  const onMessage = (...messages: Message[]) => {
+    const message = messages[0];
+    if (messages[1] && (messages[1] as Patch).objectNodes) {
+      // then we have a patch and need to see if this patch is below this one?
+      const patch = messages[1] as Patch;
+      if (subcache[patch.id] !== undefined) {
+        if (!subcache[patch.id]) {
+          return;
+        }
+      } else {
+        let p = node.patch;
+        let found = false;
+        while (p) {
+          if (p === patch) {
+            found = true;
+            break;
+          }
+          p = (p as SubPatch).parentPatch;
+        }
+        subcache[patch.id] = found;
+        if (!found) {
+          return;
+        }
+      }
+    }
     if (lastName !== name()) {
-      console.log("unsubscrivbing", lastName, name());
       queue.unsubscribe(lastName, onMessage);
       return;
     }
