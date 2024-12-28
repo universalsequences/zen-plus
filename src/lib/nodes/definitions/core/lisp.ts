@@ -113,8 +113,8 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 
         pool.borrow(ret);
         let b = new Date().getTime();
-        if ((node.attributes["font-size"] as number) < 11) {
-          console.log("lisp took %s ms", b - a);
+        if (b - a > 2) {
+          //console.log("lisp took %s ms", b - a, node.script);
         }
         return out as Message[];
       } catch (e) {

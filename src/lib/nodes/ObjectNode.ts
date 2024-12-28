@@ -808,9 +808,22 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
   }
 
+  inletIndexCache: { [key: string]: number } = {};
+
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
     if (!this.fn) {
       return;
+    }
+
+    if (this.definition && !this.definition.isHot) {
+      const indexOf = this.inletIndexCache[inlet.id] || this.inlets.indexOf(inlet);
+      this.inletIndexCache[inlet.id] = indexOf;
+      if (indexOf > 0) {
+        super.receive(inlet, message, fromNode);
+        const argumentNumber = indexOf - 1;
+        this.arguments[argumentNumber] = message;
+        return;
+      }
     }
 
     if (typeof message === "string" && message.startsWith("set-size")) {

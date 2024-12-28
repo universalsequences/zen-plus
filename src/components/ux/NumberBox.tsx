@@ -48,30 +48,33 @@ const NumberBox: React.FC<{
         return;
       }
 
-      const diff = mouseRef.current - e.pageY;
-      let factor = rounding.current ? 10 : 100;
-      let newValue = initValue.current + diff / factor;
-      const pageHeight = document.body.clientHeight;
-      const mouseDelta = e.pageY - mouseRef.current;
-      const valueRange = max - min;
+      const mouseY = e.pageY;
+      const windowHeight = window.innerHeight;
+      const mouseDelta = mouseY - mouseRef.current;
 
-      factor = pageHeight - 15 - mouseRef.current;
+      // Calculate distances to screen edges from initial mouse position
+      const distanceToTop = mouseRef.current;
+      const distanceToBottom = windowHeight - mouseRef.current;
 
-      let _min = min;
-      let _max = max;
-      if (mouseDelta < 0) {
-        factor = mouseRef.current * 1;
-        _min = initValue.current;
+      let newValue;
+      if (mouseDelta > 0) {
+        // Moving down - map from initValue to min
+        const percentageToBottom = Math.min(1, mouseDelta / distanceToBottom);
+        newValue = initValue.current - (initValue.current - min) * percentageToBottom;
       } else {
-        _max = initValue.current;
+        // Moving up - map from initValue to max
+        const percentageToTop = Math.min(1, -mouseDelta / distanceToTop);
+        newValue = initValue.current + (max - initValue.current) * percentageToTop;
       }
-      let valueChange = (mouseDelta / factor) * (_max - _min);
-      newValue = initValue.current - valueChange;
 
+      // Apply rounding if enabled
       if (rounding.current) {
-        newValue = Math.round(newValue);
+        const distanceFromOriginal = Math.abs(mouseDelta);
+        const roundingFactor = distanceFromOriginal < 50 ? 100 : 1;
+        newValue = Math.round(newValue * roundingFactor) / roundingFactor;
       }
 
+      // Clamp to min/max
       newValue = Math.max(min, Math.min(newValue, max));
       setValue(newValue, e);
     },
