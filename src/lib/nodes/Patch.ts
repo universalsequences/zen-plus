@@ -25,6 +25,7 @@ import { mergeAndExportToWav } from "@/utils/wav";
 import { onCompile, sleep } from "./compilation/onCompile";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
 import type { PatchDoc } from "../org/types";
+import Subpatch from "./Subpatch";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -527,6 +528,12 @@ export class PatchImpl implements Patch {
     }
 
     return _connections;
+  }
+
+  clearCache() {
+    if ((this as unknown as Subpatch).paramNodesCache) {
+      (this as unknown as Subpatch).paramNodesCache = null;
+    }
   }
 
   async initialLoadCompile(base = true) {

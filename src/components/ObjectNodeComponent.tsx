@@ -168,7 +168,10 @@ const InnerObjectNodeComponent: React.FC<{
 
     if (file) {
       const serializedSubPatch = await fetchSubPatchForDoc(file.id);
-      success = serializedSubPatch ? await loadSubPatch(serializedSubPatch, file.name) : false;
+      if (serializedSubPatch) {
+        await loadSubPatch(serializedSubPatch, file.name);
+      }
+      success = true;
     } else {
       success = objectNode.parse(text, context.type);
     }
@@ -225,7 +228,7 @@ const InnerObjectNodeComponent: React.FC<{
     const copied = new ObjectNodeImpl(objectNode.patch);
 
     if (objectNode.name === "zen") {
-      const typeMap = {
+      const typeMap: { [x: number]: string } = {
         [OperatorContextType.ZEN]: "zen",
         [OperatorContextType.GL]: "gl",
         [OperatorContextType.CORE]: "core",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useRef } from "react";
 import { useLocked } from "@/contexts/LockedContext";
 import { useMessage } from "@/contexts/MessageContext";
 import { useSelection } from "@/contexts/SelectionContext";
@@ -7,38 +7,42 @@ import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode } from "@/lib/nodes/types";
 
 const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-  let ref = useRef<HTMLDivElement>(null);
-  let { value: message } = useValue();
-  let { attributesIndex } = useSelection();
-  let { lockedMode } = useLocked();
-  let current = useRef(0);
-  let [animate, setAnimate] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { value: message } = useValue();
+  const { attributesIndex } = useSelection();
+  const { lockedMode } = useLocked();
+  const current = useRef(0);
+  const animateRef = useRef<HTMLDivElement>(null);
 
-  let { label, fillColor, backgroundColor } = objectNode.attributes;
+  const { label, fillColor, backgroundColor } = objectNode.attributes;
 
   useEffect(() => {
     if (message !== undefined) {
-      setAnimate(false);
+      if (ref.current) {
+        ref.current.classList.remove("animate-color");
+      }
 
       setTimeout(() => {
         // Force a reflow
         const element = ref.current;
-        element && (element as any).offsetWidth; // This line triggers a reflow
+        element?.offsetWidth; // This line triggers a reflow
 
-        setAnimate(true);
+        if (ref.current) {
+          ref.current.classList.add("animate-color");
+        }
         current.current = message as number;
 
         setTimeout(() => {
-          if (current.current === message) {
-            setAnimate(false);
+          if (current.current === message && ref.current) {
+            ref.current.classList.remove("animate-color");
           }
         }, 1000);
       }, 3);
     }
-  }, [message, setAnimate]);
+  }, [message]);
 
   const { sizeIndex } = usePosition();
-  let { width, height } = objectNode.size || { width: 50, height: 50 };
+  const { width, height } = objectNode.size || { width: 50, height: 50 };
 
   return (
     <div
@@ -57,11 +61,7 @@ const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       <div
         ref={ref}
         style={{ backgroundColor: fillColor as string }}
-        className={
-          (animate ? "animate-color " : "") +
-          (lockedMode ? " cursor-pointer " : "") +
-          " m-1 border border-1 rounded-full flex-1 flex"
-        }
+        className={`m-1 border border-1 rounded-full flex-1 flex${lockedMode ? " cursor-pointer" : ""}`}
       >
         <div className="m-auto text-white">{label}</div>
       </div>

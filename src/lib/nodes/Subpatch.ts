@@ -166,7 +166,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   // Cache for parameter nodes
-  private paramNodesCache: {
+  paramNodesCache: {
     params: ObjectNode[];
     tagParams: ObjectNode[];
     attruis: ObjectNode[];

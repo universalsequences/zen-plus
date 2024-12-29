@@ -120,7 +120,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     }
   }, [objectNode.auxAudioNodes, updatePeaks]);
 
-  useInterval(onTick, 60);
+  useInterval(onTick, 80);
 
   const [isDown, setIsDown] = useState(false);
   const down = useRef(false);

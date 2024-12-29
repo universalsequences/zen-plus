@@ -251,6 +251,7 @@ export enum PatchType {
 }
 
 export type Patch = Identifiable & {
+  clearCache: () => void;
   statementToExport?: Statement;
   zenGraph?: ZenGraph;
   justExpanded?: boolean;

@@ -69,6 +69,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 
   return (msg: Message) => {
     if (msg === "clear") {
+      pool.releaseUsed();
       lastEnv = getEnvFromMessages();
       for (let key in env) {
         delete env[key];

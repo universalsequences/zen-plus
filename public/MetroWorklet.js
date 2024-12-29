@@ -28,7 +28,7 @@ class MetroWorklet extends AudioWorkletProcessor {
   }
 
   get divisor() {
-    return (0.5 * 7.5 * 44100) / this.bpm;
+    return (2.0 * (0.5 * 7.5 * 44100)) / this.bpm;
   }
 
   get lookahead() {

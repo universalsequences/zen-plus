@@ -235,7 +235,7 @@ const PatchInner: React.FC<{
                 onMouseDown={(e: any) => e.stopPropagation()}
               >
                 <ContextMenu.Item
-                  onClick={createObjectNode}
+                  onClick={() => createObjectNode()}
                   className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
                 >
                   New Object

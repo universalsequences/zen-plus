@@ -15,7 +15,6 @@ export class ListPool {
 
   createObject(): Record<string, unknown> {
     if (this.objectPool.length > 500) {
-      console.log("Creating new object", this);
     }
     return {};
   }
@@ -60,7 +59,6 @@ export class ListPool {
     this.used.length = 0;
 
     if (this.usedObjects.length > 50) {
-      console.log("releasing objects", this.usedObjects.length, this);
     }
     for (const u of this.usedObjects) {
       this.releaseObject(u);
