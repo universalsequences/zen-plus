@@ -3,25 +3,42 @@ export type Message = number | string | boolean | null | object | Message[];
 
 export type Symbol = { type: "Symbol"; value: string };
 export type Atom = number | boolean | null | string | Symbol;
+export interface CodeLocation {
+  input: string;
+  start: number;
+  end: number;
+}
 export type Expression = Atom | List | ObjectLiteral | FunctionDefinition;
-export type List = Expression[];
+export type LocatedExpression = {
+  expression: Expression;
+  location: CodeLocation;
+};
+export type List = LocatedExpression[];
 export type ObjectLiteral = {
   type: "object";
-  spread: Expression | null;
-  properties: { [key: string]: Expression };
+  spread: LocatedExpression | null;
+  properties: { [key: string]: LocatedExpression };
 };
-export type AST = Expression[];
+export type AST = LocatedExpression[];
 export type FunctionDefinition = {
   type: "function";
-  params: Symbol[];
-  body: Expression;
+  params: LocatedExpression[];
+  body: LocatedExpression;
 };
 
 export interface Pattern {
-  params: Expression[]; // The pattern to match against
-  body: Expression;
+  params: LocatedExpression[]; // The pattern to match against
+  body: LocatedExpression;
   predicates?: ((arg: Message) => boolean)[]; // Optional runtime checks
 }
 
 export type Environment = Record<string, Message | Function | Pattern[]>;
-export const isSymbol = (x: Message | Expression) => (x as Symbol).type === "Symbol";
+export const isSymbol = (x: Message | Expression | LocatedExpression) => {
+  console.log("isSymbol", x);
+  let y = x;
+  if (typeof x === "object" && (x as LocatedExpression).expression) {
+    y = (x as LocatedExpression).expression;
+  }
+  console.log("locate isSymbol", y);
+  return (y as Symbol).type === "Symbol";
+};

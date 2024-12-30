@@ -35,69 +35,69 @@ const MatrixInnerCell: React.FC<{
   let { value: counter } = useValue();
   let ref2 = useRef<HTMLDivElement | null>(null);
 
+  // Keep the main effect that updates value, but optimize its dependencies
   useEffect(() => {
-    if (objectNode.buffer && valueRef.current !== objectNode.buffer[idx]) {
+    if (objectNode.buffer) {
       let _value =
         objectNode.attributes.type === "object" && objectNode.buffer[idx]
-          ? ((objectNode.buffer as MessageObject[])[idx][
-              selectedField
-            ] as number)
+          ? ((objectNode.buffer as MessageObject[])[idx][selectedField] as number)
           : (objectNode.buffer[idx] as number);
-      setValue(_value);
-      valueRef.current = _value;
+
+      if (valueRef.current !== _value) {
+        setValue(_value);
+        valueRef.current = _value;
+      }
     }
   }, [
     selectedField,
-    setValue,
-    (objectNode.buffer as Float32Array | Uint8Array | MessageObject[])[idx],
+    objectNode.buffer,
+    idx,
+    // Include counter to ensure updates on value changes
+    counter,
   ]);
 
+  // Batch DOM updates for labels
   useEffect(() => {
-    if (showValue && ref2.current) {
-      let labels = objectNode.attributes.options;
-      if (labels) {
-        if (showValue) {
-          let array = Array.isArray(labels)
-            ? labels
-            : typeof labels === "number"
-              ? [labels]
-              : (labels as string).split(",");
-          let label = array[value % array.length];
-          ref2.current.innerText = label as string;
-        }
-      } else {
-        ref2.current.innerText = `${showValue ? (max > 1 ? Math.round(value) : Math.round(100 * value) / 100) : ""} ${showValue ? unit : ""}`;
-      }
-    }
-  }, [showValue, max, value]);
+    if (!showValue || !ref2.current) return;
 
+    const labels = objectNode.attributes.options;
+    if (labels) {
+      const array = Array.isArray(labels)
+        ? labels
+        : typeof labels === "number"
+          ? [labels]
+          : (labels as string).split(",");
+      ref2.current.innerText = array[value % array.length] as string;
+    } else {
+      ref2.current.innerText = `${max > 1 ? Math.round(value) : Math.round(100 * value) / 100} ${unit}`;
+    }
+  }, [showValue, value, max, unit, objectNode.attributes.options]);
+
+  // Batch style updates
   useEffect(() => {
-    let _value = ((value - min) / (max - min)) * 99 + "%";
+    if (!ref1.current) return;
 
-    if (ref1.current) {
-      ref1.current.style.width = !isLine && isFullRadius ? _value : " ";
-      ref1.current.style.height = isLine ? "2px" : _value;
-      ref1.current.style.bottom = isLine ? _value : "0";
-      ref1.current.style.backgroundColor = fillColor;
-    }
-    //setStyle(style);
-  }, [isLine, max, isFullRadius, value, fillColor, min]);
+    const percentage = ((value - min) / (max - min)) * 99 + "%";
+    ref1.current.style.width = !isLine && isFullRadius ? percentage : " ";
+    ref1.current.style.height = isLine ? "2px" : percentage;
+    ref1.current.style.bottom = isLine ? percentage : "0";
+    ref1.current.style.backgroundColor = fillColor;
+  }, [value, isLine, max, isFullRadius, fillColor, min]);
 
-  return React.useMemo(() => {
-    return (
+  return React.useMemo(
+    () => (
       <>
-        <div ref={ref1}></div>
+        <div ref={ref1} />
         <div className="table absolute h-full w-full flex top-0 left-0 active:opacity-100 opacity-0 hover:opacity-100">
           <div
             ref={ref2}
-            className="table absolute top-0 left-0 right-0 bottom-0 m-auto text-white "
-          >
-            {/*showValue ? text : ''*/}
-          </div>
+            className="table absolute top-0 left-0 right-0 bottom-0 m-auto text-white"
+          />
         </div>
       </>
-    );
-  }, []);
+    ),
+    [],
+  );
 };
 
-export default MatrixInnerCell;
+export default React.memo(MatrixInnerCell);

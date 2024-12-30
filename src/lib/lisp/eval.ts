@@ -12,13 +12,24 @@ import type {
   FunctionDefinition,
   Environment,
   Pattern,
+  LocatedExpression,
 } from "./types";
 import { getRootPatch } from "../nodes/traverse";
 
 const stringCache: { [x: string]: string } = {};
 
+export class LispError extends Error {
+  constructor(
+    public expression: LocatedExpression,
+    message: string,
+  ) {
+    super(message);
+    this.expression = expression;
+  }
+}
+
 export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
-  function evaluate(expressions: Expression[], env: Environment): Message {
+  function evaluate(expressions: LocatedExpression[], env: Environment): Message {
     for (const key in env) {
       if (key.endsWith("_patterns")) {
         console.log("deleting pattern", key);
@@ -26,16 +37,22 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       }
     }
     let result: Message = null;
+    console.log("expressions=", expressions);
     for (const expr of expressions) {
       result = evaluateExpression(expr, env);
     }
     return result;
   }
 
-  function evaluateExpression(expr: Expression, env: Environment, index = 1): Message {
+  function evaluateExpression(
+    locatedExpression: LocatedExpression,
+    env: Environment,
+    index = 1,
+  ): Message {
+    const expr = locatedExpression.expression;
     const e = () => {
       if (Array.isArray(expr)) {
-        return evaluateList(expr, env);
+        return evaluateList(locatedExpression, env);
       }
       if (typeof expr === "object" && expr !== null) {
         if ("type" in expr) {
@@ -53,8 +70,8 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     return r;
   }
 
-  const shapeArgs = (args: Expression[], env: Environment): Expression[] => {
-    const _args: Expression[] = new Array(args.length);
+  const shapeArgs = (args: LocatedExpression[], env: Environment): LocatedExpression[] => {
+    const _args: LocatedExpression[] = new Array(args.length);
     let argIndex = 0;
 
     for (let i = 0; i < args.length; i++) {
@@ -111,17 +128,15 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
   }
     */
 
-  function matchPattern(pattern: Expression[], args: Message[]): boolean {
+  function matchPattern(pattern: LocatedExpression[], args: Message[]): boolean {
     if (pattern.length !== args.length) return false;
 
     for (let i = 0; i < pattern.length; i++) {
-      const p = pattern[i];
+      const p = pattern[i].expression;
       const arg = args[i];
 
       if ((p as ObjectLiteral).type === "object") {
-        console.log("matching object pattern", p, arg);
         if (typeof arg !== "object") {
-          console.log("arg is not an object", arg);
           return false;
         }
         const argObject = arg as Record<string, Message>;
@@ -144,7 +159,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     return true;
   }
 
-  function bindMatchedValues(pattern: Expression[], args: Message[], env: Environment) {
+  function bindMatchedValues(pattern: LocatedExpression[], args: Message[], env: Environment) {
     // Bind original args to $1, $2 etc
     args.forEach((arg, i) => {
       env[`$${i + 1}`] = arg;
@@ -152,7 +167,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
 
     // Bind destructured values
     for (let i = 0; i < pattern.length; i++) {
-      const p = pattern[i];
+      const p = pattern[i].expression;
       const arg = args[i];
 
       if (isMap(p)) {
@@ -171,10 +186,10 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     }
   }
   const operators = {
-    def: (args: Expression[], env: Environment) => {
-      const funcName = args[0] as Symbol;
-      const params = args[1];
-      const body = args[2];
+    def: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+      const funcName = args[0].expression as Symbol;
+      const params = args[1].expression;
+      const body = args[2].expression;
 
       const key = `${funcName.value}_patterns`;
       const patterns = (env[key] || []) as Pattern[];
@@ -198,23 +213,23 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
               return result;
             }
           }
-          throw new Error(`No matching pattern for ${funcName.value}`);
+          throw new LispError(expression, `No matching pattern for ${funcName.value}`);
         };
       };
       return null;
     },
-    defun: (args: Expression[], env: Environment) => {
+    defun: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 3) {
         throw new Error("defun requires a name, a list of parameters, and a body");
       }
-      if (!Array.isArray(args[1])) {
+      if (!Array.isArray(args[1].expression)) {
         throw new Error("defun requires list as first arg");
       }
-      const funcName = args[0];
-      const _params = args[1];
+      const funcName = args[0].expression as Symbol;
+      const _params = args[1].expression;
       const defunBody = args[2];
       if (!isSymbol(funcName)) {
-        throw new Error("Function name must be a symbol");
+        throw new LispError(expression, "Function name must be a symbol");
       }
       return defineFunctionInEnv(
         {
@@ -226,13 +241,13 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       );
     },
 
-    lambda: (args: Expression[], env: Environment) => {
-      if (args.length !== 2 || !Array.isArray(args[0])) {
-        throw new Error("Lambda expression must have parameter list and body");
+    lambda: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+      if (args.length !== 2 || !Array.isArray(args[0].expression)) {
+        throw new LispError(expression, "Lambda expression must have parameter list and body");
       }
-      const params = args[0] as Symbol[];
+      const params = args[0].expression as Symbol[];
       if (params.some((x) => !isSymbol(x))) {
-        throw new Error("Lambda expression must have parameter list of symbols");
+        throw new LispError(expression, "Lambda expression must have parameter list of symbols");
       }
       const body = args[1];
       return (callScope: Environment) =>
@@ -245,33 +260,33 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
         };
     },
 
-    let: (args: Expression[], env: Environment) => {
+    let: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length < 2) {
-        throw new Error("Let requires at least two arguments: bindings and body");
+        throw new LispError(expression, "Let requires at least two arguments: bindings and body");
       }
-      const bindings = args[0];
+      const bindings = args[0].expression;
       const letBody = args.slice(1);
 
       if (!Array.isArray(bindings)) {
-        throw new Error("First argument to let must be a list of bindings");
+        throw new LispError(expression, "First argument to let must be a list of bindings");
       }
 
       const localEnv = Object.create(env);
       for (let i = 0; i < bindings.length; i += 1) {
         const b = bindings[i];
         if (!Array.isArray(b)) {
-          throw new Error("let variables must be lists");
+          throw new LispError(expression, "let variables must be lists");
         }
         const [varName, varValue] = b;
         if (!isSymbol(varName)) {
-          throw new Error("Variable name in let binding must be a symbol");
+          throw new LispError(expression, "Variable name in let binding must be a symbol");
         }
         localEnv[(varName as Symbol).value] = evaluateExpression(varValue, localEnv);
       }
 
       let result: Message = null;
       if (!letBody) {
-        throw new Error("must have body for let");
+        throw new LispError(expression, "must have body for let");
       }
       for (const expr of letBody) {
         result = evaluateExpression(expr, localEnv);
@@ -279,73 +294,84 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return result;
     },
 
-    fill: (args: Expression[], env: Environment) => {
+    fill: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("fill requires exactly two arguments: a function and a list");
+        throw new LispError(
+          expression,
+          "fill requires exactly two arguments: a function and a list",
+        );
       }
       const fillSize = evaluateExpression(args[0], env);
       const fillValue = evaluateExpression(args[1], env);
       return new Array(fillSize as number).fill(fillValue);
     },
 
-    map: (args: Expression[], env: Environment) => {
+    map: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("Map requires exactly two arguments: a function and a list");
+        throw new LispError(
+          expression,
+          "Map requires exactly two arguments: a function and a list",
+        );
       }
       const mapFunc = evaluateExpression(args[0], env);
       let mapList = evaluateExpression(args[1], env);
 
       if (typeof mapFunc !== "function") {
-        throw new Error("First argument to map must be a function");
+        throw new LispError(expression, "First argument to map must be a function");
       }
       if (ArrayBuffer.isView(mapList)) {
         mapList = Array.from(mapList as Float32Array);
       }
       if (!Array.isArray(mapList)) {
-        throw new Error("Second argument to map must be a list");
+        throw new LispError(expression, "Second argument to map must be a list");
       }
 
       return mapList.map((item, index) => {
         if (typeof mapFunc === "function") {
           return mapFunc(env)(item, index);
         }
-        throw new Error("Unexpected error: mapFunc is not a function");
+        throw new LispError(expression, "Unexpected error: mapFunc is not a function");
       });
     },
 
-    filter: (args: Expression[], env: Environment) => {
+    filter: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("Map requires exactly two arguments: a function and a list");
+        throw new LispError(
+          expression,
+          "Map requires exactly two arguments: a function and a list",
+        );
       }
       const mapFunc = evaluateExpression(args[0], env);
       let mapList = evaluateExpression(args[1], env);
 
       if (typeof mapFunc !== "function") {
-        throw new Error("First argument to map must be a function");
+        throw new LispError(expression, "First argument to map must be a function");
       }
       if (ArrayBuffer.isView(mapList)) {
         mapList = Array.from(mapList as Float32Array);
       }
       if (!Array.isArray(mapList)) {
-        throw new Error("Second argument to map must be a list");
+        throw new LispError(expression, "Second argument to map must be a list");
       }
 
       return mapList.filter((item, index) => {
         if (typeof mapFunc === "function") {
           return mapFunc(env)(item, index);
         }
-        throw new Error("Unexpected error: mapFunc is not a function");
+        throw new LispError(expression, "Unexpected error: mapFunc is not a function");
       });
     },
 
-    "+": (args: Expression[], env: Environment) => {
+    "+": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return args.reduce(
-        (sum, arg) => (sum as any) + evaluateExpression(arg, env),
+        (sum, arg) => {
+          return (sum as any) + evaluateExpression(arg, env);
+        },
         typeof args[0] === "string" ? "" : 0,
       );
     },
 
-    "-": (args: Expression[], env: Environment) => {
+    "-": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length === 1) {
         return -Number(evaluateExpression(args[0], env));
       }
@@ -354,20 +380,20 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       );
     },
 
-    "*": (args: Expression[], env: Environment) => {
+    "*": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return args.reduce(
         (product, arg) => (product as number) * Number(evaluateExpression(arg, env)),
         1,
       );
     },
 
-    "/": (args: Expression[], env: Environment) => {
+    "/": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return Number(
         (evaluateExpression(args[0], env) as number) / (evaluateExpression(args[1], env) as number),
       );
     },
 
-    dot: (args: Expression[], env: Environment) => {
+    dot: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const a = evaluateExpression(args[0], env) as number[];
       const b = evaluateExpression(args[1], env) as number[];
       let sum = 0;
@@ -378,7 +404,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return sum;
     },
 
-    stride: (args: Expression[], env: Environment) => {
+    stride: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const arr = evaluateExpression(args[0], env) as number[];
       const l = evaluateExpression(args[1], env) as number;
       const off = evaluateExpression(args[2], env) as number;
@@ -390,7 +416,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return result;
     },
 
-    cross: (args: Expression[], env: Environment) => {
+    cross: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const a = evaluateExpression(args[0], env) as number[];
       const b = evaluateExpression(args[1], env) as number[];
       const len = Math.min(a.length, b.length);
@@ -401,7 +427,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return result;
     },
 
-    cross_sub: (args: Expression[], env: Environment) => {
+    cross_sub: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const a = evaluateExpression(args[0], env) as number[];
       const b = evaluateExpression(args[1], env) as number[];
       const len = Math.min(a.length, b.length);
@@ -412,7 +438,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return result;
     },
 
-    cross_add: (args: Expression[], env: Environment) => {
+    cross_add: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const a = evaluateExpression(args[0], env) as number[];
       const b = evaluateExpression(args[1], env) as number[];
       const len = Math.min(a.length, b.length);
@@ -423,78 +449,78 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return result;
     },
 
-    exp2: (args: Expression[], env: Environment) => {
+    exp2: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return 2 ** (evaluateExpression(args[0], env) as number);
     },
 
-    pow: (args: Expression[], env: Environment) => {
+    pow: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return (
         (evaluateExpression(args[0], env) as number) ** (evaluateExpression(args[1], env) as number)
       );
     },
 
-    max: (args: Expression[], env: Environment) => {
+    max: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return Math.max(
         evaluateExpression(args[0], env) as number,
         evaluateExpression(args[1], env) as number,
       );
     },
 
-    "%": (args: Expression[], env: Environment) => {
+    "%": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("Modulo operation requires exactly two arguments");
+        throw new LispError(expression, "Modulo operation requires exactly two arguments");
       }
       return Number(evaluateExpression(args[0], env)) % Number(evaluateExpression(args[1], env));
     },
 
-    read: (args: Expression[], env: Environment) => {
+    read: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("read operation requires exactly two arguments");
+        throw new LispError(expression, "read operation requires exactly two arguments");
       }
       const topic = evaluateExpression(args[0], env);
       const msgs = read(topic as string);
       return msgs;
     },
 
-    floor: (args: Expression[], env: Environment) => {
+    floor: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("floor operation requires exactly one arguments");
+        throw new LispError(expression, "floor operation requires exactly one arguments");
       }
       return Math.floor(Number(evaluateExpression(args[0], env)));
     },
 
-    abs: (args: Expression[], env: Environment) => {
+    abs: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("abs operation requires exactly one arguments");
+        throw new LispError(expression, "abs operation requires exactly one arguments");
       }
       return Math.abs(Number(evaluateExpression(args[0], env)));
     },
 
-    round: (args: Expression[], env: Environment) => {
+    round: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("round operation requires exactly one arguments");
+        throw new LispError(expression, "round operation requires exactly one arguments");
       }
       return Math.round(Number(evaluateExpression(args[0], env)));
     },
 
-    ceil: (args: Expression[], env: Environment) => {
+    ceil: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("floor operation requires exactly one arguments");
+        throw new LispError(expression, "floor operation requires exactly one arguments");
       }
       return Math.ceil(Number(evaluateExpression(args[0], env)));
     },
 
     random: () => Math.random(),
 
-    ">": (args: Expression[], env: Environment) => {
+    ">": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return Number(evaluateExpression(args[0], env)) > Number(evaluateExpression(args[1], env));
     },
 
-    "<": (args: Expression[], env: Environment) => {
+    "<": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return Number(evaluateExpression(args[0], env)) < Number(evaluateExpression(args[1], env));
     },
 
-    ">=": (args: Expression[], env: Environment) => {
+    ">=": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const [a1, b1] = [
         Number(evaluateExpression(args[0], env)),
         Number(evaluateExpression(args[1], env)),
@@ -502,15 +528,15 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return a1 >= b1;
     },
 
-    "<=": (args: Expression[], env: Environment) => {
+    "<=": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return Number(evaluateExpression(args[0], env)) <= Number(evaluateExpression(args[1], env));
     },
 
-    "list?": (args: Expression[], env: Environment) => {
+    "list?": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return Array.isArray(evaluateExpression(args[0], env));
     },
 
-    slice: (args: Expression[], env: Environment) => {
+    slice: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       let array = evaluateExpression(args[0], env);
       if (ArrayBuffer.isView(array)) {
         array = Array.from(array as Float32Array);
@@ -526,19 +552,19 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
         : array.slice(Number(evaluateExpression(args[1], env)));
     },
 
-    "==": (args: Expression[], env: Environment) => {
+    "==": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return evaluateExpression(args[0], env) === evaluateExpression(args[1], env);
     },
 
-    "!=": (args: Expression[], env: Environment) => {
+    "!=": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return evaluateExpression(args[0], env) !== evaluateExpression(args[1], env);
     },
 
-    and: (args: Expression[], env: Environment) => {
+    and: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return args.every((arg) => Boolean(evaluateExpression(arg, env)));
     },
 
-    or: (args: Expression[], env: Environment) => {
+    or: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       let _last: Message | null = null;
       for (const arg of args) {
         const a = evaluateExpression(arg, env);
@@ -550,32 +576,32 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return _last;
     },
 
-    not: (args: Expression[], env: Environment) => {
+    not: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("Not operation requires exactly one argument");
+        throw new LispError(expression, "Not operation requires exactly one argument");
       }
       return !evaluateExpression(args[0], env);
     },
 
-    if: (args: Expression[], env: Environment) => {
+    if: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 3) {
-        throw new Error("If statement requires exactly three arguments");
+        throw new LispError(expression, "If statement requires exactly three arguments");
       }
       const cond = evaluateExpression(args[0], env);
       return cond ? evaluateExpression(args[1], env) : evaluateExpression(args[2], env);
     },
 
-    list: (args: Expression[], env: Environment) => {
+    list: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return args.map((arg) => evaluateExpression(arg, env));
     },
 
-    car: (args: Expression[], env: Environment) => {
+    car: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("First operation requires exactly one argument");
+        throw new LispError(expression, "First operation requires exactly one argument");
       }
       const firstArg = evaluateExpression(args[0], env);
       if (!Array.isArray(firstArg) && !ArrayBuffer.isView(firstArg)) {
-        throw new Error("car operation requires a list argument");
+        throw new LispError(expression, "car operation requires a list argument");
       }
       if (Array.isArray(firstArg)) {
         return firstArg[0] ?? null;
@@ -583,7 +609,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return (firstArg as Float32Array)[0] ?? null;
     },
 
-    s: (args: Expression[], env: Environment) => {
+    s: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       let last: Message | undefined = undefined;
       for (const arg of args) {
         last = evaluateExpression(arg, env);
@@ -591,9 +617,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return last as Message;
     },
 
-    get: (args: Expression[], env: Environment) => {
+    get: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("get operation requires exactly two arguments");
+        throw new LispError(expression, "get operation requires exactly two arguments");
       }
       const a = evaluateExpression(args[0], env);
       const b =
@@ -605,14 +631,14 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return (a as Record<string, Message>)[b as string];
     },
 
-    cdr: (args: Expression[], env: Environment) => {
+    cdr: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("cdr operation requires exactly one argument");
+        throw new LispError(expression, "cdr operation requires exactly one argument");
       }
       let cdrArg = evaluateExpression(args[0], env);
 
       if (!Array.isArray(cdrArg) && !ArrayBuffer.isView(cdrArg)) {
-        throw new Error("cdr operation requires a list argument");
+        throw new LispError(expression, "cdr operation requires a list argument");
       }
       if (((cdrArg as Message[]) || Float32Array).length <= 1) {
         return pool.get();
@@ -632,9 +658,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return cdrResult;
     },
 
-    cons: (args: Expression[], env: Environment) => {
+    cons: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("cons operation requires exactly 2 arguments");
+        throw new LispError(expression, "cons operation requires exactly 2 arguments");
       }
 
       const cons = pool.get();
@@ -652,9 +678,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return cons;
     },
 
-    nil: (args: Expression[], env: Environment) => {
+    nil: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("nul operation requires exactly 1 arguments");
+        throw new LispError(expression, "nul operation requires exactly 1 arguments");
       }
       const _nil = evaluateExpression(args[0], env);
       if (Array.isArray(_nil)) {
@@ -663,16 +689,16 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return _nil === null || Number.isNaN(_nil) || _nil === undefined;
     },
 
-    concat: (args: Expression[], env: Environment) => {
+    concat: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       return args.reduce((result, arg) => {
         const evaluated = evaluateExpression(arg, env);
         return Array.isArray(evaluated) ? result.concat(evaluated) : [...result, evaluated];
       }, [] as Message[]);
     },
 
-    length: (args: Expression[], env: Environment) => {
+    length: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 1) {
-        throw new Error("Length operation requires exactly one argument");
+        throw new LispError(expression, "Length operation requires exactly one argument");
       }
       const lengthArg = evaluateExpression(args[0], env);
       if (
@@ -685,9 +711,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       throw new Error("Length operation requires a string or list argument");
     },
 
-    switch: (args: Expression[], env: Environment) => {
+    switch: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length < 2) {
-        throw new Error("Switch requires at least a condition and one case");
+        throw new LispError(expression, "Switch requires at least a condition and one case");
       }
 
       const condition = evaluateExpression(args[0], env);
@@ -715,20 +741,21 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return defaultCase ? evaluateExpression(defaultCase, env) : null;
     },
 
-    querypatch: (args: Expression[], env: Environment) => {
-      if (args.length !== 1) {
-        throw new Error("querypatch operation requires exactly one argument");
-      }
-      const tagList = evaluateExpression(args[0], env);
-      if (!Array.isArray(tagList)) {
-        throw new Error("querypatch operation requires a list of tags");
-      }
-      return registry.query(tagList as string[]);
-    },
+    querypatch:
+      (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+        if (args.length !== 1) {
+          throw new LispError(expression, "querypatch operation requires exactly one argument");
+        }
+        const tagList = evaluateExpression(args[0], env);
+        if (!Array.isArray(tagList)) {
+          throw new Error("querypatch operation requires a list of tags");
+        }
+        return registry.query(tagList as string[]);
+      },
 
-    send: (args: Expression[], env: Environment) => {
+    send: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("querypatch operation requires exactly one argument");
+        throw new LispError(expression, "querypatch operation requires exactly one argument");
       }
       const messageType = evaluateExpression(args[0], env);
       const message = evaluateExpression(args[1], env);
@@ -736,9 +763,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return message;
     },
 
-    sendpatch: (args: Expression[], env: Environment) => {
+    sendpatch: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("sendpatch operation requires exactly two arguments");
+        throw new LispError(expression, "sendpatch operation requires exactly two arguments");
       }
       const registeredPatch: RegisteredPatch = evaluateExpression(args[0], env) as RegisteredPatch;
 
@@ -749,26 +776,28 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return message;
     },
 
-    "get-state": (args: Expression[], env: Environment) => {
-      if (args.length !== 1) {
-        throw new Error("get-state operation requires exactly one argument");
-      }
-      const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
-      return node.getJSON();
-    },
+    "get-state":
+      (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+        if (args.length !== 1) {
+          throw new LispError(expression, "get-state operation requires exactly one argument");
+        }
+        const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
+        return node.getJSON();
+      },
 
-    "set-state": (args: Expression[], env: Environment) => {
-      if (args.length !== 2) {
-        throw new Error("set-state operation requires exactly two arguments");
-      }
-      const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
-      node.fromJSON(evaluateExpression(args[1], env) as Core.SerializedObjectNode);
-      return node.getJSON();
-    },
+    "set-state":
+      (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+        if (args.length !== 2) {
+          throw new LispError(expression, "set-state operation requires exactly two arguments");
+        }
+        const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
+        node.fromJSON(evaluateExpression(args[1], env) as Core.SerializedObjectNode);
+        return node.getJSON();
+      },
 
-    sendnode: (args: Expression[], env: Environment) => {
+    sendnode: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("sendpatch operation requires exactly two arguments");
+        throw new LispError(expression, "sendpatch operation requires exactly two arguments");
       }
       const node: Core.ObjectNode = evaluateExpression(args[0], env) as Core.ObjectNode;
 
@@ -777,17 +806,21 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return message;
     },
 
-    "by-scripting-name": (args: Expression[], env: Environment) => {
-      if (args.length !== 1) {
-        throw new Error("by-scripting-name operation requires exactly one argument");
-      }
-      const scriptingName = evaluateExpression(args[0], env);
-      const patch = getRootPatch(objectNode.patch);
-      const nodes = patch.scriptingNameToNodes[scriptingName as string];
-      return nodes;
-    },
+    "by-scripting-name":
+      (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+        if (args.length !== 1) {
+          throw new LispError(
+            expression,
+            "by-scripting-name operation requires exactly one argument",
+          );
+        }
+        const scriptingName = evaluateExpression(args[0], env);
+        const patch = getRootPatch(objectNode.patch);
+        const nodes = patch.scriptingNameToNodes[scriptingName as string];
+        return nodes;
+      },
 
-    "null?": (args: Expression[], env: Environment) => {
+    "null?": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const e = evaluateExpression(args[0], env);
       if (Array.isArray(e) && e.length === 0) {
         return true;
@@ -795,26 +828,27 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       return false;
     },
 
-    set: (args: Expression[], env: Environment) => {
+    set: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       if (args.length !== 2) {
-        throw new Error("set operation requires exactly two arguments");
+        throw new LispError(expression, "set operation requires exactly two arguments");
       }
       if (!isSymbol(args[0])) {
         throw new Error("set operation requires string for variable name");
       }
-      const setSymbol = (args[0] as Symbol).value;
+      const setSymbol = (args[0].expression as Symbol).value;
       env[setSymbol] = evaluateExpression(args[1], env);
       return env[setSymbol];
     },
 
-    print: (args: Expression[], env: Environment) => {
+    print: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
       const printResult = args.map((arg) => evaluateExpression(arg, env));
       console.log("lisp print=", printResult);
       return printResult[printResult.length - 1] ?? null;
     },
   };
 
-  function evaluateList(list: Expression[], env: Environment): Message {
+  function evaluateList(expression: LocatedExpression, env: Environment): Message {
+    const list = expression.expression as List;
     if (list.length === 0) return null;
 
     const [_func, ..._args] = list;
@@ -823,10 +857,10 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
 
     // Fast path for common operators
     if (isSymbol(func)) {
-      const symbol = (func as Symbol).value;
+      const symbol = ((func as LocatedExpression).expression as Symbol).value;
       const operator = operators[symbol as keyof typeof operators];
       if (operator) {
-        return operator(shapeArgs(_args, env), env);
+        return operator(expression)(shapeArgs(_args, env), env);
       }
 
       const symbolFn = `${symbol}_fn`;
@@ -838,8 +872,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
         }
       }
 
-      console.log("function missing", func);
-      throw new Error(`Unknown function: ${func}`);
+      throw new LispError(expression, `Unknown function: ${symbol}`);
     }
 
     // Regular path for other functions
@@ -863,9 +896,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       } else {
         throw new Error("Spread value must be an object");
       }
-      for (const key in env[obj.spread as string] as Record<string, Message>) {
+      for (const key in env[obj.spread.expression as string] as Record<string, Message>) {
         _env[key] = evaluateExpression(
-          key,
+          { expression: key, location: obj.spread.location },
           evaluateExpression(obj.spread, _env as Environment) as Record<string, Message>,
         );
       }
@@ -915,10 +948,11 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
 
         for (let i = 1; i < params.length; i++) {
           const index = i - 1;
-          const param = params[i];
+          const param = params[i].expression as Symbol;
+          console.log("Local param", param);
           if (param.value === "...") {
             i++;
-            const restParam = params[i].value;
+            const restParam = (params[i].expression as Symbol).value;
             const rest = args.slice(index);
             localEnv[restParam as string] = rest;
           } else {
@@ -926,11 +960,13 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
           }
         }
 
+        console.log("local env", localEnv);
         const result = evaluateExpression(body, localEnv);
         pool.releaseObject(localEnv);
         return result;
       };
     };
+    console.log("defined function", env, params);
     return null;
   }
 

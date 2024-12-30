@@ -1,6 +1,6 @@
 import type { Lazy, Message, ObjectNode, NodeFunction } from "../../types";
 import { parse } from "@/lib/lisp/parse";
-import { createContext } from "@/lib/lisp/eval";
+import { createContext, LispError } from "@/lib/lisp/eval";
 import { doc } from "./doc";
 import type { AST, Environment } from "@/lib/lisp/types";
 import { ListPool } from "@/lib/lisp/ListPool";
@@ -120,6 +120,9 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
         return out as Message[];
       } catch (e) {
         console.log("error", e, node);
+        if (e instanceof LispError) {
+          console.log((e as LispError).expression);
+        }
         // TODO: show error in UI
       }
     }

@@ -96,20 +96,15 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       }
       let client = {
         x: e.clientX - rect.left,
-        y:
-          e.clientY -
-          rect.top -
-          (show === "row" ? 0 : editing.current.y) * height, // - (editing.current.startY)
+        y: e.clientY - rect.top - (show === "row" ? 0 : editing.current.y) * height, // - (editing.current.startY)
       };
       let DIFF = editing.current.startY - client.y;
       let v =
-        editing.current.value +
-        ((min as number) + (max as number) * DIFF) / editing.current.startY;
+        editing.current.value + ((min as number) + (max as number) * DIFF) / editing.current.startY;
       if (DIFF < 0) {
         v =
           editing.current.value +
-          ((min as number) + (max as number) * DIFF) /
-            (height - editing.current.startY);
+          ((min as number) + (max as number) * DIFF) / (height - editing.current.startY);
       }
       let value = Math.min(max as number, v);
       if (value < (min as number)) {
@@ -152,50 +147,48 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 .split(",")
                 .filter((x) => x !== "")
                 .map((x) => parseInt(x));
+
+    console.log("matrix re-render");
     return (
       <div ref={ref} className="flex flex-col">
-        {(show === "row"
-          ? _rows.slice(rowToShow as number, (rowToShow as number) + 1)
-          : _rows
-        ).map((row, rowIndex) => (
-          <div key={rowIndex + (rowToShow as number)} className="flex">
-            {row.map((_value, index) =>
-              !(
-                index >= (pageStart as number) &&
-                index < (pageStart as number) + (pageSize as number)
-              ) ? (
-                <></>
-              ) : (
-                <MatrixCell
-                  cornerRadius={cornerRadius as string}
-                  fillColor={fillColor as string}
-                  row={rowIndex + (rowToShow as number)}
-                  col={index}
-                  idx={
-                    index +
-                    (rowIndex + (rowToShow as number)) * (columns as number)
-                  }
-                  _idx={index + rowIndex * (columns as number)}
-                  toggle={toggle}
-                  width={size_x}
-                  isDisabled={disabled.includes(index as number)}
-                  selectedField={selectedField as string}
-                  height={size_y}
-                  showValue={showValue as boolean}
-                  lockedMode={lockedMode}
-                  unit={unit as string}
-                  objectNode={objectNode}
-                  ux={ux as string}
-                  type={type as string}
-                  editing={editing}
-                  min={min as number}
-                  max={objectNode.attributes["max"] as number}
-                  key={index}
-                />
-              ),
-            )}
-          </div>
-        ))}
+        {(show === "row" ? _rows.slice(rowToShow as number, (rowToShow as number) + 1) : _rows).map(
+          (row, rowIndex) => (
+            <div key={rowIndex + (rowToShow as number)} className="flex">
+              {row.map((_value, index) =>
+                !(
+                  index >= (pageStart as number) &&
+                  index < (pageStart as number) + (pageSize as number)
+                ) ? (
+                  <></>
+                ) : (
+                  <MatrixCell
+                    cornerRadius={cornerRadius as string}
+                    fillColor={fillColor as string}
+                    row={rowIndex + (rowToShow as number)}
+                    col={index}
+                    idx={index + (rowIndex + (rowToShow as number)) * (columns as number)}
+                    _idx={index + rowIndex * (columns as number)}
+                    toggle={toggle}
+                    width={size_x}
+                    isDisabled={disabled.includes(index as number)}
+                    selectedField={selectedField as string}
+                    height={size_y}
+                    showValue={showValue as boolean}
+                    lockedMode={lockedMode}
+                    unit={unit as string}
+                    objectNode={objectNode}
+                    ux={ux as string}
+                    type={type as string}
+                    editing={editing}
+                    min={min as number}
+                    max={objectNode.attributes["max"] as number}
+                    key={index}
+                  />
+                ),
+              )}
+            </div>
+          ),
+        )}
       </div>
     );
   }, [

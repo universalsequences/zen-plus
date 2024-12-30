@@ -1,11 +1,13 @@
 import type {
   Atom,
   Expression,
+  CodeLocation,
   List,
   ObjectLiteral,
   AST,
   FunctionDefinition,
   Symbol,
+  LocatedExpression,
 } from "./types";
 
 // Update the Atom type to include a new 'Symbol' type
@@ -54,52 +56,67 @@ function tokenize(input: string): string[] {
 
 function parse(input: string): AST {
   const tokens = tokenize(input);
-  const expressions: Expression[] = [];
-  const expr = parseExpression(tokens);
+  const expressions: LocatedExpression[] = [];
+  const expr = parseExpression(tokens, input);
   expressions.push(expr);
   while (tokens.length > 0) {
-    expressions.push(parseExpression(tokens));
+    expressions.push(parseExpression(tokens, input));
   }
   return expressions;
 }
+const locate = (expr: Expression, input: string): LocatedExpression => {
+  return { expression: expr, location: { input, start: 0, end: input.length } };
+};
 
-function parseExpression(tokens: string[]): Expression {
+function parseExpression(tokens: string[], input: string): LocatedExpression {
   const token = tokens.shift();
   if (token === undefined) {
     throw new Error("Unexpected end of input");
   }
   if (token === "(") {
-    return parseList(tokens);
+    return parseList(tokens, input);
   }
   if (token === "{") {
-    return parseObjectLiteral(tokens);
+    return locate(parseObjectLiteral(tokens, input), input);
   }
   if (token === ")" || token === "}") {
     throw new Error("Unexpected closing bracket");
   }
-  return parseAtom(token);
+  return parseAtom(token, input);
 }
 
-function parseList(tokens: string[]): List | FunctionDefinition {
-  const list: Expression[] = [];
+function parseList(tokens: string[], input: string): LocatedExpression {
+  const list: LocatedExpression[] = [];
+  let parsedInput = "";
   while (tokens[0] !== ")") {
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing closing parenthesis");
     }
-    list.push(parseExpression(tokens));
+    //parsedInput += tokens[0];
+    const parsed = parseExpression(tokens, input);
+    console.log("adding sub parse", parsed);
+    parsedInput += `${parsed.location.input} `;
+    list.push(parsed);
   }
   tokens.shift(); // Remove closing parenthesis
-  if (list[0] === "defun" && list.length === 3 && Array.isArray(list[1])) {
+  console.log("parsedInput", parsedInput, list);
+  if (list[0].expression === "defun" && list.length === 3 && Array.isArray(list[1])) {
     return {
-      type: "function",
-      params: list[1] as unknown as Symbol[],
-      body: list[2],
+      expression: {
+        type: "function",
+        params: list[1] as LocatedExpression[],
+        body: list[2],
+      },
+      location: { input: parsedInput, start: 0, end: parsedInput.length },
     };
   }
-  return list;
+  return {
+    expression: list,
+    location: { input: parsedInput, start: 0, end: parsedInput.length },
+  };
 }
 
-function parseObjectLiteral(tokens: string[]): ObjectLiteral {
+function parseObjectLiteral(tokens: string[], input: string): ObjectLiteral {
   const obj: ObjectLiteral = {
     type: "object",
     spread: null,
@@ -111,13 +128,13 @@ function parseObjectLiteral(tokens: string[]): ObjectLiteral {
   }
   if (tokens[0] === "...") {
     tokens.shift(); // Remove spread operator
-    obj.spread = parseExpression(tokens);
+    obj.spread = parseExpression(tokens, input);
   }
   while (tokens[0] !== "}") {
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing closing brace");
     }
-    const key = parseExpression(tokens);
+    const key = parseExpression(tokens, input);
     if (
       typeof key !== "string" &&
       !(typeof key === "object" && (key as Symbol).type === "Symbol")
@@ -127,24 +144,24 @@ function parseObjectLiteral(tokens: string[]): ObjectLiteral {
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing value for key");
     }
-    const value = parseExpression(tokens);
+    const value = parseExpression(tokens, input);
     obj.properties[typeof key === "string" ? key : (key as Symbol).value] = value;
   }
   tokens.shift(); // Remove closing brace
   return obj;
 }
 
-function parseAtom(token: string): Atom {
-  if (token === "true") return true;
-  if (token === "false") return false;
-  if (token === "null") return null;
-  if (/^-?\d+(\.\d+)?$/.test(token)) return Number(token);
+function parseAtom(token: string, input: string): LocatedExpression {
+  if (token === "true") return locate(true, input);
+  if (token === "false") return locate(false, input);
+  if (token === "null") return locate(null, input);
+  if (/^-?\d+(\.\d+)?$/.test(token)) return locate(Number(token), input);
   // Handle string literals
   if (token.startsWith('"') && token.endsWith('"')) {
-    return token; // Keep the quotes
+    return locate(token, token); // Keep the quotes
   }
   // Everything else is a symbol
-  return { type: "Symbol", value: token };
+  return locate({ type: "Symbol", value: token }, token);
 }
 
 // Export the parse function

@@ -1,67 +1,70 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import { useLocked } from "@/contexts/LockedContext";
-import { useMessage } from "@/contexts/MessageContext";
-import { useSelection } from "@/contexts/SelectionContext";
 import { useValue } from "@/contexts/ValueContext";
-import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode } from "@/lib/nodes/types";
 
 const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-  const ref = useRef<HTMLDivElement>(null);
   const { value: message } = useValue();
-  const { attributesIndex } = useSelection();
   const { lockedMode } = useLocked();
-  const current = useRef(0);
-  const animateRef = useRef<HTMLDivElement>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationTimer = useRef<NodeJS.Timeout>();
 
   const { label, fillColor, backgroundColor } = objectNode.attributes;
+  const { width, height } = objectNode.size || { width: 50, height: 50 };
 
-  useEffect(() => {
+  // Memoize the click handler
+  const handleClick = useCallback(() => {
+    if (lockedMode) {
+      objectNode.receive(objectNode.inlets[0], "bang");
+    }
+  }, [lockedMode, objectNode]);
+
+  // Use CSS transitions for smooth animation
+  React.useEffect(() => {
     if (message !== undefined) {
-      if (ref.current) {
-        ref.current.classList.remove("animate-color");
+      // Clear any existing animation timer
+      if (animationTimer.current) {
+        clearTimeout(animationTimer.current);
       }
 
-      setTimeout(() => {
-        // Force a reflow
-        const element = ref.current;
-        element?.offsetWidth; // This line triggers a reflow
+      // Reset animation state
+      setIsAnimating(false);
 
-        if (ref.current) {
-          ref.current.classList.add("animate-color");
-        }
-        current.current = message as number;
-
-        setTimeout(() => {
-          if (current.current === message && ref.current) {
-            ref.current.classList.remove("animate-color");
-          }
+      // Force a reflow to restart animation
+      requestAnimationFrame(() => {
+        setIsAnimating(true);
+        animationTimer.current = setTimeout(() => {
+          setIsAnimating(false);
         }, 1000);
-      }, 3);
+      });
     }
+
+    return () => {
+      if (animationTimer.current) {
+        clearTimeout(animationTimer.current);
+      }
+    };
   }, [message]);
 
-  const { sizeIndex } = usePosition();
-  const { width, height } = objectNode.size || { width: 50, height: 50 };
+  const containerSize = Math.max(width, height);
 
   return (
     <div
-      onClick={() => {
-        if (lockedMode) {
-          objectNode.receive(objectNode.inlets[0], "bang");
-        }
-      }}
+      onClick={handleClick}
       style={{
         backgroundColor: backgroundColor as string,
-        width: Math.max(width, height),
-        height: Math.max(width, height),
+        width: containerSize,
+        height: containerSize,
       }}
       className="flex"
     >
       <div
-        ref={ref}
-        style={{ backgroundColor: fillColor as string }}
-        className={`m-1 border border-1 rounded-full flex-1 flex${lockedMode ? " cursor-pointer" : ""}`}
+        style={{
+          backgroundColor: fillColor as string,
+        }}
+        className={`${isAnimating ? "animate-color" : ""} m-1 border border-1 rounded-full flex-1 flex${
+          lockedMode ? " cursor-pointer" : ""
+        }`}
       >
         <div className="m-auto text-white">{label}</div>
       </div>
@@ -69,4 +72,5 @@ const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   );
 };
 
-export default Button;
+// Prevent unnecessary re-renders
+export default React.memo(Button);
