@@ -6,7 +6,7 @@ import { usePosition } from "@/contexts/PositionContext";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { nightOwl } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useValue } from "@/contexts/ValueContext";
-import { Syntax } from "./Syntax";
+import { Syntax, ErrorSyntax } from "./Syntax";
 
 const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
   objectNode,
@@ -15,6 +15,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
   useSelection();
   const { lockedMode: _lockedMode } = useLocked();
   const lockedMode = fullscreen ? true : _lockedMode;
+  useValue();
   usePosition();
   const [text, setText] = useState(objectNode.script || "");
   const { selectedNodes, setSelectedNodes } = useSelection();
@@ -38,6 +39,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newText = e.target.value;
+      objectNode.lispError = undefined;
       objectNode.script = newText;
       setText(newText);
     },
@@ -76,7 +78,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
   };
 
   const moveCursor = (direction: "left" | "right" | "up" | "down") => {
-    console.log("moveCursor", direction);
     if (!textAreaRef.current) return;
     const value = textAreaRef.current.value;
     const lines = value.split("\n");
@@ -207,7 +208,6 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
       e.preventDefault();
 
       if (e.metaKey) {
-        console.log("sending code");
         setFlash(true);
         setTimeout(() => {
           setFlash(false);
@@ -325,6 +325,11 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
       style={{ width, height }}
       className={`bg-zinc-800 relative flex ${flash ? "flash" : ""} ${commandMode ? "command-mode" : ""}`}
     >
+      {objectNode.lispError && (
+        <div className="text-white bg-red-500 absolute bottom-0 z-30 left-0">
+          {objectNode.lispError.message}
+        </div>
+      )}
       {objectNode.attributes["hide-code"] ? (
         <div className="m-auto text-white">code</div>
       ) : (
@@ -383,25 +388,44 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
             }}
           />
 
-          <pre
-            ref={syntaxRef}
-            className="no-scrollbar"
-            style={{
-              padding: "0px",
-              width,
-              height,
-              ...fontStyles,
-              position: "absolute",
-              pointerEvents: "none",
-              top: 0,
-              left: 0,
-              margin: 0,
-              overflow: "auto",
-              color: "transparent",
-            }}
-          >
-            <Syntax width={width} height={height} text={text} cursor={cursor} style={fontStyles} />
-          </pre>
+          {!flash && (
+            <pre
+              ref={syntaxRef}
+              className="no-scrollbar"
+              style={{
+                padding: "0px",
+                width,
+                height,
+                ...fontStyles,
+                position: "absolute",
+                pointerEvents: "none",
+                top: 0,
+                left: 0,
+                margin: 0,
+                overflow: "auto",
+                color: "transparent",
+              }}
+            >
+              {objectNode.lispError ? (
+                <ErrorSyntax
+                  width={width}
+                  height={height}
+                  text={text}
+                  cursor={cursor}
+                  lispError={objectNode.lispError}
+                  style={fontStyles}
+                />
+              ) : (
+                <Syntax
+                  width={width}
+                  height={height}
+                  text={text}
+                  cursor={cursor}
+                  style={fontStyles}
+                />
+              )}
+            </pre>
+          )}
         </>
       )}
     </div>

@@ -34,11 +34,9 @@ export interface Pattern {
 
 export type Environment = Record<string, Message | Function | Pattern[]>;
 export const isSymbol = (x: Message | Expression | LocatedExpression) => {
-  console.log("isSymbol", x);
   let y = x;
   if (typeof x === "object" && (x as LocatedExpression).expression) {
     y = (x as LocatedExpression).expression;
   }
-  console.log("locate isSymbol", y);
   return (y as Symbol).type === "Symbol";
 };

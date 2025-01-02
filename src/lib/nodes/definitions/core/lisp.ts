@@ -122,6 +122,10 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
         console.log("error", e, node);
         if (e instanceof LispError) {
           console.log((e as LispError).expression);
+          node.lispError = e as LispError;
+          if (node.onNewValue) {
+            node.onNewValue(a);
+          }
         }
         // TODO: show error in UI
       }

@@ -146,7 +146,7 @@
     .bg-zinc-950 {
     }
     .border-zinc-800 {
-        border-color: #ffffff61;
+        border-color: #ffffff21;
     }
 
     .dark-background {
@@ -220,27 +220,15 @@ body {
 
 .light-mode {
     .slot-view.sequencer {
-        background-color: #191c1e9f;
-    }
-    .slot-view.generator {
-        background-color: #2426279f;
+        background-color: #5a5959;;
     }
 
-    .slot-view.effect {
-        background-color: #1616169f;
-    }
 }
 
 .slot-view.sequencer {
     background-color: #191c1e;
 }
-.slot-view.generator {
-    background-color: #242627;
-}
 
-.slot-view.effect {
-    background-color: #161616;
-}
 .custom-view {
     background-color: var(--dark-patch-color);
     .patcher-background {
@@ -847,4 +835,10 @@ div:active {
     }
 .bg-zinc-920 {
     background-color: #161616;
+}
+
+.light-mode {
+    .bg-zinc-920 {
+        background-color: #5a5959;
+    }
 }

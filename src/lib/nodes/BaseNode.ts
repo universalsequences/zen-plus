@@ -105,6 +105,10 @@ export class BaseNode implements Node {
   }
 
   connect(destination: Node, inlet: IOlet, outlet: IOlet, compile = true) {
+    if (((this as unknown as ObjectNode).patch as SubPatch).clearCache) {
+      (this as unknown as ObjectNode).patch.clearCache();
+    }
+
     const connection: IOConnection = {
       source: this,
       destination,
@@ -195,6 +199,9 @@ export class BaseNode implements Node {
   }
 
   disconnect(connection: IOConnection, compile = true, ignoreAudio?: boolean) {
+    if (((this as unknown as ObjectNode).patch as SubPatch).clearCache) {
+      (this as unknown as ObjectNode).patch.clearCache();
+    }
     for (const outlet of this.outlets) {
       outlet.connections = outlet.connections.filter((x) => x !== connection);
     }

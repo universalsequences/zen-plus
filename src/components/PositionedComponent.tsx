@@ -51,10 +51,13 @@ const PositionedComponent: React.FC<{
     sizeIndex,
     setDraggingNode,
     setResizingNode,
+    resizingNode,
     updateSize,
     updateZIndex,
     maxZIndex,
   } = usePosition();
+
+  const isResizing = resizingNode?.node === node;
 
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -412,7 +415,7 @@ const PositionedComponent: React.FC<{
             )}
           </>
         )}
-        {!fullscreen && !isCustomView && position !== "relative" && (
+        {!isResizing && !fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={false}
@@ -421,7 +424,7 @@ const PositionedComponent: React.FC<{
             iolets={node.inlets}
           />
         )}
-        {!fullscreen && !isCustomView && position !== "relative" && (
+        {!isResizing && !fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={true}
@@ -434,6 +437,7 @@ const PositionedComponent: React.FC<{
       </div>
     );
   }, [
+    isResizing,
     node,
     isError,
     size,

@@ -101,7 +101,8 @@ function parse(input: string): AST {
 }
 
 const locate = (expr: Expression, input: string, start: number, end: number): LocatedExpression => {
-  return { expression: expr, location: { input, start, end } };
+  const actualInput = input.slice(start, end);
+  return { expression: expr, location: { input: actualInput, start, end } };
 };
 
 function parseExpression(tokens: Token[], input: string): LocatedExpression {
@@ -110,10 +111,10 @@ function parseExpression(tokens: Token[], input: string): LocatedExpression {
     throw new Error("Unexpected end of input");
   }
   if (token.value === "(") {
-    return parseList(tokens, input);
+    return parseList(tokens, input, token.start);
   }
   if (token.value === "{") {
-    return locate(parseObjectLiteral(tokens, input), input, token.start, token.end);
+    return locate(parseObjectLiteral(tokens, input), input, token.start, token.start + 2);
   }
   if (token.value === ")" || token.value === "}") {
     throw new Error("Unexpected closing bracket");
@@ -121,22 +122,18 @@ function parseExpression(tokens: Token[], input: string): LocatedExpression {
   return parseAtom(token, input);
 }
 
-function parseList(tokens: Token[], input: string): LocatedExpression {
+function parseList(tokens: Token[], input: string, startPos: number): LocatedExpression {
   const list: LocatedExpression[] = [];
-  let parsedInput = "";
-  const startToken = tokens[0];
   while (tokens[0]?.value !== ")") {
     if (tokens.length === 0) {
       throw new Error("Unexpected end of input: missing closing parenthesis");
     }
     const parsed = parseExpression(tokens, input);
-    console.log("adding sub parse", parsed);
-    parsedInput += `${parsed.location.input} `;
     list.push(parsed);
   }
   const endToken = tokens[0];
   tokens.shift(); // Remove closing parenthesis
-  console.log("parsedInput", parsedInput, list);
+
   if (list[0]?.expression === "defun" && list.length === 3 && Array.isArray(list[1])) {
     return {
       expression: {
@@ -144,12 +141,12 @@ function parseList(tokens: Token[], input: string): LocatedExpression {
         params: list[1] as LocatedExpression[],
         body: list[2],
       },
-      location: { input: parsedInput, start: startToken.start, end: endToken.end },
+      location: { input: input.slice(startPos, endToken.end), start: startPos, end: endToken.end },
     };
   }
   return {
     expression: list,
-    location: { input: parsedInput, start: startToken.start, end: endToken.end },
+    location: { input: input.slice(startPos, endToken.end), start: startPos, end: endToken.end },
   };
 }
 
@@ -198,10 +195,10 @@ function parseAtom(token: Token, input: string): LocatedExpression {
     return locate(Number(token.value), input, token.start, token.end);
   // Handle string literals
   if (token.value.startsWith('"') && token.value.endsWith('"')) {
-    return locate(token.value, token.value, token.start, token.end); // Keep the quotes
+    return locate(token.value, input, token.start, token.end);
   }
   // Everything else is a symbol
-  return locate({ type: "Symbol", value: token.value }, token.value, token.start, token.end);
+  return locate({ type: "Symbol", value: token.value }, input, token.start, token.end);
 }
 
 // Export the parse function

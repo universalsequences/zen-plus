@@ -534,6 +534,12 @@ export class PatchImpl implements Patch {
     if ((this as unknown as Subpatch).paramNodesCache) {
       (this as unknown as Subpatch).paramNodesCache = null;
     }
+    for (const node of this.objectNodes) {
+      node.clearCache();
+      if (node.subpatch) {
+        node.subpatch.clearCache();
+      }
+    }
   }
 
   async initialLoadCompile(base = true) {

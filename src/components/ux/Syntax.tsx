@@ -1,3 +1,4 @@
+import { LispError } from "@/lib/lisp/eval";
 import { RefObject } from "react";
 
 interface Props {
@@ -66,6 +67,28 @@ export const Syntax = (props: Props) => {
       ) : (
         <>{props.text}</>
       )}
+    </>
+  );
+};
+
+interface ErrorProps {
+  lispError: LispError;
+  text: string;
+  cursor: number;
+  width: number | string;
+  height: number | string;
+  style: any;
+}
+export const ErrorSyntax = (props: ErrorProps) => {
+  const { width, height } = props;
+  const { start, end } = props.lispError.expression.location;
+  return (
+    <>
+      <span style={{ color: "transparent" }}>{props.text.slice(0, start)}</span>
+      <span style={{ color: "transparent", backgroundColor: "#ff00005f" }}>
+        {props.text.slice(start + 1, end)}
+      </span>
+      <span>{props.text.slice(end)}</span>
     </>
   );
 };

@@ -456,7 +456,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             (x as ObjectNode).operatorContextType === OperatorContextType.GL,
         )
       ) {
-        console.log("BRUV");
+        patch.clearCache();
         patch.recompileGraph();
       }
     },
@@ -465,7 +465,6 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
 
   const newObjectNode = useCallback(
     (objectNode: ObjectNode, position: Coordinate) => {
-      console.log("newObjectNode", objectNode, position);
       objectNode.position = position;
       patch.objectNodes = [...patch.objectNodes, objectNode];
       objectNode.justCreated = true;

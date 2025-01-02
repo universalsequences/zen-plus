@@ -152,6 +152,7 @@ doc("in", {
 const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   let inputNumber = args[0]() as number;
   let subpatch = node.patch as SubPatch;
+  subpatch.clearCache();
   let parentNode = (node.patch as SubPatch).parentNode;
   if (!parentNode) {
     return () => [];

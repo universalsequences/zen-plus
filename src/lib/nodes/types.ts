@@ -22,6 +22,7 @@ import { PatchDoc } from "../org/types";
 import { ListPool } from "../lisp/ListPool";
 import { RegisteredPatch } from "./definitions/core/registry";
 import { Definition } from "../docs/docs";
+import { LispError } from "../lisp/eval";
 
 export interface Size {
   width: number;
@@ -228,6 +229,8 @@ export type ObjectNode = Positioned &
     pool?: ListPool;
     renderJob?: RenderJob;
     definition?: Definition;
+    clearCache: () => void;
+    lispError?: LispError;
   };
 
 export interface SerializableCustom {

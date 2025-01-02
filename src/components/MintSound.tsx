@@ -81,6 +81,7 @@ const MintSound: React.FC<{
     isLoading: transactionLoading,
   } = useWaitForTransaction({
     hash: data ? data.hash : undefined,
+    confirmations: 1,
   });
 
   useEffect(() => {

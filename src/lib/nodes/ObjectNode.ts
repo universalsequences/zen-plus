@@ -490,6 +490,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     return otherArguments;
   }
 
+  clearCache() {
+    this.inputNodeCache = {};
+    this.inletIndexCache = {};
+  }
+
   // Cache input nodes and their outlet connections for each inlet
   inputNodeCache: {
     [inletId: string]: {
@@ -700,7 +705,16 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       isCompiling = true;
     }
 
+    if ((this.patch as SubPatch).patchType === OperatorContextType.CORE) {
+      return;
+    }
+    if (this.name === "out" && (this.patch as SubPatch).patchType !== OperatorContextType.ZEN) {
+      return;
+    }
     if (!isCompiling && this.operatorContextType !== OperatorContextType.GL) {
+      return;
+    }
+    if (this.name === "uniform") {
       return;
     }
     if (!inlet.markedMessages) {
