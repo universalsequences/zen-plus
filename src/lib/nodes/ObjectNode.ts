@@ -1063,9 +1063,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     if (Object.keys(json.attributes).length === 0) {
       delete json.attributes;
     }
-    if (this.operatorContextType === 0) {
-      delete json.operatorContextType;
-    }
+    //if (this.operatorContextType === 0) {
+    //delete json.operatorContextType;
+    //}
     //        json.attributes = { ... this.attributes };
 
     if (this.subpatch) {

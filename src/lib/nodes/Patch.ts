@@ -514,7 +514,7 @@ export class PatchImpl implements Patch {
     const nodes = this.getAllNodes();
     const presets = nodes.filter((x) => x.name === "preset");
     for (const preset of presets) {
-      const custom = preset.custom as any as PresetManager;
+      const custom = preset.custom as PresetManager;
       if (custom) {
         custom.hydrateSerializedPresets(nodes);
       }

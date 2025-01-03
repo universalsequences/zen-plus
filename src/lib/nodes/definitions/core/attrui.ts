@@ -22,8 +22,9 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
     custom = node.custom as MutableValue;
   }
 
+  node.isResizable = true;
   if (!node.size) {
-    node.size = { width: 100, height: 20 };
+    node.size = { width: 160, height: 20 };
   }
 
   // node.inlets.forEach(x => x.hidden = true);

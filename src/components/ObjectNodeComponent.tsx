@@ -282,7 +282,7 @@ const InnerObjectNodeComponent: React.FC<{
           if (objectNode.text === "") e.stopPropagation();
 
           if (
-            objectNode.name === "zen" &&
+            (objectNode.name === "zen" || objectNode.name === "p") &&
             objectNode.subpatch &&
             !objectNode.attributes.slotview &&
             isDoubleClick
