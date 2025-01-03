@@ -139,6 +139,8 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
             (patch as Patch as SubPatch).parentPatch.isCompiling = false;
           }
 
+          patch.workletCode = ret.code;
+
           ret.workletNode.port.onmessage = (e) => {
             if (e.data.type === "wasm-ready") {
               initMemory(zenGraph.context, worklet);

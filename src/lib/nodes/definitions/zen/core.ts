@@ -70,9 +70,11 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
           min as number,
           max as number,
         );
+        object.param = _param;
         object.storedParameterValue = object.storedMessage as number;
       } else {
         _param = param(defaultValue, name() as string, min as number, max as number);
+        object.param = _param;
         object.storedParameterValue = defaultValue;
       }
     }

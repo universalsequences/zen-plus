@@ -1,9 +1,17 @@
 import { UGen, Arg } from "./zen";
 import { history, History } from "./history";
 
+export interface ParamInfo {
+  name: string;
+  min?: number;
+  max?: number;
+  defaultValue?: number;
+  idx?: number;
+}
 export type ParamGen = UGen & {
   set?: (val: number, time?: number) => void;
   getInitData?: () => number;
+  getParamInfo?: () => ParamInfo;
 };
 
 export const param = (
@@ -24,6 +32,17 @@ export const param = (
 
   p.getInitData = () => {
     return ssd.getInitData!();
+  };
+
+  p.getParamInfo = () => {
+    const idx = ssd.getIdx?.();
+    return {
+      idx,
+      name,
+      min,
+      max,
+      defaultValue: ssd.getInitData?.(),
+    };
   };
 
   return p;

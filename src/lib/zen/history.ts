@@ -40,6 +40,7 @@ export type History = ((input?: UGen, reset?: UGen) => UGen) & {
   value?: (v: number, time?: number) => void;
   paramName?: string;
   getInitData?: () => number;
+  getIdx?: () => number | undefined;
 };
 
 interface Clearer {
@@ -453,6 +454,13 @@ memory[${IDX}] = ${_input.variable};
     }
 
     cachedValue = val;
+  };
+
+  _history.getIdx = () => {
+    if (block?.initData) {
+      return block.idx as number;
+    }
+    return undefined;
   };
 
   return _history;

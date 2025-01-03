@@ -319,6 +319,7 @@ export type Patch = Identifiable & {
   onUpdateSize?: (id: string, size: Size) => void;
   scriptingNameToNodes: Record<string, ObjectNode[]>;
   isExamplePatch?: boolean;
+  workletCode?: string;
 };
 
 export type SubPatch = Patch & {

@@ -15,6 +15,7 @@ import { DropdownMenu } from "@radix-ui/themes";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Patch, SubPatch } from "@/lib/nodes/types";
 import { storePatch } from "@/lib/saving/storePatch";
+import { exportParameters } from "@/lib/nodes/utils/exportParameters";
 const jsonpatch = require("fast-json-patch");
 
 enum Option {
@@ -198,6 +199,16 @@ const PatchDropdown = React.memo((props: Props) => {
                   Settings
                 </DropdownMenu.Item>
               }
+              {isSubPatch && (
+                <DropdownMenu.Item
+                  onClick={() => {
+                    exportParameters(patch);
+                  }}
+                  className="DropdownMenuItem flex cursor-pointer pointer-events-auto"
+                >
+                  Export AudioWorklet
+                </DropdownMenu.Item>
+              )}
               {isSubPatch && (
                 <DropdownMenu.Item
                   onClick={() => {

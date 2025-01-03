@@ -81,6 +81,7 @@ export class PatchImpl implements Patch {
   scriptingNameToNodes: Record<string, ObjectNode[]> = {};
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
+  workletCode?: string;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
