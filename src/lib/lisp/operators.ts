@@ -422,7 +422,9 @@ export const operators = (
   },
 
   list: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
-    return args.map((arg) => evaluateExpression(arg, env));
+    return args.map((arg, i) => {
+      return evaluateExpression(arg, env);
+    });
   },
 
   car: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {

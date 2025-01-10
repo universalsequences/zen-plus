@@ -16,6 +16,7 @@ import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Patch, SubPatch } from "@/lib/nodes/types";
 import { storePatch } from "@/lib/saving/storePatch";
 import { exportParameters } from "@/lib/nodes/utils/exportParameters";
+import { usePatches } from "@/contexts/PatchesContext";
 const jsonpatch = require("fast-json-patch");
 
 enum Option {
@@ -32,6 +33,7 @@ interface Props {
 }
 
 const PatchDropdown = React.memo((props: Props) => {
+  const { visualsCode } = usePatches();
   const [open, setOpen] = useState<boolean | undefined>();
   const [option, setOption] = useState<Option | null>(null);
   const { patch, children } = props;
@@ -202,7 +204,7 @@ const PatchDropdown = React.memo((props: Props) => {
               {isSubPatch && (
                 <DropdownMenu.Item
                   onClick={() => {
-                    exportParameters(patch);
+                    exportParameters(patch, visualsCode);
                   }}
                   className="DropdownMenuItem flex cursor-pointer pointer-events-auto"
                 >

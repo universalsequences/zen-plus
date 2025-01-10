@@ -99,6 +99,10 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     if (list.length === 0) return null;
 
     const [_func, ..._args] = list;
+
+    if (_func["expression"] === undefined) {
+      return list;
+    }
     // Cache function lookup result
     const func = evaluateExpression(_func, env, 0) || _func;
 
@@ -114,7 +118,9 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
       if (symbolFn in env) {
         const fn = env[symbolFn];
         if (typeof fn === "function") {
-          const evaluatedArgs = shapeArgs(_args, env).map((arg) => evaluateExpression(arg, env));
+          const evaluatedArgs = shapeArgs(_args, env).map((arg) => {
+            return evaluateExpression(arg, env);
+          });
           return fn(env)(...evaluatedArgs);
         }
       }

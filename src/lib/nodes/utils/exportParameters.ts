@@ -8,13 +8,18 @@ export type ExportedParameter = ParamInfo & {
   id: string;
 };
 
+type ExportedPreset = {
+  [id: string]: number;
+};
+
 export type ExportedPatch = {
   workletCode?: string;
   parameters: ExportedParameter[];
   presets: ExportedPreset[];
+  visualsCode?: string;
 };
 
-export const exportParameters = (patch: Patch) => {
+export const exportParameters = (patch: Patch, visualsCode: string) => {
   const paramNodes = patch.getAllNodes().filter((x) => x.name === "param");
   const params: ExportedParameter[] = [];
   for (const node of paramNodes) {
@@ -40,6 +45,7 @@ export const exportParameters = (patch: Patch) => {
     presets,
     parameters: params,
     workletCode: patch.workletCode,
+    visualsCode,
   };
 
   console.log(exported);
@@ -57,9 +63,6 @@ export const exportParameters = (patch: Patch) => {
   document.body.removeChild(downloadAnchor);
 };
 
-type ExportedPreset = {
-  [id: string]: number;
-};
 export const exportPreset = (patch: Patch) => {
   const presetNodes = patch.getAllNodes().filter((x) => x.name === "preset");
   const exportedPresets: ExportedPreset[] = [];
