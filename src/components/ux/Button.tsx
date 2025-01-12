@@ -5,6 +5,7 @@ import { ObjectNode } from "@/lib/nodes/types";
 
 const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { value: message } = useValue();
+  //const message = 0;
   const { lockedMode } = useLocked();
   const [isAnimating, setIsAnimating] = useState(false);
   const animationTimer = useRef<NodeJS.Timeout>();

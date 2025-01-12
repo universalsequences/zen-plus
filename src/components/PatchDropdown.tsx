@@ -204,7 +204,7 @@ const PatchDropdown = React.memo((props: Props) => {
               {isSubPatch && (
                 <DropdownMenu.Item
                   onClick={() => {
-                    exportParameters(patch, visualsCode);
+                    exportParameters(patch, visualsCode as string);
                   }}
                   className="DropdownMenuItem flex cursor-pointer pointer-events-auto"
                 >

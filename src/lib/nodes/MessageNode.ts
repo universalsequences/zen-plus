@@ -51,6 +51,8 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
 
     this.newInlet(TRIGGER, ConnectionType.CORE);
     this.newInlet(REPLACE, ConnectionType.CORE);
+    this.inlets[0].isHot = true;
+    this.inlets[1].isHot = false;
     this.newOutlet("message result", ConnectionType.CORE);
 
     if (messageType === MessageType.Number) {

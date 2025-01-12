@@ -333,6 +333,18 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     if (this.patch.registerNewNode) {
       this.patch.registerNewNode(this);
     }
+
+    if (this.definition?.isHot) {
+      for (const inlet of this.inlets) {
+        inlet.isHot = true;
+      }
+    } else {
+      let i = 0;
+      for (const inlet of this.inlets) {
+        inlet.isHot = i === 0;
+        i++;
+      }
+    }
     return true;
   }
 

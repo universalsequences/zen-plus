@@ -43,6 +43,8 @@ export const route = (node: ObjectNode, ...types: Lazy[]) => {
     node.attributes["field"] = "type";
   }
 
+  node.branching = true;
+
   return (message: Message) => {
     let matched = false;
     if (typeof message === "string" && message.includes(" ")) {

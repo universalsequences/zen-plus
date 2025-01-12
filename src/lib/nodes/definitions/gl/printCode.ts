@@ -48,7 +48,6 @@ interface Variable {
 }
 
 export const getVariableName = (op: string, idx: number, zobject_id: string): string => {
-  console.log("get variable name op=", op);
   return `${op.trim()[0]}${idx} `;
 };
 

@@ -91,6 +91,7 @@ const MessageBox: React.FC<{
   const startPosition = useRef<Coordinate | null>(null);
 
   const { selectPatch } = usePatchSelector();
+  const lastClick = useRef(0);
 
   return (
     <div
@@ -109,8 +110,12 @@ const MessageBox: React.FC<{
             startPosition.current &&
             equalCoordinate(startPosition.current, messageNode.position)
           ) {
-            setText(_value);
-            setEditing(true);
+            const now = new Date().getTime();
+            if (now - lastClick.current < 350) {
+              setText(_value);
+              setEditing(true);
+            }
+            lastClick.current = now;
           }
         }
         if (lockedModeRef.current) {

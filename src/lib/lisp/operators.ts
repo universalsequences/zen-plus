@@ -71,7 +71,10 @@ export const operators = (
     return defineFunctionInEnv(
       {
         type: "function",
-        params: [funcName as Symbol, ...(_params as Symbol[])],
+        params: [
+          funcName as unknown as Symbol,
+          ...(_params as unknown as Symbol[]),
+        ] as unknown as LocatedExpression[],
         body: defunBody,
       },
       env,
@@ -693,7 +696,8 @@ function matchPattern(pattern: LocatedExpression[], args: Message[]): boolean {
       for (const [key, value] of Object.entries(pObject.properties)) {
         if (isSymbol(value)) continue;
         // Compare actual values from AST nodes
-        const patternValue = typeof value === "number" ? value : trimString(value as string);
+        const patternValue =
+          typeof value === "number" ? value : trimString(value as unknown as string);
         if (argObject[key] !== patternValue) {
           return false;
         }
@@ -724,7 +728,7 @@ function bindMatchedValues(pattern: LocatedExpression[], args: Message[], env: E
       const argObject = arg as Core.MessageObject;
       for (const [key, value] of Object.entries(pObject.properties)) {
         if (isSymbol(value)) {
-          env[(value as Symbol).value] = argObject[key];
+          env[(value as unknown as Symbol).value] = argObject[key];
         }
       }
     } else if (isSymbol(p)) {
@@ -734,7 +738,7 @@ function bindMatchedValues(pattern: LocatedExpression[], args: Message[], env: E
   }
 }
 
-function defineFunctionInEnv(
+export function defineFunctionInEnv(
   funcDef: FunctionDefinition,
   env: Environment,
   pool: ListPool,

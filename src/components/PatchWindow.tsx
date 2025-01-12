@@ -53,7 +53,10 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
 
   const [baseName, setBaseName] = useState("");
   useEffect(() => {
-    const p = (patch as SubPatch).parentNode.patch;
+    const p = ((patch as SubPatch).parentPatch as SubPatch).parentPatch as SubPatch;
+
+    //const p = (patch as SubPatch).parentNode.patch;
+    console.log(patch);
     if (p) {
       setBaseName((p as SubPatch).name || "");
     }
@@ -113,9 +116,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
             {patch.name}
           </div>
         </div>
-        <div style={{ color: generateColor(baseName) }} className="absolute right-3 text-xs py-0.5">
-          {baseName}
-        </div>
+        <div className="absolute right-3 text-xs py-0.5 text-zinc-100">{baseName}</div>
       </div>
       <PatchWrapper
         isWindow={true}

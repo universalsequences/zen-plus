@@ -127,6 +127,7 @@ export type IOlet = Identifiable & {
   hidden?: boolean;
   connectionType?: ConnectionType; // default = ZEN
   messagesReceived?: number;
+  isHot?: boolean;
   markedMessages?: MarkedMessage[];
   node?: ObjectNode;
   callback?: (x: Message) => void;
@@ -231,6 +232,7 @@ export type ObjectNode = Positioned &
     definition?: Definition;
     clearCache: () => void;
     lispError?: LispError;
+    branching?: boolean;
   };
 
 export interface SerializableCustom {

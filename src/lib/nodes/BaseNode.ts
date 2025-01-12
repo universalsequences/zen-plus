@@ -14,10 +14,12 @@ import {
   type Node,
   type Attributes,
   SubPatch,
+  MessageNode,
 } from "./types";
 import { OperatorContextType, isCompiledType } from "./context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
+import { compileVM } from "./vm/compile";
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode)
@@ -86,20 +88,25 @@ export class BaseNode implements Node {
   }
 
   newInlet(name?: string, connectionType?: ConnectionType) {
-    this.newIOlet(this.inlets, name, connectionType);
+    const isMessageType = (this as unknown as MessageNode).messageType !== undefined;
+    const inletNumber = this.inlets.length;
+    const definitionIsHot = (this as unknown as ObjectNode).definition?.isHot;
+    const isHot = definitionIsHot || inletNumber === 0 || (isMessageType && inletNumber === 0);
+    this.newIOlet(this.inlets, name, connectionType, isHot);
   }
 
   newOutlet(name?: string, connectionType?: ConnectionType) {
     this.newIOlet(this.outlets, name, connectionType);
   }
 
-  newIOlet(iolets: IOlet[], name?: string, connectionType?: ConnectionType) {
+  newIOlet(iolets: IOlet[], name?: string, connectionType?: ConnectionType, isHot?: boolean) {
     const id = uuidv4();
     const inlet: IOlet = {
       id,
       name: name,
       connections: [],
       connectionType,
+      isHot,
     };
     iolets.push(inlet);
   }
@@ -161,6 +168,8 @@ export class BaseNode implements Node {
         this.outlets.indexOf(outlet),
       );
     }
+
+    compileVM(this.patch);
     return connection;
   }
 

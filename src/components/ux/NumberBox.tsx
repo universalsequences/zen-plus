@@ -71,7 +71,7 @@ const NumberBox: React.FC<{
       if (rounding.current) {
         const distanceFromOriginal = Math.abs(mouseDelta);
         const roundingFactor = distanceFromOriginal < 50 ? 100 : 1;
-        newValue = Math.round(newValue * roundingFactor) / roundingFactor;
+        newValue = Math.round(newValue); // * roundingFactor) / roundingFactor;
       }
 
       // Clamp to min/max
@@ -170,7 +170,7 @@ const NumberBox: React.FC<{
                 {integer}
               </div>
               <div className="">.</div>
-              <div onMouseDown={() => (rounding.current = false)} className="flex-1">
+              <div onMouseDown={() => (rounding.current = false)} className="flex-1 ">
                 {float !== undefined
                   ? value < 0
                     ? float.toString().slice(3)

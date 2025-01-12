@@ -1,5 +1,5 @@
 import { type RegisteredPatch, registry } from "../nodes/definitions/core/registry";
-import { operators } from "./operators";
+import { defineFunctionInEnv, operators } from "./operators";
 import * as Core from "../nodes/types";
 import type { ListPool } from "./ListPool";
 import { isSymbol } from "./types";
@@ -57,7 +57,7 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
             return evaluateObject(expr, env);
           }
           if (expr.type === "function") {
-            return defineFunctionInEnv(expr, env);
+            return defineFunctionInEnv(expr, env, pool, evaluateExpression);
           }
         }
       }
@@ -109,9 +109,12 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     // Fast path for common operators
     if (isSymbol(func)) {
       const symbol = ((func as LocatedExpression).expression as Symbol).value;
-      const operator = OPERATORS[symbol as keyof typeof operators];
+      const operator = OPERATORS[symbol as keyof typeof operators] as (x: any) => void;
       if (operator) {
-        return operator(expression)(shapeArgs(_args, env), env);
+        return (operator(expression) as unknown as (x: any, y: any) => Message)(
+          shapeArgs(_args, env),
+          env,
+        );
       }
 
       const symbolFn = `${symbol}_fn`;
