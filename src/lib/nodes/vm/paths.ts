@@ -14,22 +14,25 @@ export const mergePaths = (paths: CompilationPath[]): CompilationPath[] => {
   for (const path of paths) {
     if (isHot(path)) {
       if (!path.nodes.includes(path.connection.destination)) {
-        console.log("adding to hot path", path.connection.destination.id, path.nodes);
         path.nodes = [...path.nodes, path.connection.destination];
       }
     }
   }
+
   if (paths.length <= 1) return paths;
 
-  const sortedPaths = paths.sort((a, b) => a.nodes.length - b.nodes.length);
+  const sortedPaths = [...paths].sort((a, b) => a.nodes.length - b.nodes.length);
   const mergedPaths: CompilationPath[] = [];
 
   for (const currentPath of sortedPaths) {
     let merged = false;
 
     for (const existingPath of mergedPaths) {
-      if (arePathsSharePrefix(existingPath, currentPath)) {
-        mergePathNodes(existingPath, currentPath);
+      const prefixLength = getSharedPrefixLength(existingPath, currentPath);
+      if (prefixLength > 1) {
+        const currentSuffix = currentPath.nodes.slice(prefixLength);
+
+        existingPath.nodes = [...existingPath.nodes, ...currentSuffix];
         merged = true;
         break;
       }
@@ -43,16 +46,21 @@ export const mergePaths = (paths: CompilationPath[]): CompilationPath[] => {
   return mergedPaths;
 };
 
-function arePathsSharePrefix(path1: CompilationPath, path2: CompilationPath): boolean {
+export function getSharedPrefixLength(path1: CompilationPath, path2: CompilationPath): number {
   const minLength = Math.min(path1.nodes.length, path2.nodes.length);
 
-  for (let i = 0; i < minLength; i++) {
-    if (path1.nodes[i].id !== path2.nodes[i].id) {
-      return false;
+  for (let prefixLength = minLength; prefixLength >= 0; prefixLength--) {
+    let isPrefix = true;
+    for (let i = 0; i < prefixLength; i++) {
+      if (path1.nodes[i].id !== path2.nodes[i].id) {
+        isPrefix = false;
+        break;
+      }
     }
+    if (isPrefix) return prefixLength;
   }
 
-  return true;
+  return 0;
 }
 
 function mergePathNodes(basePath: CompilationPath, pathToMerge: CompilationPath): void {
