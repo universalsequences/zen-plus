@@ -4,7 +4,14 @@ export const getOutboundConnections = (
   n: Node,
   visitedConnections: Set<IOConnection>,
 ): IOConnection[] => {
-  const rawConnections = n.outlets.flatMap((x) => x.connections);
+  return n.outlets.flatMap((x) => getOutboundConnectionsFromOutlet(x, visitedConnections));
+};
+
+export const getOutboundConnectionsFromOutlet = (
+  outlet: IOlet,
+  visitedConnections: Set<IOConnection>,
+): IOConnection[] => {
+  const rawConnections = outlet.connections;
 
   const connections = rawConnections.filter((x) => !visitedConnections.has(x));
 
@@ -33,7 +40,11 @@ export const getOutboundConnections = (
     );
 
     if (input) {
-      resolvedSubpatchConnections.push(...input.outlets.flatMap((outlet) => outlet.connections));
+      resolvedSubpatchConnections.push(
+        ...input.outlets.flatMap((outlet) =>
+          getOutboundConnectionsFromOutlet(outlet, visitedConnections),
+        ),
+      );
     }
   }
 
@@ -44,7 +55,9 @@ export const getOutboundConnections = (
     const outlet = (patch as SubPatch).parentNode.outlets[outletNumber];
 
     if (outlet) {
-      resolvedSubpatchConnections.push(...outlet.connections);
+      resolvedSubpatchConnections.push(
+        ...getOutboundConnectionsFromOutlet(outlet, visitedConnections),
+      );
     }
   }
 
@@ -102,7 +115,7 @@ export const getInboundConnections = (inlet: IOlet): IOConnection[] => {
     const inlet = (patch as SubPatch).parentNode.inlets[inletNumber];
 
     if (inlet) {
-      resolvedSubpatchConnections.push(...inlet.connections);
+      resolvedSubpatchConnections.push(...getInboundConnections(inlet));
     }
   }
 

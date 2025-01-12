@@ -1,5 +1,5 @@
 import { Node, ObjectNode, IOConnection, MessageNode, SubPatch } from "../types";
-import { forwardTraversal } from "./traversal";
+import { forwardTraversal, getOutboundConnectionsFromOutlet } from "./traversal";
 import { Instruction, InstructionType } from "./types";
 
 const pushInstruction = (
@@ -190,7 +190,7 @@ export const createInstructions = (nodes: Node[]) => {
     // whenever we push into branches we need to keep track of the position of each branch...
     for (let i = 0; i < node.outlets.length; i++) {
       const outlet = node.outlets[i];
-      for (const connection of outlet.connections) {
+      for (const connection of getOutboundConnectionsFromOutlet(outlet, new Set())) {
         if (newBranch) {
           console.log(
             "calling compile connection from new branch with",

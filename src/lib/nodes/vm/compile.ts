@@ -16,7 +16,7 @@ export const compileVM = (patch: Patch) => {
   console.log("%ccompiling vm", "color:lime");
   const allNodes = [...patch.getAllNodes(), ...patch.getAllMessageNodes()].filter((x) => {
     let name = (x as ObjectNode).name;
-    if (name === "in" || name === "out" || name === "zen") {
+    if (name === "in" || name === "out" || (x as ObjectNode).subpatch) {
       return false;
     }
     return true;
@@ -45,6 +45,7 @@ export const compileVM = (patch: Patch) => {
     if (n) {
       L.push(n);
       const connections = getOutboundConnections(n, visitedConnections);
+      console.log("outbound connectiosn for n", n.id, connections);
       for (const m of connections) {
         const { destination, destinationInlet } = m;
         const inletNumber = destination.inlets.indexOf(destinationInlet);
@@ -54,14 +55,14 @@ export const compileVM = (patch: Patch) => {
           const backtracked = backtrack(n, L); //.filter(
           coldpaths.push({
             connection: m,
-            nodes: backtracked,
+            nodes: backtracked.includes(destination) ? backtracked : [...backtracked, destination],
           });
-          console.log("backtracked=", backtracked);
+          console.log("backtracked from=", destination, backtracked);
           // L = L.filter((x) => x === n || !backtracked.includes(x));
           // back-track from this cold inlet getting list of nodes w/ current L list
         } else if (destinationInlet.isHot) {
           const backtracked = backtrack(n, L);
-          //console.log("%chotpath backtrack =", "color:red", destination, backtracked);
+          console.log("%chotpath backtrack =", "color:red", destination, backtracked);
           hotpaths.push({
             connection: m,
             nodes: backtracked,
