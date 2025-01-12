@@ -1,25 +1,16 @@
-import type { Node, Patch, IOConnection, ObjectNode, SubPatch, MessageNode } from "../types";
+import type { Node, Patch, IOConnection, ObjectNode, SubPatch, MessageNode, IOlet } from "../types";
 import { evaluate } from "./evaluate";
 import { createInstructions } from "./instructions";
-import { type CompilationPath, isSubpath, splitPath, mergePaths, printPaths } from "./paths";
-import { getOutboundConnections } from "./traversal";
-
-const backtrack = (node: Node, L: Node[]) => {
-  const L2: Node[] = [node];
-
-  for (const inlet of node.inlets) {
-    if (!inlet.isHot) {
-      continue;
-    }
-    for (const connection of inlet.connections) {
-      const { source } = connection;
-      if (L.includes(source)) {
-        L2.push(...backtrack(source, L));
-      }
-    }
-  }
-  return L.filter((x) => L2.includes(x));
-};
+import {
+  type CompilationPath,
+  isSubpath,
+  splitPath,
+  mergePaths,
+  printPaths,
+  splitPathByNonCompilableNodes,
+  printNodes,
+} from "./paths";
+import { backtrack, getInboundConnections, getOutboundConnections } from "./traversal";
 
 export const compileVM = (patch: Patch) => {
   console.log("%ccompiling vm", "color:lime");
@@ -30,12 +21,18 @@ export const compileVM = (patch: Patch) => {
     }
     return true;
   });
+  for (const node of allNodes) {
+    node.instructions = undefined;
+  }
 
   const SOURCE: Node[] = allNodes.filter(
     (x) =>
+      //x.inlets.some((x) => x.connections.some((y) => y.source.skipCompilation)) ||
       !x.inlets.some((x) => x.connections.length > 0) &&
       x.outlets.some((y) => y.connections.length > 0),
   );
+
+  console.log("INITIAL SOURCE=", SOURCE);
 
   let S = [...SOURCE];
   let L: Node[] = [];
@@ -59,6 +56,7 @@ export const compileVM = (patch: Patch) => {
             connection: m,
             nodes: backtracked,
           });
+          console.log("backtracked=", backtracked);
           // L = L.filter((x) => x === n || !backtracked.includes(x));
           // back-track from this cold inlet getting list of nodes w/ current L list
         } else if (destinationInlet.isHot) {
@@ -80,12 +78,13 @@ export const compileVM = (patch: Patch) => {
     }
   }
 
+  printNodes(L, "red", "topological sort:");
+
   const realhotpaths: CompilationPath[] = [];
   for (const hotpath of hotpaths) {
     const found = coldpaths.filter((x) => x.nodes.includes(hotpath.connection.destination));
     if (found.length === 0) {
       realhotpaths.push(hotpath);
-    } else {
     }
   }
   const COLDPATHS = coldpaths
@@ -102,14 +101,26 @@ export const compileVM = (patch: Patch) => {
 
   // so now with the merged paths, we have the topologically sorted nodes needed to execute any source node
   // theres a execution path for each source node
-  const MERGEDPATHS = mergePaths([...HOTPATHS, ...COLDPATHS]);
+  const MERGEDPATHS = mergePaths([...HOTPATHS, ...COLDPATHS]).flatMap((x) =>
+    splitPathByNonCompilableNodes(x),
+  );
 
   console.log("/////////////////////////////////");
-  for (const path of MERGEDPATHS) {
-    const instructions = createInstructions(path.nodes);
-    printPaths([path], "lime", "MERGED");
+  for (const nodes of MERGEDPATHS) {
+    printNodes([...nodes], "orange", "OG MERGED");
+    while (nodes[0] && (nodes[0] as ObjectNode).needsLoad) {
+      nodes.shift();
+    }
+    const instructions = createInstructions(nodes);
+    printNodes([...nodes], "lime", "MERGED");
     console.log("instructions", instructions);
-    evaluate(instructions);
+    // evaluate(instructions);
+
+    const source = nodes[0];
+    if (source) {
+      console.log("STORING IN SOURCE", source.id);
+      source.instructions = instructions;
+    }
   }
   //evaluate(instructions);
   //console.log("instructions=", instructions);

@@ -29,7 +29,7 @@ export const mergePaths = (paths: CompilationPath[]): CompilationPath[] => {
 
     for (const existingPath of mergedPaths) {
       const prefixLength = getSharedPrefixLength(existingPath, currentPath);
-      if (prefixLength > 1) {
+      if (prefixLength >= 1) {
         const currentSuffix = currentPath.nodes
           .slice(prefixLength)
           .filter(
@@ -65,14 +65,6 @@ export function getSharedPrefixLength(path1: CompilationPath, path2: Compilation
   }
 
   return 0;
-}
-
-function mergePathNodes(basePath: CompilationPath, pathToMerge: CompilationPath): void {
-  const prefixLength = basePath.nodes.length;
-
-  for (let i = prefixLength; i < pathToMerge.nodes.length; i++) {
-    basePath.nodes.push(pathToMerge.nodes[i]);
-  }
 }
 
 // returns true if pathA is subpath of pathB
@@ -124,4 +116,34 @@ export const printPaths = (paths: CompilationPath[], color: string, type: string
       path.nodes.map((x) => x.id).join(","),
     );
   }
+};
+
+export const printNodes = (nodes: Node[], color: string, type: string) => {
+  console.log("%c %s  nodes=", `color:${color}`, type, nodes.map((x) => x.id).join(","));
+};
+
+export const splitPathByNonCompilableNodes = (path: CompilationPath): Node[][] => {
+  const resultPaths: Node[][] = [];
+  let currentPathNodes: Node[] = [];
+
+  for (const node of path.nodes) {
+    if (node.skipCompilation) {
+      if (currentPathNodes.length > 0) {
+        currentPathNodes.push(node);
+        resultPaths.push(currentPathNodes);
+        currentPathNodes = [];
+      }
+    } else {
+      if (!currentPathNodes.some((existingNode) => existingNode === node)) {
+        currentPathNodes.push(node);
+      }
+    }
+  }
+
+  if (currentPathNodes.length > 0) {
+    resultPaths.push(currentPathNodes);
+  }
+
+  console.log("split path into", path, resultPaths);
+  return resultPaths;
 };

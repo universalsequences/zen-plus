@@ -60,8 +60,10 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
     (value: number) => {
       // we need to send this over to messageNode
       messageNode.receive(messageNode.inlets[1], value);
-      if (!messageNode.attributes["is parameter"]) {
-        messageNode.receive(messageNode.inlets[0], "bang");
+      if (!messageNode.instructions) {
+        if (!messageNode.attributes["is parameter"]) {
+          messageNode.receive(messageNode.inlets[0], "bang");
+        }
       }
       publish("statechanged", {
         node: messageNode,

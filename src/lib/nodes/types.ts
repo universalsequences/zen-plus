@@ -23,6 +23,7 @@ import { ListPool } from "../lisp/ListPool";
 import { RegisteredPatch } from "./definitions/core/registry";
 import { Definition } from "../docs/docs";
 import { LispError } from "../lisp/eval";
+import { Instruction } from "./vm/types";
 
 export interface Size {
   width: number;
@@ -182,6 +183,8 @@ export type Node = Identifiable &
     receive: (inlet: IOlet, x: Message, fromNode?: Node) => void;
     onNewValue?: (value: Message) => void;
     onNewValues?: { [x: string]: (value: Message) => void };
+    instructions?: Instruction[]; // compiled instructions
+    skipCompilation?: boolean;
   };
 
 export type ObjectNode = Positioned &

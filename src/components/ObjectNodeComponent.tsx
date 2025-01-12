@@ -90,6 +90,9 @@ const InnerObjectNodeComponent: React.FC<{
   objectNode,
   setSelectedNodes,
 }) => {
+  if (isSelected) {
+    //console.log("selected", objectNode);
+  }
   const [fullscreen, setFullscreen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const lastSubPatchClick = useRef(0);

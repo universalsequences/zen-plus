@@ -10,6 +10,7 @@ doc("filter.=", {
 });
 
 export const filter_eq: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  node.branching = true;
   if (!node.attributes.field) {
     node.attributes.field = "";
   }
@@ -32,6 +33,7 @@ doc("filter.!=", {
 });
 
 export const filter_neq: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  node.branching = true;
   if (!node.attributes.field) {
     node.attributes.field = "";
   }
@@ -53,6 +55,7 @@ doc("filter.i=", {
   description: "passes message if message matches condition",
 });
 export const filter_arg_eq: NodeFunction = (_node: ObjectNode, arg: Lazy, condition: Lazy) => {
+  node.branching = true;
   return (message: Message) => {
     if (arg() === condition()) {
       return [message];
@@ -70,6 +73,7 @@ doc("filter.<", {
 });
 
 export const filter_lt: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  node.branching = true;
   if (!node.attributes.field) {
     node.attributes.field = "";
   }
@@ -92,6 +96,7 @@ doc("filter.<=", {
 });
 
 export const filter_lte: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  node.branching = true;
   if (!node.attributes.field) {
     node.attributes.field = "";
   }
@@ -114,6 +119,7 @@ doc("filter.>=", {
 });
 
 export const filter_gte: NodeFunction = (node: ObjectNode, condition: Lazy) => {
+  node.branching = true;
   if (!node.attributes.field) {
     node.attributes.field = "";
   }
@@ -136,6 +142,7 @@ doc("filter.%=", {
 });
 
 export const filter_mod_eq: NodeFunction = (node: ObjectNode, divisor: Lazy, condition: Lazy) => {
+  node.branching = true;
   if (!node.attributes.field) {
     node.attributes.field = "";
   }

@@ -14,6 +14,8 @@ import { BaseNode } from "./BaseNode";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { isNumber } from "@/utils/isNumber";
 import { parseLispExpression } from "./utils/lisp";
+import { Instruction } from "./vm/types";
+import { evaluate } from "./vm/evaluate";
 
 const TRIGGER = "trigger";
 const REPLACE = "replace";
@@ -26,6 +28,7 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
   presentationPosition?: Coordinate;
   zIndex: number;
   messageType: MessageType;
+  instructions?: Instruction[];
 
   constructor(patch: Patch, messageType: MessageType) {
     super(patch);
@@ -69,6 +72,10 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
   }
 
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
+    if (this.instructions) {
+      evaluate(this.instructions, message);
+      return;
+    }
     switch (inlet.name) {
       case TRIGGER:
         if (

@@ -434,6 +434,7 @@ const PositionedComponent: React.FC<{
           />
         )}
         {children}
+        {node.instructions && <div className="absolute top-1 right-1 w-2 h-2 bg-red-500" />}
       </div>
     );
   }, [

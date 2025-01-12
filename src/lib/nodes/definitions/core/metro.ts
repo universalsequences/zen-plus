@@ -33,6 +33,10 @@ doc("metro", {
 export const metro = (node: ObjectNode, bpm: Lazy) => {
   node.needsLoad = true;
 
+  node.skipCompilation = true;
+
+  // metro needs to be an endpoint node
+
   if (!node.audioNode) {
     createWorklet(node, "/MetroWorklet.js", "metro-processor").then(() => {
       const worklet = node.audioNode as AudioWorkletNode;

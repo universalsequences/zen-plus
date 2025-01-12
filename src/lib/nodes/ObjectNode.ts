@@ -27,6 +27,8 @@ import {
 import { type Slot, deserializedSlots } from "./definitions/audio/slots";
 import { GenericStepData } from "./definitions/core/zequencer/types";
 import { getRootPatch } from "./traverse";
+import { evaluate } from "./vm/evaluate";
+import { Instruction } from "./vm/types";
 
 interface Constants {
   [x: string]: number | boolean;
@@ -70,6 +72,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   slots?: Slot[];
   steps?: GenericStepData[];
   script?: string;
+  instructions?: Instruction[];
 
   constructor(patch: Patch, id?: string) {
     super(patch);
@@ -871,6 +874,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
     if (!this.fn) {
+      return;
+    }
+
+    if (this.instructions) {
+      evaluate(this.instructions, message);
       return;
     }
 
