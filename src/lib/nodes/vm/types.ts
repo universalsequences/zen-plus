@@ -9,12 +9,26 @@ export enum InstructionType {
   Branch = "Branch",
 }
 
-export interface Instruction {
-  type: InstructionType;
+// Base interface with common properties
+interface BaseInstruction {
   node?: Node;
   inlet?: IOlet;
   inletNumber?: number;
   outletNumber?: number;
   loadAtStart?: boolean;
-  branches?: Instruction[][];
 }
+
+// Branch-specific instruction
+interface BranchInstruction extends BaseInstruction {
+  type: InstructionType.Branch;
+  branches: Instruction[][];
+}
+
+// Non-branch instruction
+interface NonBranchInstruction extends BaseInstruction {
+  type: Exclude<InstructionType, InstructionType.Branch>;
+  branches?: never;
+}
+
+// Combined instruction type
+export type Instruction = BranchInstruction | NonBranchInstruction;

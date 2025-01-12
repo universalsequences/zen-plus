@@ -29,7 +29,7 @@ const compileConnection = (
   if (inletNumber === 0) {
     // possible attribute (will later check if the register message is a string of correct form)
     // TODO - if subpatch, then add a list of possible matching nodes for attrbute handling
-    const instruction = {
+    const instruction: Instruction = {
       type: InstructionType.Attribute,
       node: destination,
     };
@@ -66,13 +66,14 @@ const compileConnection = (
     }
   } else if ((destination as MessageNode).messageType !== undefined) {
     // message type
-    const instruction = {
+    const instruction: Instruction = {
       type: inletNumber === 0 ? InstructionType.PipeMessage : InstructionType.ReplaceMessage,
       node: destination,
+      outletNumber,
     };
     pushInstruction(instructions, instruction, branch, branchIndex);
   } else {
-    const instruction = {
+    const instruction: Instruction = {
       type: InstructionType.Store,
       inletNumber,
       inlet: destinationInlet,
@@ -113,20 +114,22 @@ export const createInstructions = (nodes: Node[]) => {
   const instructions: Instruction[] = [];
   const branchStack: Branch[] = [];
   for (const node of nodes) {
+    let branch = peek(branchStack);
+    let inBranch = branch && isNodeInBranch(node, branch);
+    let newBranch: Branch | undefined = undefined;
     if ((node as ObjectNode).name) {
       // TODO if we are in branch need to find branch index
 
       if ((node as ObjectNode).branching) {
         // we're at a branch so push new branch onto stack
-        branchStack.push({
+        newBranch = {
           rootNode: node,
           branches: node.outlets.map(() => []),
-        });
+        };
+        branchStack.push(newBranch);
       }
     }
 
-    let branch = peek(branchStack);
-    let inBranch = branch && isNodeInBranch(node, branch);
     while (branch && !inBranch) {
       console.log("no longer in branch ");
       branch = branchStack.pop();
@@ -148,20 +151,39 @@ export const createInstructions = (nodes: Node[]) => {
       }
       inBranch = branch && isNodeInBranch(node, branch);
     }
+
     const branchIndex = branch && inBranch ? getBranchIndex(node, branch) : -1;
 
     if ((node as ObjectNode).name) {
       // TODO if we are in branch need to find branch index
 
-      const instruction = {
+      const instruction: Instruction = {
         type: InstructionType.EvaluateObject,
         node,
         loadAtStart: (node as ObjectNode).needsLoad, // tells the evaluator that if we are running some other branch, to skip this
       };
+
+      const isBranchingNode = (node as ObjectNode).branching;
       if (branch && inBranch && branchIndex >= 0) {
         branch.branches[branchIndex].push(instruction);
+        if (isBranchingNode) {
+          const b = peek(branchStack);
+          if (b) {
+            branch.branches[branchIndex].push({
+              type: InstructionType.Branch,
+              branches: b.branches,
+            });
+          }
+        }
       } else {
         instructions.push(instruction);
+        const b = peek(branchStack);
+        if (b) {
+          instructions.push({
+            type: InstructionType.Branch,
+            branches: b.branches,
+          });
+        }
       }
     }
 
@@ -169,11 +191,21 @@ export const createInstructions = (nodes: Node[]) => {
     for (let i = 0; i < node.outlets.length; i++) {
       const outlet = node.outlets[i];
       for (const connection of outlet.connections) {
-        const compiledConnection = compileConnection(
-          connection,
-          branchIndex >= 0 && inBranch ? branch : undefined,
-          branchIndex,
-        );
+        if (newBranch) {
+          console.log(
+            "calling compile connection from new branch with",
+            branchIndex >= 0 && inBranch ? branch : undefined,
+            branchIndex,
+            newBranch,
+          );
+        }
+        const compiledConnection = newBranch
+          ? compileConnection(connection, newBranch, i)
+          : compileConnection(
+              connection,
+              branchIndex >= 0 && inBranch ? branch : undefined,
+              branchIndex,
+            );
         if (inBranch && branch) {
           // need to know what branch index to choose by forward traversaing
           branch.branches[branchIndex === -1 ? i : branchIndex].push(...compiledConnection);
@@ -185,6 +217,7 @@ export const createInstructions = (nodes: Node[]) => {
   }
 
   // NOTE - this is most definitely not the way to do this...
+  /*
   while (branchStack.length > 0) {
     const branch = branchStack.pop();
     if (branch) {
@@ -206,5 +239,6 @@ export const createInstructions = (nodes: Node[]) => {
     }
     // add the branches
   }
+  */
   return instructions;
 };

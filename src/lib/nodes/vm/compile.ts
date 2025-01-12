@@ -109,6 +109,7 @@ export const compileVM = (patch: Patch) => {
     const instructions = createInstructions(path.nodes);
     printPaths([path], "lime", "MERGED");
     console.log("instructions", instructions);
+    evaluate(instructions);
   }
   //evaluate(instructions);
   //console.log("instructions=", instructions);

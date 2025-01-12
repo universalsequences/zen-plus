@@ -30,7 +30,11 @@ export const mergePaths = (paths: CompilationPath[]): CompilationPath[] => {
     for (const existingPath of mergedPaths) {
       const prefixLength = getSharedPrefixLength(existingPath, currentPath);
       if (prefixLength > 1) {
-        const currentSuffix = currentPath.nodes.slice(prefixLength);
+        const currentSuffix = currentPath.nodes
+          .slice(prefixLength)
+          .filter(
+            (node) => !existingPath.nodes.some((existingNode) => existingNode.id === node.id),
+          );
 
         existingPath.nodes = [...existingPath.nodes, ...currentSuffix];
         merged = true;

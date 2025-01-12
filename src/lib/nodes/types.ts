@@ -248,6 +248,7 @@ export type MessageNode = Positioned &
     getJSON: () => SerializedMessageNode;
     fromJSON: (x: SerializedMessageNode) => void;
     parse: (x: string) => void;
+    pipeIfApplicable: (x: Message) => Message;
   };
 
 // for now, only Zen patches are allowed
