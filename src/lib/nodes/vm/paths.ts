@@ -5,7 +5,20 @@ export interface CompilationPath {
   connection: IOConnection;
 }
 
-export const mergePaths = (paths: CompilationPath[], isHot?: boolean): CompilationPath[] => {
+const isHot = (x: CompilationPath) => {
+  const inletNumber = x.connection.destination.inlets.indexOf(x.connection.destinationInlet);
+  return inletNumber === 0 || x.connection.destinationInlet.isHot;
+};
+
+export const mergePaths = (paths: CompilationPath[]): CompilationPath[] => {
+  for (const path of paths) {
+    if (isHot(path)) {
+      if (!path.nodes.includes(path.connection.destination)) {
+        console.log("adding to hot path", path.connection.destination.id, path.nodes);
+        path.nodes = [...path.nodes, path.connection.destination];
+      }
+    }
+  }
   if (paths.length <= 1) return paths;
 
   const sortedPaths = paths.sort((a, b) => a.nodes.length - b.nodes.length);
@@ -27,12 +40,7 @@ export const mergePaths = (paths: CompilationPath[], isHot?: boolean): Compilati
     }
   }
 
-  return isHot
-    ? mergedPaths.map((x) => ({
-        ...x,
-        nodes: [...x.nodes, x.connection.destination],
-      }))
-    : mergedPaths;
+  return mergedPaths;
 };
 
 function arePathsSharePrefix(path1: CompilationPath, path2: CompilationPath): boolean {

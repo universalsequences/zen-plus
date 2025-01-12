@@ -25,8 +25,6 @@ const compileConnection = (
   const inletNumber = destination.inlets.indexOf(destinationInlet);
   const outletNumber = source.outlets.indexOf(sourceOutlet);
 
-  console.log("compile connection dest.id", connection.destination.id, branch, branchIndex);
-
   // handle attribute case
   if (inletNumber === 0) {
     // possible attribute (will later check if the register message is a string of correct form)
@@ -98,7 +96,7 @@ const isNodeInBranch = (node: Node, branch: Branch): boolean => {
   return forwardNodes.includes(node);
 };
 
-const getBranchIndex = (node: Node, branch: Branch) => {
+const getBranchIndex = (node: Node, branch: Branch, log = false) => {
   for (let i = 0; i < branch.rootNode.outlets.length; i++) {
     const outlet = branch.rootNode.outlets[i];
     const outletNodes = outlet.connections.flatMap((c) => forwardTraversal(c.destination));
@@ -124,15 +122,33 @@ export const createInstructions = (nodes: Node[]) => {
           rootNode: node,
           branches: node.outlets.map(() => []),
         });
-        console.log("added to stack", peek(branchStack), node);
       }
     }
 
-    const branch = peek(branchStack);
-    const inBranch = branch && isNodeInBranch(node, branch);
-    const branchIndex = inBranch ? getBranchIndex(node, branch) : -1;
-
-    console.log("node.id=%s inBranch=%s index=%s", node.id, inBranch, branchIndex);
+    let branch = peek(branchStack);
+    let inBranch = branch && isNodeInBranch(node, branch);
+    while (branch && !inBranch) {
+      console.log("no longer in branch ");
+      branch = branchStack.pop();
+      if (branch) {
+        const parentBranch = peek(branchStack);
+        console.log("parent branch=", parentBranch);
+        if (parentBranch && isNodeInBranch(branch.rootNode, parentBranch)) {
+          const parentBranchIndex = getBranchIndex(branch.rootNode, parentBranch);
+          parentBranch.branches[parentBranchIndex].push({
+            type: InstructionType.Branch,
+            branches: branch.branches,
+          });
+        } else {
+          instructions.push({
+            type: InstructionType.Branch,
+            branches: branch.branches,
+          });
+        }
+      }
+      inBranch = branch && isNodeInBranch(node, branch);
+    }
+    const branchIndex = branch && inBranch ? getBranchIndex(node, branch) : -1;
 
     if ((node as ObjectNode).name) {
       // TODO if we are in branch need to find branch index
@@ -142,23 +158,23 @@ export const createInstructions = (nodes: Node[]) => {
         node,
         loadAtStart: (node as ObjectNode).needsLoad, // tells the evaluator that if we are running some other branch, to skip this
       };
-      if (inBranch && branchIndex >= 0) {
+      if (branch && inBranch && branchIndex >= 0) {
         branch.branches[branchIndex].push(instruction);
       } else {
         instructions.push(instruction);
       }
     }
 
+    // whenever we push into branches we need to keep track of the position of each branch...
     for (let i = 0; i < node.outlets.length; i++) {
       const outlet = node.outlets[i];
       for (const connection of outlet.connections) {
-        console.log("calling compiled connection from", node.id);
         const compiledConnection = compileConnection(
           connection,
           branchIndex >= 0 && inBranch ? branch : undefined,
           branchIndex,
         );
-        if (inBranch) {
+        if (inBranch && branch) {
           // need to know what branch index to choose by forward traversaing
           branch.branches[branchIndex === -1 ? i : branchIndex].push(...compiledConnection);
         } else {
@@ -167,13 +183,26 @@ export const createInstructions = (nodes: Node[]) => {
       }
     }
   }
+
+  // NOTE - this is most definitely not the way to do this...
   while (branchStack.length > 0) {
     const branch = branchStack.pop();
     if (branch) {
-      instructions.push({
-        type: InstructionType.Branch,
-        branches: branch?.branches,
-      });
+      const parentBranch = peek(branchStack);
+      if (parentBranch && isNodeInBranch(branch.rootNode, parentBranch)) {
+        const parentBranchIndex = getBranchIndex(branch.rootNode, parentBranch, true);
+        if (parentBranchIndex >= 0) {
+          parentBranch.branches[parentBranchIndex].push({
+            type: InstructionType.Branch,
+            branches: branch.branches,
+          });
+        }
+      } else {
+        instructions.push({
+          type: InstructionType.Branch,
+          branches: branch.branches,
+        });
+      }
     }
     // add the branches
   }
