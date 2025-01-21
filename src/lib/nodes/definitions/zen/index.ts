@@ -7,7 +7,6 @@ import {
 } from "../../types";
 import { loop, loopVariable } from "./loop";
 import { z_click } from "./click";
-import { PatchImpl } from "@/lib/nodes/Patch";
 import { membraneAPI } from "./physical-modeling/membrane";
 import { zen_simdDotSum, zen_simdDot, zen_simdMatSum } from "./simd";
 import { gate } from "./gate";
@@ -281,7 +280,7 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes.SIMD = false;
   }
 
-  const subpatch = node.subpatch || new SubpatchImpl(node.patch, node);
+  const subpatch = node.subpatch || node.patch.newSubPatch(node.patch, node); //new SubpatchImpl(node.patch, node);
   node.subpatch = subpatch;
   subpatch.clearState();
   if (!node.attributes["moduleType"]) {

@@ -40,9 +40,14 @@ export const speakers = (node: ObjectNode) => {
 
   if (!node.audioNode) {
     // need to create an audio node that connects to speakers
-    const ctxt = node.patch.audioContext;
-    const splitter = ctxt.createChannelMerger((node.attributes.channels || 1) as number);
+    const ctxt = node.patch.audioContext!;
+    const channelCount = (node.attributes.channels || 1) as number;
+    const splitter = ctxt.createChannelMerger(channelCount);
     node.audioNode = splitter;
+
+    ctxt.destination.channelCount = ctxt.destination.maxChannelCount;
+    ctxt.destination.channelCountMode = "explicit";
+    ctxt.destination.channelInterpretation = "discrete";
 
     splitter.connect(ctxt.destination);
 
@@ -95,6 +100,9 @@ export const scope_tilde = (node: ObjectNode) => {
 const init: Record<string, boolean> = {};
 export const createWorklet = async (node: ObjectNode, path: string, processor: string) => {
   const audioContext = node.patch.audioContext;
+  if (!audioContext) {
+    return;
+  }
   //if (!init[processor]) {
   await audioContext.audioWorklet.addModule(path);
   //  init[processor] = true;

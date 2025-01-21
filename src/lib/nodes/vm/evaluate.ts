@@ -4,10 +4,15 @@ import { Message, MessageNode, ObjectNode } from "../types";
 interface Branching {
   input: (Message | undefined)[];
   branches: Instruction[][];
+  consumed: number[];
+  register: (Message | undefined)[];
 }
 
-export const evaluate = (_instructions: Instruction[], initialMessage: Message = "bang") => {
-  console.log("evaluate with initial message=", initialMessage);
+export const evaluate = (
+  _instructions: Instruction[],
+  initialMessage: Message = "bang",
+  debug = false,
+) => {
   let a = new Date().getTime();
   const instructions = [..._instructions];
   let register: (Message | undefined)[] = new Array(16)
@@ -15,6 +20,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
     .map((x) => initialMessage);
   const branchingStack: Branching[] = [];
 
+  const objectsEvaluated: ObjectNode[] | undefined = debug ? [] : undefined;
   const peekBranching = () => {
     return branchingStack[branchingStack.length - 1];
   };
@@ -24,16 +30,26 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
       const branching = peekBranching();
       let instruction: Instruction | undefined = undefined;
       for (let i = 0; i < branching.branches.length; i++) {
+        if (branching.input[i] === undefined) {
+          // skip this branch
+          continue;
+        }
         const branch = branching.branches[i];
         if (branch.length > 0) {
           instruction = branch.shift();
+          if (branching.consumed[i] === 0) {
+            // first instruction from branch so we bring back the original input
+            register = branching.register;
+          }
+          branching.consumed[i]++;
           return instruction;
         }
       }
       if (instruction === undefined) {
         // we have consumed the branch completely and should pop
-        branchingStack.pop();
-        return getNext();
+        const b = branchingStack.pop();
+        const next = getNext();
+        return next;
       }
     }
     return instructions.shift();
@@ -86,6 +102,9 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
             : objectNode.inlets[0].lastMessage;
         if (objectNode.fn && inputMessage !== undefined) {
           register = objectNode.fn(inputMessage);
+          objectsEvaluated?.push(objectNode);
+        } else {
+          console.log("no msg...");
         }
         break;
       case InstructionType.Store: {
@@ -110,6 +129,8 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
         const branch: Branching = {
           input: [...register],
           branches: instruction.branches.map((x) => [...x]),
+          consumed: instruction.branches.map((x) => 0),
+          register: [...register],
         };
         branchingStack.push(branch);
         //console.log("%cpushing onto branch stack now", "color:lime", [...branchingStack]);
@@ -119,8 +140,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
         //console.log("needs implementation");
         break;
     }
-    console.log("register now", register, instruction);
   }
   let b = new Date().getTime();
-  //console.log("evaluating instructions took %s ms", b - a);
+  return objectsEvaluated;
 };

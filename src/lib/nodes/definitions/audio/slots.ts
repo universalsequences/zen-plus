@@ -1,4 +1,4 @@
-import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "@/components/SlotView";
+import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "@/constants/slots";
 import {
   type AttributeValue,
   ConnectionType,
@@ -55,7 +55,7 @@ const initializeSlots = (node: ObjectNode) => {
 };
 
 const initializeAudioNodes = (node: ObjectNode) => {
-  const ctxt = node.patch.audioContext;
+  const ctxt = node.patch.audioContext as AudioContext;
   if (!node.audioNode) {
     node.audioNode = ctxt.createChannelMerger(2);
   }
@@ -111,7 +111,7 @@ const connectInputs = (node: ObjectNode) => {
   const first: ObjectNode = node.slots[0];
   if (node.merger && first.merger) {
     node.merger.disconnect();
-    const _splitter = node.patch.audioContext.createChannelSplitter(2);
+    const _splitter = node.patch.audioContext!.createChannelSplitter(2);
     node.merger.connect(_splitter);
     _splitter.connect(first.merger, 0, 0);
     _splitter.connect(first.merger, 1, 1);
@@ -129,7 +129,7 @@ const connectSlotPair = (current: ObjectNode, next: ObjectNode) => {
 const setupOutputs = (node: ObjectNode) => {
   const last = node.slots?.[node.slots?.length - 1];
   if (!last) return;
-  const splitter = node.patch.audioContext.createChannelSplitter(2);
+  const splitter = node.patch.audioContext!.createChannelSplitter(2);
 
   last.audioNode?.connect(splitter);
   if (node.audioNode) {

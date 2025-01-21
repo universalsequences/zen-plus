@@ -236,6 +236,8 @@ export type ObjectNode = Positioned &
     clearCache: () => void;
     lispError?: LispError;
     branching?: boolean;
+    isInletSumSpecialCase?: boolean;
+    isSpecialCase?: boolean;
   };
 
 export interface SerializableCustom {
@@ -271,11 +273,10 @@ export type Patch = Identifiable & {
   presentationMode: boolean;
   lockedMode?: boolean;
   compile: (x: Statement, outputNumber?: number) => void;
-  assistant: Assistant;
   recompileGraph: (force?: boolean) => void;
   type: PatchType;
   isZenBase: () => boolean;
-  audioContext: AudioContext;
+  audioContext?: AudioContext;
   historyDependencies: Statement[];
   outputStatements: Statement[];
   historyNodes: Set<ObjectNode>;
@@ -326,6 +327,7 @@ export type Patch = Identifiable & {
   scriptingNameToNodes: Record<string, ObjectNode[]>;
   isExamplePatch?: boolean;
   workletCode?: string;
+  newSubPatch: (p: Patch, n: ObjectNode) => SubPatch;
 };
 
 export type SubPatch = Patch & {

@@ -112,6 +112,10 @@ export class PatchImpl implements Patch {
     }
   }
 
+  newSubPatch(parentPatch: Patch, parentNode: ObjectNode) {
+    return new Subpatch(parentPatch, parentNode);
+  }
+
   async initializeRecorderWorklet() {
     const audioContext = this.audioContext;
     const processor = "recorder-processor";

@@ -33,7 +33,8 @@ const compileConnection = (
       type: InstructionType.Attribute,
       node: destination,
     };
-    pushInstruction(instructions, instruction, branch, branchIndex);
+    instructions.push(instruction);
+    //pushInstruction(instructions, instruction, branch, branchIndex);
   }
   const subpatch = (destination as ObjectNode).subpatch;
   if (subpatch) {
@@ -48,7 +49,8 @@ const compileConnection = (
         compileConnection(c, branch, branchIndex),
       );
       for (const instruction of compiledInstructions) {
-        pushInstruction(instructions, instruction, branch, branchIndex);
+        instructions.push(instruction);
+        //pushInstruction(instructions, instruction, branch, branchIndex);
       }
       //instructions.push(...connections.flatMap((c) => compileConnection(c, branch, branchIndex)));
     }
@@ -61,7 +63,8 @@ const compileConnection = (
         (c) => compileConnection(c, branch, branchIndex),
       );
       for (const instruction of compiledInstructions) {
-        pushInstruction(instructions, instruction, branch, branchIndex);
+        instructions.push(instruction);
+        //pushInstruction(instructions, instruction, branch, branchIndex);
       }
     }
   } else if ((destination as MessageNode).messageType !== undefined) {
@@ -71,7 +74,8 @@ const compileConnection = (
       node: destination,
       outletNumber,
     };
-    pushInstruction(instructions, instruction, branch, branchIndex);
+    //pushInstruction(instructions, instruction, branch, branchIndex);
+    instructions.push(instruction);
   } else {
     const instruction: Instruction = {
       type: InstructionType.Store,
@@ -80,7 +84,9 @@ const compileConnection = (
       outletNumber,
       node: destination,
     };
-    pushInstruction(instructions, instruction, branch, branchIndex);
+    //pushInstruction(instructions, instruction, branch, branchIndex);
+
+    instructions.push(instruction);
   }
 
   return instructions;
@@ -131,22 +137,23 @@ export const createInstructions = (nodes: Node[]) => {
     }
 
     while (branch && !inBranch) {
-      console.log("no longer in branch ");
       branch = branchStack.pop();
-      if (branch) {
+      if (branch && inBranch) {
         const parentBranch = peek(branchStack);
-        console.log("parent branch=", parentBranch);
         if (parentBranch && isNodeInBranch(branch.rootNode, parentBranch)) {
           const parentBranchIndex = getBranchIndex(branch.rootNode, parentBranch);
-          parentBranch.branches[parentBranchIndex].push({
-            type: InstructionType.Branch,
-            branches: branch.branches,
-          });
+          if (parentBranchIndex > -1) {
+            parentBranch.branches[parentBranchIndex].push({
+              type: InstructionType.Branch,
+              branches: branch.branches,
+            });
+          }
         } else {
           instructions.push({
             type: InstructionType.Branch,
             branches: branch.branches,
           });
+          break;
         }
       }
       inBranch = branch && isNodeInBranch(node, branch);
@@ -188,17 +195,59 @@ export const createInstructions = (nodes: Node[]) => {
     }
 
     // whenever we push into branches we need to keep track of the position of each branch...
+
+    if (node.skipCompilation) {
+      continue;
+    }
+    const outs: { i: number; instruction: Instruction }[] = [];
+    for (let i = 0; i < node.outlets.length; i++) {
+      const outlet = node.outlets[i];
+      const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
+      for (const connection of connections) {
+        const compiledConnection = newBranch
+          ? compileConnection(connection, newBranch, i)
+          : compileConnection(
+              connection,
+              branchIndex >= 0 && inBranch ? branch : undefined,
+              branchIndex,
+            );
+        outs.push(...compiledConnection.map((x) => ({ instruction: x, i })));
+      }
+    }
+
+    for (const { instruction: out, i } of [
+      ...outs.filter(
+        (x) =>
+          x.instruction.type === InstructionType.Store ||
+          x.instruction.type === InstructionType.Attribute ||
+          x.instruction.type === InstructionType.ReplaceMessage,
+      ),
+      ...outs.filter(
+        (x) =>
+          !(
+            x.instruction.type === InstructionType.Store ||
+            x.instruction.type === InstructionType.Attribute ||
+            x.instruction.type === InstructionType.ReplaceMessage
+          ),
+      ),
+    ]) {
+      const index = branchIndex === -1 ? i : branchIndex;
+      if (newBranch) {
+        const chosenBranch = newBranch.branches[i];
+        chosenBranch.push(out);
+      } else if (inBranch && branch && index < branch.branches.length) {
+        // need to know what branch index to choose by forward traversaing
+        const chosenBranch = branch.branches[branchIndex === -1 ? i : branchIndex];
+        chosenBranch.push(out);
+      } else {
+        instructions.push(out);
+      }
+    }
+
+    /*
     for (let i = 0; i < node.outlets.length; i++) {
       const outlet = node.outlets[i];
       for (const connection of getOutboundConnectionsFromOutlet(outlet, new Set())) {
-        if (newBranch) {
-          console.log(
-            "calling compile connection from new branch with",
-            branchIndex >= 0 && inBranch ? branch : undefined,
-            branchIndex,
-            newBranch,
-          );
-        }
         const compiledConnection = newBranch
           ? compileConnection(connection, newBranch, i)
           : compileConnection(
@@ -214,6 +263,7 @@ export const createInstructions = (nodes: Node[]) => {
         }
       }
     }
+    */
   }
 
   // NOTE - this is most definitely not the way to do this...

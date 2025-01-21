@@ -15,16 +15,15 @@ import {
   type Attributes,
   SubPatch,
   MessageNode,
-} from "./types";
-import { OperatorContextType, isCompiledType } from "./context";
+} from "@/lib/nodes/types";
+import { OperatorContextType, isCompiledType } from "@/lib/nodes/context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
-import { compileVM } from "./vm/forwardpass";
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode)
  */
-export class BaseNode implements Node {
+export class MockBaseNode implements Node {
   patch: Patch;
   inlets: IOlet[];
   outlets: IOlet[];
@@ -132,7 +131,6 @@ export class BaseNode implements Node {
       )
     ) {
       outlet.connections.push(connection);
-    } else {
     }
 
     if (
@@ -170,43 +168,12 @@ export class BaseNode implements Node {
       );
     }
 
-    compileVM(this.patch);
     return connection;
   }
 
-  disconnectAudioNode(connection: IOConnection) {
-    if (connection.splitter) {
-      connection.splitter.disconnect();
-      const sourceNode = (this as any as ObjectNode).audioNode;
-      if (sourceNode) {
-        sourceNode.disconnect(connection.splitter);
-      }
-      connection.splitter = undefined;
-    }
-  }
+  disconnectAudioNode(connection: IOConnection) {}
 
-  connectAudioNode(connection: IOConnection) {
-    const { destination, sourceOutlet, destinationInlet } = connection;
-    // todo -- figure out why BaseNode is not being typed as ObjectNode
-    const sourceNode = (this as unknown as ObjectNode).audioNode;
-    let destNode = (destination as unknown as ObjectNode).audioNode;
-    if (sourceNode && destNode) {
-      const splitter = this.patch.audioContext.createChannelSplitter(this.outlets.length);
-      connection.splitter = splitter;
-      sourceNode.connect(splitter);
-
-      if ((connection.destination as ObjectNode).merger) {
-        destNode = (connection.destination as ObjectNode).merger;
-      }
-      if (destNode) {
-        splitter.connect(
-          destNode,
-          this.outlets.indexOf(sourceOutlet),
-          destination.inlets.indexOf(destinationInlet),
-        );
-      }
-    }
-  }
+  connectAudioNode(connection: IOConnection) {}
 
   disconnect(connection: IOConnection, compile = true, ignoreAudio?: boolean) {
     if (((this as unknown as ObjectNode).patch as SubPatch).clearCache) {

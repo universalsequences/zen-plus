@@ -1,5 +1,4 @@
 import type { Node, Patch, IOConnection, ObjectNode, SubPatch, MessageNode, IOlet } from "../types";
-import { evaluate } from "./evaluate";
 import { createInstructions } from "./instructions";
 import {
   type CompilationPath,
@@ -32,8 +31,6 @@ export const compileVM = (patch: Patch) => {
       x.outlets.some((y) => y.connections.length > 0),
   );
 
-  console.log("INITIAL SOURCE=", SOURCE);
-
   let S = [...SOURCE];
   let L: Node[] = [];
   const visitedConnections: Set<IOConnection> = new Set();
@@ -63,10 +60,12 @@ export const compileVM = (patch: Patch) => {
         } else if (destinationInlet.isHot) {
           const backtracked = backtrack(n, L);
           console.log("%chotpath backtrack =", "color:red", destination, backtracked);
-          hotpaths.push({
+          const hotpath = {
             connection: m,
-            nodes: backtracked,
-          });
+            nodes: backtracked.includes(destination) ? backtracked : [...backtracked, destination],
+          };
+          console.log("adding hotpath", hotpath);
+          hotpaths.push(hotpath);
         }
         visitedConnections.add(m);
         if (
@@ -114,12 +113,12 @@ export const compileVM = (patch: Patch) => {
     }
     const instructions = createInstructions(nodes);
     printNodes([...nodes], "lime", "MERGED");
-    console.log("instructions", instructions);
+    //console.log("instructions", instructions);
     // evaluate(instructions);
 
     const source = nodes[0];
     if (source) {
-      console.log("STORING IN SOURCE", source.id);
+      //console.log("STORING IN SOURCE", source.id);
       source.instructions = instructions;
     }
   }

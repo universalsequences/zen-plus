@@ -3,7 +3,6 @@ import { isForwardCycle } from "@/lib/nodes/traverse";
 import { ObjectNode, Message, SubPatch } from "../../types";
 import { Statement, CompoundOperator } from "./types";
 import { history, Arg, History, UGen, print } from "@/lib/zen/index";
-import ObjectNodeComponent from "@/components/ObjectNodeComponent";
 
 /**
  *              _______________

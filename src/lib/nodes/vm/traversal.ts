@@ -74,17 +74,15 @@ export const forwardTraversal = (node: Node, visited = new Set<Node>()): Node[] 
   return [node, ...outbound.flatMap((c) => forwardTraversal(c.destination, visited))];
 };
 
-export const getInboundConnections = (inlet: IOlet): IOConnection[] => {
+export const getInboundConnections = (inlet: IOlet, debug = false): IOConnection[] => {
   const connections = inlet.connections;
-
   const subpatchConnections: IOConnection[] = [];
   const regularConnections: IOConnection[] = [];
   const inConnections: IOConnection[] = [];
   for (const c of connections) {
-    const name = (c.destination as ObjectNode).name;
     if ((c.source as ObjectNode).subpatch) {
       subpatchConnections.push(c);
-    } else if (name === "out") {
+    } else if ((c.source as ObjectNode).name === "in") {
       inConnections.push(c);
     } else {
       regularConnections.push(c);
@@ -113,9 +111,9 @@ export const getInboundConnections = (inlet: IOlet): IOConnection[] => {
     const patch = source.patch;
     const inletNumber = ((source as ObjectNode).arguments[0] as number) - 1;
     const inlet = (patch as SubPatch).parentNode.inlets[inletNumber];
-
     if (inlet) {
-      resolvedSubpatchConnections.push(...getInboundConnections(inlet));
+      const c = getInboundConnections(inlet, true);
+      resolvedSubpatchConnections.push(...c);
     }
   }
 

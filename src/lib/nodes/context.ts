@@ -42,6 +42,7 @@ export const getAllAPIs = (): API[] => {
   const svg = getOperatorContext(OperatorContextType.SVG);
   const gl = getOperatorContext(OperatorContextType.GL);
   return [zen.api, audio.api, core.api, gpu.api, svg.api, gl.api];
+  return [];
 };
 
 export const getAllDefinitions = (): docs.API[] => {
@@ -73,6 +74,7 @@ export const getAllContexts = (): OperatorContext[] => {
   const gl = getOperatorContext(OperatorContextType.GL);
   const contexts = [core, zen, audio, audio, gl];
   return contexts;
+  return [];
 };
 
 export interface OperatorContext {

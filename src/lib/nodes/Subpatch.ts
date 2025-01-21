@@ -2,7 +2,7 @@ import type { Statement } from "./definitions/zen/types";
 import { toConnectionType, OperatorContextType } from "./context";
 import { PatchImpl } from "./Patch";
 import { type ObjectNode, type Message, type Patch, type SubPatch, PatchType } from "./types";
-import ObjectNodeImpl from "./ObjectNode";
+//import ObjectNodeImpl from "./ObjectNode";
 import { MutableValue } from "./definitions/core/MutableValue";
 
 /**
@@ -20,7 +20,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
   constructor(parentPatch: Patch, parentNode: ObjectNode) {
     const parentNodeType = parentNode.attributes.type as string;
-    super(parentPatch.audioContext, parentNodeType === "zen", true);
+    super(parentPatch.audioContext!, parentNodeType === "zen", true);
 
     this.parentPatch = parentPatch;
     this.parentNode = parentNode;
@@ -85,6 +85,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
   }
 
   _setupInitialNodes() {
+    /*
     const ZEN = OperatorContextType.ZEN;
     let in1 = new ObjectNodeImpl(this as Patch);
     in1.parse("in 1", ZEN, false);
@@ -108,6 +109,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
 
     this.objectNodes = [in1, out1, in2, out2];
     this.messageNodes = [];
+    */
   }
 
   recompileGraph(force?: boolean): void {
@@ -183,11 +185,6 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     };
   }
 
-  /**
-   * This is called when a parameter-setting message is received
-   * @param message
-   * @returns
-   */
   processMessageForParam(message: Message) {
     if (typeof message !== "string") {
       return false;

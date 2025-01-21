@@ -8,6 +8,7 @@ doc("messagemessage", {
 });
 
 export const messagemessage = (node: ObjectNode) => {
+  node.branching = true;
   return (message: Message): Message[] => {
     return [message, message];
   };
