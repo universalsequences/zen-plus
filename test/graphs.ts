@@ -187,9 +187,10 @@ export const graphBranch1 = () => {
   mult1.connect(add1_A, add1_A.inlets[0], mult1.outlets[0]);
   add1_A.connect(m2, m2.inlets[1], add1_A.outlets[0]);
   mult2.connect(m3, m3.inlets[1], mult2.outlets[0]);
-  mult3.connect(m4, m3.inlets[1], mult3.outlets[0]);
+  mult3.connect(m4, m4.inlets[1], mult3.outlets[0]);
 
   const nodes = topologicalSearchFromNode(m1);
+
   return {
     nodes,
     patch,
@@ -316,5 +317,43 @@ export const graphBranchMessageMessageNested = () => {
       mult2,
       add2_A,
     ],
+  };
+};
+
+export const graphScript = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const p = newObject("p", patch, OperatorContextType.ZEN);
+  const subpatch = p.subpatch as SubPatch;
+  const in1 = newObject("in 1", subpatch, OperatorContextType.ZEN);
+  const script = newObject("lisp", subpatch);
+  script.script = "(list $1 $1 $1 $1)";
+  newObject("out 1", subpatch, OperatorContextType.ZEN);
+  const out2 = newObject("out 2", subpatch, OperatorContextType.ZEN);
+
+  m1.connect(p, p.inlets[0], m1.outlets[0]);
+  in1.connect(script, script.inlets[0], in1.outlets[0]);
+  script.connect(out2, out2.inlets[0], script.outlets[0]);
+
+  p.connect(m2, m2.inlets[1], p.outlets[1]);
+
+  return { m1, m2, nodes: topologicalSearchFromNode(m1) };
+};
+
+export const graphPipeMessage = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const button = newObject("button", patch);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+
+  button.connect(m2, m2.inlets[0], button.outlets[0]);
+  m2.connect(m3, m3.inlets[1], m2.outlets[0]);
+
+  return {
+    m2,
+    m3,
+    nodes: topologicalSearchFromNode(button),
+    expected: [button.id, m2.id],
   };
 };

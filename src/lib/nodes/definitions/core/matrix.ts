@@ -165,7 +165,6 @@ export const matrix = (_node: ObjectNode) => {
    */
   let counter = 0;
   return (message: Message) => {
-    console.log("matrix message=", message, _node.buffer);
     if (_node.attributes.columns !== columns) {
       columns = _node.attributes.columns as number;
       _node.buffer =

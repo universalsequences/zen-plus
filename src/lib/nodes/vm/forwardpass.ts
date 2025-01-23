@@ -35,13 +35,15 @@ export const topologicalSearchFromNode = (node: Node, debug = false): Node[] => 
         //  continue;
         if (isMessage && inletNumber === 1) {
           continue;
-        } else if (destinationInlet.isHot) {
+        } else if (destinationInlet.isHot || (isMessage && inletNumber === 0)) {
+          /*
           const inbound = destination.inlets
             .flatMap((x) => getInboundConnections(x))
             .filter((x) => !visitedConnections.has(x));
-          if (!S.includes(destination)) {
-            S.push(destination);
-          }
+            */
+          //if (!S.includes(destination)) {
+          S.push(destination);
+          //}
         }
       }
     }
@@ -83,7 +85,6 @@ const compileSourceNode = (node: Node) => {
   const nodes = topologicalSearchFromNode(node);
   const instructions = createInstructions(nodes);
   node.instructions = instructions;
-  //console.log("instructions for node=", node, instructions);
 };
 
 export const getSourceNodesForCompilation = (patch: Patch): Node[] => {

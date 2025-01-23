@@ -6,13 +6,18 @@ import {
   graphBranch2,
   graphNestedSubPatch,
   graphNestedSubPatchIntoSubpatch,
+  graphPipeMessage,
   graphSubPatch1,
   graphSubPatchIntoSubpatch,
   newObject,
 } from "./graphs";
 import { MockPatch } from "./mocks/MockPatch";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
-import { compileVM, getSourceNodesForCompilation } from "@/lib/nodes/vm/forwardpass";
+import {
+  compileVM,
+  getSourceNodesForCompilation,
+  topologicalSearchFromNode,
+} from "@/lib/nodes/vm/forwardpass";
 import { MessageType } from "@/lib/nodes/types";
 import { InstructionType } from "@/lib/nodes/vm/types";
 
@@ -56,6 +61,11 @@ describe("topologicalSearchFromNode", async () => {
     const { nodes, expected } = graphBranch2();
     expect(nodes.map((x) => x.id)).toEqual(expected);
   });
+
+  it("topologicalSearchFromNode pipe message", async () => {
+    const { nodes, expected } = graphPipeMessage();
+    expect(nodes.map((x) => x.id)).toEqual(expected);
+  });
 });
 
 describe("compileVM", async () => {
@@ -77,6 +87,9 @@ describe("compileVM", async () => {
 
     const sourceNodes = getSourceNodesForCompilation(patch);
     expect(sourceNodes.length).toBe(3);
+
+    const nodesFromM1 = topologicalSearchFromNode(m1);
+    expect(nodesFromM1.map((x) => x.id)).toEqual([m1.id, metro.id]);
 
     compileVM(patch);
 

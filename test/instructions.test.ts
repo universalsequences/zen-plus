@@ -9,6 +9,7 @@ import {
   graphBranch2,
   graphBranchMessageMessage,
   graphBranchMessageMessageNested,
+  graphScript,
   graphSubPatch1,
   graphSubPatchIntoSubpatch,
 } from "./graphs";
@@ -192,5 +193,17 @@ describe("evaluateInstructions", async () => {
     const instructions = createInstructions(nodes);
     const objectsEvaluated = evaluate(instructions, 5, true);
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
+  });
+
+  it("script in patch", () => {
+    const { nodes, m2 } = graphScript();
+    console.log(
+      "nodes=",
+      nodes.map((x) => x.text),
+    );
+    const instructions = createInstructions(nodes);
+    console.log(instructions.map((x) => [x.type, x.outletNumber]));
+    evaluate(instructions, 5);
+    expect(m2.message).toEqual([5, 5, 5, 5]);
   });
 });

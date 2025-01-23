@@ -23,8 +23,6 @@ export const AudioContextProvider: React.FC<Props> = ({ children }) => {
     setAudioContext(
       new AudioContext({
         sampleRate: 44100,
-        channelCount: 10,
-        channelCountMode: "explicit",
       }),
     );
   }, []);

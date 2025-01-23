@@ -1,5 +1,18 @@
-import { Node, ObjectNode, IOConnection, MessageNode, SubPatch } from "../types";
-import { forwardTraversal, getOutboundConnectionsFromOutlet } from "./traversal";
+import {
+  Node,
+  ObjectNode,
+  IOConnection,
+  MessageNode,
+  SubPatch,
+  IOlet,
+  MessageType,
+} from "../types";
+import {
+  forwardTraversal,
+  getInboundConnections,
+  getOutboundConnections,
+  getOutboundConnectionsFromOutlet,
+} from "./traversal";
 import { Instruction, InstructionType } from "./types";
 
 const pushInstruction = (
@@ -15,6 +28,9 @@ const pushInstruction = (
   }
 };
 
+const isMessageNode = (node: Node) => (node as MessageNode).messageType !== undefined;
+const isObjectNode = (node: Node) => (node as ObjectNode).name !== undefined;
+
 const compileConnection = (
   connection: IOConnection,
   branch: Branch | undefined,
@@ -23,7 +39,12 @@ const compileConnection = (
   const instructions: Instruction[] = [];
   const { destinationInlet, source, destination, sourceOutlet } = connection;
   const inletNumber = destination.inlets.indexOf(destinationInlet);
-  const outletNumber = source.outlets.indexOf(sourceOutlet);
+  const inbound = getInboundConnections(sourceOutlet);
+  const outletNumber = inbound[0].source.outlets.indexOf(inbound[0].sourceOutlet);
+
+  if (outletNumber === -1) {
+    throw new Error("outlet number -1");
+  }
 
   // handle attribute case
   if (inletNumber === 0) {
@@ -67,16 +88,17 @@ const compileConnection = (
         //pushInstruction(instructions, instruction, branch, branchIndex);
       }
     }
-  } else if ((destination as MessageNode).messageType !== undefined) {
+  } else if (isMessageNode(destination) && inletNumber === 1) {
     // message type
     const instruction: Instruction = {
-      type: inletNumber === 0 ? InstructionType.PipeMessage : InstructionType.ReplaceMessage,
+      type: InstructionType.ReplaceMessage,
       node: destination,
       outletNumber,
     };
     //pushInstruction(instructions, instruction, branch, branchIndex);
     instructions.push(instruction);
-  } else {
+  } else if (isObjectNode(destination)) {
+    // object node
     const instruction: Instruction = {
       type: InstructionType.Store,
       inletNumber,
@@ -85,7 +107,6 @@ const compileConnection = (
       node: destination,
     };
     //pushInstruction(instructions, instruction, branch, branchIndex);
-
     instructions.push(instruction);
   }
 
@@ -161,14 +182,24 @@ export const createInstructions = (nodes: Node[]) => {
 
     const branchIndex = branch && inBranch ? getBranchIndex(node, branch) : -1;
 
-    if ((node as ObjectNode).name) {
+    if ((node as ObjectNode).name || (node as MessageNode).messageType === MessageType.Message) {
       // TODO if we are in branch need to find branch index
 
       const instruction: Instruction = {
-        type: InstructionType.EvaluateObject,
+        type: isObjectNode(node) ? InstructionType.EvaluateObject : InstructionType.PipeMessage,
         node,
         loadAtStart: (node as ObjectNode).needsLoad, // tells the evaluator that if we are running some other branch, to skip this
       };
+
+      if ((node as MessageNode).messageType === MessageType.Message) {
+        const inbound = getInboundConnections(node.inlets[0]);
+        if (inbound[0]) {
+          const outletNumber = inbound[0].source.inlets.indexOf(inbound[0].sourceOutlet);
+          instruction.outletNumber = outletNumber;
+        } else {
+          console.log("NO INBOUND!");
+        }
+      }
 
       const isBranchingNode = (node as ObjectNode).branching;
       if (branch && inBranch && branchIndex >= 0) {
@@ -199,7 +230,8 @@ export const createInstructions = (nodes: Node[]) => {
     if (node.skipCompilation) {
       continue;
     }
-    const outs: { i: number; instruction: Instruction }[] = [];
+
+    let outs: { i: number; instruction: Instruction }[] = [];
     for (let i = 0; i < node.outlets.length; i++) {
       const outlet = node.outlets[i];
       const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
