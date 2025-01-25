@@ -28,14 +28,13 @@ const pushInstruction = (
   }
 };
 
-const isMessageNode = (node: Node) => (node as MessageNode).messageType !== undefined;
+const isMessageNode = (node: Node, messageType?: MessageType) =>
+  (messageType !== undefined ? (node as MessageNode).messageType === messageType : true) &&
+  (node as MessageNode).messageType !== undefined;
+
 const isObjectNode = (node: Node) => (node as ObjectNode).name !== undefined;
 
-const compileConnection = (
-  connection: IOConnection,
-  branch: Branch | undefined,
-  branchIndex: number,
-): Instruction[] => {
+const compileConnection = (connection: IOConnection): Instruction[] => {
   const instructions: Instruction[] = [];
   const { destinationInlet, source, destination, sourceOutlet } = connection;
   const inletNumber = destination.inlets.indexOf(destinationInlet);
@@ -66,9 +65,7 @@ const compileConnection = (
 
     if (input) {
       const connections = input.outlets.flatMap((outlet) => outlet.connections);
-      const compiledInstructions = connections.flatMap((c) =>
-        compileConnection(c, branch, branchIndex),
-      );
+      const compiledInstructions = connections.flatMap((c) => compileConnection(c));
       for (const instruction of compiledInstructions) {
         instructions.push(instruction);
         //pushInstruction(instructions, instruction, branch, branchIndex);
@@ -81,7 +78,7 @@ const compileConnection = (
     const outletNumber = ((destination as ObjectNode).arguments[0] as number) - 1;
     if (subpatch) {
       const compiledInstructions = subpatch.parentNode.outlets[outletNumber].connections.flatMap(
-        (c) => compileConnection(c, branch, branchIndex),
+        (c) => compileConnection(c),
       );
       for (const instruction of compiledInstructions) {
         instructions.push(instruction);
@@ -137,7 +134,7 @@ const getBranchIndex = (node: Node, branch: Branch, log = false) => {
 
 const peek = (stack: Branch[]): Branch | undefined => stack[stack.length - 1];
 
-export const createInstructions = (nodes: Node[]) => {
+export const createInstructions2 = (nodes: Node[]) => {
   const instructions: Instruction[] = [];
   const branchStack: Branch[] = [];
   for (const node of nodes) {
@@ -236,13 +233,7 @@ export const createInstructions = (nodes: Node[]) => {
       const outlet = node.outlets[i];
       const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
       for (const connection of connections) {
-        const compiledConnection = newBranch
-          ? compileConnection(connection, newBranch, i)
-          : compileConnection(
-              connection,
-              branchIndex >= 0 && inBranch ? branch : undefined,
-              branchIndex,
-            );
+        const compiledConnection = compileConnection(connection);
         outs.push(...compiledConnection.map((x) => ({ instruction: x, i })));
       }
     }
@@ -322,5 +313,122 @@ export const createInstructions = (nodes: Node[]) => {
     // add the branches
   }
   */
+  return instructions;
+};
+
+interface BranchContext {
+  rootNode: Node;
+  branches: Instruction[][];
+  parentBranchIndex?: number;
+}
+
+export const createInstructions = (nodes: Node[]) => {
+  const instructions: Instruction[] = [];
+  const branchStack: BranchContext[] = [];
+
+  const handleNodeInstructions = (node: Node, branchContext?: BranchContext) => {
+    const instruction: Instruction = {
+      type: isObjectNode(node) ? InstructionType.EvaluateObject : InstructionType.PipeMessage,
+      node,
+      loadAtStart: (node as ObjectNode).needsLoad,
+    };
+
+    if (isMessageNode(node, MessageType.Message)) {
+      console.log("MESSAGE", node.id);
+      const inbound = getInboundConnections(node.inlets[0])[0];
+      if (inbound) {
+        instruction.outletNumber = inbound.source.outlets.indexOf(inbound.sourceOutlet);
+      } else {
+        console.log("no inbound..", node.id);
+      }
+    }
+
+    if (isObjectNode(node) || isMessageNode(node, MessageType.Message)) {
+      if (branchContext) {
+        const branchIndex = getBranchIndex(node, branchContext.rootNode);
+        if (branchIndex >= 0) {
+          branchContext.branches[branchIndex].push(instruction);
+        }
+      } else {
+        instructions.push(instruction);
+      }
+    }
+  };
+
+  const getBranchIndex = (node: Node, branchRoot: Node): number => {
+    for (let i = 0; i < branchRoot.outlets.length; i++) {
+      const outletNodes = forwardTraversal(branchRoot);
+      if (outletNodes.includes(node)) return i;
+    }
+    return -1;
+  };
+
+  const handleConnectionInstructions = (
+    node: Node,
+    outlet: IOlet,
+    branchContext?: BranchContext,
+  ) => {
+    const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
+    const outletIndex = node.outlets.indexOf(outlet);
+
+    return connections
+      .flatMap((connection) => {
+        const instructions = compileConnection(connection);
+
+        if (branchContext) {
+          const branchIndex = branchContext.parentBranchIndex ?? outletIndex;
+          branchContext.branches[branchIndex].push(...instructions);
+        } else {
+          return instructions;
+        }
+      })
+      .filter((x) => !!x) as Instruction[];
+  };
+
+  for (const node of nodes) {
+    const currentBranch = branchStack[branchStack.length - 1];
+
+    // Handle branching nodes
+    if (isObjectNode(node) && (node as ObjectNode).branching) {
+      const newBranch: BranchContext = {
+        rootNode: node,
+        branches: node.outlets.map(() => []),
+        parentBranchIndex: currentBranch ? getBranchIndex(node, currentBranch.rootNode) : undefined,
+      };
+      branchStack.push(newBranch);
+
+      if (currentBranch) {
+        const branchInstruction: Instruction = {
+          type: InstructionType.Branch,
+          branches: newBranch.branches,
+        };
+        currentBranch.branches[newBranch.parentBranchIndex!].push(branchInstruction);
+      } else {
+        instructions.push({
+          type: InstructionType.Branch,
+          branches: newBranch.branches,
+        });
+      }
+    }
+
+    // Handle node evaluation
+    if (!node.skipCompilation) {
+      handleNodeInstructions(node, currentBranch);
+
+      // Handle outgoing connections
+      node.outlets.forEach((outlet) => {
+        const connectionInstructions = handleConnectionInstructions(node, outlet, currentBranch);
+        if (connectionInstructions?.length) {
+          instructions.push(...connectionInstructions);
+        }
+      });
+    }
+
+    // Clean up completed branches
+    while (branchStack.length && !isNodeInBranch(node, branchStack[branchStack.length - 1])) {
+      branchStack.pop();
+    }
+  }
+
   return instructions;
 };
