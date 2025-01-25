@@ -316,7 +316,9 @@ export const createInstructions2 = (nodes: Node[]) => {
   return instructions;
 };
 
+let branchId = 0;
 interface BranchContext {
+  id: number;
   rootNode: Node;
   branches: Instruction[][];
   parentBranchIndex?: number;
@@ -345,8 +347,15 @@ export const createInstructions = (nodes: Node[]) => {
 
     if (isObjectNode(node) || isMessageNode(node, MessageType.Message)) {
       if (branchContext) {
-        const branchIndex = getBranchIndex(node, branchContext.rootNode);
+        const branchIndex = getBranchIndex(node, branchContext);
         if (branchIndex >= 0) {
+          console.log(
+            "inserting into branch.id=%s index=%s",
+            branchContext.id,
+            branchIndex,
+            instruction.type,
+            instruction.node?.id,
+          );
           branchContext.branches[branchIndex].push(instruction);
         }
       } else {
@@ -355,10 +364,13 @@ export const createInstructions = (nodes: Node[]) => {
     }
   };
 
-  const getBranchIndex = (node: Node, branchRoot: Node): number => {
-    for (let i = 0; i < branchRoot.outlets.length; i++) {
-      const outletNodes = forwardTraversal(branchRoot);
-      if (outletNodes.includes(node)) return i;
+  const getBranchIndex = (node: Node, branch: BranchContext, log = false) => {
+    for (let i = 0; i < branch.rootNode.outlets.length; i++) {
+      const outlet = branch.rootNode.outlets[i];
+      const outletNodes = outlet.connections.flatMap((c) => forwardTraversal(c.destination));
+      if (outletNodes.includes(node)) {
+        return i;
+      }
     }
     return -1;
   };
@@ -377,6 +389,12 @@ export const createInstructions = (nodes: Node[]) => {
 
         if (branchContext) {
           const branchIndex = branchContext.parentBranchIndex ?? outletIndex;
+          console.log(
+            "handleCOnnectionInstruction node=%s inserting into branch.id=%s",
+            node.id,
+            branchContext.id,
+            instructions.map((x) => [x.type, x.node?.id]),
+          );
           branchContext.branches[branchIndex].push(...instructions);
         } else {
           return instructions;
@@ -386,14 +404,16 @@ export const createInstructions = (nodes: Node[]) => {
   };
 
   for (const node of nodes) {
+    console.log("NODE.id", node.id);
     const currentBranch = branchStack[branchStack.length - 1];
 
     // Handle branching nodes
     if (isObjectNode(node) && (node as ObjectNode).branching) {
       const newBranch: BranchContext = {
+        id: branchId++,
         rootNode: node,
         branches: node.outlets.map(() => []),
-        parentBranchIndex: currentBranch ? getBranchIndex(node, currentBranch.rootNode) : undefined,
+        parentBranchIndex: currentBranch ? getBranchIndex(node, currentBranch) : undefined,
       };
       branchStack.push(newBranch);
 
@@ -404,6 +424,7 @@ export const createInstructions = (nodes: Node[]) => {
         };
         currentBranch.branches[newBranch.parentBranchIndex!].push(branchInstruction);
       } else {
+        console.log("adding branch");
         instructions.push({
           type: InstructionType.Branch,
           branches: newBranch.branches,
@@ -425,8 +446,23 @@ export const createInstructions = (nodes: Node[]) => {
     }
 
     // Clean up completed branches
-    while (branchStack.length && !isNodeInBranch(node, branchStack[branchStack.length - 1])) {
-      branchStack.pop();
+    //while (branchStack.length && !isNodeInBranch(node, branchStack[branchStack.length - 1])) {
+    //  branchStack.pop();
+    // }
+    while (branchStack.length) {
+      const currentBranch = branchStack[branchStack.length - 1];
+      const remainingNodes = nodes.slice(nodes.indexOf(node) + 1);
+      const branchNodes = remainingNodes.filter((n) =>
+        currentBranch.rootNode.outlets.some((outlet) =>
+          outlet.connections.flatMap((c) => forwardTraversal(c.destination)).includes(n),
+        ),
+      );
+
+      if (branchNodes.length === 0) {
+        branchStack.pop();
+      } else {
+        break;
+      }
     }
   }
 
