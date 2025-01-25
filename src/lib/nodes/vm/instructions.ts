@@ -194,7 +194,7 @@ export const createInstructions = (nodes: Node[]) => {
       if ((node as MessageNode).messageType === MessageType.Message) {
         const inbound = getInboundConnections(node.inlets[0]);
         if (inbound[0]) {
-          const outletNumber = inbound[0].source.inlets.indexOf(inbound[0].sourceOutlet);
+          const outletNumber = inbound[0].source.outlets.indexOf(inbound[0].sourceOutlet);
           instruction.outletNumber = outletNumber;
         } else {
           console.log("NO INBOUND!");

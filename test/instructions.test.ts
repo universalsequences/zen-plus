@@ -9,6 +9,7 @@ import {
   graphBranch2,
   graphBranchMessageMessage,
   graphBranchMessageMessageNested,
+  graphCyclicScript,
   graphScript,
   graphSubPatch1,
   graphSubPatchIntoSubpatch,
@@ -205,5 +206,44 @@ describe("evaluateInstructions", async () => {
     console.log(instructions.map((x) => [x.type, x.outletNumber]));
     evaluate(instructions, 5);
     expect(m2.message).toEqual([5, 5, 5, 5]);
+  });
+
+  it("script matrix", () => {
+    const { matrix, nodesA, nodesB, expectedA, expectedB } = graphCyclicScript();
+
+    expect(nodesA.map((x) => x.id)).toEqual(expectedA);
+    expect(nodesB.map((x) => x.id)).toEqual(expectedB);
+
+    const instructionsA = createInstructions(nodesA);
+    const instructionsB = createInstructions(nodesB);
+
+    expect(instructionsB.map((x) => x.type)).toEqual([
+      InstructionType.EvaluateObject, // button
+      InstructionType.Attribute,
+      InstructionType.PipeMessage, // message box [0.5,0.5,0.5,0.5]
+      InstructionType.Attribute,
+      InstructionType.Store,
+      InstructionType.EvaluateObject,
+      InstructionType.Store,
+    ]);
+
+    evaluate(instructionsB, "bang");
+    expect(Array.from(matrix.buffer as Float32Array)).toEqual([0.5, 0.5, 0.5, 0.5]);
+
+    evaluate(instructionsA, 1);
+    expect(Array.from(matrix.buffer as Float32Array)).toEqual([1, 1, 1, 1.5]);
+
+    expect(instructionsA.map((x) => x.type)).toEqual([
+      InstructionType.Attribute,
+      InstructionType.Store, // <lisp> store
+      InstructionType.EvaluateObject, // <lisp> eval
+      InstructionType.Attribute, // <pack> attribute
+      InstructionType.Store, // pack store
+      InstructionType.EvaluateObject, // pack eval
+      InstructionType.Attribute, // matrix attribute
+      InstructionType.Store, // matrix store
+      InstructionType.EvaluateObject, // matrix eval
+      InstructionType.Store, // lisp store
+    ]);
   });
 });

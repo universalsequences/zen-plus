@@ -534,7 +534,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (this.instructions) {
-      console.log("evaluating instructions with message", message);
+      console.log("evaluating instructions with message", message, this);
       inlet.lastMessage = message;
       evaluate(this.instructions, message);
       return;

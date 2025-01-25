@@ -1,6 +1,6 @@
 import { MockPatch } from "./mocks/MockPatch";
 import { MockObjectNode } from "./mocks/MockObjectNode";
-import { MessageType, Patch, SubPatch } from "@/lib/nodes/types";
+import { MessageType, type Node, type Patch, type SubPatch } from "@/lib/nodes/types";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
 import { topologicalSearchFromNode } from "@/lib/nodes/vm/forwardpass";
 import { OperatorContextType } from "@/lib/nodes/context";
@@ -355,5 +355,38 @@ export const graphPipeMessage = () => {
     m3,
     nodes: topologicalSearchFromNode(button),
     expected: [button.id, m2.id],
+  };
+};
+
+const c = (a: Node, b: Node, inlet = 0, outlet = 0) => {
+  a.connect(b, b.inlets[inlet], a.outlets[outlet], false);
+};
+
+export const graphCyclicScript = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const lisp = newObject("lisp 0 ", patch);
+  lisp.script = "(list (list $1 $1 $1 (+ (get $2 0) $1)) 0 0)";
+  const unpack = newObject("unpack 0 0 0", patch);
+
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  m2.message = [0.5, 0.5, 0.5, 0.5];
+  const button = newObject("button", patch);
+  const matrix = newObject("matrix @rows 1 @colums 4", patch);
+
+  c(button, m2);
+  c(m2, matrix);
+
+  c(m1, lisp);
+  c(lisp, unpack);
+  c(unpack, matrix);
+  c(matrix, lisp, 1);
+
+  return {
+    matrix,
+    nodesA: topologicalSearchFromNode(m1),
+    nodesB: topologicalSearchFromNode(button),
+    expectedA: [m1.id, lisp.id, unpack.id, matrix.id],
+    expectedB: [button.id, m2.id, matrix.id],
   };
 };
