@@ -20,6 +20,7 @@ export const topologicalSearchFromNode = (node: Node, debug = false): Node[] => 
 
   while (S.length > 0) {
     const n = S.pop();
+    console.log("topo.n", n);
     if (n) {
       L.push(n);
       if (n.skipCompilation || isCompiledType((n as ObjectNode).operatorContextType)) {
@@ -82,7 +83,9 @@ const isSourceNode = (node: Node) => {
 };
 
 const compileSourceNode = (node: Node) => {
+  console.log("finding nodes");
   const nodes = topologicalSearchFromNode(node);
+  console.log("creating instructions");
   const instructions = createInstructions(nodes);
   node.instructions = instructions;
 };

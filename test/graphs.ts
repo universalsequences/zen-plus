@@ -358,7 +358,7 @@ export const graphPipeMessage = () => {
   };
 };
 
-const c = (a: Node, b: Node, inlet = 0, outlet = 0) => {
+export const c = (a: Node, b: Node, inlet = 0, outlet = 0) => {
   a.connect(b, b.inlets[inlet], a.outlets[outlet], false);
 };
 

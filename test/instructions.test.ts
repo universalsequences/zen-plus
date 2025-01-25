@@ -252,14 +252,14 @@ describe("evaluateInstructions", async () => {
     const { nodes, m4 } = graphBranchIntoSubPatch();
     const instructions = createInstructions(nodes);
     console.log("instructions");
-    console.log(instructions.map((x) => x.type));
+    console.log(instructions.map((x) => [x.node?.id, x.type]));
 
     console.log("branch 1");
-    console.log(instructions[2].branches?.[0].map((x) => [x.node?.id, x.type]));
+    console.log(instructions[3].branches?.[0].map((x) => [x.node?.id, x.type]));
     console.log("branch 2");
-    console.log(instructions[2].branches?.[1].map((x) => [x.node?.id, x.type]));
+    console.log(instructions[3].branches?.[1].map((x) => [x.node?.id, x.type]));
 
-    evaluate(instructions, 0);
+    evaluate(instructions, 1);
 
     console.log(m4.message);
   });
