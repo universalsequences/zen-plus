@@ -7,6 +7,7 @@ import {
   graph2,
   graphBranch1,
   graphBranch2,
+  graphBranchIntoSubPatch,
   graphBranchMessageMessage,
   graphBranchMessageMessageNested,
   graphCyclicScript,
@@ -245,5 +246,21 @@ describe("evaluateInstructions", async () => {
       InstructionType.EvaluateObject, // matrix eval
       InstructionType.Store, // lisp store
     ]);
+  });
+
+  it("branch into subpatch", () => {
+    const { nodes, m4 } = graphBranchIntoSubPatch();
+    const instructions = createInstructions(nodes);
+    console.log("instructions");
+    console.log(instructions.map((x) => x.type));
+
+    console.log("branch 1");
+    console.log(instructions[3].branches?.[0].map((x) => [x.node?.id, x.type]));
+    console.log("branch 2");
+    console.log(instructions[3].branches?.[1].map((x) => [x.node?.id, x.type]));
+
+    evaluate(instructions, 0);
+
+    console.log(m4.message);
   });
 });

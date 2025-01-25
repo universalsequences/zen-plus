@@ -390,3 +390,49 @@ export const graphCyclicScript = () => {
     expectedB: [button.id, m2.id, matrix.id],
   };
 };
+
+export const graphBranchIntoSubPatch = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+  const filter = newObject("filter.= 1", patch);
+  m2.message = 1;
+  m3.message = 0;
+
+  const o1 = newObject("p", patch, OperatorContextType.ZEN);
+
+  const subpatch = o1.subpatch as SubPatch;
+  const in1 = newObject("in 1", subpatch, OperatorContextType.ZEN);
+  const out1 = newObject("out 1", subpatch, OperatorContextType.ZEN);
+  const mult = newObject("* 3", subpatch);
+  const m4 = new MessageNodeImpl(patch, MessageType.Message);
+
+  c(m1, filter);
+  c(filter, m2);
+  c(filter, m3, 0, 1);
+  c(m2, o1);
+  c(m3, o1);
+  c(in1, mult);
+  c(mult, out1);
+  c(o1, m4, 1, 0);
+
+  const nodes = topologicalSearchFromNode(m1);
+  console.log(
+    "m1.id=%s m2.id=%s m3.id=%s filter.id=%s mult.id=%s m4.id=%s",
+    m1.id,
+    m2.id,
+    m3.id,
+    filter.id,
+    mult.id,
+    m4.id,
+  );
+  console.log(
+    "nodes =",
+    nodes.map((x) => x.id),
+  );
+  return {
+    m4,
+    nodes,
+  };
+};

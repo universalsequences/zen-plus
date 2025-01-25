@@ -40,7 +40,7 @@ export const evaluate = (
             instruction = branch.shift();
             if (branching.consumed[i] === 0) {
               // first instruction from branch so we bring back the original input
-              register = branching.register;
+              register = [...branching.register];
             }
             branching.consumed[i]++;
             return instruction;
@@ -144,6 +144,7 @@ export const evaluate = (
       }
     }
     let b = new Date().getTime();
+    console.log("instructions len=%s took %s ms", _instructions.length, b - a);
     return objectsEvaluated;
   } catch (e) {
     console.log("error=", e);
