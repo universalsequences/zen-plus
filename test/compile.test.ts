@@ -11,6 +11,7 @@ import {
   graphSubPatch1,
   graphSubPatchIntoSubpatch,
   newObject,
+  graphEndInButton,
 } from "./graphs";
 import { MockPatch } from "./mocks/MockPatch";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
@@ -67,6 +68,11 @@ describe("topologicalSearchFromNode", async () => {
     const { nodes, expected } = graphPipeMessage();
     expect(nodes.map((x) => x.id)).toEqual(expected);
   });
+
+  it("topologicalSearchFromNode ends in button", async () => {
+    const { nodes, expected } = graphEndInButton();
+    expect(nodes.map((x) => x.id)).toEqual(expected);
+  });
 });
 
 describe("compileVM", async () => {
@@ -93,14 +99,6 @@ describe("compileVM", async () => {
     c(messagemessage, m4, 1, 0);
     c(messagemessage, mult, 0, 1);
     c(mult, m5, 1, 0);
-
-    console.log(
-      "getter.id=%s m4.id=%s m5.id=%s messagemessage.id=%s",
-      getter.id,
-      m4.id,
-      m5.id,
-      messagemessage.id,
-    );
 
     patch.messageNodes.push(m1, m2, m3, m4, m5);
 
@@ -173,15 +171,6 @@ describe("compileVM", async () => {
     c(messagemessage2, mult);
     c(mult, m5, 1, 0);
 
-    console.log(
-      "getter.id=%s m4.id=%s m5.id=%s messagemessage.id=%s messagemessage2.id=%s",
-      getter.id,
-      m4.id,
-      m5.id,
-      messagemessage.id,
-      messagemessage2.id,
-    );
-
     patch.messageNodes.push(m1, m2, m3, m4, m5);
 
     const sourceNodes = getSourceNodesForCompilation(patch);
@@ -206,7 +195,6 @@ describe("compileVM", async () => {
       InstructionType.EvaluateObject,
     ]);
 
-    console.log(messagemessage.instructions?.map((x) => x.type));
     const branch = messagemessage.instructions?.[1];
     expect(branch?.branches?.length).toBe(2);
 

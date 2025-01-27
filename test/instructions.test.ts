@@ -184,7 +184,7 @@ describe("evaluateInstructions", async () => {
   it("messagemessage should execute branches sequentially", () => {
     const { nodes, m2, m3, expectedObjectsEvaluated } = graphBranchMessageMessage();
     const instructions = createInstructions(nodes);
-    const objectsEvaluated = evaluate(instructions, 5, true);
+    const { objectsEvaluated } = evaluate(instructions, 5, true);
     expect(m2.message).toBe(12);
     expect(m3.message).toBe(49);
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
@@ -193,7 +193,7 @@ describe("evaluateInstructions", async () => {
   it("nested messagemessage should execute branches sequentially", () => {
     const { nodes, expectedObjectsEvaluated } = graphBranchMessageMessageNested();
     const instructions = createInstructions(nodes);
-    const objectsEvaluated = evaluate(instructions, 5, true);
+    const { objectsEvaluated } = evaluate(instructions, 5, true);
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
   });
 
@@ -261,6 +261,17 @@ describe("evaluateInstructions", async () => {
 
     evaluate(instructions, 1);
 
-    console.log(m4.message);
+    expect(m4.message).toBe(3);
+
+    // in order for this to pass we need to change topologicalSearchFromNode to not
+    // pass new Set() to getOutboundConnection()
+  });
+
+  it("subscribe test", () => {
+    //
+  });
+
+  it("unpack test", () => {
+    //
   });
 });

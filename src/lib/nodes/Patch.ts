@@ -26,6 +26,7 @@ import { onCompile, sleep } from "./compilation/onCompile";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
 import type { PatchDoc } from "../org/types";
 import Subpatch from "./Subpatch";
+import { compileVM } from "./vm/forwardpass";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -82,10 +83,12 @@ export class PatchImpl implements Patch {
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
   workletCode?: string;
+  finishedInitialCompile: boolean;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
     this.isRecording = false;
+    this.finishedInitialCompile = false;
     this.id = uuid();
     this.assistant = new Assistant(this);
     this.presentationMode = false;
@@ -613,6 +616,9 @@ export class PatchImpl implements Patch {
     const loadBangs = o.filter(
       (x) => x.operatorContextType === OperatorContextType.CORE && x.needsLoad,
     );
+
+    this.finishedInitialCompile = true;
+    compileVM(this);
     loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));
   }
 

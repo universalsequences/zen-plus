@@ -1,7 +1,8 @@
 import { BaseNode } from "@/lib/nodes/BaseNode";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import { Patch, IOlet, Message } from "@/lib/nodes/types";
+import { Patch, IOlet, Message, ObjectNode, MessageNode } from "@/lib/nodes/types";
+import { MessageBody } from "@/workers/core";
 import React, { createContext, useState, useContext, useRef, useCallback, useEffect } from "react";
 
 interface IWorkerContext {}
@@ -22,81 +23,51 @@ export const useWorker = (): IWorkerContext => {
 export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
   const workerRef = useRef<Worker>();
 
+  const objectsRef = useRef<{ [x: string]: ObjectNode }>({});
+  const messagesRef = useRef<{ [x: string]: MessageNode }>({});
+
   useEffect(() => {
-    /*
     // Ensure the worker is only loaded on the client side
     const worker = new Worker(new URL("../workers/core", import.meta.url));
     workerRef.current = worker;
 
     worker.onmessage = (event: MessageEvent) => {
-      console.log("Worker result:", JSON.parse(event.data));
+      console.log("Worker result:", event.data);
+      if (event.data.type === "replaceMessages") {
+        for (const { messageId, message } of event.data.body) {
+          const messageNode = messagesRef.current[messageId];
+          if (messageNode) {
+            if (messageNode.onNewValue) {
+              messageNode.message = message;
+              messageNode.onNewValue(message);
+            }
+          }
+        }
+      }
     };
 
     worker.postMessage({ type: "init" }); // Send data to the worker
-    */
   }, []);
 
-  const registerReceive = useCallback((node: BaseNode, msg: Message, inlet: IOlet) => {
+  const sendWorkerMessage = useCallback((body: MessageBody) => {
     if (workerRef.current) {
-      workerRef.current.postMessage({
-        type: "receive",
-        data: {
-          id: node.id,
-          message: msg,
-          inlet: node.inlets.indexOf(inlet),
-        },
-      });
+      workerRef.current.postMessage(body);
     }
   }, []);
 
-  const registerNewNode = useCallback((node: BaseNode) => {
-    if (workerRef.current) {
-      if (node instanceof ObjectNodeImpl) {
-        workerRef.current.postMessage({
-          type: "register_new_node",
-          data: {
-            id: node.id,
-            name: node.name,
-            inlets: node.inlets.length,
-            outlets: node.outlets.length,
-          },
-        });
-      } else if (node instanceof MessageNodeImpl) {
-        workerRef.current.postMessage({
-          type: "register_new_node",
-          data: {
-            id: node.id,
-            name: "message",
-            inlets: node.inlets.length,
-            outlets: node.outlets.length,
-          },
-        });
-      }
+  const registerNodes = useCallback((objects: ObjectNode[], messages: MessageNode[]) => {
+    for (const o of objects) {
+      objectsRef.current[o.id] = o;
+    }
+    for (const m of messages) {
+      messagesRef.current[m.id] = m;
     }
   }, []);
-
-  const connect = useCallback(
-    (fromNode: BaseNode, toNode: BaseNode, inlet: number, outlet: number) => {
-      if (workerRef.current) {
-        workerRef.current.postMessage({
-          type: "connect",
-          data: {
-            fromId: fromNode.id,
-            toId: toNode.id,
-            inlet,
-            outlet,
-          },
-        });
-      }
-    },
-    [],
-  );
 
   useEffect(() => {
-    patch.registerNewNode = registerNewNode;
-    patch.registerConnect = connect;
-    patch.registerReceive = registerReceive;
-  }, [patch, registerNewNode, registerReceive, connect]);
+    patch.sendWorkerMessage = sendWorkerMessage;
+    patch.registerNodes = registerNodes;
+  }, [patch, sendWorkerMessage]);
 
   return <WorkerContext.Provider value={{}}>{children}</WorkerContext.Provider>;
 };

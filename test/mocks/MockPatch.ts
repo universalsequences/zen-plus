@@ -73,9 +73,11 @@ export class MockPatch implements Patch {
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
   workletCode?: string;
+  finishedInitialCompile: boolean;
 
   constructor(audioContext: AudioContext | undefined, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
+    this.finishedInitialCompile = true;
     this.isRecording = false;
     this.id = uuid();
     this.presentationMode = false;

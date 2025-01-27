@@ -1,11 +1,13 @@
 import { Instruction, InstructionType } from "./types";
 import { Message, MessageNode, ObjectNode } from "../types";
 
-interface Branching {
+export interface Branching {
+  id?: string;
   input: (Message | undefined)[];
   branches: Instruction[][];
   consumed: number[];
   register: (Message | undefined)[];
+  parent?: Branching;
 }
 
 export const evaluate = (
@@ -13,6 +15,11 @@ export const evaluate = (
   initialMessage: Message = "bang",
   debug = false,
 ) => {
+  const replaceMessages: { messageId: string; message: Message }[] = [];
+  const objectsEvaluated: ObjectNode[] | undefined = debug ? [] : undefined;
+
+  // TODO - need to keep track of all STOREs into nodes with skipCompilation along w/
+  // any evaluateObject for skipCompilation  nodes (we will tell the main thread to run them)
   try {
     let a = new Date().getTime();
     const instructions = [..._instructions];
@@ -21,7 +28,6 @@ export const evaluate = (
       .map((x) => initialMessage);
     const branchingStack: Branching[] = [];
 
-    const objectsEvaluated: ObjectNode[] | undefined = debug ? [] : undefined;
     const peekBranching = () => {
       return branchingStack[branchingStack.length - 1];
     };
@@ -56,7 +62,14 @@ export const evaluate = (
       return instructions.shift();
     };
 
+    const emittedInstructions: Instruction[] = [];
+    let instructionCounter = 0;
     for (let instruction = getNext(); instruction !== undefined; instruction = getNext()) {
+      if (instruction.node) {
+        emittedInstructions.push(instruction);
+        instruction.node.debugInstructions = emittedInstructions;
+        instruction.node.debugInstructionIndex = instructionCounter++;
+      }
       switch (instruction.type) {
         case InstructionType.PipeMessage: {
           // trigger/pipe mesasge
@@ -90,6 +103,10 @@ export const evaluate = (
             if (messageNode.onNewValue) {
               messageNode.onNewValue(messageToReplace);
             }
+            replaceMessages.push({
+              messageId: messageNode.id,
+              message: messageToReplace,
+            });
           }
           break;
         }
@@ -106,7 +123,6 @@ export const evaluate = (
 
             objectsEvaluated?.push(objectNode);
           } else {
-            console.log("no msg...");
           }
           break;
         case InstructionType.Store: {
@@ -129,6 +145,8 @@ export const evaluate = (
         case InstructionType.Branch: {
           // based on the previous
           const branch: Branching = {
+            id: instruction.node?.id,
+            parent: peekBranching(),
             input: [...register],
             branches: instruction.branches.map((x) => [...x]),
             consumed: instruction.branches.map((x) => 0),
@@ -142,12 +160,34 @@ export const evaluate = (
           //console.log("needs implementation");
           break;
       }
+
+      if (instruction.node) {
+        instruction.node.debugBranching = peekBranching();
+      }
     }
     let b = new Date().getTime();
-    console.log("instructions len=%s took %s ms", _instructions.length, b - a);
-    return objectsEvaluated;
+    /*
+    const f = flatten(_instructions);
+    console.log("instructions len=%s took %s ms", f.length, b - a);
+    if (f.length > 100) {
+      console.log(f);
+    }
+    */
+    return {
+      objectsEvaluated,
+      replaceMessages,
+    };
   } catch (e) {
     console.log("error=", e);
-    return [];
+    return {
+      objectsEvaluated,
+      replaceMessages,
+    };
   }
+};
+
+const flatten = (instructions: Instruction[]): Instruction[] => {
+  return instructions.flatMap((x) =>
+    x.branches ? [x, ...x.branches.flatMap((y) => flatten(y))] : x,
+  );
 };

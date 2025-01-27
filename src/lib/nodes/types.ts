@@ -24,6 +24,8 @@ import { RegisteredPatch } from "./definitions/core/registry";
 import { Definition } from "../docs/docs";
 import { LispError } from "../lisp/eval";
 import { Instruction } from "./vm/types";
+import { Branching } from "./vm/evaluate";
+import { MessageBody } from "@/workers/core";
 
 export interface Size {
   width: number;
@@ -184,7 +186,11 @@ export type Node = Identifiable &
     onNewValue?: (value: Message) => void;
     onNewValues?: { [x: string]: (value: Message) => void };
     instructions?: Instruction[]; // compiled instructions
+    debugInstructions?: Instruction[];
+    debugInstructionIndex?: number;
+    debugTopologicalIndex?: Record<string, number>;
     skipCompilation?: boolean;
+    debugBranching?: Branching;
   };
 
 export type ObjectNode = Positioned &
@@ -264,6 +270,7 @@ export enum PatchType {
 export type Patch = Identifiable & {
   clearCache: () => void;
   statementToExport?: Statement;
+  finishedInitialCompile: boolean;
   zenGraph?: ZenGraph;
   justExpanded?: boolean;
   isCompiling: boolean;
@@ -328,6 +335,8 @@ export type Patch = Identifiable & {
   isExamplePatch?: boolean;
   workletCode?: string;
   newSubPatch: (p: Patch, n: ObjectNode) => SubPatch;
+  sendWorkerMessage?: (body: MessageBody) => void;
+  registerNodes?: (objects: ObjectNode[], messages: MessageNode[]) => void;
 };
 
 export type SubPatch = Patch & {

@@ -162,7 +162,7 @@ export const graphNestedSubPatchIntoSubpatch = () => {
   p2.connect(mult3, mult3.inlets[0], p2.outlets[0]);
   mult3.connect(m2, m2.inlets[1], mult3.outlets[0]);
 
-  const nodes = topologicalSearchFromNode(m1, true);
+  const nodes = topologicalSearchFromNode(m1);
   return { nodes, patch, m2, expected: [m1.id, mult1.id, mult2.id, mult3.id] };
 };
 
@@ -191,13 +191,26 @@ export const graphBranch1 = () => {
 
   const nodes = topologicalSearchFromNode(m1);
 
+  console.log(
+    "m1.id=%s route.id=%s mult3.id=%s mult2.id=%s mult1.id=%s add1A.id=%s",
+    m1.id,
+    route.id,
+    mult3.id,
+    mult2.id,
+    mult1.id,
+    add1_A.id,
+  );
+  console.log(
+    "nodes=",
+    nodes.map((x) => x.id),
+  );
   return {
     nodes,
     patch,
     m2,
     m3,
     m4,
-    expected: [m1.id, route.id, mult3.id, mult2.id, mult1.id, add1_A.id],
+    expected: [m1.id, route.id, mult1.id, add1_A.id, mult2.id, mult3.id],
   };
 };
 
@@ -418,21 +431,23 @@ export const graphBranchIntoSubPatch = () => {
   c(o1, m4, 1, 0);
 
   const nodes = topologicalSearchFromNode(m1);
-  console.log(
-    "m1.id=%s m2.id=%s m3.id=%s filter.id=%s mult.id=%s m4.id=%s",
-    m1.id,
-    m2.id,
-    m3.id,
-    filter.id,
-    mult.id,
-    m4.id,
-  );
-  console.log(
-    "nodes =",
-    nodes.map((x) => x.id),
-  );
   return {
     m4,
     nodes,
+  };
+};
+
+export const graphEndInButton = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const o1 = newObject("* 3", patch);
+  const o2 = newObject("button", patch);
+  c(m1, o1);
+  c(o1, o2);
+
+  const nodes = topologicalSearchFromNode(m1);
+  return {
+    nodes,
+    expected: [m1.id, o1.id, o2.id],
   };
 };

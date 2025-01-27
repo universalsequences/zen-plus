@@ -1,14 +1,15 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { OperatorContextType, getOperatorContext } from "@/lib/nodes/context";
-import { ObjectNode, MessageNode } from "@/lib/nodes/types";
+import type { ObjectNode, MessageNode, Message } from "@/lib/nodes/types";
 import Attribute from "./Attribute";
 import { PatchDocComponent } from "./org/PatchDocComponent";
 import { MinusCircledIcon, PlusCircledIcon, QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import { useStorage } from "@/contexts/StorageContext";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import { getSubPatchType } from "./search/PatchesExplorer";
 import { usePatches } from "@/contexts/PatchesContext";
 import { useSelection } from "@/contexts/SelectionContext";
+import { printLispExpression } from "@/lib/nodes/utils/lisp";
+import { Branching } from "./Branching";
 
 const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
   const { fetchSubPatchForDoc } = useStorage();
@@ -81,12 +82,37 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
   const hasDynamicInlets = (node as ObjectNode).hasDynamicInlets;
 
   return (
-    <div onClick={(e: any) => e.stopPropagation()} className=" p-1">
+    <div
+      style={{ maxHeight: "100vh" }}
+      onClick={(e: any) => e.stopPropagation()}
+      className=" p-1 overflow-y-scroll"
+    >
       <div className="w-full h-full text-xs">
         <div style={{ borderBottom: "1px solid #4f4f4f" }} className="p-2 w-full text-xs">
           <div className="text-base">
             {(node as ObjectNode).name} ( {node.id} )
           </div>
+          {node.debugTopologicalIndex !== undefined &&
+            Object.keys(node.debugTopologicalIndex).map((key) => (
+              <div className="text-bold">
+                t_index[{key}]: {node.debugTopologicalIndex?.[key]}
+              </div>
+            ))}
+          {node.debugBranching && <Branching top={true} branching={node.debugBranching} />}
+          <div style={{ maxHeight: 250 }} className="overflow-scroll">
+            {node.debugInstructions
+              ?.slice((node.debugInstructionIndex as number) - 8)
+              .map((x, i) => (
+                <div className={i === 7 ? "text-white" : "text-zinc-400"}>
+                  {x.type}_{x.node?.id}
+                </div>
+              ))}
+          </div>
+          {node.inlets?.map((x, i) => (
+            <div>
+              in {i + 1}: {printLispExpression(x.lastMessage as Message)}
+            </div>
+          ))}
           {doc && <div className="mt-2 w-52">{doc.description}</div>}
           {doc?.examplePatch && (
             <button

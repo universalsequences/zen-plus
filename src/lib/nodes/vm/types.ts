@@ -32,3 +32,12 @@ interface NonBranchInstruction extends BaseInstruction {
 
 // Combined instruction type
 export type Instruction = BranchInstruction | NonBranchInstruction;
+
+export type SerializedInstruction = {
+  node?: string;
+  inletNumber?: number;
+  outletNumber?: number;
+  loadAtStart?: boolean;
+  type: InstructionType;
+  branches?: SerializedInstruction[][];
+};

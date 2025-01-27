@@ -73,7 +73,19 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
 
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
     if (this.instructions) {
-      evaluate(this.instructions, message);
+      if (inlet.name === REPLACE) {
+        this.message = message;
+      }
+      if (this.patch.sendWorkerMessage) {
+        this.patch.sendWorkerMessage({
+          type: "evaluateNode",
+          body: {
+            nodeId: this.id,
+            message: message,
+          },
+        });
+      }
+      // evaluate(this.instructions, message);
       return;
     }
     switch (inlet.name) {

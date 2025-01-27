@@ -20,6 +20,7 @@ import { OperatorContextType, isCompiledType } from "./context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { compileVM } from "./vm/forwardpass";
+import { getRootPatch } from "./traverse";
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode)
@@ -170,7 +171,9 @@ export class BaseNode implements Node {
       );
     }
 
-    compileVM(this.patch);
+    if (!this.patch.skipRecompile && getRootPatch(this.patch).finishedInitialCompile) {
+      compileVM(this.patch);
+    }
     return connection;
   }
 
@@ -191,7 +194,7 @@ export class BaseNode implements Node {
     const sourceNode = (this as unknown as ObjectNode).audioNode;
     let destNode = (destination as unknown as ObjectNode).audioNode;
     if (sourceNode && destNode) {
-      const splitter = this.patch.audioContext.createChannelSplitter(this.outlets.length);
+      const splitter = this.patch.audioContext!.createChannelSplitter(this.outlets.length);
       connection.splitter = splitter;
       sourceNode.connect(splitter);
 
