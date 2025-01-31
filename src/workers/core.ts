@@ -6,7 +6,7 @@ import type {
   Patch,
 } from "@/lib/nodes/types";
 import type { SerializedInstruction } from "@/lib/nodes/vm/types";
-import { VM } from "./VM";
+import { VM } from "./vm/VM";
 
 export interface NodeInstructions {
   nodeId: string;
@@ -35,21 +35,57 @@ export interface EvaluateNodeBody {
   };
 }
 
-export type MessageBody = SetCompilationBody | EvaluateNodeBody;
+export interface UpdateNodeBody {
+  type: "updateObject";
+  body: {
+    nodeId: string;
+    json: SerializedObjectNode;
+  };
+}
+
+export type MessageBody = SetCompilationBody | EvaluateNodeBody | UpdateNodeBody;
 const vm = new VM();
 
 self.onmessage = async (e: MessageEvent) => {
   const data = e.data as MessageBody;
 
   if (data.type === "setCompilation") {
-    console.log("received worker message");
-    vm.setNodes(data.body.objects, data.body.messages);
+    console.log("received worker message", data.body.objects);
+    const { onNewSharedBuffer } = vm.setNodes(data.body.objects, data.body.messages);
+    if (onNewSharedBuffer.length > 0) {
+      self.postMessage({
+        type: "onNewSharedBuffer",
+        body: onNewSharedBuffer,
+      });
+    }
     vm.setNodeInstructions(data.body.nodeInstructions);
   } else if (data.type === "evaluateNode") {
-    const { replaceMessages } = vm.evaluateNode(data.body.nodeId, data.body.message);
+    const { replaceMessages, onNewValue, onNewSharedBuffer, mainThreadInstructions } =
+      vm.evaluateNode(data.body.nodeId, data.body.message);
+    if (replaceMessages.length > 0)
+      self.postMessage({
+        type: "replaceMessages",
+        body: replaceMessages,
+      });
+
+    if (mainThreadInstructions.length > 0)
+      self.postMessage({
+        type: "mainThreadInstructions",
+        body: mainThreadInstructions,
+      });
+
+    if (onNewSharedBuffer.length > 0)
+      self.postMessage({
+        type: "onNewSharedBuffer",
+        body: onNewSharedBuffer,
+      });
+
     self.postMessage({
-      type: "replaceMessages",
-      body: replaceMessages,
+      type: "onNewValue",
+      body: onNewValue,
     });
+  } else if (data.type === "updateObject") {
+    const { nodeId, json } = data.body;
+    vm.updateObject(nodeId, json);
   }
 };

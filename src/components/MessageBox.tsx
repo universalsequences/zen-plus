@@ -5,11 +5,12 @@ import { usePatchSelector } from "@/hooks/usePatchSelector";
 import { safeStringify } from "@/utils/safePrint";
 
 const MessageBox: React.FC<{
+  rawMessage: Message | null;
   message: Message;
   isSelected: boolean;
   lockedModeRef: React.MutableRefObject<boolean>;
   messageNode: MessageNode;
-}> = ({ messageNode, isSelected, lockedModeRef, message }) => {
+}> = ({ rawMessage, messageNode, isSelected, lockedModeRef, message }) => {
   const { updateSize } = usePosition();
   const fullDiv = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -30,12 +31,19 @@ const MessageBox: React.FC<{
     }
   }, [messageNode]);
 
+  /*
   useEffect(() => {
     update();
   }, []);
+  */
+
+  const lastMessage = useRef(rawMessage);
   useEffect(() => {
-    update();
-  }, [message]);
+    if (lastMessage.current !== rawMessage) {
+      update();
+      lastMessage.current = message;
+    }
+  }, [rawMessage]);
 
   useEffect(() => {
     if (editing) {

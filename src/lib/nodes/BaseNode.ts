@@ -78,6 +78,11 @@ export class BaseNode implements Node {
   }
 
   send(outlet: IOlet, msg: Message) {
+    if ((this as unknown as ObjectNode).isAsync) {
+      if ((this as unknown as ObjectNode).instructions) {
+      }
+      return;
+    }
     const { connections } = outlet;
 
     for (const connection of connections) {

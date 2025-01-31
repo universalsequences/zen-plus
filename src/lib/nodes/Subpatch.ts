@@ -22,6 +22,8 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     const parentNodeType = parentNode.attributes.type as string;
     super(parentPatch.audioContext!, parentNodeType === "zen", true);
 
+    this.sendWorkerMessage = parentPatch.sendWorkerMessage;
+
     this.parentPatch = parentPatch;
     this.parentNode = parentNode;
     this.parentNode.newAttribute("Custom Presentation", false);

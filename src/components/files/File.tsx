@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import Image from "next/image";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/db/firebase"; // Ensure you have a firebase config file where 'db' is your Firestore instance
 import { CommitIcon, HeartIcon, HeartFilledIcon } from "@radix-ui/react-icons";
@@ -61,7 +62,16 @@ const FileComponent: React.FC<{
       <div
         className={`${className}  mb-5 hover:bg-zinc-700 transition-colors bg-zinc-800 rounded-lg relative overflow-hidden`}
       >
-        {file.screenshot && <img src={file.screenshot} className="w-full h-full object-cover" />}
+        {file.screenshot && (
+          <Image
+            crossOrigin="anonymous"
+            alt="file image"
+            width="300"
+            height="200"
+            src={file.screenshot}
+            className="w-full h-full object-cover"
+          />
+        )}
         {file.commits && (
           <div
             onClick={(e: any) => {

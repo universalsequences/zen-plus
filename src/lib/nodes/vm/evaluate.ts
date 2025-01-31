@@ -10,13 +10,25 @@ export interface Branching {
   parent?: Branching;
 }
 
+export interface MainThreadInstruction {
+  nodeId: string;
+  inletMessages: (Message | undefined)[];
+}
+
+export interface ReplaceMessage {
+  messageId: string;
+  message?: Message;
+  sharedBuffer?: SharedArrayBuffer;
+}
+
 export const evaluate = (
   _instructions: Instruction[],
   initialMessage: Message = "bang",
   debug = false,
 ) => {
-  const replaceMessages: { messageId: string; message: Message }[] = [];
+  const replaceMessages: ReplaceMessage[] = [];
   const objectsEvaluated: ObjectNode[] | undefined = debug ? [] : undefined;
+  const mainThreadInstructions: MainThreadInstruction[] = [];
 
   // TODO - need to keep track of all STOREs into nodes with skipCompilation along w/
   // any evaluateObject for skipCompilation  nodes (we will tell the main thread to run them)
@@ -103,14 +115,25 @@ export const evaluate = (
             if (messageNode.onNewValue) {
               messageNode.onNewValue(messageToReplace);
             }
-            replaceMessages.push({
-              messageId: messageNode.id,
-              message: messageToReplace,
-            });
+            if (
+              ArrayBuffer.isView(messageToReplace) &&
+              (messageToReplace as Float32Array).buffer instanceof SharedArrayBuffer
+            ) {
+              replaceMessages.push({
+                messageId: messageNode.id,
+                sharedBuffer: (messageToReplace as Float32Array).buffer as SharedArrayBuffer,
+              });
+            } else {
+              replaceMessages.push({
+                messageId: messageNode.id,
+                message: messageToReplace,
+              });
+            }
           }
           break;
         }
         case InstructionType.EvaluateObject:
+          // TODO - need to first determine that all inlets have messages
           const objectNode = instruction.node as ObjectNode;
 
           // note - store operation needs to store in inlet as well
@@ -119,10 +142,19 @@ export const evaluate = (
               ? initialMessage
               : objectNode.inlets[0].lastMessage;
           if (objectNode.fn && inputMessage !== undefined) {
-            register = objectNode.fn(inputMessage);
+            if (objectNode.skipCompilation) {
+              mainThreadInstructions.push({
+                nodeId: objectNode.id,
+                inletMessages: [
+                  inputMessage,
+                  ...objectNode.inlets.slice(1).map((x) => x.lastMessage),
+                ],
+              });
+            } else {
+              register = objectNode.fn(inputMessage);
 
-            objectsEvaluated?.push(objectNode);
-          } else {
+              objectsEvaluated?.push(objectNode);
+            }
           }
           break;
         case InstructionType.Store: {
@@ -138,6 +170,14 @@ export const evaluate = (
               // store results in arguments (for inlets 1...) and inlet (for inlet 0)
               (node as ObjectNode).arguments[inletNumber - 1] = register[outletNumber] as Message;
               inlet.lastMessage = register[outletNumber] as Message;
+            }
+            if (node.skipCompilation) {
+              const inletMessages = new Array(node.inlets.length).fill(undefined);
+              inletMessages[inletNumber] = register[outletNumber] as Message;
+              mainThreadInstructions.push({
+                nodeId: node.id,
+                inletMessages,
+              });
             }
           }
           break;
@@ -174,12 +214,14 @@ export const evaluate = (
     }
     */
     return {
+      mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,
     };
   } catch (e) {
     console.log("error=", e);
     return {
+      mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,
     };

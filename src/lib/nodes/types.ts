@@ -207,6 +207,8 @@ export type ObjectNode = Positioned &
     ) => boolean; // function to parse text -> fn
     arguments: Message[]; // stored messages from inlets #1,2,3,etc (to be used by fn)
     buffer?: Uint8Array | Float32Array | MessageObject[]; // optional buffer (used in matrix objects)
+    sharedBuffer?: SharedArrayBuffer;
+    onNewSharedBuffer?: (x: SharedArrayBuffer) => void;
     subpatch?: SubPatch;
     getJSON: () => SerializedObjectNode;
     fromJSON: (x: SerializedObjectNode) => void;
@@ -244,6 +246,8 @@ export type ObjectNode = Positioned &
     branching?: boolean;
     isInletSumSpecialCase?: boolean;
     isSpecialCase?: boolean;
+    updateWorkerState: () => void;
+    isAsync?: boolean;
   };
 
 export interface SerializableCustom {

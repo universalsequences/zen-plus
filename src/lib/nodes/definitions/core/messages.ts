@@ -38,6 +38,7 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
   let initialized = false;
   let lastName = "";
   node.needsLoad = true;
+  node.isAsync = true;
 
   const subcache: { [id: string]: boolean } = {};
 

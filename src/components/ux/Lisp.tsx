@@ -41,6 +41,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
       const newText = e.target.value;
       objectNode.lispError = undefined;
       objectNode.script = newText;
+      objectNode.updateWorkerState();
       setText(newText);
     },
     [objectNode],

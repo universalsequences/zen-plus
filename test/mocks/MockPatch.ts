@@ -19,6 +19,7 @@ import type { Statement } from "@/lib/nodes/definitions/zen/types";
 import type { ExportedAudioUnit } from "@/lib/nodes/compilation/export";
 import type { PatchDoc } from "@/lib/org/types";
 import Subpatch from "@/lib/nodes/Subpatch";
+import { VM } from "@/workers/vm/VM";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -74,6 +75,7 @@ export class MockPatch implements Patch {
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
   workletCode?: string;
   finishedInitialCompile: boolean;
+  vm?: VM;
 
   constructor(audioContext: AudioContext | undefined, isZen = false, isSubPatch = false) {
     this.isZen = isZen;

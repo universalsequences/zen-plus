@@ -1,9 +1,9 @@
-import { BaseNode } from "@/lib/nodes/BaseNode";
-import MessageNodeImpl from "@/lib/nodes/MessageNode";
-import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
-import { Patch, IOlet, Message, ObjectNode, MessageNode } from "@/lib/nodes/types";
+import { Patch, ObjectNode, MessageNode } from "@/lib/nodes/types";
+import { MainThreadInstruction } from "@/lib/nodes/vm/evaluate";
+import { OnNewSharedBuffer, OnNewValue } from "@/workers/vm/VM";
 import { MessageBody } from "@/workers/core";
-import React, { createContext, useState, useContext, useRef, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useRef, useCallback, useEffect } from "react";
+import { Matrix } from "@/lib/nodes/definitions/core/matrix";
 
 interface IWorkerContext {}
 
@@ -32,15 +32,57 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     workerRef.current = worker;
 
     worker.onmessage = (event: MessageEvent) => {
-      console.log("Worker result:", event.data);
       if (event.data.type === "replaceMessages") {
-        for (const { messageId, message } of event.data.body) {
+        for (const { messageId, message, sharedBuffer } of event.data.body) {
           const messageNode = messagesRef.current[messageId];
           if (messageNode) {
             if (messageNode.onNewValue) {
-              messageNode.message = message;
-              messageNode.onNewValue(message);
+              if (message !== undefined) {
+                messageNode.message = message;
+                messageNode.onNewValue(message);
+              } else if (sharedBuffer) {
+                const buffer = sharedBuffer as SharedArrayBuffer;
+                const floatBuffer = new Float32Array(buffer);
+                messageNode.message = floatBuffer;
+                messageNode.onNewValue(floatBuffer);
+              }
             }
+          }
+        }
+      } else if (event.data.type === "mainThreadInstructions") {
+        const mainThreadInstructions = event.data.body as MainThreadInstruction[];
+        for (const { nodeId, inletMessages } of mainThreadInstructions) {
+          const node = objectsRef.current[nodeId];
+          if (!node) continue;
+          for (let i = 0; i < inletMessages.length; i++) {
+            const message = inletMessages[i];
+            if (message !== undefined) {
+              node.inlets[i].lastMessage = message;
+              if (i > 0) {
+                node.arguments[i - 1] = message;
+              }
+            }
+          }
+          if (inletMessages[0] !== undefined) {
+            // evaluate
+            node.fn?.(inletMessages[0]);
+          }
+        }
+      } else if (event.data.type === "onNewValue") {
+        const onNewValues = event.data.body as OnNewValue[];
+        for (const { nodeId, value } of onNewValues) {
+          const node = objectsRef.current[nodeId];
+          if (!node) continue;
+          node.onNewValue?.(value);
+        }
+      } else if (event.data.type === "onNewSharedBuffer") {
+        const onNewSharedBuffer = event.data.body as OnNewSharedBuffer[];
+        for (const { nodeId, sharedBuffer } of onNewSharedBuffer) {
+          const node = objectsRef.current[nodeId];
+          if (!node) continue;
+          node.buffer = new Float32Array(sharedBuffer);
+          if (node.custom) {
+            (node.custom as Matrix).buffer = node.buffer;
           }
         }
       }

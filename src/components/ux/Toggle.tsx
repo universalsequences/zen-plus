@@ -7,15 +7,15 @@ import { useValue } from "@/contexts/ValueContext";
 
 export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
-  const v = useValue();
+  const { value: v } = useValue();
   const [value, setValue] = useState(objectNode.custom?.value as number);
   const { lockedMode } = useLocked();
 
   const size = objectNode.size || { width: 80, height: 80 };
 
   useEffect(() => {
-    setValue(objectNode.custom?.value as number);
-  }, [objectNode.custom?.value]);
+    setValue(v as number);
+  }, [v]);
 
   const toggle = useCallback(() => {
     if (!lockedMode) {

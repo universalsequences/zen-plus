@@ -27,6 +27,7 @@ import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
 import type { PatchDoc } from "../org/types";
 import Subpatch from "./Subpatch";
 import { compileVM } from "./vm/forwardpass";
+import { MessageBody } from "@/workers/core";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -84,11 +85,12 @@ export class PatchImpl implements Patch {
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
   workletCode?: string;
   finishedInitialCompile: boolean;
+  sendWorkerMessage?: ((body: MessageBody) => void) | undefined;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
     this.isRecording = false;
-    this.finishedInitialCompile = false;
+    this.finishedInitialCompile = true;
     this.id = uuid();
     this.assistant = new Assistant(this);
     this.presentationMode = false;
@@ -387,6 +389,7 @@ export class PatchImpl implements Patch {
   }
 
   fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
+    this.finishedInitialCompile = false;
     this.skipRecompile = true;
     this.name = x.name;
     this.doc = x.doc;

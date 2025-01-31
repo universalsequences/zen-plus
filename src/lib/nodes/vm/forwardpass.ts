@@ -121,6 +121,8 @@ export const topologicalSearchFromNode2 = (node: Node, debug = false): Node[] =>
 };
 
 const isSourceNode = (node: Node) => {
+  // TODO - we need to figure out compiling nodes in compileable patches (that are not
+  // part of the actual zen/gl graph)
   if (isCompiledType((node.patch as SubPatch).patchType)) {
     if (
       !isCompiledType((node as ObjectNode).operatorContextType) &&
@@ -130,12 +132,17 @@ const isSourceNode = (node: Node) => {
       return false;
     }
   }
-  if ((node as MessageNode).messageType !== undefined) {
+  if (isMessageNode(node)) {
     return (
       !node.inlets.some((x) => x.connections.length > 0) &&
       node.outlets.some((y) => y.connections.length > 0)
     );
   }
+
+  if ((node as ObjectNode).isAsync) {
+    return true;
+  }
+
   if (
     !node.inlets.some((x) => x.connections.length > 0) &&
     node.outlets.some((x) => x.connections.length > 0) &&
@@ -161,7 +168,8 @@ const isSourceNode = (node: Node) => {
 
 const compileSourceNode = (node: Node) => {
   const nodes = topologicalSearchFromNode(node);
-  const instructions = createInstructions(nodes);
+  const offset = (node as ObjectNode).isAsync ? 1 : 0;
+  const instructions = createInstructions(nodes.slice(offset));
   node.instructions = instructions;
   for (let i = 0; i < nodes.length; i++) {
     const _node = nodes[i];
@@ -193,7 +201,8 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
   return sourceNodes;
 };
 
-export const compileVM = (patch: Patch) => {
+export const compileVM = (_patch: Patch) => {
+  const patch = getRootPatch(_patch);
   console.log("compile vm called...");
   const nodeInstructions: NodeInstructions[] = [];
   const allObjects: SerializedObjectNode[] = [];
@@ -201,7 +210,7 @@ export const compileVM = (patch: Patch) => {
 
   const ogObjects: ObjectNode[] = [];
   const ogMessages: MessageNode[] = [];
-  for (const sourceNode of getSourceNodesForCompilation(getRootPatch(patch))) {
+  for (const sourceNode of getSourceNodesForCompilation(patch)) {
     compileSourceNode(sourceNode);
     if (sourceNode.instructions) {
       const serializedInstructions = sourceNode.instructions.map(serializeInstruction);
@@ -231,6 +240,7 @@ export const compileVM = (patch: Patch) => {
     }
   }
   if (patch.sendWorkerMessage) {
+    console.log("sending dat shit");
     patch.sendWorkerMessage({
       type: "setCompilation",
       body: {

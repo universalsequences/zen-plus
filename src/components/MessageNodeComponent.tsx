@@ -29,6 +29,8 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
   const [value, setValue] = useState<number>((messageNode.message as number) || 0);
   let { value: message } = useValue();
 
+  const rawMessage = message;
+
   if (message === null) {
     message = messageNode.message as string;
   }
@@ -50,11 +52,11 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
   const valueRef = useRef<number>();
 
   useEffect(() => {
-    if (valueRef.current !== message) {
+    if (valueRef.current !== rawMessage) {
       setValue(message as number);
     }
-    valueRef.current = message as number;
-  }, [message]);
+    valueRef.current = rawMessage as number;
+  }, [message, rawMessage]);
 
   const onValueChange = useCallback(
     (value: number) => {
@@ -140,6 +142,7 @@ const MessageNodeComponent: React.FC<{ isCustomView?: boolean; messageNode: Mess
                   />
                 ) : (
                   <MessageBox
+                    rawMessage={rawMessage}
                     message={message === null ? "" : message}
                     isSelected={isSelected}
                     lockedModeRef={lockedModeRef}

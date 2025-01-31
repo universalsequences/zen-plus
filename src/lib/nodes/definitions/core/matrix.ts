@@ -37,12 +37,13 @@ export class Matrix {
 
   fromJSON(x: any) {
     const _type = this.objectNode.attributes.type;
-    this.buffer =
-      _type === "uint8"
-        ? new Uint8Array(x.buffer)
-        : _type === "object"
-          ? (x.buffer as MessageObject[])
-          : new Float32Array(x.buffer);
+    const { buffer } = createMatrixBuffer(
+      this.objectNode,
+      x.buffer.length,
+      _type as MatrixType,
+      x.buffer || this.objectNode.buffer,
+    );
+    this.buffer = buffer as Float32Array;
 
     const _node = this.objectNode;
     _node.buffer = this.buffer;
@@ -92,23 +93,47 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
     _node.attributes.cornerRadius = "full";
   }
 
-  _node.attributeCallbacks.columns = (cols) => {
-    const total = (cols as number) * (_node.attributes.rows as number);
-    _node.buffer =
-      _node.attributes.type === "uint8"
-        ? new Uint8Array(total)
-        : _node.attributes.type === "object"
-          ? newObjectList(_node.buffer as MessageObject[], total)
-          : changeLength(_node.buffer as Float32Array, total);
+  _node.attributeCallbacks.columns = (_cols) => {
+    const columns = _cols as number;
+    const rows = _node.attributes.rows as number;
+    const type = _node.attributes.type as MatrixType;
+    console.log("calling create from columns");
+    const { buffer, sharedBuffer } = createMatrixBuffer(
+      _node,
+      columns * rows,
+      type,
+      Array.from(_node.buffer as Float32Array).slice(0, columns * rows),
+    );
+    _node.buffer = buffer;
+    _node.sharedBuffer = sharedBuffer;
+  };
+
+  _node.attributeCallbacks.rows = (_rows) => {
+    const rows = _rows as number;
+    const columns = _node.attributes.columns as number;
+    const type = _node.attributes.type as MatrixType;
+    console.log("calling create from rows");
+    const { buffer, sharedBuffer } = createMatrixBuffer(
+      _node,
+      columns * rows,
+      type,
+      Array.from(_node.buffer as Float32Array).slice(0, columns * rows),
+    );
+    _node.buffer = buffer;
+    _node.sharedBuffer = sharedBuffer;
   };
 
   _node.attributeCallbacks.type = (type) => {
-    _node.buffer =
-      type === "uint8"
-        ? new Uint8Array(columns * rows)
-        : type === "object"
-          ? new Array(columns * rows).fill({} as MessageObject)
-          : new Float32Array(columns * rows);
+    const _type = type as MatrixType;
+    console.log("calling create from type");
+    const { buffer, sharedBuffer } = createMatrixBuffer(
+      _node,
+      columns * rows,
+      _type,
+      Array.from(_node.buffer as Float32Array).slice(0, columns * rows),
+    );
+    _node.buffer = buffer;
+    _node.sharedBuffer = sharedBuffer;
   };
 
   _node.newAttribute("ux", "circle");
@@ -132,16 +157,15 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
   if (!_node.buffer) {
     _node.attributes.columns = columns;
     _node.attributes.rows = rows;
-    const _type = _node.attributes.type;
-    _node.buffer =
-      _type === "uint8"
-        ? new Uint8Array(columns * rows)
-        : _type === "object"
-          ? (new Array(columns * rows).fill({} as MessageObject) as MessageObject[])
-          : new Float32Array(columns * rows);
+    const _type = _node.attributes.type as MatrixType;
+    console.log("calling create from init");
+    const { buffer, sharedBuffer } = createMatrixBuffer(_node, rows * columns, _type);
+    _node.buffer = buffer;
+    _node.sharedBuffer = sharedBuffer;
   }
 
   if (!_node.custom && _node.buffer) {
+    console.log("initializing matrix with _node.buffer=", _node.buffer);
     _node.custom = new Matrix(_node, _node.buffer);
   }
 
@@ -157,6 +181,55 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
   return { columns, rows };
 };
 
+export type MatrixType = "uint8" | "object" | "float";
+
+export const createMatrixBuffer = (
+  node: ObjectNode,
+  size: number,
+  type: MatrixType,
+  values?: number[],
+) => {
+  console.log("create matrix buffer", type, node.onNewSharedBuffer, values);
+  if (type === "object") {
+    return {
+      buffer: (values ? values : new Array(size).fill({} as MessageObject)) as MessageObject[],
+    };
+  }
+  if (node.onNewSharedBuffer) {
+    console.log("creating matrix buffer");
+    // we are in a worklet and need to propagate this to the main thread
+    const bytesPerElement =
+      type === "float" ? Float32Array.BYTES_PER_ELEMENT : Uint8Array.BYTES_PER_ELEMENT;
+
+    const sharedBuffer = new SharedArrayBuffer(bytesPerElement * size);
+    node.onNewSharedBuffer(sharedBuffer);
+    const buffer = type === "float" ? new Float32Array(sharedBuffer) : new Uint8Array(sharedBuffer);
+    if (values) {
+      buffer.set(values);
+    }
+    console.log("returning buffer", buffer);
+    if (node.custom) {
+      (node.custom as Matrix).buffer = buffer;
+    }
+    return {
+      sharedBuffer,
+      buffer,
+    };
+  } else {
+    const buffer = type === "float" ? new Float32Array(size) : new Uint8Array(size);
+    if (values) {
+      buffer.set(values);
+    }
+    if (node.custom) {
+      (node.custom as Matrix).buffer = buffer;
+    }
+    console.log("returning buffer", buffer);
+    return {
+      buffer,
+    };
+  }
+};
+
 export const matrix = (_node: ObjectNode) => {
   let { columns, rows } = setupMatrixAttributes(_node);
   /**
@@ -165,25 +238,6 @@ export const matrix = (_node: ObjectNode) => {
    */
   let counter = 0;
   return (message: Message) => {
-    if (_node.attributes.columns !== columns) {
-      columns = _node.attributes.columns as number;
-      _node.buffer =
-        _node.attributes.type === "uint8"
-          ? new Uint8Array(columns * rows)
-          : _node.attributes.type === "object"
-            ? newObjectList(_node.buffer as MessageObject[], columns * rows)
-            : new Float32Array(columns * rows);
-    }
-    if (_node.attributes.rows !== rows) {
-      rows = _node.attributes.rows as number;
-      _node.buffer =
-        _node.attributes.type === "uint8"
-          ? new Uint8Array(columns * rows)
-          : _node.attributes.type === "object"
-            ? newObjectList(_node.buffer as MessageObject[], columns * rows)
-            : new Float32Array(columns * rows);
-    }
-
     if (!_node.buffer) {
       return [];
     }

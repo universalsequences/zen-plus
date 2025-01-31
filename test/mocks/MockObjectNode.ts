@@ -58,6 +58,7 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
   steps?: GenericStepData[];
   script?: string;
   instructions?: Instruction[];
+  isAsync?: boolean;
 
   constructor(patch: Patch, id?: string) {
     super(patch);
@@ -79,6 +80,8 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
     this.arguments = [];
     this.operatorContextType = OperatorContextType.ZEN;
   }
+
+  updateWorkerState() {}
 
   clearCache() {
     this.inputNodeCache = {};

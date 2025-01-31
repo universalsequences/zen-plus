@@ -30,6 +30,7 @@ import { GenericStepData } from "./definitions/core/zequencer/types";
 import { getRootPatch } from "./traverse";
 import { evaluate } from "./vm/evaluate";
 import { Instruction } from "./vm/types";
+import { MatrixType, createMatrixBuffer } from "./definitions/core/matrix";
 
 interface Constants {
   [x: string]: number | boolean;
@@ -74,6 +75,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   steps?: GenericStepData[];
   script?: string;
   instructions?: Instruction[];
+  isAsync?: boolean;
 
   constructor(patch: Patch, id?: string) {
     super(patch);
@@ -158,7 +160,21 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     compile = true,
     patchPreset?: SerializedPatch,
   ): boolean {
-    return parse(this, _text, contextType, compile, patchPreset);
+    const ret = parse(this, _text, contextType, compile, patchPreset);
+    this.updateWorkerState();
+    return ret;
+  }
+
+  updateWorkerState() {
+    if (getRootPatch(this.patch).finishedInitialCompile) {
+      this.patch.sendWorkerMessage?.({
+        type: "updateObject",
+        body: {
+          nodeId: this.id,
+          json: this.getJSON(),
+        },
+      });
+    }
   }
 
   clearCache() {
@@ -534,7 +550,9 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (this.instructions && inlet.isHot) {
-      //console.log("evaluating instructions with message", message, this);
+      if (this.isAsync) {
+        return;
+      }
       inlet.lastMessage = message;
       //evaluate(this.instructions, message);
       this.patch.sendWorkerMessage?.({
@@ -547,6 +565,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
       return;
     }
+    console.log("actually running receive", message, this);
 
     if (this.definition && !this.definition.isHot) {
       const indexOf = this.inletIndexCache[inlet.id] || this.inlets.indexOf(inlet);
@@ -769,13 +788,14 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
   fromJSON(json: SerializedObjectNode, isPreset?: boolean) {
     if (json.buffer && json.attributes) {
-      const _type = json.attributes.type;
-      this.buffer =
-        _type === "uint8"
-          ? new Uint8Array(json.buffer as number[])
-          : _type === "object"
-            ? (json.buffer as MessageObject[])
-            : new Float32Array(json.buffer as number[]);
+      const _type = json.attributes.type as MatrixType;
+      const { buffer } = createMatrixBuffer(
+        this,
+        json.buffer.length,
+        _type,
+        json.buffer as number[],
+      );
+      this.buffer = buffer as Float32Array;
     }
 
     this.script = json.script;

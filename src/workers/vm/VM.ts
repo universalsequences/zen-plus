@@ -1,4 +1,4 @@
-import { MockPatch } from "../../test/mocks/MockPatch";
+import { MockPatch } from "../../../test/mocks/MockPatch";
 import type {
   Message,
   SerializedMessageNode,
@@ -8,11 +8,25 @@ import type {
   ObjectNode,
   MessageNode,
 } from "@/lib/nodes/types";
-import { MockObjectNode } from "../../test/mocks/MockObjectNode";
+import { MockObjectNode } from "../../../test/mocks/MockObjectNode";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
-import { Instruction, InstructionType, SerializedInstruction } from "@/lib/nodes/vm/types";
-import { NodeInstructions } from "./core";
+import {
+  type Instruction,
+  InstructionType,
+  type SerializedInstruction,
+} from "@/lib/nodes/vm/types";
+import type { NodeInstructions } from "../core";
 import { evaluate } from "@/lib/nodes/vm/evaluate";
+
+export interface OnNewValue {
+  nodeId: string;
+  value: Message;
+}
+
+export interface OnNewSharedBuffer {
+  nodeId: string;
+  sharedBuffer: SharedArrayBuffer;
+}
 
 export class VM {
   nodes: {
@@ -22,19 +36,25 @@ export class VM {
   nodeInstructions: {
     [nodeId: string]: Instruction[];
   };
+  onNewValue: OnNewValue[] = [];
+  onNewSharedBuffer: OnNewSharedBuffer[] = [];
 
   constructor() {
     this.nodes = {};
     this.patch = new MockPatch(undefined);
     this.nodeInstructions = {};
+    this.onNewValue = [];
   }
 
   setNodes(objects: SerializedObjectNode[], messages: SerializedMessageNode[]) {
-    console.log("set nodes called", objects, messages);
     const p = new MockPatch(undefined);
 
     for (const o of objects) {
+      if (this.nodes[o.id]) continue;
       let o1 = (this.nodes[o.id] as ObjectNode) || new MockObjectNode(p);
+      o1.onNewValue = (value) => this.onNewValue.push({ nodeId: o1.id, value: value });
+      o1.onNewSharedBuffer = (value) =>
+        this.onNewSharedBuffer.push({ nodeId: o1.id, sharedBuffer: value });
       o1.fromJSON(o);
       this.nodes[o1.id] = o1;
     }
@@ -43,9 +63,13 @@ export class VM {
       m1.fromJSON(m);
       this.nodes[m1.id] = m1;
     }
-    console.log("finished set nodes", this);
+
+    return {
+      onNewSharedBuffer: this.onNewSharedBuffer,
+    };
   }
 
+  // TODO - call this whenever an object updates from main thread
   updateObject(nodeId: string, serializedNode: SerializedObjectNode) {
     if (this.nodes[nodeId]) {
       (this.nodes[nodeId] as ObjectNode).fromJSON(serializedNode);
@@ -64,12 +88,19 @@ export class VM {
   }
 
   evaluateNode(nodeId: string, message: Message) {
+    this.onNewValue.length = 0;
+    this.onNewSharedBuffer.length = 0;
     const instructions = this.nodeInstructions[nodeId];
     if (!instructions) {
       throw new Error("no instructions found");
     }
-    console.log("Worker.evaluateInstructions len=%s message=", instructions.length, message);
-    return evaluate(instructions, message);
+    const o = evaluate(instructions, message);
+    console.log("evaluation", o);
+    return {
+      ...o,
+      onNewValue: this.onNewValue,
+      onNewSharedBuffer: this.onNewSharedBuffer,
+    };
   }
 }
 

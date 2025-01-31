@@ -19,6 +19,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "../hooks/usePatchSelector";
 import { useLocked } from "@/contexts/LockedContext";
+import { isMessageNode } from "@/lib/nodes/vm/instructions";
 
 const PositionedComponent: React.FC<{
   position?: string;
@@ -72,7 +73,10 @@ const PositionedComponent: React.FC<{
     maxZIndexRef.current = maxZIndex;
   }, [maxZIndex]);
 
+  const lastText = useRef(text);
   useEffect(() => {
+    if (isMessageNode(node) || text === lastText.current) return;
+    lastText.current = text;
     let name = (node as ObjectNode).name;
     if (((node as MessageNode).message === undefined && name === undefined) || name == "divider") {
       return;
