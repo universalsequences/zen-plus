@@ -1,15 +1,16 @@
 import { isCompiledType } from "../context";
 import { getRootPatch } from "../traverse";
-import type {
-  Node,
-  Patch,
-  IOConnection,
-  ObjectNode,
-  SubPatch,
-  MessageNode,
-  IOlet,
-  SerializedObjectNode,
-  SerializedMessageNode,
+import {
+  type Node,
+  type Patch,
+  type IOConnection,
+  type ObjectNode,
+  type SubPatch,
+  type MessageNode,
+  type IOlet,
+  type SerializedObjectNode,
+  type SerializedMessageNode,
+  MessageType,
 } from "../types";
 import { createInstructions, isMessageNode, isObjectNode } from "./instructions";
 import { Instruction, InstructionType, SerializedInstruction } from "./types";
@@ -143,6 +144,10 @@ const isSourceNode = (node: Node) => {
     return true;
   }
 
+  if ((node as ObjectNode).name === "matrix") {
+    return true;
+  }
+
   if (
     !node.inlets.some((x) => x.connections.length > 0) &&
     node.outlets.some((x) => x.connections.length > 0) &&
@@ -169,8 +174,8 @@ const isSourceNode = (node: Node) => {
 const compileSourceNode = (node: Node) => {
   const nodes = topologicalSearchFromNode(node);
   const offset = (node as ObjectNode).isAsync ? 1 : 0;
-  const instructions = createInstructions(nodes.slice(offset));
-  node.instructions = instructions;
+  const instructions = createInstructions(nodes);
+  node.instructions = instructions.slice(offset);
   for (let i = 0; i < nodes.length; i++) {
     const _node = nodes[i];
     if (!_node.debugTopologicalIndex) {
@@ -216,6 +221,9 @@ export const compileVM = (_patch: Patch) => {
       const serializedInstructions = sourceNode.instructions.map(serializeInstruction);
       const nodes = getNodesFromInstructions(sourceNode.instructions);
       const objects = nodes.filter((x) => isObjectNode(x)) as ObjectNode[];
+      if ((sourceNode as ObjectNode).isAsync) {
+        objects.push(sourceNode as ObjectNode);
+      }
       const serializedObjects = objects.map((x) => (x as ObjectNode).getJSON());
       const messages = nodes.filter((x) => isMessageNode(x)) as MessageNode[];
       const serializedMessages = messages.map((x) => (x as MessageNode).getJSON());
@@ -249,6 +257,15 @@ export const compileVM = (_patch: Patch) => {
         nodeInstructions,
       },
     });
+
+    const allNumbers = patch
+      .getAllMessageNodes()
+      .filter((x) => x.messageType === MessageType.Number);
+    setTimeout(() => {
+      for (const message of allNumbers) {
+        message.receive(message.inlets[0], message.message as number);
+      }
+    }, 100);
   }
   if (patch.registerNodes) {
     patch.registerNodes(ogObjects, ogMessages);

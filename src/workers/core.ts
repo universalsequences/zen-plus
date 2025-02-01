@@ -6,7 +6,8 @@ import type {
   Patch,
 } from "@/lib/nodes/types";
 import type { SerializedInstruction } from "@/lib/nodes/vm/types";
-import { VM } from "./vm/VM";
+import { VM, VMEvaluation } from "./vm/VM";
+import { ReplaceMessage } from "@/lib/nodes/vm/evaluate";
 
 export interface NodeInstructions {
   nodeId: string;
@@ -46,11 +47,46 @@ export interface UpdateNodeBody {
 export type MessageBody = SetCompilationBody | EvaluateNodeBody | UpdateNodeBody;
 const vm = new VM();
 
+// sends one round of instructions evaluation to the main thread
+const sendEvaluationToMainThread = (data: VMEvaluation) => {
+  const { replaceMessages, onNewValue, onNewSharedBuffer, mainThreadInstructions } = data;
+
+  onNewSharedBuffer.push(...vm.newSharedBuffers);
+  if (replaceMessages.length > 0)
+    self.postMessage({
+      type: "replaceMessages",
+      body: replaceMessages,
+    });
+
+  if (mainThreadInstructions.length > 0)
+    self.postMessage({
+      type: "mainThreadInstructions",
+      body: mainThreadInstructions,
+    });
+
+  if (onNewSharedBuffer.length > 0)
+    self.postMessage({
+      type: "onNewSharedBuffer",
+      body: onNewSharedBuffer,
+    });
+
+  if (onNewValue.length > 0) {
+    self.postMessage({
+      type: "onNewValue",
+      body: onNewValue,
+    });
+  }
+
+  vm.clear();
+};
+
+vm.sendEvaluationToMainThread = sendEvaluationToMainThread;
+
 self.onmessage = async (e: MessageEvent) => {
   const data = e.data as MessageBody;
 
   if (data.type === "setCompilation") {
-    console.log("received worker message", data.body.objects);
+    //console.log("received worker message", data.body.objects);
     const { onNewSharedBuffer } = vm.setNodes(data.body.objects, data.body.messages);
     if (onNewSharedBuffer.length > 0) {
       self.postMessage({
@@ -60,30 +96,8 @@ self.onmessage = async (e: MessageEvent) => {
     }
     vm.setNodeInstructions(data.body.nodeInstructions);
   } else if (data.type === "evaluateNode") {
-    const { replaceMessages, onNewValue, onNewSharedBuffer, mainThreadInstructions } =
-      vm.evaluateNode(data.body.nodeId, data.body.message);
-    if (replaceMessages.length > 0)
-      self.postMessage({
-        type: "replaceMessages",
-        body: replaceMessages,
-      });
-
-    if (mainThreadInstructions.length > 0)
-      self.postMessage({
-        type: "mainThreadInstructions",
-        body: mainThreadInstructions,
-      });
-
-    if (onNewSharedBuffer.length > 0)
-      self.postMessage({
-        type: "onNewSharedBuffer",
-        body: onNewSharedBuffer,
-      });
-
-    self.postMessage({
-      type: "onNewValue",
-      body: onNewValue,
-    });
+    const vmEvaluation = vm.evaluateNode(data.body.nodeId, data.body.message);
+    sendEvaluationToMainThread(vmEvaluation);
   } else if (data.type === "updateObject") {
     const { nodeId, json } = data.body;
     vm.updateObject(nodeId, json);

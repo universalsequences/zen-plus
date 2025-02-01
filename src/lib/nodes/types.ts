@@ -26,6 +26,7 @@ import { LispError } from "../lisp/eval";
 import { Instruction } from "./vm/types";
 import { Branching } from "./vm/evaluate";
 import { MessageBody } from "@/workers/core";
+import { VM } from "@/workers/vm/VM";
 
 export interface Size {
   width: number;
@@ -341,6 +342,7 @@ export type Patch = Identifiable & {
   newSubPatch: (p: Patch, n: ObjectNode) => SubPatch;
   sendWorkerMessage?: (body: MessageBody) => void;
   registerNodes?: (objects: ObjectNode[], messages: MessageNode[]) => void;
+  vm?: VM;
 };
 
 export type SubPatch = Patch & {

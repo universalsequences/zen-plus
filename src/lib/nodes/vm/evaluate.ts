@@ -138,9 +138,16 @@ export const evaluate = (
 
           // note - store operation needs to store in inlet as well
           const inputMessage =
-            objectNode.inlets[0].lastMessage === undefined
+            initialMessage !== undefined
               ? initialMessage
-              : objectNode.inlets[0].lastMessage;
+              : objectNode.inlets[0].lastMessage === undefined
+                ? initialMessage
+                : objectNode.inlets[0].lastMessage;
+
+          if (initialMessage !== undefined) {
+            // consumed initial message
+            initialMessage = undefined;
+          }
           if (objectNode.fn && inputMessage !== undefined) {
             if (objectNode.skipCompilation) {
               mainThreadInstructions.push({
@@ -206,13 +213,6 @@ export const evaluate = (
       }
     }
     let b = new Date().getTime();
-    /*
-    const f = flatten(_instructions);
-    console.log("instructions len=%s took %s ms", f.length, b - a);
-    if (f.length > 100) {
-      console.log(f);
-    }
-    */
     return {
       mainThreadInstructions,
       objectsEvaluated,

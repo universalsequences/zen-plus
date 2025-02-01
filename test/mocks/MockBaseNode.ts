@@ -19,6 +19,7 @@ import {
 import { OperatorContextType, isCompiledType } from "@/lib/nodes/context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
+import { VMEvaluation } from "@/workers/vm/VM";
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode)
@@ -76,6 +77,15 @@ export class MockBaseNode implements Node {
   }
 
   send(outlet: IOlet, msg: Message) {
+    const objectNode = this as unknown as ObjectNode;
+    if (objectNode.isAsync) {
+      if (objectNode.instructions && objectNode.patch.vm) {
+        const r: VMEvaluation = objectNode.patch.vm.evaluateNode(this.id, msg);
+        // need to pass this back to main-thread
+        objectNode.patch.vm.sendEvaluationToMainThread?.(r);
+      }
+      return;
+    }
     const { connections } = outlet;
 
     for (const connection of connections) {

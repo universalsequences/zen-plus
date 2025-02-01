@@ -375,7 +375,7 @@ const PositionedComponent: React.FC<{
           onMouseDown(e);
         }}
         style={_style}
-        className={className}
+        className={node?.instructions ? `${className} border border-teal-500` : className}
       >
         {isSelected && (
           <>
@@ -438,7 +438,6 @@ const PositionedComponent: React.FC<{
           />
         )}
         {children}
-        {node.instructions && <div className="absolute top-1 right-1 w-2 h-2 bg-red-500" />}
       </div>
     );
   }, [

@@ -143,6 +143,26 @@ export const stream = (node: ObjectNode, list: Lazy) => {
   };
 };
 
+doc("iter", {
+  numberOfInlets: 1,
+  inletNames: ["list"],
+  outletNames: ["stream element"],
+  description: "sends the elements of a list one by one",
+  numberOfOutlets: 1,
+});
+
+export const iter = (node: ObjectNode) => {
+  node.isAsync = true;
+  return (list: Message) => {
+    if (Array.isArray(list)) {
+      for (const element of list as Message[]) {
+        node.send(node.outlets[0], element);
+      }
+    }
+    return [];
+  };
+};
+
 doc("collect", {
   numberOfInlets: 1,
   inletNames: ["element"],
@@ -350,5 +370,6 @@ export const lists: API = {
   "list.slice": list_slice,
   stream,
   unpack,
+  iter,
   pak,
 };

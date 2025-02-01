@@ -80,7 +80,15 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         for (const { nodeId, sharedBuffer } of onNewSharedBuffer) {
           const node = objectsRef.current[nodeId];
           if (!node) continue;
-          node.buffer = new Float32Array(sharedBuffer);
+          node.buffer =
+            node.attributes.type === "uint8" || node.attributes.type === "boolean"
+              ? new Uint8Array(sharedBuffer)
+              : new Float32Array(sharedBuffer);
+          if (node.attributes.type === "uint8" || node.attributes.type === "boolean") {
+            console.log("creating uint8 buffer", node.buffer, node);
+          } else {
+          }
+          console.log("setting buffer of type=", node.attributes.type, node.buffer, sharedBuffer);
           if (node.custom) {
             (node.custom as Matrix).buffer = node.buffer;
           }

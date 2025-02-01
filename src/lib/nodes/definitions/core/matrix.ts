@@ -97,7 +97,6 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
     const columns = _cols as number;
     const rows = _node.attributes.rows as number;
     const type = _node.attributes.type as MatrixType;
-    console.log("calling create from columns");
     const { buffer, sharedBuffer } = createMatrixBuffer(
       _node,
       columns * rows,
@@ -112,7 +111,6 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
     const rows = _rows as number;
     const columns = _node.attributes.columns as number;
     const type = _node.attributes.type as MatrixType;
-    console.log("calling create from rows");
     const { buffer, sharedBuffer } = createMatrixBuffer(
       _node,
       columns * rows,
@@ -125,7 +123,6 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
 
   _node.attributeCallbacks.type = (type) => {
     const _type = type as MatrixType;
-    console.log("calling create from type");
     const { buffer, sharedBuffer } = createMatrixBuffer(
       _node,
       columns * rows,
@@ -158,14 +155,12 @@ const setupMatrixAttributes = (_node: ObjectNode) => {
     _node.attributes.columns = columns;
     _node.attributes.rows = rows;
     const _type = _node.attributes.type as MatrixType;
-    console.log("calling create from init");
     const { buffer, sharedBuffer } = createMatrixBuffer(_node, rows * columns, _type);
     _node.buffer = buffer;
     _node.sharedBuffer = sharedBuffer;
   }
 
   if (!_node.custom && _node.buffer) {
-    console.log("initializing matrix with _node.buffer=", _node.buffer);
     _node.custom = new Matrix(_node, _node.buffer);
   }
 
@@ -189,6 +184,7 @@ export const createMatrixBuffer = (
   type: MatrixType,
   values?: number[],
 ) => {
+  size = Math.max(size, 4);
   console.log("create matrix buffer", type, node.onNewSharedBuffer, values);
   if (type === "object") {
     return {

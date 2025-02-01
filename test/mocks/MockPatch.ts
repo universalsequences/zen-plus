@@ -345,6 +345,8 @@ export class MockSubPatch extends MockPatch implements SubPatch {
     } else {
       this._setupInitialNodes();
     }
+
+    this.vm = parentPatch.vm;
   }
 
   private determinePatchType(parentNodeType: string) {
