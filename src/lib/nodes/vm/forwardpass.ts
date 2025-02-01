@@ -7,22 +7,12 @@ import {
   type ObjectNode,
   type SubPatch,
   type MessageNode,
-  type IOlet,
   type SerializedObjectNode,
   type SerializedMessageNode,
   MessageType,
 } from "../types";
 import { createInstructions, isMessageNode, isObjectNode } from "./instructions";
 import { Instruction, InstructionType, SerializedInstruction } from "./types";
-import {
-  type CompilationPath,
-  isSubpath,
-  splitPath,
-  mergePaths,
-  printPaths,
-  splitPathByNonCompilableNodes,
-  printNodes,
-} from "./paths";
 import { getInboundConnections, getOutboundConnections } from "./traversal";
 import { NodeInstructions } from "@/workers/core";
 
@@ -88,39 +78,6 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
   return result;
 };
 
-export const topologicalSearchFromNode2 = (node: Node, debug = false): Node[] => {
-  let S = [node];
-  let L: Node[] = [];
-  const visitedConnections: Set<IOConnection> = new Set();
-
-  while (S.length > 0) {
-    const n = S.pop();
-    if (n) {
-      L.push(n);
-      if (n.skipCompilation || isCompiledType((n as ObjectNode).operatorContextType)) {
-        continue;
-      }
-      // NOTE: we need to determine if theres a cycle and if so ensure that we don't keep looping
-      const connections = getOutboundConnections(n, new Set());
-      for (const m of connections) {
-        const { destination, destinationInlet } = m;
-        const inletNumber = destination.inlets.indexOf(destinationInlet);
-        const isMessage = (destination as MessageNode).messageType !== undefined;
-        if (isMessage && inletNumber === 1) {
-          continue;
-        } else if (destinationInlet.isHot || (isMessage && inletNumber === 0)) {
-          const inbound = destination.inlets.flatMap((inlet) => getInboundConnections(inlet));
-          if (!inbound.every((c) => visitedConnections.has(c))) {
-            S.push(destination);
-          }
-        }
-        visitedConnections.add(m);
-      }
-    }
-  }
-  return L;
-};
-
 const isSourceNode = (node: Node) => {
   // TODO - we need to figure out compiling nodes in compileable patches (that are not
   // part of the actual zen/gl graph)
@@ -151,7 +108,7 @@ const isSourceNode = (node: Node) => {
   if (
     !node.inlets.some((x) => x.connections.length > 0) &&
     node.outlets.some((x) => x.connections.length > 0) &&
-    (!(node as ObjectNode).needsLoad || (node as ObjectNode).name === "attrui")
+    !(node as ObjectNode).needsMainThread
   ) {
     return true;
   }
@@ -226,6 +183,9 @@ export const compileVM = (_patch: Patch) => {
       }
       const serializedObjects = objects.map((x) => (x as ObjectNode).getJSON());
       const messages = nodes.filter((x) => isMessageNode(x)) as MessageNode[];
+      if ((sourceNode as MessageNode).messageType === MessageType.Number) {
+        messages.push(sourceNode as MessageNode);
+      }
       const serializedMessages = messages.map((x) => (x as MessageNode).getJSON());
       ogObjects.push(...objects);
       ogMessages.push(...messages);
@@ -248,7 +208,6 @@ export const compileVM = (_patch: Patch) => {
     }
   }
   if (patch.sendWorkerMessage) {
-    console.log("sending dat shit");
     patch.sendWorkerMessage({
       type: "setCompilation",
       body: {

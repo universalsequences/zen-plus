@@ -249,6 +249,7 @@ export type ObjectNode = Positioned &
     isSpecialCase?: boolean;
     updateWorkerState: () => void;
     isAsync?: boolean;
+    needsMainThread?: boolean;
   };
 
 export interface SerializableCustom {

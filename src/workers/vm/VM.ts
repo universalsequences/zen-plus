@@ -129,6 +129,23 @@ export class VM {
     this.onNewValue.length = 0;
     this.newSharedBuffers.length = 0;
   }
+
+  /**
+   * executes all load bangs / numbers - to be called after initial compile of project
+   * */
+  loadBang() {
+    for (const nodeId in this.nodeInstructions) {
+      const node = this.nodes[nodeId];
+      if (!node) {
+        continue;
+      }
+      if ((node as MessageNode).messageType === MessageType.Number) {
+        this.evaluateNode(nodeId, (node as MessageNode).message as number);
+      } else if ((node as ObjectNode).needsLoad) {
+        this.evaluateNode(nodeId, "bang");
+      }
+    }
+  }
 }
 
 const deserializeInstruction = (

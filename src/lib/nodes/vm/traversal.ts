@@ -22,7 +22,7 @@ export const getOutboundConnectionsFromOutlet = (
     const name = (c.destination as ObjectNode).name;
     if ((c.destination as ObjectNode).subpatch) {
       subpatchConnections.push(c);
-    } else if (name === "out") {
+    } else if (name === "out" || name === "patchmessage") {
       outConnections.push(c);
     } else {
       regularConnections.push(c);
@@ -51,7 +51,10 @@ export const getOutboundConnectionsFromOutlet = (
   for (const connection of outConnections) {
     const { destination } = connection;
     const patch = destination.patch;
-    const outletNumber = ((destination as ObjectNode).arguments[0] as number) - 1;
+    const outletNumber =
+      (destination as ObjectNode).name === "patchmessage"
+        ? 0
+        : ((destination as ObjectNode).arguments[0] as number) - 1;
     const outlet = (patch as SubPatch).parentNode.outlets[outletNumber];
 
     if (outlet) {
@@ -96,7 +99,9 @@ export const getInboundConnections = (inlet: IOlet, debug = false): IOConnection
 
     const subpatch = (source as ObjectNode).subpatch as SubPatch;
     const out = subpatch.objectNodes.find(
-      (x) => x.name === "out" && x.arguments[0] === outletNumber,
+      (x) =>
+        (outletNumber === 1 && x.name === "patchmessage") ||
+        (x.name === "out" && x.arguments[0] === outletNumber),
     );
 
     if (out) {

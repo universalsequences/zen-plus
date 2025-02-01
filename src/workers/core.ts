@@ -44,7 +44,11 @@ export interface UpdateNodeBody {
   };
 }
 
-export type MessageBody = SetCompilationBody | EvaluateNodeBody | UpdateNodeBody;
+export interface LoadBangBody {
+  type: "loadbang";
+}
+
+export type MessageBody = SetCompilationBody | EvaluateNodeBody | UpdateNodeBody | LoadBangBody;
 const vm = new VM();
 
 // sends one round of instructions evaluation to the main thread
@@ -101,5 +105,7 @@ self.onmessage = async (e: MessageEvent) => {
   } else if (data.type === "updateObject") {
     const { nodeId, json } = data.body;
     vm.updateObject(nodeId, json);
+  } else if (data.type === "loadbang") {
+    vm.loadBang();
   }
 };

@@ -375,7 +375,11 @@ const PositionedComponent: React.FC<{
           onMouseDown(e);
         }}
         style={_style}
-        className={node?.instructions ? `${className} border border-teal-500` : className}
+        className={
+          node?.instructions
+            ? `${className.replace("border-zinc-100", "").replace("border-zinc-900", "")} border border-teal-500`
+            : className
+        }
       >
         {isSelected && (
           <>

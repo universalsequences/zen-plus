@@ -31,11 +31,9 @@ const MessageBox: React.FC<{
     }
   }, [messageNode]);
 
-  /*
   useEffect(() => {
     update();
   }, []);
-  */
 
   const lastMessage = useRef(rawMessage);
   useEffect(() => {

@@ -617,11 +617,16 @@ export class PatchImpl implements Patch {
 
     const o = useDeep ? this.getAllNodes() : this.objectNodes;
     const loadBangs = o.filter(
-      (x) => x.operatorContextType === OperatorContextType.CORE && x.needsLoad,
+      (x) => !x.instructions && x.operatorContextType === OperatorContextType.CORE && x.needsLoad,
     );
 
     this.finishedInitialCompile = true;
+    console.log("compiling vm...");
+    const startTime = new Date().getTime();
     compileVM(this);
+    const endTime = new Date().getTime();
+    console.log("compilation of vm took %s ms", endTime - startTime);
+    this.sendWorkerMessage?.({ type: "loadbang" });
     loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));
   }
 
