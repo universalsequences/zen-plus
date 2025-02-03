@@ -56,6 +56,9 @@ const initializeSlots = (node: ObjectNode) => {
 
 const initializeAudioNodes = (node: ObjectNode) => {
   const ctxt = node.patch.audioContext as AudioContext;
+  if (!ctxt) {
+    return;
+  }
   if (!node.audioNode) {
     node.audioNode = ctxt.createChannelMerger(2);
   }
@@ -172,6 +175,7 @@ const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode
     if (objectNode.subpatch) {
       objectNode.subpatch.name = "";
       objectNode.subpatch.isInsideSlot = true;
+      objectNode.subpatch.slotsNode = node;
     }
     objectNode.parentSlots = node;
     return objectNode;

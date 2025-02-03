@@ -1,6 +1,6 @@
 import { Definition, NumberOfInlets } from "@/lib/docs/docs";
 import pako from "pako";
-import { OperatorContextType, getOperatorContext } from "../context";
+import { OperatorContextType, getOperatorContext, isCompiledType } from "../context";
 import { createGLFunction } from "../definitions/create";
 import {
   Message,
@@ -48,6 +48,11 @@ export const parse = (
   }
 
   objectNode.isCycle = undefined;
+
+  if (isCompiledType(contextType) || contextType === OperatorContextType.AUDIO) {
+    // skip vm compilation
+    objectNode.skipCompilation = true;
+  }
 
   const definition: Definition | null = context.lookupDoc(name);
 

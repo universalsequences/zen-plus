@@ -8,7 +8,10 @@ doc("currenttime", {
 });
 
 export const currenttime = (_node: ObjectNode) => {
-  return (_x: Message) => [_node.patch.audioContext.currentTime];
+  _node.skipCompilation = true;
+  return (_x: Message) => {
+    return [_node.patch.audioContext?.currentTime];
+  };
 };
 
 doc("converttime", {

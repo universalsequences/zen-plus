@@ -27,9 +27,9 @@ export const live_meter: NodeFunction = (node: ObjectNode) => {
   let gainNode: GainNode;
   let analyser1: AnalyserNode;
   let analyser2: AnalyserNode;
-  const splitter = node.patch.audioContext.createChannelSplitter(2);
+  const splitter = node.patch.audioContext?.createChannelSplitter(2);
 
-  if (!node.audioNode) {
+  if (node.patch.audioContext && splitter && !node.audioNode) {
     gainNode = node.patch.audioContext.createGain();
     analyser1 = node.patch.audioContext.createAnalyser();
     analyser1.fftSize = 32;
@@ -51,6 +51,9 @@ export const live_meter: NodeFunction = (node: ObjectNode) => {
   }
 
   return (message: Message) => {
+    if (!node.patch.audioContext) {
+      return [];
+    }
     if (typeof message === "number" && gainNode) {
       gainNode.gain.linearRampToValueAtTime(message, node.patch.audioContext.currentTime + 0.01);
       if (node.custom) {

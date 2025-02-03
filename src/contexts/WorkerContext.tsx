@@ -1,9 +1,10 @@
 import { Patch, ObjectNode, MessageNode } from "@/lib/nodes/types";
 import { MainThreadInstruction } from "@/lib/nodes/vm/evaluate";
-import { OnNewSharedBuffer, OnNewValue } from "@/workers/vm/VM";
+import { MutableValueChanged, OnNewSharedBuffer, OnNewValue } from "@/workers/vm/VM";
 import { MessageBody } from "@/workers/core";
 import React, { createContext, useContext, useRef, useCallback, useEffect } from "react";
 import { Matrix } from "@/lib/nodes/definitions/core/matrix";
+import { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 
 interface IWorkerContext {}
 
@@ -71,6 +72,9 @@ class UpdateBatcher {
     for (const [type, updates] of this.pendingUpdates) {
       const updateArray = Array.from(updates);
       switch (type) {
+        case "mutableValueChanged":
+          this.handleMutableValueChanged(updateArray);
+          break;
         case "replaceMessages":
           this.handleReplaceMessages(updateArray);
           break;
@@ -80,6 +84,9 @@ class UpdateBatcher {
         case "onNewValue":
           this.handleOnNewValue(updateArray);
           break;
+        case "onNewValues":
+          this.handleOnNewValues(updateArray);
+          break;
         case "onNewSharedBuffer":
           this.handleSharedBuffer(updateArray);
           break;
@@ -87,6 +94,14 @@ class UpdateBatcher {
     }
 
     this.pendingUpdates.clear();
+  }
+
+  private handleMutableValueChanged(mutableValueChanged: MutableValueChanged[]) {
+    for (const { nodeId, value } of mutableValueChanged) {
+      const node = this.objects[nodeId];
+      if (!node?.custom) continue;
+      node.custom.value = value;
+    }
   }
 
   private handleReplaceMessages(updates: any[]) {
@@ -112,10 +127,12 @@ class UpdateBatcher {
 
       const { inlets, arguments: args, fn } = node;
 
+      let inletDetected = -1;
       // Process all inlets in one pass
       for (let i = 0; i < inletMessages.length; i++) {
         const message = inletMessages[i];
         if (message === undefined) continue;
+        inletDetected = i;
 
         inlets[i].lastMessage = message;
         if (i > 0) {
@@ -123,8 +140,15 @@ class UpdateBatcher {
         }
       }
 
+      if (
+        inletMessages[0] === undefined &&
+        inletDetected > -1 &&
+        node.inlets[inletDetected].isHot
+      ) {
+        inletMessages[0] = node.inlets[0].lastMessage;
+      }
       if (inletMessages[0] !== undefined && fn) {
-        fn(inletMessages[0]);
+        node.receive(node.inlets[0], inletMessages[0]);
       }
     }
   }
@@ -134,6 +158,19 @@ class UpdateBatcher {
       const node = this.objects[nodeId];
       if (!node?.onNewValue) continue;
       node.onNewValue(value);
+    }
+  }
+
+  private handleOnNewValues(updates: OnNewValue[]) {
+    for (const { nodeId, value } of updates) {
+      const node = this.objects[nodeId];
+      if (!node?.onNewValues) continue;
+      for (const id in node.onNewValues) {
+        if (node.name === "zequencer.core" && Array.isArray(value)) {
+          node.steps = value[1] as GenericStepData[];
+        }
+        node.onNewValues[id](value);
+      }
     }
   }
 

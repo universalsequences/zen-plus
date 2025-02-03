@@ -18,10 +18,13 @@ import {
 } from "@/lib/nodes/vm/types";
 import type { NodeInstructions } from "../core";
 import { MainThreadInstruction, ReplaceMessage, evaluate } from "@/lib/nodes/vm/evaluate";
-import { isMessageNode } from "@/lib/nodes/vm/instructions";
-import { isNumberObject } from "util/types";
 
 export interface OnNewValue {
+  nodeId: string;
+  value: Message;
+}
+
+export interface OnNewValues {
   nodeId: string;
   value: Message;
 }
@@ -37,6 +40,13 @@ export interface VMEvaluation {
   mainThreadInstructions: MainThreadInstruction[];
   onNewValue: OnNewValue[];
   onNewSharedBuffer: OnNewSharedBuffer[];
+  mutableValueChanged: MutableValueChanged[];
+  onNewValues: OnNewValues[];
+}
+
+export interface MutableValueChanged {
+  nodeId: string;
+  value: Message;
 }
 
 export class VM {
@@ -48,7 +58,9 @@ export class VM {
     [nodeId: string]: Instruction[];
   };
   onNewValue: OnNewValue[] = [];
+  onNewValues: OnNewValues[] = [];
   newSharedBuffers: OnNewSharedBuffer[] = [];
+  mutableValueChanged: MutableValueChanged[] = [];
 
   sendEvaluationToMainThread?: (evaluation: VMEvaluation) => void;
 
@@ -67,8 +79,10 @@ export class VM {
       if (this.nodes[o.id]) continue;
       let o1 = (this.nodes[o.id] as ObjectNode) || new MockObjectNode(p);
       o1.onNewValue = (value) => this.onNewValue.push({ nodeId: o1.id, value: value });
+      o1.onNewValues = {
+        1: (value) => this.onNewValues.push({ nodeId: o1.id, value: value }),
+      };
       o1.onNewSharedBuffer = (value) => {
-        console.log("new shared buffer emitted", value);
         this.newSharedBuffers.push({ nodeId: o1.id, sharedBuffer: value });
       };
       o1.fromJSON(o);
@@ -115,11 +129,24 @@ export class VM {
     if (!instructions) {
       throw new Error("no instructions found");
     }
-    const o = evaluate(instructions, message);
+    /*
+    console.log(
+      "%cVM evaluating message=%s instructions=%s at node=[%s]",
+      "color:magenta",
+      typeof message === "object" ? "[object]" :  message,
+      instructions.length,
+      (this.nodes[nodeId] as ObjectNode)?.text ||
+        ((this.nodes[nodeId] as MessageNode)?.messageType === MessageType.Number
+          ? "NUMBER"
+          : nodeId),
+    );
+    */
     const vmEvaluation: VMEvaluation = {
-      ...o,
+      ...evaluate(instructions, message),
       onNewValue: this.onNewValue,
+      onNewValues: this.onNewValues,
       onNewSharedBuffer: this.newSharedBuffers,
+      mutableValueChanged: this.mutableValueChanged,
     };
 
     return vmEvaluation;
@@ -127,7 +154,9 @@ export class VM {
 
   clear() {
     this.onNewValue.length = 0;
+    this.onNewValues.length = 0;
     this.newSharedBuffers.length = 0;
+    this.mutableValueChanged.length = 0;
   }
 
   /**
@@ -146,6 +175,20 @@ export class VM {
       }
     }
   }
+
+  sendAttrUI(nodeId: string, num: number) {
+    const objectNode = this.nodes[nodeId] as ObjectNode;
+    if (!objectNode) return;
+    let text = objectNode.text.split(" ");
+    text[2] = num.toString();
+    objectNode.text = text.join(" ");
+    objectNode.arguments[1] = num;
+    objectNode.inlets[1].lastMessage = num;
+    if (objectNode && objectNode.custom) {
+      (objectNode.custom as any).value = num;
+    }
+    return this.evaluateNode(nodeId, `${text[0]} ${num}`);
+  }
 }
 
 const deserializeInstruction = (
@@ -153,6 +196,15 @@ const deserializeInstruction = (
   nodes: { [id: string]: Node },
 ): Instruction => {
   const node = nodes[serialized.node as string];
+  const additionalNodes: ObjectNode[] | undefined = serialized.nodes ? [] : undefined;
+  if (additionalNodes && serialized.nodes) {
+    for (const nodeId of serialized.nodes) {
+      const node = nodes[nodeId];
+      if (node) {
+        additionalNodes.push(node as ObjectNode);
+      }
+    }
+  }
   let branches: Instruction[][] | undefined;
   if (serialized.branches) {
     branches = [];
@@ -175,5 +227,6 @@ const deserializeInstruction = (
     inlet: node?.inlets[serialized.inletNumber as number],
     inletNumber: serialized.inletNumber,
     outletNumber: serialized.outletNumber,
+    nodes: additionalNodes,
   };
 };

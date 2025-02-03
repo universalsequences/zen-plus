@@ -203,6 +203,7 @@ doc("function", {
   ],
 });
 export const function_editor = (node: ObjectNode) => {
+  node.skipCompilation = true;
   if (!node.custom) {
     node.custom = new FunctionEditor(node);
   }

@@ -100,10 +100,10 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
   };
 
   return (_x: Message) => {
-    if (lastName && name() !== lastName) {
+    if (lastName !== undefined && name() !== lastName) {
       queue.unsubscribe(lastName, onMessage);
       initialized = false;
-      const ret = queue.read(name() as string);
+      queue.read(name() as string);
     }
     if (!initialized) {
       queue.subscribe(name() as string, onMessage);

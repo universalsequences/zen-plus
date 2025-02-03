@@ -1,32 +1,11 @@
-import {
-  Node,
-  ObjectNode,
-  IOConnection,
-  MessageNode,
-  SubPatch,
-  IOlet,
-  MessageType,
-} from "../types";
+import { Node, ObjectNode, IOConnection, MessageNode, SubPatch, MessageType } from "../types";
+import { createAttributeInstruction } from "./attribute";
 import {
   forwardTraversal,
   getInboundConnections,
-  getOutboundConnections,
   getOutboundConnectionsFromOutlet,
 } from "./traversal";
 import { Instruction, InstructionType } from "./types";
-
-const pushInstruction = (
-  instructions: Instruction[],
-  instruction: Instruction,
-  branch: Branch | undefined,
-  branchIndex: number,
-) => {
-  if (branch) {
-    branch.branches[branchIndex].push(instruction);
-  } else {
-    instructions.push(instruction);
-  }
-};
 
 export const isMessageNode = (node: Node, messageType?: MessageType) =>
   (messageType !== undefined ? (node as MessageNode).messageType === messageType : true) &&
@@ -39,6 +18,9 @@ const compileConnection = (connection: IOConnection): Instruction[] => {
   const { destinationInlet, source, destination, sourceOutlet } = connection;
   const inletNumber = destination.inlets.indexOf(destinationInlet);
   const inbound = getInboundConnections(sourceOutlet);
+  if (!inbound[0]) {
+    console.log("no inbound on source outlet=", sourceOutlet);
+  }
   const outletNumber = inbound[0].source.outlets.indexOf(inbound[0].sourceOutlet);
 
   if (outletNumber === -1) {
@@ -52,6 +34,7 @@ const compileConnection = (connection: IOConnection): Instruction[] => {
     const instruction: Instruction = {
       type: InstructionType.Attribute,
       node: destination,
+      outletNumber,
     };
     instructions.push(instruction);
     //pushInstruction(instructions, instruction, branch, branchIndex);
@@ -120,19 +103,6 @@ const isNodeInBranch = (node: Node, branch: Branch): boolean => {
   const forwardNodes = forwardTraversal(branch.rootNode);
   return forwardNodes.includes(node);
 };
-
-const getBranchIndex = (node: Node, branch: Branch, log = false) => {
-  for (let i = 0; i < branch.rootNode.outlets.length; i++) {
-    const outlet = branch.rootNode.outlets[i];
-    const outletNodes = outlet.connections.flatMap((c) => forwardTraversal(c.destination));
-    if (outletNodes.includes(node)) {
-      return i;
-    }
-  }
-  return -1;
-};
-
-const peek = (stack: Branch[]): Branch | undefined => stack[stack.length - 1];
 
 interface BranchContext {
   id: number;
@@ -247,6 +217,15 @@ export const createInstructions = (nodes: Node[]) => {
     if (!node.skipCompilation) {
       // Handle connections using same outletIndex
       node.outlets.forEach((outlet, idx) => {
+        const immediateSubPatchConnections = outlet.connections.filter(
+          (x) => !!(x.destination as ObjectNode).subpatch,
+        );
+
+        for (const connection of immediateSubPatchConnections) {
+          const instruction = createAttributeInstruction(connection.destination as ObjectNode, idx);
+          instructions.push(instruction);
+        }
+
         const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
         const connectionInstructions = connections
           .flatMap((connection) => {

@@ -15,6 +15,7 @@ import { createInstructions, isMessageNode, isObjectNode } from "./instructions"
 import { Instruction, InstructionType, SerializedInstruction } from "./types";
 import { getInboundConnections, getOutboundConnections } from "./traversal";
 import { NodeInstructions } from "@/workers/core";
+import { Statement } from "../definitions/zen/types";
 
 export const topologicalSearchFromNode3 = (
   node: Node,
@@ -79,8 +80,13 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
 };
 
 const isSourceNode = (node: Node) => {
+  if (node.skipCompilation) {
+    return false;
+  }
+
   // TODO - we need to figure out compiling nodes in compileable patches (that are not
   // part of the actual zen/gl graph)
+  /*
   if (isCompiledType((node.patch as SubPatch).patchType)) {
     if (
       !isCompiledType((node as ObjectNode).operatorContextType) &&
@@ -90,6 +96,8 @@ const isSourceNode = (node: Node) => {
       return false;
     }
   }
+  */
+
   if (isMessageNode(node)) {
     return (
       !node.inlets.some((x) => x.connections.length > 0) &&
@@ -101,7 +109,7 @@ const isSourceNode = (node: Node) => {
     return true;
   }
 
-  if ((node as ObjectNode).name === "matrix") {
+  if ((node as ObjectNode).name === "matrix" || (node as ObjectNode).name === "zequencer.core") {
     return true;
   }
 
@@ -198,6 +206,9 @@ export const compileVM = (_patch: Patch) => {
 
       for (const m of serializedMessages) {
         if (!allMessages.includes(m)) {
+          if ((m.message as Statement)?.node) {
+            m.message = "";
+          }
           allMessages.push(m);
         }
       }
@@ -217,14 +228,12 @@ export const compileVM = (_patch: Patch) => {
       },
     });
 
-    const allNumbers = patch
-      .getAllMessageNodes()
-      .filter((x) => x.messageType === MessageType.Number);
+    // TODO - ack from worker and then do this
     setTimeout(() => {
-      for (const message of allNumbers) {
-        message.receive(message.inlets[0], message.message as number);
-      }
-    }, 100);
+      patch.sendWorkerMessage?.({
+        type: "loadbang",
+      });
+    }, 200);
   }
   if (patch.registerNodes) {
     patch.registerNodes(ogObjects, ogMessages);
@@ -254,6 +263,7 @@ const serializeInstruction = (instruction: Instruction): SerializedInstruction =
     node,
     inletNumber: instruction.inletNumber,
     outletNumber: instruction.outletNumber,
+    nodes: instruction.nodes?.map((x) => x.id),
   };
 };
 
@@ -263,6 +273,11 @@ const getNodesFromInstructions = (instructions: Instruction[]): Node[] => {
   for (const instruction of instructions) {
     if (instruction.node) {
       nodes.add(instruction.node);
+    }
+    if (instruction.nodes) {
+      for (const node of instruction.nodes) {
+        nodes.add(node);
+      }
     }
     if (instruction.branches) {
       for (const branch of instruction.branches) {

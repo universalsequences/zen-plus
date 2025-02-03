@@ -25,6 +25,18 @@ const AttrUIValue: React.FC<{
       if (node && node.custom) {
         (node.custom as any).value = num;
       }
+      if (node.instructions) {
+        // need to actually send over the data and evaluate ...
+        // do we need a special function for this
+        node.patch.sendWorkerMessage?.({
+          type: "attrui",
+          body: {
+            nodeId: node.id,
+            message: num,
+          },
+        });
+        return;
+      }
       let message: Message = text.slice(1).join(" ");
       objectNode.send(objectNode.outlets[0], message);
 

@@ -572,19 +572,5 @@ export class MockSubPatch extends MockPatch implements SubPatch {
     this.parentPatch.newHistoryDependency(newHistory, object);
   }
 
-  setupAudioPatch() {
-    const inputMerger = this.audioContext.createChannelMerger(16);
-    const outputMerger = this.audioContext.createChannelMerger(16);
-    const parentNode = (this as SubPatch).parentNode;
-    if (parentNode) {
-      parentNode.merger = inputMerger;
-      //merger.connect(ret.workletNode);
-    }
-
-    this.audioNode = outputMerger;
-    if (parentNode) {
-      parentNode.useAudioNode(this.audioNode);
-      //this.audioNode.connect(this.audioContext.destination);
-    }
-  }
+  setupAudioPatch() {}
 }

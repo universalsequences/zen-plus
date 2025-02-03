@@ -25,6 +25,11 @@ export class MutableValue {
     if (this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);
     }
+
+    this.objectNode.patch.vm?.mutableValueChanged.push({
+      nodeId: this.objectNode.id,
+      value: x as Message,
+    });
   }
 
   get value() {

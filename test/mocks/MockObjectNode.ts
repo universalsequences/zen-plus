@@ -19,6 +19,7 @@ import {
   ConnectionType,
   SerializedObjectNode,
   IOConnection,
+  AttributeValue,
 } from "../../src/lib/nodes/types";
 import { Instruction } from "@/lib/nodes/vm/types";
 import { Slot, deserializedSlots } from "@/lib/nodes/definitions/audio/slots";
@@ -79,6 +80,12 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
     this.newAttribute("font-size", 9);
     this.arguments = [];
     this.operatorContextType = OperatorContextType.ZEN;
+    this.newAttribute("scripting name", "", (x: AttributeValue) => {
+      if (typeof x === "string") {
+        const patch = getRootPatch(this.patch);
+        patch.scriptingNameToNodes[x] = [...(patch.scriptingNameToNodes[x] || []), this];
+      }
+    });
   }
 
   updateWorkerState() {}

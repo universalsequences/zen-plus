@@ -565,7 +565,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
       return;
     }
-    console.log("actually running receive", message, this);
+    //console.log(`%cmain thread object=[${this.text}](${message})`, "color: lime");
 
     if (this.definition && !this.definition.isHot) {
       const indexOf = this.inletIndexCache[inlet.id] || this.inlets.indexOf(inlet);

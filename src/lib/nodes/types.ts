@@ -6,7 +6,7 @@ import type { RenderJob } from "@/lib/gl/zen";
 import type { SVGObject } from "./definitions/svg/index";
 import type { ZenGraph } from "@/lib/zen/zen";
 import type { ParamGen, param } from "@/lib/zen/index";
-import type { OperatorContextType } from "./context";
+import type { OperatorContext, OperatorContextType } from "./context";
 import type { Connections } from "@/contexts/PatchContext";
 import type { Statement } from "./definitions/zen/types";
 import type { Slot } from "./definitions/audio/slots";
@@ -250,6 +250,7 @@ export type ObjectNode = Positioned &
     updateWorkerState: () => void;
     isAsync?: boolean;
     needsMainThread?: boolean;
+    parseAttributes: (text: string, context: OperatorContext) => string;
   };
 
 export interface SerializableCustom {
@@ -344,6 +345,7 @@ export type Patch = Identifiable & {
   sendWorkerMessage?: (body: MessageBody) => void;
   registerNodes?: (objects: ObjectNode[], messages: MessageNode[]) => void;
   vm?: VM;
+  slotsNode?: ObjectNode;
 };
 
 export type SubPatch = Patch & {

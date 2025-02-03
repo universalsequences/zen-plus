@@ -36,6 +36,14 @@ export interface EvaluateNodeBody {
   };
 }
 
+export interface AttrUIBody {
+  type: "attrui";
+  body: {
+    nodeId: string;
+    message: number;
+  };
+}
+
 export interface UpdateNodeBody {
   type: "updateObject";
   body: {
@@ -48,12 +56,24 @@ export interface LoadBangBody {
   type: "loadbang";
 }
 
-export type MessageBody = SetCompilationBody | EvaluateNodeBody | UpdateNodeBody | LoadBangBody;
+export type MessageBody =
+  | SetCompilationBody
+  | EvaluateNodeBody
+  | UpdateNodeBody
+  | LoadBangBody
+  | AttrUIBody;
 const vm = new VM();
 
 // sends one round of instructions evaluation to the main thread
 const sendEvaluationToMainThread = (data: VMEvaluation) => {
-  const { replaceMessages, onNewValue, onNewSharedBuffer, mainThreadInstructions } = data;
+  const {
+    mutableValueChanged,
+    replaceMessages,
+    onNewValue,
+    onNewSharedBuffer,
+    mainThreadInstructions,
+    onNewValues,
+  } = data;
 
   onNewSharedBuffer.push(...vm.newSharedBuffers);
   if (replaceMessages.length > 0)
@@ -78,6 +98,20 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
     self.postMessage({
       type: "onNewValue",
       body: onNewValue,
+    });
+  }
+
+  if (onNewValues.length > 0) {
+    self.postMessage({
+      type: "onNewValues",
+      body: onNewValues,
+    });
+  }
+
+  if (mutableValueChanged.length > 0) {
+    self.postMessage({
+      type: "mutableValueChanged",
+      body: mutableValueChanged,
     });
   }
 
@@ -107,5 +141,10 @@ self.onmessage = async (e: MessageEvent) => {
     vm.updateObject(nodeId, json);
   } else if (data.type === "loadbang") {
     vm.loadBang();
+  } else if (data.type === "attrui") {
+    const vmEvaluation = vm.sendAttrUI(data.body.nodeId, data.body.message);
+    if (vmEvaluation) {
+      sendEvaluationToMainThread(vmEvaluation);
+    }
   }
 };

@@ -13,7 +13,9 @@ export const route = (node: ObjectNode) => {
   let outputMerger: ChannelMergerNode;
 
   const setup = (numberOfOutputs: number) => {
-    console.log("setup called", numberOfOutputs, node.id);
+    if (!ctx) {
+      return;
+    }
     if (node.merger) {
       node.merger.disconnect();
     }
@@ -41,7 +43,7 @@ export const route = (node: ObjectNode) => {
     if (typeof message === "number") {
       const index = message % node.outlets.length;
 
-      if (index !== currentOutputIndex) {
+      if (ctx && index !== currentOutputIndex) {
         if (currentOutputIndex !== -1) {
           // Disconnect the current output
           node.merger?.disconnect(outputMerger, 0, currentOutputIndex);

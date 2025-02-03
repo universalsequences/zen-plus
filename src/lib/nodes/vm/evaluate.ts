@@ -1,5 +1,6 @@
 import { Instruction, InstructionType } from "./types";
 import { Message, MessageNode, ObjectNode } from "../types";
+import { evaluateAttributeInstruction } from "./attribute";
 
 export interface Branching {
   id?: string;
@@ -21,13 +22,9 @@ export interface ReplaceMessage {
   sharedBuffer?: SharedArrayBuffer;
 }
 
-export const evaluate = (
-  _instructions: Instruction[],
-  initialMessage: Message = "bang",
-  debug = false,
-) => {
+export const evaluate = (_instructions: Instruction[], initialMessage: Message = "bang") => {
   const replaceMessages: ReplaceMessage[] = [];
-  const objectsEvaluated: ObjectNode[] | undefined = debug ? [] : undefined;
+  const objectsEvaluated: ObjectNode[] = [];
   const mainThreadInstructions: MainThreadInstruction[] = [];
 
   // TODO - need to keep track of all STOREs into nodes with skipCompilation along w/
@@ -159,7 +156,6 @@ export const evaluate = (
               });
             } else {
               register = objectNode.fn(inputMessage);
-
               objectsEvaluated?.push(objectNode);
             }
           }
@@ -200,11 +196,19 @@ export const evaluate = (
             register: [...register],
           };
           branchingStack.push(branch);
-          //console.log("%cpushing onto branch stack now", "color:lime", [...branchingStack]);
           break;
         }
         case InstructionType.Attribute:
-          //console.log("needs implementation");
+          const { outletNumber, nodes } = instruction;
+          const attributeValue =
+            register[outletNumber as number] === undefined
+              ? initialMessage
+              : register[outletNumber as number];
+          if (nodes && outletNumber !== undefined && attributeValue) {
+            mainThreadInstructions.push(
+              ...evaluateAttributeInstruction(attributeValue as Message, instruction),
+            );
+          }
           break;
       }
 

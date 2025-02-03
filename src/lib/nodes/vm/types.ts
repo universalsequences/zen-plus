@@ -16,6 +16,7 @@ interface BaseInstruction {
   inletNumber?: number;
   outletNumber?: number;
   loadAtStart?: boolean;
+  nodes?: ObjectNode[];
 }
 
 // Branch-specific instruction
@@ -40,4 +41,5 @@ export type SerializedInstruction = {
   loadAtStart?: boolean;
   type: InstructionType;
   branches?: SerializedInstruction[][];
+  nodes?: string[];
 };

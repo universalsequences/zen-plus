@@ -58,6 +58,7 @@ describe("createInstructions", async () => {
     const instructions = createInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
+      InstructionType.Attribute,
       InstructionType.Store,
       InstructionType.EvaluateObject,
       InstructionType.ReplaceMessage,
@@ -68,6 +69,7 @@ describe("createInstructions", async () => {
     const { nodes } = graphSubPatchIntoSubpatch();
     const instructions = createInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
+      InstructionType.Attribute,
       InstructionType.Attribute,
       InstructionType.Store,
       InstructionType.EvaluateObject,

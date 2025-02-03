@@ -18,6 +18,7 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   useEffect(() => {
     lockedModeRef.current = lockedMode;
   }, [lockedMode]);
+
   let [selectedOption, setSelectedOption] = useState<string | null>(
     (objectNode.text.split(" ")[1] as string) || null,
   );
@@ -56,6 +57,8 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       objectNode.text = text.join(" ");
       objectNode.controllingParamNode =
         options.find((x) => x.label === e.target.value)?.value || undefined;
+
+      objectNode.updateWorkerState();
     },
     [setSelectedOption, options],
   );
