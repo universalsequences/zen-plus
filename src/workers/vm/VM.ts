@@ -139,6 +139,7 @@ export class VM {
       mutableValueChanged: this.mutableValueChanged,
     };
 
+    /*
     console.log(
       "%cVM evaluated message=%s instructions=%s at node=[%s] instructions=%s",
       "color:magenta",
@@ -150,6 +151,7 @@ export class VM {
           : nodeId),
       vmEvaluation.instructionsEvaluated.length,
     );
+    */
 
     return vmEvaluation;
   }

@@ -203,12 +203,7 @@ describe("evaluateInstructions", async () => {
 
   it("script in patch", () => {
     const { nodes, m2 } = graphScript();
-    console.log(
-      "nodes=",
-      nodes.map((x) => x.text),
-    );
     const instructions = createInstructions(nodes);
-    console.log(instructions.map((x) => [x.type, x.outletNumber]));
     evaluate(instructions, 5);
     expect(m2.message).toEqual([5, 5, 5, 5]);
   });
@@ -286,21 +281,10 @@ describe("evaluateInstructions", async () => {
   });
 
   it("messagemessage / route test 2", () => {
-    const { nodes, expected } = graphBranchMessageMessageRoute2();
+    const { nodes, expected, expectedObjectsEvaluated } = graphBranchMessageMessageRoute2();
     expect(nodes.map((x) => x.id)).toEqual(expected);
     const instructions = createInstructions(nodes);
-    console.log(
-      "instructions=",
-      instructions.map((x) => [x.type, x.node?.text]),
-    );
-    console.log(
-      "filter branch",
-      instructions[instructions.length - 2].branches[0].map((x) => [x.type, x.node?.text]),
-    );
-    const { objectsEvaluated } = evaluate(instructions, 5, true);
-    console.log(
-      "objects evaluated=",
-      objectsEvaluated.map((x) => x.text),
-    );
+    const { objectsEvaluated } = evaluate(instructions, 5);
+    expect(objectsEvaluated.map((x) => x.id)).toEqual(expectedObjectsEvaluated);
   });
 });

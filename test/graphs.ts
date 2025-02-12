@@ -550,6 +550,15 @@ export const graphBranchMessageMessageRoute2 = () => {
   const nodes = topologicalSearchFromNode(m1);
   return {
     nodes,
+    expectedObjectsEvaluated: [
+      lisp.id,
+      filter.id,
+      messagemessage.id,
+      route1.id,
+      get1.id,
+      get2.id,
+      dict.id,
+    ],
     expected: [
       m1.id,
       lisp.id,
