@@ -37,7 +37,8 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
           ? (inputData as Float32Array)
           : undefined;
       if (initBuffer === undefined) {
-        initBuffer = new Float32Array((size() as number) * (channels() as number));
+        const totalSize = (size() as number) * (channels() as number);
+        initBuffer = new Float32Array(1); //Math.min(100000, totalSize));
       }
       block = data(
         size() as number,
@@ -46,6 +47,7 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
         true,
         _node.attributes.interpolation as Interpolation,
       );
+      _node.blockGen = block;
     } else {
       lastData = inputData;
       if (ArrayBuffer.isView(inputData)) {

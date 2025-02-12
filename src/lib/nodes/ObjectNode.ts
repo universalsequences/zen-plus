@@ -4,7 +4,12 @@ import { parse } from "./objectNode/parse";
 import pako from "pako";
 import type { Definition } from "../docs/docs";
 import { BaseNode } from "./BaseNode";
-import { type OperatorContext, OperatorContextType, getOperatorContext } from "./context";
+import {
+  type OperatorContext,
+  OperatorContextType,
+  getOperatorContext,
+  isCompiledType,
+} from "./context";
 import { createGLFunction } from "./definitions/create";
 import type { CompoundOperator, Operator, Statement } from "./definitions/zen/types";
 import type { AttributeValue, IOConnection, MessageNode } from "./types";
@@ -166,6 +171,8 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   }
 
   updateWorkerState() {
+    if (isCompiledType(this.operatorContextType)) return;
+    console.log("updating worker state=", this);
     if (getRootPatch(this.patch).finishedInitialCompile) {
       this.patch.sendWorkerMessage?.({
         type: "updateObject",
@@ -882,7 +889,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
 
     if (json.slots) {
-      deserializedSlots(this, json.slots);
+      deserializedSlots(this, json.slots, isPreset);
     }
   }
 

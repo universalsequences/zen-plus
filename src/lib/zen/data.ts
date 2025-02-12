@@ -28,6 +28,7 @@ export interface Gettable<t> {
   getInitData?: () => Float32Array;
   getSize?: () => number;
   getChannels?: () => number;
+  getIdx?: () => number;
 }
 
 export type BlockGen = ((c: Context) => MemoryBlock) &
@@ -102,6 +103,11 @@ export const data = (
 
   resp.getInitData = () => {
     return initData!;
+  };
+
+  resp.getIdx = () => {
+    const lastBlock = contextBlocks[contextBlocks.length - 1];
+    return lastBlock?.block.idx as number;
   };
 
   resp.set = (buf: Float32Array, time?: number, transferable = false) => {

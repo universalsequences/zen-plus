@@ -44,6 +44,11 @@ export class XYControl {
       y: minY + widthY * pt.y,
     }));
   }
+
+  set value(v) {
+    console.log("xy contorl value=", v);
+  }
+
   get value() {
     return this.points;
   }

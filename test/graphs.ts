@@ -451,3 +451,117 @@ export const graphEndInButton = () => {
     expected: [m1.id, o1.id, o2.id],
   };
 };
+
+export const graphBranchMessageMessageRoute = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+  const m4 = new MessageNodeImpl(patch, MessageType.Message);
+  const lisp = newObject("lisp", patch);
+  lisp.script = `
+{
+   type "hello"
+   stepData $1
+}
+`;
+
+  const messagemessage = newObject("messagemessage", patch);
+  const route1 = newObject("route @field type hello", patch);
+  const route2 = newObject("route @field type hello", patch);
+  const get1 = newObject("get type", patch);
+  const get2 = newObject("get stepData", patch);
+  const get3 = newObject("get stepData", patch);
+
+  c(m1, lisp);
+  c(lisp, messagemessage);
+  c(messagemessage, route1);
+  c(route1, get1);
+  c(messagemessage, get2, 0, 1);
+  c(lisp, route2);
+  c(route2, get3);
+  c(get1, m2);
+  c(get2, m3);
+  c(get3, m4);
+
+  console.log("m1=%s m2=%s m3=%3 m4=%3", m1.id, m2.id, m3.id, m4.id);
+  const nodes = topologicalSearchFromNode(m1);
+  return {
+    nodes,
+    expected: [
+      m1.id,
+      lisp.id,
+      messagemessage.id,
+      route1.id,
+      get1.id,
+      m2.id,
+      get2.id,
+      m3.id,
+      route2.id,
+      get3.id,
+      m4.id,
+    ],
+  };
+};
+
+export const graphBranchMessageMessageRoute2 = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+  const m4 = new MessageNodeImpl(patch, MessageType.Message);
+  const lisp = newObject("lisp", patch);
+  lisp.script = `
+{
+   type "hello"
+   stepData $1
+}
+`;
+
+  const p1 = newObject("p hello", patch, OperatorContextType.ZEN);
+  const subpatch = p1.subpatch as SubPatch;
+
+  const filter = newObject("filter.%= 1 0 @field stepData", patch);
+  const messagemessage = newObject("messagemessage", patch);
+  const route1 = newObject("route @field type hello", patch);
+
+  const dict = newObject("dict hello p", subpatch);
+  const get1 = newObject("get type", patch);
+  const get2 = newObject("get stepData", patch);
+
+  const in1 = newObject("in 1", subpatch, OperatorContextType.ZEN);
+
+  c(dict, m4);
+  c(in1, dict);
+
+  c(m1, lisp);
+  c(lisp, filter);
+  c(filter, messagemessage);
+  c(messagemessage, route1);
+  c(route1, get1);
+  c(messagemessage, get2, 0, 1);
+  c(filter, p1);
+  c(get1, m2);
+  c(get2, m3);
+
+  console.log("m1=%s m2=%s m3=%3 m4=%3", m1.id, m2.id, m3.id, m4.id);
+  console.log("get1=%s get2=%s", get1.id, get2.id);
+  console.log("dict=%s", dict.id);
+  const nodes = topologicalSearchFromNode(m1);
+  return {
+    nodes,
+    expected: [
+      m1.id,
+      lisp.id,
+      filter.id,
+      messagemessage.id,
+      route1.id,
+      get1.id,
+      m2.id,
+      get2.id,
+      m3.id,
+      dict.id,
+      m4.id,
+    ],
+  };
+};

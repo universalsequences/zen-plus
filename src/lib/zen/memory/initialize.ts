@@ -21,6 +21,26 @@ export const determineMemorySize = (context: Context) => {
 export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
   const initializes: any = [];
   const memorySize = determineMemorySize(context);
+  if (memorySize > 4000000) {
+    // memory is huge so go thru one at a time
+    console.log("memory is huge...");
+    for (const block of context.memory.blocksInUse) {
+      if (block.initData !== undefined) {
+        const idx = block._idx === undefined ? block.idx : block._idx;
+        if (block.initData.length < 100000) {
+          console.log("init-memory", idx, block.initData.length);
+          workletNode.port.postMessage({
+            type: "init-memory",
+            body: {
+              idx: idx,
+              data: block.initData,
+            },
+          });
+        }
+      }
+    }
+    return;
+  }
   const memory = new Float32Array(memorySize);
   for (const block of context.memory.blocksInUse) {
     if (block.initData !== undefined) {

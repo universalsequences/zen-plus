@@ -35,6 +35,7 @@ export interface OnNewSharedBuffer {
 }
 
 export interface VMEvaluation {
+  instructionsEvaluated: Instruction[];
   replaceMessages: ReplaceMessage[];
   objectsEvaluated?: ObjectNode[];
   mainThreadInstructions: MainThreadInstruction[];
@@ -72,6 +73,7 @@ export class VM {
   }
 
   setNodes(objects: SerializedObjectNode[], messages: SerializedMessageNode[]) {
+    console.log("set nodes=", objects);
     const p = new MockPatch(undefined);
     p.vm = this;
 
@@ -129,18 +131,6 @@ export class VM {
     if (!instructions) {
       throw new Error("no instructions found");
     }
-    /*
-    console.log(
-      "%cVM evaluating message=%s instructions=%s at node=[%s]",
-      "color:magenta",
-      typeof message === "object" ? "[object]" :  message,
-      instructions.length,
-      (this.nodes[nodeId] as ObjectNode)?.text ||
-        ((this.nodes[nodeId] as MessageNode)?.messageType === MessageType.Number
-          ? "NUMBER"
-          : nodeId),
-    );
-    */
     const vmEvaluation: VMEvaluation = {
       ...evaluate(instructions, message),
       onNewValue: this.onNewValue,
@@ -148,6 +138,18 @@ export class VM {
       onNewSharedBuffer: this.newSharedBuffers,
       mutableValueChanged: this.mutableValueChanged,
     };
+
+    console.log(
+      "%cVM evaluated message=%s instructions=%s at node=[%s] instructions=%s",
+      "color:magenta",
+      typeof message === "object" ? "[object]" : message,
+      instructions.length,
+      (this.nodes[nodeId] as ObjectNode)?.text ||
+        ((this.nodes[nodeId] as MessageNode)?.messageType === MessageType.Number
+          ? "NUMBER"
+          : nodeId),
+      vmEvaluation.instructionsEvaluated.length,
+    );
 
     return vmEvaluation;
   }
@@ -159,15 +161,17 @@ export class VM {
     this.mutableValueChanged.length = 0;
   }
 
+  alreadyLoaded: { [x: string]: boolean } = {};
   /**
    * executes all load bangs / numbers - to be called after initial compile of project
    * */
   loadBang() {
     for (const nodeId in this.nodeInstructions) {
       const node = this.nodes[nodeId];
-      if (!node) {
+      if (!node || this.alreadyLoaded[nodeId]) {
         continue;
       }
+      this.alreadyLoaded[nodeId] = true;
       if ((node as MessageNode).messageType === MessageType.Number) {
         this.evaluateNode(nodeId, (node as MessageNode).message as number);
       } else if ((node as ObjectNode).needsLoad) {

@@ -183,10 +183,14 @@ const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode
   return wrapperNode;
 };
 
-export const deserializedSlots = async (node: ObjectNode, y: SerializedObjectNode[]) => {
+export const deserializedSlots = async (
+  node: ObjectNode,
+  y: SerializedObjectNode[],
+  isPreset = false,
+) => {
   node.slots = y.map((serialized) => {
     const _node = newPatch(node, serialized.subpatch?.patchType);
-    _node.fromJSON(serialized);
+    _node.fromJSON(serialized, isPreset);
     if (_node.subpatch && _node.subpatch.patchType !== OperatorContextType.ZEN) {
       _node.subpatch.isZen = false;
     }
@@ -206,10 +210,11 @@ const compileSlots = async (node: ObjectNode) => {
     }
   }
 
-  await waitForCompilation(node.slots);
+  // TODO - wait better w/o this wait but is this right?
+  //await waitForCompilation(node.slots);
 
   for (const slot of node.slots) {
-    slot.subpatch?.setupPostCompile(true);
+    slot.subpatch?.setupPostCompile(true, false);
   }
 
   const rootPatch = getRootPatch(node.patch);

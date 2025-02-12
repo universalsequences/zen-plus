@@ -80,7 +80,9 @@ export const umenu = (node: ObjectNode) => {
         }
       }
       message = node.storedMessage;
+      console.log("bang called sending stored message=", message);
     }
+    console.log("storing message=", node, message);
     node.storedMessage = message;
     node.saveData = message;
     const options = Array.isArray(node.attributes["options"])

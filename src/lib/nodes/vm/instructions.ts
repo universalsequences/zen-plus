@@ -136,18 +136,26 @@ export const createInstructions = (nodes: Node[]) => {
     let currentBranch = branchStack[branchStack.length - 1];
 
     while (currentBranch && !isNodeInBranch(node, currentBranch)) {
-      branchStack.pop();
+      const b = branchStack.pop();
       currentBranch = branchStack[branchStack.length - 1];
+      console.log(
+        "popping branch=%s currentBranch=%s",
+        b.rootNode?.text,
+        currentBranch?.rootNode?.text,
+      );
     }
   };
 
   for (const node of nodes) {
+    console.log("processing node *********** ", node.text);
     popIfNecessary(node);
     const initialCurrentBranch = branchStack[branchStack.length - 1];
     let _outlet = getOutletIndex(node);
+    console.log("outlet index for node=%s index=%s", node.text, _outlet);
     if (_outlet !== undefined) {
       outletIndexStore = _outlet;
     }
+    console.log("outlet index for node=%s post-store index=%s", node.text, outletIndexStore);
     let outletIndex = outletIndexStore;
 
     const isBranchingNode = (node as ObjectNode).branching;
@@ -170,6 +178,7 @@ export const createInstructions = (nodes: Node[]) => {
     }
 
     if (isObjectNode(node) || isMessageNode(node, MessageType.Message)) {
+      console.log("handling object node...", node.text);
       // Handle node evaluation using current outletIndex
       const instruction: Instruction = {
         type: isObjectNode(node) ? InstructionType.EvaluateObject : InstructionType.PipeMessage,
@@ -193,23 +202,50 @@ export const createInstructions = (nodes: Node[]) => {
         branchStack[branchStack.length - 1].branches[outletIndex]
       ) {
         branchStack[branchStack.length - 1].branches[outletIndex].push(instruction);
+        console.log(
+          "insterting instruction into  branch[%s]=",
+          outletIndex,
+          branchStack[branchStack.length - 1].rootNode.text,
+          instruction.node?.text,
+        );
       } else if ((node as ObjectNode).branching && outletIndex !== undefined) {
         const branch = branchStack[branchStack.length - 2];
         if (branch) {
           branch.branches[outletIndex].push(instruction);
+          console.log(
+            "insterting instruction into branch=",
+            branch.rootNode.text,
+            instruction.node?.text,
+          );
         } else {
           instructions.push(instruction);
+          console.log("insterting instruction into root=", instruction.node?.text);
         }
       } else {
         instructions.push(instruction);
+        console.log("insterting instruction into root=", instruction.node?.text);
       }
 
       if (branchInstructionToInsert) {
-        if (branchStack.length && outletIndex !== undefined) {
-          const currentBranch = initialCurrentBranch || branchStack[branchStack.length - 1];
+        const currentBranch = initialCurrentBranch || branchStack[branchStack.length - 1];
+        if (
+          branchStack.length &&
+          outletIndex !== undefined &&
+          currentBranch.rootNode?.id !== branchInstructionToInsert.node?.id
+        ) {
           currentBranch.branches[outletIndex].push(branchInstructionToInsert);
+          console.log(
+            "inserting branchinstruction=%s in other branch[%s]",
+            branchInstructionToInsert.node?.text,
+            outletIndex,
+            currentBranch?.rootNode?.text,
+          );
         } else {
           instructions.push(branchInstructionToInsert);
+          console.log(
+            "inserting branchinstruction=%s in root",
+            branchInstructionToInsert.node?.text,
+          );
         }
       }
     }

@@ -198,6 +198,7 @@ export const createMatrixBuffer = (
       type === "float" ? Float32Array.BYTES_PER_ELEMENT : Uint8Array.BYTES_PER_ELEMENT;
 
     const sharedBuffer = new SharedArrayBuffer(bytesPerElement * size);
+    console.log("creating shared array buffer=", sharedBuffer);
     node.onNewSharedBuffer(sharedBuffer);
     const buffer = type === "float" ? new Float32Array(sharedBuffer) : new Uint8Array(sharedBuffer);
     if (values) {

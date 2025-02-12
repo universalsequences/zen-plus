@@ -8,6 +8,20 @@ export type ExportedParameter = ParamInfo & {
   id: string;
 };
 
+export type ExportedBuffer = {
+  id: string;
+  idx: number;
+  channels: number;
+  size: number;
+  name?: string;
+};
+
+export type ExportedClick = {
+  id: string;
+  idx: number;
+  name?: string;
+};
+
 type ExportedPreset = {
   [id: string]: number;
 };
@@ -20,7 +34,8 @@ export type ExportedPatch = {
 };
 
 export const exportParameters = (patch: Patch, visualsCode: string) => {
-  const paramNodes = patch.getAllNodes().filter((x) => x.name === "param");
+  const allNodes = patch.getAllNodes();
+  const paramNodes = allNodes.filter((x) => x.name === "param");
   const params: ExportedParameter[] = [];
   for (const node of paramNodes) {
     const objectNode = node as ObjectNode;
@@ -40,10 +55,50 @@ export const exportParameters = (patch: Patch, visualsCode: string) => {
     }
   }
 
+  const clickNodes = allNodes.filter((x) => x.name === "click");
+  const clicks: ExportedClick[] = [];
+  for (const node of clickNodes) {
+    const objectNode = node as ObjectNode;
+    const { click } = objectNode;
+    if (click) {
+      if (click.getIdx) {
+        clicks.push({
+          id: objectNode.id,
+          name: (objectNode.attributes.name || "") as string,
+          idx: click.getIdx(),
+        });
+      } else {
+        console.log("no idx for click");
+      }
+    } else {
+      console.log("no click found...");
+    }
+  }
+
+  const dataNodes = allNodes.filter((x) => x.name === "data");
+  const dataBuffers: ExportedBuffer[] = [];
+  for (const node of dataNodes) {
+    const objectNode = node as ObjectNode;
+    const { blockGen } = objectNode;
+    if (blockGen) {
+      if (blockGen.getChannels && blockGen.getSize && blockGen.getIdx) {
+        dataBuffers.push({
+          id: objectNode.id,
+          name: (objectNode.attributes.name || "") as string,
+          idx: blockGen.getIdx(),
+          channels: blockGen.getChannels(),
+          size: blockGen.getSize(),
+        });
+      }
+    }
+  }
+
   const presets = exportPreset(patch);
   const exported = {
     presets,
     parameters: params,
+    clicks,
+    dataBuffers,
     workletCode: patch.workletCode,
     visualsCode,
   };

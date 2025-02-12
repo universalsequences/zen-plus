@@ -125,6 +125,7 @@ interface BlockNode {
   node: ObjectNode;
 }
 export const printStatement = (statement: Statement): string => {
+  console.log("print statement");
   if (statement === undefined) {
     return "";
   }

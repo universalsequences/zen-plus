@@ -3,7 +3,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: "/files",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
@@ -12,6 +12,43 @@ const nextConfig = {
           {
             key: "Cross-Origin-Embedder-Policy",
             value: "require-corp", // Change this line
+          },
+        ],
+      },
+      {
+        source: "/editor/:slug*",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+        ],
+      },
+
+      // Add headers for worker files
+      {
+        source: "/:path*(.js|.wasm)",
+        headers: [
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+        ],
+      },
+      {
+        source: "/",
+        headers: [
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
           },
         ],
       },

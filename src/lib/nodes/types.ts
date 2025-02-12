@@ -5,7 +5,7 @@ import type { TypeSuccess, TypeError } from "./typechecker";
 import type { RenderJob } from "@/lib/gl/zen";
 import type { SVGObject } from "./definitions/svg/index";
 import type { ZenGraph } from "@/lib/zen/zen";
-import type { ParamGen, param } from "@/lib/zen/index";
+import type { BlockGen, Clicker, ParamGen, param } from "@/lib/zen/index";
 import type { OperatorContext, OperatorContextType } from "./context";
 import type { Connections } from "@/contexts/PatchContext";
 import type { Statement } from "./definitions/zen/types";
@@ -212,7 +212,7 @@ export type ObjectNode = Positioned &
     onNewSharedBuffer?: (x: SharedArrayBuffer) => void;
     subpatch?: SubPatch;
     getJSON: () => SerializedObjectNode;
-    fromJSON: (x: SerializedObjectNode) => void;
+    fromJSON: (x: SerializedObjectNode, isPreset?: boolean) => void;
     size?: Size;
     audioNode?: AudioNode; // output for node
     auxAudioNodes?: AudioNode[];
@@ -223,6 +223,8 @@ export type ObjectNode = Positioned &
     hasDynamicInlets?: boolean;
     storedLazyMessage?: Lazy;
     param?: ParamGen;
+    blockGen?: BlockGen;
+    click?: Clicker;
     isCycle?: boolean;
     lastSentMessage?: Message;
     storedMessage?: Message;
@@ -317,7 +319,7 @@ export type Patch = Identifiable & {
   isZen: boolean;
   updateAttributes?: (id: string, attribute: Attributes) => void;
   isSelected?: boolean;
-  setupPostCompile: (x: boolean) => void;
+  setupPostCompile: (x: boolean, y?: boolean) => void;
   registerNewNode?: (node: BaseNode) => void;
   registerConnect?: (fromNode: BaseNode, toNode: BaseNode, inlet: number, outlet: number) => void;
   registerReceive?: (node: BaseNode, message: Message, inlet: IOlet) => void;

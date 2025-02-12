@@ -72,13 +72,13 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
     };
 
     const emittedInstructions: Instruction[] = [];
-    let instructionCounter = 0;
+    //let instructionCounter = 0;
     for (let instruction = getNext(); instruction !== undefined; instruction = getNext()) {
-      if (instruction.node) {
-        emittedInstructions.push(instruction);
-        instruction.node.debugInstructions = emittedInstructions;
-        instruction.node.debugInstructionIndex = instructionCounter++;
-      }
+      //if (instruction.node) {
+      emittedInstructions.push(instruction);
+      //  instruction.node.debugInstructions = emittedInstructions;
+      //  instruction.node.debugInstructionIndex = instructionCounter++;
+      //}
       switch (instruction.type) {
         case InstructionType.PipeMessage: {
           // trigger/pipe mesasge
@@ -221,6 +221,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
       mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,
+      instructionsEvaluated: emittedInstructions,
     };
   } catch (e) {
     console.log("error=", e);
@@ -228,6 +229,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
       mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,
+      instructionsEvaluated: [],
     };
   }
 };

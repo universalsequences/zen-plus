@@ -389,6 +389,7 @@ export class PatchImpl implements Patch {
   }
 
   fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
+    console.log("FROM JSON isPreset=", isPreset, x.name);
     this.finishedInitialCompile = false;
     this.skipRecompile = true;
     this.name = x.name;
@@ -597,7 +598,7 @@ export class PatchImpl implements Patch {
     }
   }
 
-  setupPostCompile(useDeep = false) {
+  setupPostCompile(useDeep = false, needsVMCompile = true) {
     for (const node of this.getAllNodes()) {
       if (node.name === "send~" || node.name === "publishPatchSignals") {
         node.parse(node.text);
@@ -621,11 +622,13 @@ export class PatchImpl implements Patch {
     );
 
     this.finishedInitialCompile = true;
-    console.log("compiling vm...");
-    const startTime = new Date().getTime();
-    compileVM(this);
-    const endTime = new Date().getTime();
-    console.log("compilation of vm took %s ms", endTime - startTime);
+    if (needsVMCompile) {
+      console.log("compiling vm...");
+      const startTime = new Date().getTime();
+      compileVM(this);
+      const endTime = new Date().getTime();
+      console.log("compilation of vm took %s ms", endTime - startTime);
+    }
     this.sendWorkerMessage?.({ type: "loadbang" });
     loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));
   }

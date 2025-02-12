@@ -7,6 +7,7 @@ import { UGen, Generated } from "./zen";
 
 export type Clicker = ((context: Context) => Generated) & {
   click?: (time?: number) => void;
+  getIdx?: () => number;
 };
 
 export const click = (): Clicker => {
@@ -66,5 +67,10 @@ if (${clickVar} > 0) {
       }
     }
   };
+
+  clicker.getIdx = () => {
+    return block.idx as number;
+  };
+
   return clicker;
 };

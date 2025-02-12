@@ -10,6 +10,8 @@ import {
   graphBranchIntoSubPatch,
   graphBranchMessageMessage,
   graphBranchMessageMessageNested,
+  graphBranchMessageMessageRoute,
+  graphBranchMessageMessageRoute2,
   graphCyclicScript,
   graphScript,
   graphSubPatch1,
@@ -275,5 +277,30 @@ describe("evaluateInstructions", async () => {
 
   it("unpack test", () => {
     //
+  });
+
+  it("messagemessage / route test", () => {
+    const { nodes, expected } = graphBranchMessageMessageRoute();
+    expect(nodes.map((x) => x.id)).toEqual(expected);
+    const instructions = createInstructions(nodes);
+  });
+
+  it("messagemessage / route test 2", () => {
+    const { nodes, expected } = graphBranchMessageMessageRoute2();
+    expect(nodes.map((x) => x.id)).toEqual(expected);
+    const instructions = createInstructions(nodes);
+    console.log(
+      "instructions=",
+      instructions.map((x) => [x.type, x.node?.text]),
+    );
+    console.log(
+      "filter branch",
+      instructions[instructions.length - 2].branches[0].map((x) => [x.type, x.node?.text]),
+    );
+    const { objectsEvaluated } = evaluate(instructions, 5, true);
+    console.log(
+      "objects evaluated=",
+      objectsEvaluated.map((x) => x.text),
+    );
   });
 });

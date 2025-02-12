@@ -176,7 +176,12 @@ export class BaseNode implements Node {
       );
     }
 
-    if (!this.patch.skipRecompile && getRootPatch(this.patch).finishedInitialCompile) {
+    if (
+      compile &&
+      !isCompiledType(outlet.connectionType) &&
+      !this.patch.skipRecompile &&
+      getRootPatch(this.patch).finishedInitialCompile
+    ) {
       compileVM(this.patch);
     }
     return connection;

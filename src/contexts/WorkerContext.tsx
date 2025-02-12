@@ -1,10 +1,11 @@
 import { Patch, ObjectNode, MessageNode } from "@/lib/nodes/types";
 import { MainThreadInstruction } from "@/lib/nodes/vm/evaluate";
 import { MutableValueChanged, OnNewSharedBuffer, OnNewValue } from "@/workers/vm/VM";
-import { MessageBody } from "@/workers/core";
+import { EvaluateNodeBody, MessageBody } from "@/workers/core";
 import React, { createContext, useContext, useRef, useCallback, useEffect } from "react";
 import { Matrix } from "@/lib/nodes/definitions/core/matrix";
 import { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
+import { CompoundOperator, Statement } from "@/lib/nodes/definitions/zen/types";
 
 interface IWorkerContext {}
 
@@ -221,6 +222,9 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
   }, []);
 
   const sendWorkerMessage = useCallback((body: MessageBody) => {
+    if (((body as EvaluateNodeBody).body?.message as Statement)?.node) {
+      return;
+    }
     workerRef.current?.postMessage(body);
   }, []);
 
