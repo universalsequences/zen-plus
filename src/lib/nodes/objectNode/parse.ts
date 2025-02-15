@@ -245,6 +245,7 @@ const setupStaticNumberObject = (objectNode: ObjectNode, num: number, compile: b
   objectNode.operatorContextType = OperatorContextType.NUMBER;
   objectNode.fn = (message: Message) => [num];
   objectNode.inlets.length = 0;
+  objectNode.skipCompilation = true;
   if (objectNode.outlets.length === 0) {
     objectNode.newOutlet();
   }

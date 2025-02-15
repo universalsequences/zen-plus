@@ -6,7 +6,6 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import PatchWrapper from "./PatchWrapper";
 import { useWindows } from "@/contexts/WindowsContext";
-import { generateColor } from "@/utils/color";
 
 const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
   const ref = useRef<HTMLDivElement>(null);

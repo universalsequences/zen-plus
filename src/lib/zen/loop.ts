@@ -41,14 +41,11 @@ export const sumLoop = (range: Range, body: LoopBody): UGen => {
   let memoized: Generated | undefined;
   return (context: Context): Generated => {
     if (memoized) {
-      console.log("RETURNING MEMOIZED LOOP", memoized);
       return memoized;
     }
-    console.log("SUM LOOP WITH CONTEXT=", context);
     let [i, sum] = context.useCachedVariables(id, "i", "sum");
 
     context = context.useContext(false, true);
-    console.log("SUM useContext returned", context);
     let loopContext =
       typeof range.min === "number" && typeof range.max === "number"
         ? new LoopContext(i, range, context)
@@ -62,7 +59,6 @@ export const sumLoop = (range: Range, body: LoopBody): UGen => {
     const _variable = variable(i);
 
     const _body = body(_variable)(loopContext);
-    console.log("fragments=", _body.codeFragments);
 
     const blocks = determineBlocks(..._body.codeFragments);
     const blockWeWant = blocks.find((x) => x.context === loopContext);
@@ -72,10 +68,7 @@ export const sumLoop = (range: Range, body: LoopBody): UGen => {
     let outerHistories = Array.from(new Set(_body.outerHistories));
     outerHistories = outerHistories.map((x) => replaceAll(x, "let", context.varKeyword) + ";");
 
-    console.log("histories vs outerHistories", histories, outerHistories);
-
     // need to generate all "inbound dependencies"
-    console.log("block we want=", blockWeWant, blocks, _body);
     let out = `
 // loop ${context.id}
 ${context.varKeyword} ${sum} = 0;
@@ -85,11 +78,9 @@ ${sum} += ${blockWeWant!.codeFragment.variable};
     }
 `;
 
-    console.log("LOOP OUT context.id=%s", context.id, out);
     const generated = context.emit(out, sum);
 
     let parents = new Set<Context>(); //getParentContexts(context, context.target === Target.Javascript);
-    console.log("parent contexts =", Array.from(parents), context);
     // the trick is to put the other blocks inside there
     const deps = blocks
       .map((x) => x.codeFragment)
@@ -101,29 +92,22 @@ ${sum} += ${blockWeWant!.codeFragment.variable};
     );
     const withParents = deps.filter((x) => parents.has(x.context));
 
-    console.log("deps = ", deps);
-    console.log("with parents=", withParents);
-
     if (withParents.length > 0) {
       const c = withParents[0].context;
       if (c.baseContext === c || c.context === c.baseContext) {
         context = withParents[0].context;
-        console.log("FOUND WITH PARENT", context);
       }
     }
 
     const historiesWritten = getHistoriesBeingWrittenTo(context);
     const withHistories = deps.filter((x) => x.histories.some((x) => historiesWritten.has(x)));
 
-    console.log("generated.variable=%s context used=", generated.variable, context);
     generated.context = context;
     generated.codeFragments[0].context = context;
-    generated.codeFragments[0].histories.push(... histories);
+    generated.codeFragments[0].histories.push(...histories);
 
     const deepHistories = findDeepHistories(generated);
-    console.log("DEEP HISTORIES FOR LOOP=", deepHistories);
 
-    console.log("placing depenencies for contet.id=%s", context.id, deps);
     generated.codeFragments[0].dependencies = deps;
     generated.codeFragments[0].id = id;
 
@@ -134,11 +118,9 @@ ${sum} += ${blockWeWant!.codeFragment.variable};
       const allInbounds = blocks.flatMap((x) => Array.from(x.inboundDependencies));
       (loopContext as LoopContext).inboundDependencies?.push(...allInbounds);
       context.inboundDependencies = (loopContext as LoopContext).inboundDependencies;
-      console.log("adding inbound dependencies=", [...(context.inboundDependencies || [])]);
     }
 
     memoized = generated;
-    console.log("returning generated=", memoized);
     return generated;
   };
 };

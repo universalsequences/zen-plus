@@ -525,5 +525,6 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
     onSelectionMove,
     onMouseDown,
     setResizingPatch,
+    resizingPatch,
   };
 };

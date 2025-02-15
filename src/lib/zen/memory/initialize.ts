@@ -28,7 +28,6 @@ export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
       if (block.initData !== undefined) {
         const idx = block._idx === undefined ? block.idx : block._idx;
         if (block.initData.length < 100000) {
-          console.log("init-memory", idx, block.initData.length);
           workletNode.port.postMessage({
             type: "init-memory",
             body: {
@@ -46,6 +45,9 @@ export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
     if (block.initData !== undefined) {
       const idx = block._idx === undefined ? block.idx : block._idx;
       initializes[idx] = block.initData;
+      if (Number.isNaN(block.initData[0])) {
+        continue;
+      }
       memory.set(block.initData, idx as number);
     }
   }

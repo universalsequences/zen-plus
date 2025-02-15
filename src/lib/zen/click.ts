@@ -69,7 +69,7 @@ if (${clickVar} > 0) {
   };
 
   clicker.getIdx = () => {
-    return block.idx as number;
+    return block?.idx as number;
   };
 
   return clicker;

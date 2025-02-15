@@ -18,10 +18,10 @@ export const toggle = (node: ObjectNode) => {
     };
   }
   if (!node.attributes.strokeColor) {
-    node.attributes.strokeColor = "#000000";
+    node.attributes.strokeColor = "#ffffff";
   }
   if (!node.attributes.fillColor) {
-    node.attributes.fillColor = "#ffffff";
+    node.attributes.fillColor = "#000000";
   }
   if (!node.attributes.playIcon) {
     node.attributes.playIcon = false;

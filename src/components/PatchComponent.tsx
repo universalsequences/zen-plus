@@ -17,6 +17,7 @@ import { Connections, usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePosition, ResizingNode, DraggingNode, Coordinates } from "@/contexts/PositionContext";
 import { usePatchMouse } from "@/hooks/usePatchMouse";
+import { PatchResizer } from "./PatchResizer";
 
 interface Selection {
   x1: number;
@@ -276,68 +277,7 @@ const PatchComponent: React.FC<{
             (isCustomView ? " custom-view" : "")
           }
         >
-          {!isCustomView && (
-            <>
-              <div
-                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                  setSelectedPatch(patch);
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setResizingPatch({
-                    startSize: (patch as SubPatch).parentNode?.size,
-                    startPosition: { x: e.pageX, y: e.pageY },
-                    gridTemplate,
-                    resizeType: PatchResizeType.South,
-                  });
-                }}
-                className="w-full h-1 absolute bottom-0 cursor-ns-resize z-30"
-              />
-              <div
-                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                  setSelectedPatch(patch);
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setResizingPatch({
-                    startSize: (patch as SubPatch).parentNode?.size,
-                    startPosition: { x: e.pageX, y: e.pageY },
-                    gridTemplate,
-                    resizeType: PatchResizeType.North,
-                  });
-                }}
-                className="w-full h-1 absolute top-0 cursor-ns-resize z-30"
-              />
-              <div
-                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                  setSelectedPatch(patch);
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setResizingPatch({
-                    startSize: (patch as SubPatch).parentNode?.size,
-                    startPosition: { x: e.pageX, y: e.pageY },
-                    gridTemplate,
-                    resizeType: PatchResizeType.East,
-                  });
-                }}
-                className="h-full w-1 absolute right-0 cursor-ew-resize z-30"
-              />
-              {!isCustomView && (
-                <div
-                  onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                    setSelectedPatch(patch);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setResizingPatch({
-                      startSize: (patch as SubPatch).parentNode?.size,
-                      startPosition: { x: e.pageX, y: e.pageY },
-                      gridTemplate,
-                      resizeType: PatchResizeType.West,
-                    });
-                  }}
-                  className="h-full w-1 absolute left-0 cursor-ew-resize z-30"
-                />
-              )}
-            </>
-          )}
+          {!isCustomView && <PatchResizer isCustomView={false} />}
           <PatchInner
             isSelected={selectedPatch === patch}
             visibleObjectNodes={visibleObjectNodes}

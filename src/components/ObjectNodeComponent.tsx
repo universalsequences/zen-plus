@@ -23,6 +23,7 @@ import CustomSubPatchView from "./CustomSubPatchView";
 import { useStorage } from "@/contexts/StorageContext";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import type { Definition } from "@/lib/docs/docs";
+import { setupSkeletonPatch } from "@/lib/utils";
 
 const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode }> = ({
   objectNode,
@@ -177,6 +178,11 @@ const InnerObjectNodeComponent: React.FC<{
       success = true;
     } else {
       success = objectNode.parse(text, context.type);
+
+      if (objectNode.subpatch) {
+        // we create a patch so setup skeleton
+        setupSkeletonPatch(objectNode.subpatch);
+      }
     }
 
     if (success || file) {
@@ -295,7 +301,7 @@ const InnerObjectNodeComponent: React.FC<{
             return;
           }
 
-          if (!objectNode.name || !index[objectNode.name]) {
+          if (!objectNode.name || (!index[objectNode.name] && !objectNode.subpatch)) {
             clicked.current = true;
             setEditing(true);
             setSelectedNodes([objectNode]);

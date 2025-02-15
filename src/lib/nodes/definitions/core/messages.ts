@@ -93,6 +93,10 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     if (second && ((message as Message[])[2] as unknown as SubPatch).patchType !== undefined) {
       (message as Message[]).splice(2, 1);
     }
+
+    if (name() === "bpm") {
+      console.log("subscribed bpm", message);
+    }
     node.send(node.outlets[0], message);
     if (typeof message === "string") {
       lastMessage = message;
@@ -118,6 +122,9 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     }
     const ret = queue.read(name() as string);
     if (ret?.[0]) {
+      if (name() === "bpm") {
+        console.log("sending default bpm", ret[0]);
+      }
       return [ret[0]];
     }
     return [];

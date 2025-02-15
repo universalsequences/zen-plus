@@ -105,15 +105,13 @@ interface BranchContext {
   outletIndexStore?: number;
 }
 
-export const createInstructions = (nodes: Node[]) => {
+/**
+ * compiles a list of topologically sorted nodes into a list of instructions that can be executed in a virtual machine
+ * */
+export const compileInstructions = (nodes: Node[]) => {
   const isNodeInBranch = (node: Node, branch: Branch): boolean => {
     if (node === branch.rootNode) return true;
     const forwardNodes = forwardTraversal(branch.rootNode);
-    if (branch.rootNode.id === "1v") {
-      console.log("branch=", branch);
-      console.log("forward nodes", forwardNodes);
-      console.log("nodes list=", nodes);
-    }
     return forwardNodes.includes(node);
   };
 

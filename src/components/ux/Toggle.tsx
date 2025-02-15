@@ -14,7 +14,7 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
   const size = objectNode.size || { width: 80, height: 80 };
 
   useEffect(() => {
-    setValue(v as number);
+    setValue(objectNode.custom?.value as number);
   }, [v]);
 
   const toggle = useCallback(() => {

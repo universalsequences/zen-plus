@@ -3,17 +3,13 @@ import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "@/components/SlotView";
 import { usePosition } from "@/contexts/PositionContext";
 import { Coordinate, ObjectNode, IOConnection } from "@/lib/nodes/types";
 
-export const useEdgePatch = (
-  node: ObjectNode,
-  outletNumber: number,
-  connection: IOConnection,
-) => {
+export const useEdgePatch = (node: ObjectNode, outletNumber: number, connection: IOConnection) => {
   const { sizeIndex, coordinates } = usePosition();
 
   let sourceCoordinate = coordinates[node.id];
   let destCoordinate = coordinates[(connection.destination as any).id];
-  let sourceSize = sizeIndex[node.id];
-  let destSize = sizeIndex[connection.destination.id];
+  let sourceSize = connection.source.size || sizeIndex[node.id];
+  let destSize = connection.destination.size || sizeIndex[connection.destination.id];
   let source_w = sourceSize ? sourceSize.width : 30;
   let source_h = sourceSize ? sourceSize.height : 20;
   let dest_w = destSize ? destSize.width : 30;
@@ -43,9 +39,7 @@ export const useEdgePatch = (
       let numInlets = connection.destination.inlets.length;
       let numOutlets = node.outlets.length;
 
-      let source_height = connection.source.size
-        ? connection.source.size.height
-        : SLOT_VIEW_HEIGHT;
+      let source_height = connection.source.size ? connection.source.size.height : SLOT_VIEW_HEIGHT;
       let width = (connection.source as ObjectNode).size
         ? (connection.source as ObjectNode).size!.width!
         : source_w;
@@ -72,9 +66,7 @@ export const useEdgePatch = (
         ...destCoordinate,
         x: destX + offset,
       };
-      let height = (connection.source as ObjectNode).size
-        ? source_height
-        : source_h;
+      let height = (connection.source as ObjectNode).size ? source_height : source_h;
       sourceCoordinate = {
         x: sourceCoordinate.x + outletNumber * sourceBetween,
         y: sourceCoordinate.y + height,
@@ -153,10 +145,7 @@ function cubicBezier(
   return point;
 }
 
-export const generatePath = (
-  source: Coordinate,
-  dest: Coordinate,
-): [string, Coordinate[]] => {
+export const generatePath = (source: Coordinate, dest: Coordinate): [string, Coordinate[]] => {
   let x1 = source.x;
   let y1 = source.y;
   let x2 = dest.x;
@@ -218,23 +207,10 @@ export const getZObjectPath = (
     return [x1, y1, x1, y1 + y_a, x2 - y_b, y2, x2, y2];
   }
 
-  return [
-    x1,
-    y1,
-    x1 + -x_sign * x_a,
-    y1 + y_a,
-    x2 + x_sign * x_b,
-    y2 - y_b,
-    x2,
-    y2,
-  ];
+  return [x1, y1, x1 + -x_sign * x_a, y1 + y_a, x2 + x_sign * x_b, y2 - y_b, x2, y2];
 };
 
-function interpolate(
-  pointA: Coordinate,
-  pointB: Coordinate,
-  t: number,
-): Coordinate {
+function interpolate(pointA: Coordinate, pointB: Coordinate, t: number): Coordinate {
   return {
     x: pointA.x + (pointB.x - pointA.x) * t,
     y: pointA.y + (pointB.y - pointA.y) * t,
@@ -288,16 +264,7 @@ const generateSegmentedPaths = (
   let x_diff = Math.abs(x1 - x2);
   let _ratio = Math.min(1, x_diff / 80);
   offsetX1 *= _ratio;
-  let path1 = [
-    x1,
-    y1,
-    x1,
-    segmentY,
-    x1 - 0.1 * offsetX1,
-    segmentY,
-    cx1 + offsetX1,
-    segmentY,
-  ];
+  let path1 = [x1, y1, x1, segmentY, x1 - 0.1 * offsetX1, segmentY, cx1 + offsetX1, segmentY];
 
   if (isSmol) {
     path1 = [x1, y1, x1, segmentY, x1, segmentY, cx1, segmentY];
@@ -318,16 +285,7 @@ const generateSegmentedPaths = (
       cx2a,
       segmentY,
     ];
-    let path3 = [
-      cx2a,
-      segmentY,
-      _x2a + 0,
-      segmentY,
-      _x2a + 0,
-      segmentY,
-      _x2a + 0,
-      y2a,
-    ];
+    let path3 = [cx2a, segmentY, _x2a + 0, segmentY, _x2a + 0, segmentY, _x2a + 0, y2a];
     let path4 = [
       _x2a,
       y2a,

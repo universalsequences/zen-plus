@@ -1,4 +1,5 @@
 import { isCompiledType } from "../context";
+import { index as UX_INDEX } from "@/components/ux/index";
 import { getRootPatch } from "../traverse";
 import {
   type Node,
@@ -11,7 +12,7 @@ import {
   type SerializedMessageNode,
   MessageType,
 } from "../types";
-import { createInstructions, isMessageNode, isObjectNode } from "./instructions";
+import { compileInstructions, isMessageNode, isObjectNode } from "./instructions";
 import { Instruction, InstructionType, SerializedInstruction } from "./types";
 import { getInboundConnections, getOutboundConnections } from "./traversal";
 import { NodeInstructions } from "@/workers/core";
@@ -84,20 +85,6 @@ const isSourceNode = (node: Node) => {
     return false;
   }
 
-  // TODO - we need to figure out compiling nodes in compileable patches (that are not
-  // part of the actual zen/gl graph)
-  /*
-  if (isCompiledType((node.patch as SubPatch).patchType)) {
-    if (
-      !isCompiledType((node as ObjectNode).operatorContextType) &&
-      node.inlets.some((x) => x.connections.some((y) => (y.source as ObjectNode).name === "in"))
-    ) {
-    } else {
-      return false;
-    }
-  }
-  */
-
   if (isMessageNode(node)) {
     return (
       !node.inlets.some((x) => x.connections.length > 0) &&
@@ -109,13 +96,13 @@ const isSourceNode = (node: Node) => {
     return true;
   }
 
-  if ((node as ObjectNode).name === "button") {
+  // UI elements are all source nodes -- i.e. they should be executable via instructions
+  if (((node as ObjectNode).name as string) in UX_INDEX) {
     return true;
   }
 
   // TODO - all UX elements should be true here (marked as needsLoad)
   if ((node as ObjectNode).needsLoad) {
-    //(node as ObjectNode).name === "matrix" || (node as ObjectNode).name === "zequencer.core") {
     return true;
   }
 
@@ -145,7 +132,7 @@ const isSourceNode = (node: Node) => {
 const compileSourceNode = (node: Node) => {
   const nodes = topologicalSearchFromNode(node);
   const offset = (node as ObjectNode).isAsync ? 1 : 0;
-  const instructions = createInstructions(nodes);
+  const instructions = compileInstructions(nodes);
   node.instructions = instructions.slice(offset);
   for (let i = 0; i < nodes.length; i++) {
     const _node = nodes[i];

@@ -261,6 +261,13 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes.type = "zen";
   }
 
+  if (!node.size) {
+    node.size = {
+      width: 50,
+      height: 30,
+    };
+  }
+
   if (!node.attributes.messageRate) {
     node.attributes.messageRate = 32;
   }

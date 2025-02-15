@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { createInstructions } from "@/lib/nodes/vm/instructions";
+import { compileInstructions } from "@/lib/nodes/vm/instructions";
 import { InstructionType } from "@/lib/nodes/vm/types";
 import { evaluate } from "@/lib/nodes/vm/evaluate";
 import {
@@ -21,7 +21,7 @@ import {
 describe("createInstructions", async () => {
   it("createInstructions simple", async () => {
     const { nodes } = graph1();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
       InstructionType.Store,
@@ -42,7 +42,7 @@ describe("createInstructions", async () => {
 
   it("createInstructions simple with message nodes", async () => {
     const { nodes } = graph2();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
       InstructionType.Store,
@@ -57,7 +57,7 @@ describe("createInstructions", async () => {
 
   it("createInstructions with subpatch", async () => {
     const { nodes } = graphSubPatch1();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
       InstructionType.Attribute,
@@ -69,7 +69,7 @@ describe("createInstructions", async () => {
 
   it("createInstructions with subpatch into other subpatch", async () => {
     const { nodes } = graphSubPatchIntoSubpatch();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
       InstructionType.Attribute,
@@ -87,7 +87,7 @@ describe("createInstructions", async () => {
 
   it("createInstructions with subpatch into branch", async () => {
     const { nodes } = graphBranch1();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
       InstructionType.Store,
@@ -134,7 +134,7 @@ describe("createInstructions", async () => {
 describe("evaluateInstructions", async () => {
   it("evaluateInstructions simple with message nodes", async () => {
     const { nodes, m2, m3 } = graph2();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     evaluate(instructions, 5);
     expect(m2.message).toBe(20);
     expect(m3.message).toBe(100);
@@ -142,21 +142,21 @@ describe("evaluateInstructions", async () => {
 
   it("evaluateInstructions with subpatch", async () => {
     const { nodes, m2 } = graphSubPatch1();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     evaluate(instructions, 5);
     expect(m2.message).toBe(15);
   });
 
   it("evaluateInstructions with subpatch into subpatch", async () => {
     const { nodes, m2 } = graphSubPatchIntoSubpatch();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     evaluate(instructions, 5);
     expect(m2.message).toBe(14);
   });
 
   it("evaluateInstructions with route branch", async () => {
     const { nodes, m2, m3, m4 } = graphBranch1();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     evaluate(instructions, 1);
     expect(m2.message).toBe(4);
     expect(m3.message).toBeDefined(false);
@@ -175,7 +175,7 @@ describe("evaluateInstructions", async () => {
 
   it("evaluateInstructions with branch filter", async () => {
     const { nodes, m2, m3 } = graphBranch2();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     evaluate(instructions, 1);
     expect(m2.message).toBe(4);
     expect(m3.message).toBeDefined(false);
@@ -187,7 +187,7 @@ describe("evaluateInstructions", async () => {
 
   it("messagemessage should execute branches sequentially", () => {
     const { nodes, m2, m3, expectedObjectsEvaluated } = graphBranchMessageMessage();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     const { objectsEvaluated } = evaluate(instructions, 5, true);
     expect(m2.message).toBe(12);
     expect(m3.message).toBe(49);
@@ -196,14 +196,14 @@ describe("evaluateInstructions", async () => {
 
   it("nested messagemessage should execute branches sequentially", () => {
     const { nodes, expectedObjectsEvaluated } = graphBranchMessageMessageNested();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     const { objectsEvaluated } = evaluate(instructions, 5, true);
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
   });
 
   it("script in patch", () => {
     const { nodes, m2 } = graphScript();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     evaluate(instructions, 5);
     expect(m2.message).toEqual([5, 5, 5, 5]);
   });
@@ -214,8 +214,8 @@ describe("evaluateInstructions", async () => {
     expect(nodesA.map((x) => x.id)).toEqual(expectedA);
     expect(nodesB.map((x) => x.id)).toEqual(expectedB);
 
-    const instructionsA = createInstructions(nodesA);
-    const instructionsB = createInstructions(nodesB);
+    const instructionsA = compileInstructions(nodesA);
+    const instructionsB = compileInstructions(nodesB);
 
     expect(instructionsB.map((x) => x.type)).toEqual([
       InstructionType.EvaluateObject, // button
@@ -249,7 +249,7 @@ describe("evaluateInstructions", async () => {
 
   it("branch into subpatch", () => {
     const { nodes, m4 } = graphBranchIntoSubPatch();
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     console.log("instructions");
     console.log(instructions.map((x) => [x.node?.id, x.type]));
 
@@ -277,13 +277,13 @@ describe("evaluateInstructions", async () => {
   it("messagemessage / route test", () => {
     const { nodes, expected } = graphBranchMessageMessageRoute();
     expect(nodes.map((x) => x.id)).toEqual(expected);
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
   });
 
   it("messagemessage / route test 2", () => {
     const { nodes, expected, expectedObjectsEvaluated } = graphBranchMessageMessageRoute2();
     expect(nodes.map((x) => x.id)).toEqual(expected);
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     const { objectsEvaluated } = evaluate(instructions, 5);
     expect(objectsEvaluated.map((x) => x.id)).toEqual(expectedObjectsEvaluated);
   });

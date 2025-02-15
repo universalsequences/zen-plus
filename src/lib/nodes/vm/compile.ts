@@ -1,5 +1,5 @@
 import type { Node, Patch, IOConnection, ObjectNode, SubPatch, MessageNode, IOlet } from "../types";
-import { createInstructions } from "./instructions";
+import { compileInstructions } from "./instructions";
 import {
   type CompilationPath,
   isSubpath,
@@ -111,7 +111,7 @@ export const compileVM = (patch: Patch) => {
     while (nodes[0] && (nodes[0] as ObjectNode).needsLoad) {
       nodes.shift();
     }
-    const instructions = createInstructions(nodes);
+    const instructions = compileInstructions(nodes);
     printNodes([...nodes], "lime", "MERGED");
     //console.log("instructions", instructions);
     // evaluate(instructions);

@@ -172,9 +172,21 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
             node &&
             inletNumber !== undefined
           ) {
+            if (node.name?.startsWith("lisp 0 0 0 0 0 0 0 0")) {
+              console.log(
+                "STORE CALLED",
+                node.text,
+                inletNumber,
+                outletNumber,
+                register[outletNumber],
+                node,
+              );
+            }
             if ((node as ObjectNode).arguments) {
               // store results in arguments (for inlets 1...) and inlet (for inlet 0)
-              (node as ObjectNode).arguments[inletNumber - 1] = register[outletNumber] as Message;
+              if (inletNumber > 0) {
+                (node as ObjectNode).arguments[inletNumber - 1] = register[outletNumber] as Message;
+              }
               inlet.lastMessage = register[outletNumber] as Message;
             }
             if (node.skipCompilation) {

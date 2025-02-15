@@ -3,8 +3,15 @@
         overflow: hidden !important;
     }
 }
-    .node-component {
+    .node-component.node-subpatch-component {
         overflow: hidden !important;
+    }
+
+    .patch-window {
+        overflow: hidden !important;
+       .tile {
+           overflow: visible !important;
+       }
     }
 
 .locked,

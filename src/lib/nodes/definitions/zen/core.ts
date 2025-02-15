@@ -93,15 +93,25 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     let isScheduleSet = Array.isArray(x) && typeof x[0] === "number";
     if (typeof x === "number" || isScheduleSet) {
       if (Array.isArray(x)) {
+        if (isNaN(x[0])) {
+          return [];
+        }
         object.storedMessage = x[0] as number;
         let time = x[1] as number;
-        time = (time - object.patch.audioContext.currentTime) * 44100;
-        _param.set!(x[0] as number, time);
-        object.storedParameterValue = x[0] as number;
+        time = (time - object.patch.audioContext!.currentTime) * 44100;
+        const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
+        _param.set!(value as number, time);
+        object.storedParameterValue = value as number;
+        object.storedMessage = value as number;
       } else {
+        if (isNaN(x)) {
+          return [];
+        }
         object.storedMessage = x as number;
-        _param.set!(x as number);
-        object.storedParameterValue = x as number;
+        const value = isNaN(x as number) ? (object.attributes.default as number) || 0 : x;
+        _param.set!(value as number);
+        object.storedParameterValue = value as number;
+        object.storedMessage = value as number;
       }
 
       return [];

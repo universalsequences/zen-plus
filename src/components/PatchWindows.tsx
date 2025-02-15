@@ -50,7 +50,9 @@ export const PatchWindows = () => {
       )}
 
       {!hide && sideNodeWindow && <NodePatchWrapper objectNode={sideNodeWindow} />}
-      <div className="flex-1 left-0 overflow-x-auto whitespace-nowrap flex gap-2 ">
+      <div
+        className={`flex-1 left-0 overflow-x-auto whitespace-nowrap flex gap-2 ${hide ? "" : "pb-4"}`}
+      >
         {hide ? (
           <div className="w-full h-6"></div>
         ) : (

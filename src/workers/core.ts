@@ -164,7 +164,8 @@ self.onmessage = async (e: MessageEvent) => {
     const { nodeId, json } = data.body;
     vm.updateMessage(nodeId, json);
   } else if (data.type === "loadbang") {
-    vm.loadBang();
+    const vmEvaluation = vm.loadBang();
+    sendEvaluationToMainThread(vmEvaluation);
   } else if (data.type === "attrui") {
     const vmEvaluation = vm.sendAttrUI(data.body.nodeId, data.body.message);
     if (vmEvaluation) {

@@ -436,6 +436,9 @@ memory[${IDX}] = ${_input.variable};
   };
 
   _history.value = (val: number, time?: Samples) => {
+    if (Number.isNaN(val)) {
+      return;
+    }
     if (block?.initData && block?.initData[0] !== undefined) {
       block.initData[0] = val;
     }

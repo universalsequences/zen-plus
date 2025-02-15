@@ -80,9 +80,10 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     }
 
     const _env = getEnvFromMessages();
-    if (_env !== lastEnv) {
+    if (typeof _env === "object" && _env !== lastEnv) {
       lastEnv = _env;
       for (let key in env) {
+        if (key.startsWith("$")) continue;
         delete env[key];
       }
       Object.assign(env, _env);

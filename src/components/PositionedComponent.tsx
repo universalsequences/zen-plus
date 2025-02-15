@@ -3,7 +3,6 @@ import { useMessage } from "@/contexts/MessageContext";
 import { index } from "./ux/index";
 import IOletsComponent from "./IOletsComponent";
 import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "./SlotView";
-import { fetchOnchainSubPatch } from "@/lib/onchain/fetch";
 import {
   Orientation,
   MessageType,
@@ -15,10 +14,8 @@ import { useSelection } from "@/contexts/SelectionContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { usePositionStyle } from "@/hooks/usePositionStyle";
 import { OperatorContextType } from "@/lib/nodes/context";
-import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "../hooks/usePatchSelector";
-import { useLocked } from "@/contexts/LockedContext";
 import { isMessageNode } from "@/lib/nodes/vm/instructions";
 
 const PositionedComponent: React.FC<{
@@ -236,7 +233,7 @@ const PositionedComponent: React.FC<{
     [setDraggingNode, setSelectedNodes, node, maxZIndex, isCustomView],
   );
 
-  const size = sizeIndex[node.id];
+  const size = node.size || sizeIndex[node.id];
   const out = React.useMemo(() => {
     let minWidth = Math.max(15, node.inlets.length * 15);
     if (size && size.width > minWidth) {
@@ -252,6 +249,10 @@ const PositionedComponent: React.FC<{
     let className =
       (isCustom ? "" : "h-6_5 border bg-black-clear") +
       ` ${position || "absolute"}  node-component text-black text-xs flex ${_skipOverflow ? "overflow-visible" : "overflow-hidden"} hover:overflow-visible border `;
+
+    if ((node as ObjectNode).subpatch) {
+      className += " node-subpatch-component ";
+    }
     if ((node as MessageNode).messageType === MessageType.Message) {
       className += " rounded-md";
       minWidth = 20;

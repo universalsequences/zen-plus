@@ -334,8 +334,6 @@ const Edge: React.FC<{
       isAudio = false;
       isCore = true;
     }
-    let sourceCoord = (connection.source as ObjectNode).position;
-    let destCoord = (connection.destination as ObjectNode).position;
     let id = connection.source.id + connection.destination.id;
     let keyframes = connection.created ? createKeyframes(d[0], id) : "";
     let created = connection.created;

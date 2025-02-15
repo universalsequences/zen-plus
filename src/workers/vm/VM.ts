@@ -23,6 +23,7 @@ import {
   ReplaceMessage,
   evaluate,
 } from "@/lib/nodes/vm/evaluate";
+import { isMessageNode } from "@/lib/nodes/vm/instructions";
 
 export interface OnNewValue {
   nodeId: string;
@@ -94,10 +95,6 @@ export class VM {
       };
       o1.fromJSON(o);
       this.nodes[o1.id] = o1;
-
-      if (o1.needsLoad) {
-        o1.fn?.("bang");
-      }
     }
     for (const m of messages) {
       let m1 = (this.nodes[m.id] as MessageNode) || new MessageNodeImpl(p, m.messageType);
@@ -112,8 +109,16 @@ export class VM {
 
   // TODO - call this whenever an object updates from main thread
   updateObject(nodeId: string, serializedNode: SerializedObjectNode) {
-    if (this.nodes[nodeId]) {
-      (this.nodes[nodeId] as ObjectNode).fromJSON(serializedNode);
+    const node = this.nodes[nodeId] as ObjectNode;
+    if (node) {
+      const args = node.arguments;
+      node.fromJSON(serializedNode);
+      for (let i = 0; i < args.length; i++) {
+        if (i + 1 < node.inlets.length) {
+          node.arguments[i] = args[i];
+          node.inlets[i + 1].lastMessage = args[i];
+        }
+      }
     }
   }
 
@@ -161,6 +166,7 @@ export class VM {
           ? "NUMBER"
           : nodeId),
       vmEvaluation.instructionsEvaluated.length,
+      vmEvaluation.instructionsEvaluated,
     );
     */
 
@@ -175,22 +181,73 @@ export class VM {
   }
 
   alreadyLoaded: { [x: string]: boolean } = {};
+
   /**
    * executes all load bangs / numbers - to be called after initial compile of project
    * */
   loadBang() {
+    console.log("load bang called");
+    const vmEvaluation: VMEvaluation = {
+      instructionsEvaluated: [],
+      replaceMessages: [],
+      objectsEvaluated: [],
+      mainThreadInstructions: [],
+      onNewValue: [],
+      onNewSharedBuffer: [],
+      mutableValueChanged: [],
+      onNewValues: [],
+      attributeUpdates: [],
+    };
+
     for (const nodeId in this.nodeInstructions) {
       const node = this.nodes[nodeId];
       if (!node || this.alreadyLoaded[nodeId]) {
         continue;
       }
+      if (isMessageNode(node)) {
+        continue;
+      }
+
+      if ((node as ObjectNode).name === "subscribe" || (node as ObjectNode).name === "r") {
+        //continue;
+      }
       this.alreadyLoaded[nodeId] = true;
-      if ((node as MessageNode).messageType === MessageType.Number) {
-        this.evaluateNode(nodeId, (node as MessageNode).message as number);
-      } else if ((node as ObjectNode).needsLoad) {
-        this.evaluateNode(nodeId, "bang");
+      if ((node as ObjectNode).needsLoad) {
+        const ret = this.evaluateNode(nodeId, "bang");
+        vmEvaluation.instructionsEvaluated.push(...ret.instructionsEvaluated);
+        vmEvaluation.replaceMessages.push(...ret.replaceMessages);
+        vmEvaluation.objectsEvaluated?.push(...(ret.objectsEvaluated || []));
+        vmEvaluation.mainThreadInstructions.push(...ret.mainThreadInstructions);
+        vmEvaluation.onNewValue.push(...ret.onNewValue);
+        vmEvaluation.onNewSharedBuffer.push(...ret.onNewSharedBuffer);
+        vmEvaluation.mutableValueChanged.push(...ret.mutableValueChanged);
+        vmEvaluation.onNewValues.push(...ret.onNewValues);
+        vmEvaluation.attributeUpdates.push(...ret.attributeUpdates);
       }
     }
+
+    for (const nodeId in this.nodeInstructions) {
+      const node = this.nodes[nodeId];
+      if (!node || this.alreadyLoaded[nodeId]) {
+        continue;
+      }
+      if (!isMessageNode(node)) {
+        continue;
+      }
+      this.alreadyLoaded[nodeId] = true;
+      if ((node as MessageNode).messageType === MessageType.Number) {
+        if (node.attributes["scripting name"]) {
+          console.log(
+            "loading number",
+            node.attributes["scripting name"],
+            (node as MessageNode).message,
+            this.nodeInstructions[nodeId],
+          );
+        }
+        this.evaluateNode(nodeId, (node as MessageNode).message as number);
+      }
+    }
+    return vmEvaluation;
   }
 
   sendAttrUI(nodeId: string, num: number) {
