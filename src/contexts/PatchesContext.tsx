@@ -202,7 +202,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   const expandPatch = useCallback(
     (objectNode: ObjectNode, replace?: boolean) => {
       if (!rootTileRef.current) {
-        console.log("none...");
         return;
       }
       let includes = rootTileRef.current.findPatch(objectNode.subpatch as Patch);
@@ -211,13 +210,11 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         patches.forEach((p) => (p.viewed = true));
         let rootTile = rootTileRef.current;
         if (rootTile) {
-          console.log("adding to root tile");
           let allTiles: Tile[] = patchesRef.current
             .map((x: Patch) => rootTile.findPatch(x))
             .filter((x) => x) as Tile[];
           allTiles.sort((a: Tile, b: Tile) => a.getDepth() - b.getDepth());
           let existingTile = rootTile.findPatch(objectNode.subpatch);
-          console.log("existing tile=", existingTile);
           if (existingTile) {
             setSelectedPatch(objectNode.subpatch);
             return;
@@ -272,7 +269,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           setSelectedPatch(objectNode.subpatch);
         }
       }
-      console.log("patches ref = ", patchesRef.current);
     },
     [setPatches, patches, setSelectedPatch, setGridLayout, rootTile],
   );
@@ -310,7 +306,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       if (_p.length === 0) {
         _p = [(patch as any).parentPatch];
       }
-      console.log("setting patches ref=", _p);
       patchesRef.current = _p;
       resetRoot();
 
@@ -327,10 +322,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   const changeTileForPatch = useCallback(
     (a: Patch, b: Patch) => {
-      console.log("changeTileForPatch", a, b);
       if (patchesRef.current.includes(b)) {
         closePatch(a);
-        console.log("closing patch", patchesRef.current, b);
         return;
       }
 
@@ -338,7 +331,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         let tile = rootTileRef.current.findPatch(a);
         if (tile) {
           tile.patch = b;
-          console.log("choosing tile=", tile);
           resetRoot();
           setSelectedPatch(b);
           let index = patches.indexOf(a);
@@ -406,7 +398,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   const liftPatchTile = useCallback(
     (patch: Patch) => {
-      console.log("lifting patch tile");
       if (rootTileRef.current) {
         let tile = rootTileRef.current.findPatch(patch);
         if (tile && tile.parent) {
@@ -415,13 +406,11 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           tile.parent.children = [];
           if (tile.parent.parent === null) {
             patchesRef.current = [patch];
-            console.log("patches=", patch);
             setPatches([patch]);
           } else {
             if (childToKill) {
               let newPatches = patches.filter((x) => childToKill && x !== childToKill.patch);
               patchesRef.current = [...newPatches];
-              console.log("patches=", newPatches);
               setPatches(newPatches);
             }
           }

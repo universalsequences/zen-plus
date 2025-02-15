@@ -263,7 +263,6 @@ export type RoundMode = "ceil" | "trunc" | "floor" | "nearest";
 const trunc = simdFunc("Math.trunc", "trunc", Math.trunc);
 
 export const round = (numb: Arg, multi: Arg, mode: RoundMode): UGen => {
-  console.log("mode=", mode);
   let numbRound = div(numb, multi);
   const preMultiply =
     mode === "ceil"

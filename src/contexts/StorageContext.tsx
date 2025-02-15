@@ -89,7 +89,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
   }, [user, subpatches]);
 
   const fetchProject = async (projectId: string, email: string): Promise<File | null> => {
-    console.log("fetchProject", projectId);
     return new Promise((resolve) => {
       user.getIdToken().then((token: string) => {
         fetch("/api/files/fetch", {
@@ -103,7 +102,6 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
           }),
         }).then(async (resp) => {
           const json = await resp.json();
-          console.log("fetched=", json);
           resolve({
             ...json,
             createdAt: Timestamp.fromMillis(json.seconds * 1000 + json.nanoseconds / 1000000),

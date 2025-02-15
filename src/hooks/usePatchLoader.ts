@@ -18,9 +18,7 @@ export const usePatchLoader = (patch: Patch) => {
   const loadPatch = useCallback(
     async (saved: any) => {
       let id = saved.id;
-      console.log("fetching patch...");
       let serialized = await fetchPatch(saved);
-      console.log("fetched patch");
       loadProjectPatch(serialized);
       let updates: Coordinates = {};
       let sizes = { ...sizeIndexRef.current };

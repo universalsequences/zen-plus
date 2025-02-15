@@ -76,7 +76,6 @@ const PatchesComponent: React.FC<{
   );
 
   useEffect(() => {
-    console.log("file to open=", fileToOpen);
     if (lightMode) {
       document.body.className = "light-mode";
     } else {

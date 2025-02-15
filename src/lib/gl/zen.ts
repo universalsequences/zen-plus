@@ -70,7 +70,6 @@ export const mount = (
   renderJobs: RenderJob[],
   canvas: HTMLCanvasElement,
 ): ZenRenderFunction | null => {
-  console.log("mounting =", renderJobs);
   // first we attach to it...
   const gl: WebGLRenderingContext | null = canvas.getContext("webgl", {
     preserveDrawingBuffer: true,

@@ -376,9 +376,9 @@ const PositionedComponent: React.FC<{
         }}
         style={_style}
         className={
-          node?.instructions
-            ? `${className.replace("border-zinc-100", "").replace("border-zinc-900", "")} border border-teal-500`
-            : className
+          //node?.instructions
+          // ? `${className.replace("border-zinc-100", "").replace("border-zinc-900", "")} border border-teal-500`
+          className
         }
       >
         {isSelected && (
@@ -431,6 +431,10 @@ const PositionedComponent: React.FC<{
             node={node}
             iolets={node.inlets}
           />
+        )}
+
+        {node?.instructions && (
+          <div className="w-1 h-1 bg-red-500 rounded-full absolute top-0 right-0" />
         )}
         {!isResizing && !fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent

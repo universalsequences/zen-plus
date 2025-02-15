@@ -30,7 +30,7 @@ const constructStatements = (patch: PatchImpl, statement: Statement) => {
     const hist = ((dependency as Statement[])[0] as any).history;
     // make sure the hist is somewhere in the statement
     if (hist) {
-      if (containsSameHistory(hist, statement, false)) {
+      if (containsSameHistory(hist, statement, false, undefined, undefined, patch)) {
         _statement.push(dependency as any);
       } else {
       }
@@ -141,6 +141,8 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
 
           patch.workletCode = ret.code;
 
+          const parentNode = (patch as Patch as SubPatch).parentNode;
+
           ret.workletNode.port.onmessage = (e) => {
             if (e.data.type === "wasm-ready") {
               initMemory(zenGraph.context, worklet);
@@ -156,6 +158,7 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
               }
 
               patch.skipRecompile = false;
+              return;
             }
             const data = e.data.time
               ? [
@@ -169,12 +172,25 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
                   e.data.body === true ? 1 : e.data.body === false ? 0 : e.data.body,
                   patch,
                 ];
-            publish(e.data.type, data);
+            // TODO use the patch stuff
+            patch.sendWorkerMessage?.({
+              type: "publish",
+              body: {
+                message: [e.data.subType, e.data.body],
+                type: e.data.type,
+              },
+            });
+
+            //publish(e.data.type, data);
+            parentNode.send(parentNode.outlets[0], {
+              type: e.data.type,
+              subType: e.data.subType,
+              data: e.data.body,
+            });
           };
 
           patch.disconnectGraph();
           const merger = patch.audioContext.createChannelMerger(zenGraph.numberOfInputs);
-          const parentNode = (patch as Patch as SubPatch).parentNode;
           if (parentNode) {
             parentNode.merger = merger;
             merger.connect(ret.workletNode);
@@ -192,6 +208,18 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
           if (parentNode) {
             parentNode.useAudioNode(patch.audioNode);
           }
+
+          parentNode.setAttribute(
+            "messageRate",
+            (parentNode.attributes.messageRate as number) || 32,
+          );
+
+          if (!patch.silentGain) {
+            patch.silentGain = patch.audioContext.createGain();
+            patch.silentGain.gain.value = 0;
+            patch.silentGain.connect(patch.audioContext.destination);
+          }
+          patch.audioNode.connect(patch.silentGain);
 
           patch.setupAudioNode(patch.audioNode);
           const gain = patch.audioContext.createGain();

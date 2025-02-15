@@ -6,8 +6,6 @@ class RecorderWorklet extends AudioWorkletProcessor {
   constructor() {
     super();
 
-    console.log("Recorder Worklet initialized");
-
     this._channelCount = 2;
     this.recBuffers = [[], []];
     this.recLength = 0;
@@ -23,25 +21,12 @@ class RecorderWorklet extends AudioWorkletProcessor {
       this.recBuffers.push([]);
       this.recBuffers.push([]);
     }
-    /*
-        if (x === 2) {
-            this.recBuffers = [[], []];
-        } else {
-            this.recBuffers = [[]];
-        }
-        */
   }
 
   clear() {
     for (let i = 0; i < this.recBuffers.length; i++) {
       this.recBuffers[i].length = 0;
     }
-    /*
-        this.recBuffers[0].length = 0;
-        if (this._channelCount === 2) {
-            this.recBuffers[1].length = 0;
-        }
-        */
     this.recLength = 0;
   }
 

@@ -261,6 +261,19 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes.type = "zen";
   }
 
+  if (!node.attributes.messageRate) {
+    node.attributes.messageRate = 32;
+  }
+  node.attributeCallbacks.messageRate = (opt: AttributeValue) => {
+    if (typeof opt === "number") {
+      const n = node.audioNode as AudioWorkletNode;
+      n?.port?.postMessage({
+        type: "messageRate",
+        body: Math.max(16, opt as number),
+      });
+    }
+  };
+
   if (!node.attributes.target) {
     node.attributes.target = "JS";
     node.attributeOptions.target = ["C", "JS"];

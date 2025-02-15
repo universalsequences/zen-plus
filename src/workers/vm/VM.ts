@@ -17,7 +17,12 @@ import {
   type SerializedInstruction,
 } from "@/lib/nodes/vm/types";
 import type { NodeInstructions } from "../core";
-import { MainThreadInstruction, ReplaceMessage, evaluate } from "@/lib/nodes/vm/evaluate";
+import {
+  AttributeUpdate,
+  MainThreadInstruction,
+  ReplaceMessage,
+  evaluate,
+} from "@/lib/nodes/vm/evaluate";
 
 export interface OnNewValue {
   nodeId: string;
@@ -43,6 +48,7 @@ export interface VMEvaluation {
   onNewSharedBuffer: OnNewSharedBuffer[];
   mutableValueChanged: MutableValueChanged[];
   onNewValues: OnNewValues[];
+  attributeUpdates: AttributeUpdate[];
 }
 
 export interface MutableValueChanged {
@@ -73,7 +79,6 @@ export class VM {
   }
 
   setNodes(objects: SerializedObjectNode[], messages: SerializedMessageNode[]) {
-    console.log("set nodes=", objects);
     const p = new MockPatch(undefined);
     p.vm = this;
 
@@ -109,6 +114,12 @@ export class VM {
   updateObject(nodeId: string, serializedNode: SerializedObjectNode) {
     if (this.nodes[nodeId]) {
       (this.nodes[nodeId] as ObjectNode).fromJSON(serializedNode);
+    }
+  }
+
+  updateMessage(nodeId: string, serializedNode: SerializedMessageNode) {
+    if (this.nodes[nodeId]) {
+      (this.nodes[nodeId] as MessageNode).fromJSON(serializedNode);
     }
   }
 

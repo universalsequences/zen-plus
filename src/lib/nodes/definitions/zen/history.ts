@@ -1,6 +1,6 @@
 import { doc } from "./doc";
 import { isForwardCycle } from "@/lib/nodes/traverse";
-import { ObjectNode, Message, SubPatch } from "../../types";
+import { ObjectNode, Message, SubPatch, Patch } from "../../types";
 import { Statement, CompoundOperator } from "./types";
 import { history, Arg, History, UGen, print } from "@/lib/zen/index";
 
@@ -119,6 +119,7 @@ export const containsSameHistory = (
   needsInput: boolean,
   depth: number = 0,
   visited = new Set<Statement>(),
+  patch: Patch,
 ): Statement | null => {
   //console.log('contains same history called looking for history', history, statement);
   if (visited.has(statement)) {
@@ -127,6 +128,9 @@ export const containsSameHistory = (
   visited.add(statement);
   if (Array.isArray(statement)) {
     let [operator, ...statements] = statement;
+    if (operator === undefined) {
+      console.log("operator statement what", statement, patch);
+    }
     if ((operator as CompoundOperator).history === history) {
       let loopedHistory = statement;
       let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator;

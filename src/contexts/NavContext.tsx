@@ -27,7 +27,6 @@ interface Props {
 }
 
 export const NavProvider: React.FC<Props> = ({ showDocs, children }) => {
-  console.log("show docs=", showDocs);
   const [navOption, setNavOption] = useState(showDocs ? NavOption.Docs : NavOption.Home);
 
   return <NavContext.Provider value={{ navOption, setNavOption }}>{children}</NavContext.Provider>;

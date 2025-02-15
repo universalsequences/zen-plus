@@ -72,6 +72,7 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
 
       let voiceChosen: Voice | undefined;
 
+      let i = 0;
       for (let voice of voices) {
         if (voice.lastTriggerTime === undefined) {
           voiceChosen = voice;
@@ -83,19 +84,23 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
             break;
           }
         }
+        i++;
       }
       if (!voiceChosen) {
         let minTime = 10000000;
+        i = 0;
         for (const v of voices) {
           if (v.lastTriggerTime && v.lastTriggerTime < minTime) {
             minTime = v.lastTriggerTime as number;
             voiceChosen = v;
+            break;
           }
         }
       }
 
       if (voiceChosen && time) {
-        let _time = (time - node.patch.audioContext.currentTime) * 44100;
+        const currentTime = node.patch.audioContext?.currentTime as number;
+        let _time = (time - currentTime) * 44100;
         voiceChosen.lastTriggerDuration = dur;
         voiceChosen.lastTriggerTime = time;
 
@@ -109,7 +114,7 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
         }
       }
     } catch (e) {
-      console.log("invalid trigger received", trigger);
+      console.log("invalid trigger received", trigger, e);
     }
 
     // look thru the voices

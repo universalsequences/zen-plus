@@ -182,7 +182,7 @@ export class BaseNode implements Node {
       !this.patch.skipRecompile &&
       getRootPatch(this.patch).finishedInitialCompile
     ) {
-      compileVM(this.patch);
+      compileVM(this.patch, false);
     }
     return connection;
   }

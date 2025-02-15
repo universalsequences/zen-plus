@@ -89,7 +89,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     }
 
     if (node.attributes["release-nodes"]) {
-      pool.releaseUsed();
+      //pool.releaseUsed();
     }
     const evaluate = createContext(pool, node);
     // where do we store the script, in a attribute? lol

@@ -109,6 +109,10 @@ const isSourceNode = (node: Node) => {
     return true;
   }
 
+  if ((node as ObjectNode).name === "button") {
+    return true;
+  }
+
   // TODO - all UX elements should be true here (marked as needsLoad)
   if ((node as ObjectNode).needsLoad) {
     //(node as ObjectNode).name === "matrix" || (node as ObjectNode).name === "zequencer.core") {
@@ -175,7 +179,6 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
 
 export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
   const patch = isSubPatch ? _patch : getRootPatch(_patch);
-  console.log("compile vm called...");
   const nodeInstructions: NodeInstructions[] = [];
   const allObjects: SerializedObjectNode[] = [];
   const allMessages: SerializedMessageNode[] = [];

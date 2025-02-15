@@ -45,7 +45,8 @@ export const speakers = (node: ObjectNode) => {
     const splitter = ctxt.createChannelMerger(channelCount);
     node.audioNode = splitter;
 
-    ctxt.destination.channelCount = ctxt.destination.maxChannelCount;
+    ctxt.destination.channelCount =
+      channelCount === 1 ? channelCount : ctxt.destination.maxChannelCount;
     ctxt.destination.channelCountMode = "explicit";
     ctxt.destination.channelInterpretation = "discrete";
 
@@ -53,15 +54,11 @@ export const speakers = (node: ObjectNode) => {
 
     const root = getRootPatch(node.patch);
     if (root.recorderWorklet) {
-      console.log("conecting to worklet");
       splitter.connect(root.recorderWorklet);
     } else {
       setTimeout(() => {
         if (root.recorderWorklet) {
-          console.log("connecting to worklet!");
           splitter.connect(root.recorderWorklet);
-        } else {
-          console.log("no worklet...");
         }
       }, 1000);
     }
@@ -97,6 +94,30 @@ export const scope_tilde = (node: ObjectNode) => {
   return (_message: Message) => [];
 };
 
+doc("snapshot~", {
+  description: "snapshots incoming audio and sends out outlet everytime receives bang message",
+  numberOfInlets: 1,
+  numberOfOutlets: 1,
+  inletType: ConnectionType.AUDIO,
+});
+
+export const snapshot_tilde = (node: ObjectNode) => {
+  // setup the visualizer worklet and hook it up to this node
+  let lastValue: number | undefined = undefined;
+  node.outlets[0].connectionType = ConnectionType.CORE;
+  createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor").then(() => {
+    const worklet = node.audioNode as AudioWorkletNode;
+    if (worklet) {
+      worklet.port.onmessage = (e) => {
+        lastValue = e.data;
+      };
+    }
+  });
+  return (_message: Message) => {
+    return [lastValue];
+  };
+};
+
 const init: Record<string, boolean> = {};
 export const createWorklet = async (node: ObjectNode, path: string, processor: string) => {
   const audioContext = node.patch.audioContext;
@@ -114,6 +135,7 @@ export const createWorklet = async (node: ObjectNode, path: string, processor: s
 export const api: API = {
   "live.meter~": live_meter,
   "slots~": slots,
+  "snapshot~": snapshot_tilde,
   "gate~": gate,
   "route~": route,
   "speakers~": speakers,

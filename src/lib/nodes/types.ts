@@ -253,6 +253,7 @@ export type ObjectNode = Positioned &
     isAsync?: boolean;
     needsMainThread?: boolean;
     parseAttributes: (text: string, context: OperatorContext) => string;
+    processMessageForAttributes: (x: Message) => void;
   };
 
 export interface SerializableCustom {
@@ -307,6 +308,7 @@ export type Patch = Identifiable & {
   getZenBase: () => Patch | null;
   setZenCode?: (x: string | null) => void;
   wasmCode?: string;
+  silentGain?: GainNode;
   zenCode?: string;
   setVisualsCode?: (x: string | null) => void;
   setAudioWorklet?: (x: AudioWorkletNode | null) => void; // tells the front-end a new audioworklet has been compiled

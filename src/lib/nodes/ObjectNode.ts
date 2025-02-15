@@ -172,7 +172,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
   updateWorkerState() {
     if (isCompiledType(this.operatorContextType)) return;
-    console.log("updating worker state=", this);
     if (getRootPatch(this.patch).finishedInitialCompile) {
       this.patch.sendWorkerMessage?.({
         type: "updateObject",
@@ -286,11 +285,13 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     if (typeof message === "string" && message !== "bang") {
       const tokens = message.split(" ").filter((x) => x.length > 0);
       const attributeName = tokens[0];
+      /*
       if (this.subpatch) {
         // if this is a subpatch thats receiving messages...
         // we need to pass it off to subpatch
         return this.subpatch.processMessageForParam(message);
       }
+      */
       if (this.attributes[attributeName] === undefined) {
         return;
       }

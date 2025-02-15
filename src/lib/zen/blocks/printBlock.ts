@@ -298,13 +298,16 @@ ${functionSignature} {
   let post = "";
 
   if (target === Target.Javascript) {
-    code += `let memory = this.memory;
+    code += `let memory = this.memory;`;
+    if (functionSignature.includes("process(")) {
+      code += `
     let BLOCK_SIZE = 128;
     if (this.disposed || !this.ready) {
       return true;
     }
     this.scheduleEvents(218);
 `;
+    }
   }
 
   let i = 0;
@@ -327,11 +330,16 @@ ${printBlock(outputName, block, totalInvocations, isLast, forceScalar, target)
     .filter((x) => !x.includes("v128_t constant"))
     .join("\n");
 
+  if (functionSignature.includes("process(")) {
+    if (target === Target.C) {
+      post += "\nelapsed += 128;\n";
+    } else {
+      post += "\nthis.elapsed += 128;\n";
+      post += "\nthis.messageCounter ++;\n";
+    }
+  }
   if (target === Target.C) {
-    post += "\nelapsed += 128;\n";
   } else {
-    post += "\nthis.elapsed += 128;\n";
-    post += "\nthis.messageCounter ++;\n";
     post += "return true;\n";
   }
   post += "\n}\n";

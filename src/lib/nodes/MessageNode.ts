@@ -16,6 +16,7 @@ import { isNumber } from "@/utils/isNumber";
 import { parseLispExpression } from "./utils/lisp";
 import { Instruction } from "./vm/types";
 import { evaluate } from "./vm/evaluate";
+import { getRootPatch } from "./traverse";
 
 const TRIGGER = "trigger";
 const REPLACE = "replace";
@@ -122,11 +123,15 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
     if (text.includes("(") && text.includes(")")) {
       const lisp = parseLispExpression(text);
       this.receive(this.inlets[1], lisp);
+      this.message = lisp;
+      this.updateWorkerState();
       return lisp;
     }
     if (text.includes("[") && text.includes("]")) {
       try {
         const list = JSON.parse(text);
+        this.message = list;
+        this.updateWorkerState();
         this.receive(this.inlets[1], list);
         return list;
       } catch (e) {
@@ -134,8 +139,22 @@ export default class MessageNodeImpl extends BaseNode implements MessageNode {
       }
     }
     const parsed: Message[] | Message = isNumber(text) ? Number.parseFloat(text) : text;
+    this.message = parsed;
+    this.updateWorkerState();
     this.receive(this.inlets[1], parsed as Message);
     return parsed;
+  }
+
+  updateWorkerState() {
+    if (getRootPatch(this.patch).finishedInitialCompile) {
+      this.patch.sendWorkerMessage?.({
+        type: "updateMessage",
+        body: {
+          nodeId: this.id,
+          json: this.getJSON(),
+        },
+      });
+    }
   }
 
   pipeIfApplicable(incomingMessage: Message): Message {

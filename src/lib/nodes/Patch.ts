@@ -86,6 +86,7 @@ export class PatchImpl implements Patch {
   workletCode?: string;
   finishedInitialCompile: boolean;
   sendWorkerMessage?: ((body: MessageBody) => void) | undefined;
+  silentGain?: GainNode;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
@@ -389,7 +390,6 @@ export class PatchImpl implements Patch {
   }
 
   fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
-    console.log("FROM JSON isPreset=", isPreset, x.name);
     this.finishedInitialCompile = false;
     this.skipRecompile = true;
     this.name = x.name;
@@ -623,11 +623,9 @@ export class PatchImpl implements Patch {
 
     this.finishedInitialCompile = true;
     if (needsVMCompile) {
-      console.log("compiling vm...");
       const startTime = new Date().getTime();
       compileVM(this);
       const endTime = new Date().getTime();
-      console.log("compilation of vm took %s ms", endTime - startTime);
     }
     this.sendWorkerMessage?.({ type: "loadbang" });
     loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));

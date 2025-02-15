@@ -1,4 +1,5 @@
 import type { API } from "@/lib/nodes/context";
+import { counter } from "./counter";
 import { registryIndex } from "./registry";
 import { xy_control } from "./xy";
 import { hooks } from "./hooks/index";
@@ -99,6 +100,7 @@ export const api: API = {
   "==": eq,
   "||": or,
   queue,
+  counter,
   ...registryIndex,
   "xy.control": xy_control,
   "<": lt,

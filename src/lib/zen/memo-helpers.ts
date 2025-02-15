@@ -186,7 +186,6 @@ export const determineMemoization = (
             : 1
           : 1)
     ) {
-      console.log("RETURNING BUT MIGHT NOT NEED!");
       return {
         context: memoized.context,
         memoization: memoized,
@@ -194,8 +193,6 @@ export const determineMemoization = (
       };
     }
     count(11);
-    // let matchingDownstreamHistoriesB = downstreamHistories.some(h => getHistoriesBeingWrittenTo(context).has(h));
-    // console.log("id=%s PASS THRU CASE last=%s current=%s matchingA=%s matchingB=%s", memoized.codeFragments[0].id, lastHistoriesWritten, historiesBeingWrittenTo.size, matchingDownstreamHistories, matchingDownstreamHistoriesB, memoized.context, memoized.incomingContext, context, downstreamHistories, historiesBeingWrittenTo, memoized.codeFragments);
   } else if (context === memoized.context) {
     count(9);
     return {

@@ -1,6 +1,7 @@
 import { Instruction, InstructionType } from "./types";
-import { Message, MessageNode, ObjectNode } from "../types";
+import { AttributeValue, Message, MessageNode, ObjectNode } from "../types";
 import { evaluateAttributeInstruction } from "./attribute";
+import { isObjectNode } from "./instructions";
 
 export interface Branching {
   id?: string;
@@ -22,19 +23,25 @@ export interface ReplaceMessage {
   sharedBuffer?: SharedArrayBuffer;
 }
 
-export const evaluate = (_instructions: Instruction[], initialMessage: Message = "bang") => {
+export interface AttributeUpdate {
+  nodeId: string;
+  message: AttributeValue;
+}
+
+export const evaluate = (_instructions: Instruction[], _initialMessage: Message = "bang") => {
+  let initialMessage: Message | undefined = _initialMessage;
   const replaceMessages: ReplaceMessage[] = [];
   const objectsEvaluated: ObjectNode[] = [];
   const mainThreadInstructions: MainThreadInstruction[] = [];
+  const attributeUpdates: AttributeUpdate[] = [];
 
   // TODO - need to keep track of all STOREs into nodes with skipCompilation along w/
   // any evaluateObject for skipCompilation  nodes (we will tell the main thread to run them)
   try {
-    let a = new Date().getTime();
     const instructions = [..._instructions];
     let register: (Message | undefined)[] = new Array(16)
       .fill(initialMessage)
-      .map((x) => initialMessage);
+      .map(() => initialMessage);
     const branchingStack: Branching[] = [];
 
     const peekBranching = () => {
@@ -63,7 +70,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
         }
         if (instruction === undefined) {
           // we have consumed the branch completely and should pop
-          const b = branchingStack.pop();
+          branchingStack.pop();
           const next = getNext();
           return next;
         }
@@ -74,11 +81,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
     const emittedInstructions: Instruction[] = [];
     //let instructionCounter = 0;
     for (let instruction = getNext(); instruction !== undefined; instruction = getNext()) {
-      //if (instruction.node) {
       emittedInstructions.push(instruction);
-      //  instruction.node.debugInstructions = emittedInstructions;
-      //  instruction.node.debugInstructionIndex = instructionCounter++;
-      //}
       switch (instruction.type) {
         case InstructionType.PipeMessage: {
           // trigger/pipe mesasge
@@ -192,14 +195,14 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
             parent: peekBranching(),
             input: [...register],
             branches: instruction.branches.map((x) => [...x]),
-            consumed: instruction.branches.map((x) => 0),
+            consumed: instruction.branches.map(() => 0),
             register: [...register],
           };
           branchingStack.push(branch);
           break;
         }
         case InstructionType.Attribute:
-          const { outletNumber, nodes } = instruction;
+          const { outletNumber, nodes, node } = instruction;
           const attributeValue =
             register[outletNumber as number] === undefined
               ? initialMessage
@@ -208,6 +211,12 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
             mainThreadInstructions.push(
               ...evaluateAttributeInstruction(attributeValue as Message, instruction),
             );
+          } else if (node && isObjectNode(node) && typeof attributeValue === "string") {
+            (node as ObjectNode)?.processMessageForAttributes(attributeValue as Message);
+            attributeUpdates.push({
+              nodeId: node.id,
+              message: attributeValue as AttributeValue,
+            });
           }
           break;
       }
@@ -216,12 +225,12 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
         instruction.node.debugBranching = peekBranching();
       }
     }
-    let b = new Date().getTime();
     return {
       mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,
       instructionsEvaluated: emittedInstructions,
+      attributeUpdates,
     };
   } catch (e) {
     console.log("error=", e);
@@ -230,6 +239,7 @@ export const evaluate = (_instructions: Instruction[], initialMessage: Message =
       objectsEvaluated,
       replaceMessages,
       instructionsEvaluated: [],
+      attributeUpdates,
     };
   }
 };

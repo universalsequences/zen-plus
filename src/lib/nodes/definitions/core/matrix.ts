@@ -185,26 +185,22 @@ export const createMatrixBuffer = (
   values?: number[],
 ) => {
   size = Math.max(size, 4);
-  console.log("create matrix buffer", type, node.onNewSharedBuffer, values);
   if (type === "object") {
     return {
       buffer: (values ? values : new Array(size).fill({} as MessageObject)) as MessageObject[],
     };
   }
   if (node.onNewSharedBuffer) {
-    console.log("creating matrix buffer");
     // we are in a worklet and need to propagate this to the main thread
     const bytesPerElement =
       type === "float" ? Float32Array.BYTES_PER_ELEMENT : Uint8Array.BYTES_PER_ELEMENT;
 
     const sharedBuffer = new SharedArrayBuffer(bytesPerElement * size);
-    console.log("creating shared array buffer=", sharedBuffer);
     node.onNewSharedBuffer(sharedBuffer);
     const buffer = type === "float" ? new Float32Array(sharedBuffer) : new Uint8Array(sharedBuffer);
     if (values) {
       buffer.set(values);
     }
-    console.log("returning buffer", buffer);
     if (node.custom) {
       (node.custom as Matrix).buffer = buffer;
     }
@@ -220,7 +216,6 @@ export const createMatrixBuffer = (
     if (node.custom) {
       (node.custom as Matrix).buffer = buffer;
     }
-    console.log("returning buffer", buffer);
     return {
       buffer,
     };

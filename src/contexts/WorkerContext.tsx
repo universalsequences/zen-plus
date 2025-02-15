@@ -1,5 +1,5 @@
 import { Patch, ObjectNode, MessageNode } from "@/lib/nodes/types";
-import { MainThreadInstruction } from "@/lib/nodes/vm/evaluate";
+import { AttributeUpdate, MainThreadInstruction } from "@/lib/nodes/vm/evaluate";
 import { MutableValueChanged, OnNewSharedBuffer, OnNewValue } from "@/workers/vm/VM";
 import { EvaluateNodeBody, MessageBody } from "@/workers/core";
 import React, { createContext, useContext, useRef, useCallback, useEffect } from "react";
@@ -73,6 +73,9 @@ class UpdateBatcher {
     for (const [type, updates] of this.pendingUpdates) {
       const updateArray = Array.from(updates);
       switch (type) {
+        case "attributeUpdates":
+          this.handleAttributeUpdates(updateArray);
+          break;
         case "mutableValueChanged":
           this.handleMutableValueChanged(updateArray);
           break;
@@ -95,6 +98,15 @@ class UpdateBatcher {
     }
 
     this.pendingUpdates.clear();
+  }
+
+  private handleAttributeUpdates(attributeUpdates: AttributeUpdate[]) {
+    for (const { nodeId, message } of attributeUpdates) {
+      const node = this.objects[nodeId];
+      if (node) {
+        node.processMessageForAttributes(message);
+      }
+    }
   }
 
   private handleMutableValueChanged(mutableValueChanged: MutableValueChanged[]) {

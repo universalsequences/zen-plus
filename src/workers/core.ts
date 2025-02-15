@@ -1,13 +1,7 @@
-import type {
-  Message,
-  SerializedMessageNode,
-  SerializedObjectNode,
-  Node,
-  Patch,
-} from "@/lib/nodes/types";
+import type { Message, SerializedMessageNode, SerializedObjectNode } from "@/lib/nodes/types";
 import type { SerializedInstruction } from "@/lib/nodes/vm/types";
 import { VM, VMEvaluation } from "./vm/VM";
-import { ReplaceMessage } from "@/lib/nodes/vm/evaluate";
+import { publish } from "@/lib/messaging/queue";
 
 export interface NodeInstructions {
   nodeId: string;
@@ -44,11 +38,27 @@ export interface AttrUIBody {
   };
 }
 
+export interface PublishBody {
+  type: "publish";
+  body: {
+    type: string;
+    message: Message;
+  };
+}
+
 export interface UpdateNodeBody {
   type: "updateObject";
   body: {
     nodeId: string;
     json: SerializedObjectNode;
+  };
+}
+
+export interface UpdateMessageBody {
+  type: "updateMessage";
+  body: {
+    nodeId: string;
+    json: SerializedMessageNode;
   };
 }
 
@@ -60,8 +70,11 @@ export type MessageBody =
   | SetCompilationBody
   | EvaluateNodeBody
   | UpdateNodeBody
+  | UpdateMessageBody
   | LoadBangBody
+  | PublishBody
   | AttrUIBody;
+
 const vm = new VM();
 
 // sends one round of instructions evaluation to the main thread
@@ -73,9 +86,17 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
     onNewSharedBuffer,
     mainThreadInstructions,
     onNewValues,
+    attributeUpdates,
   } = data;
 
   onNewSharedBuffer.push(...vm.newSharedBuffers);
+
+  if (attributeUpdates.length > 0) {
+    self.postMessage({
+      type: "attributeUpdates",
+      body: attributeUpdates,
+    });
+  }
   if (replaceMessages.length > 0)
     self.postMessage({
       type: "replaceMessages",
@@ -139,6 +160,9 @@ self.onmessage = async (e: MessageEvent) => {
   } else if (data.type === "updateObject") {
     const { nodeId, json } = data.body;
     vm.updateObject(nodeId, json);
+  } else if (data.type === "updateMessage") {
+    const { nodeId, json } = data.body;
+    vm.updateMessage(nodeId, json);
   } else if (data.type === "loadbang") {
     vm.loadBang();
   } else if (data.type === "attrui") {
@@ -146,5 +170,8 @@ self.onmessage = async (e: MessageEvent) => {
     if (vmEvaluation) {
       sendEvaluationToMainThread(vmEvaluation);
     }
+  } else if (data.type === "publish") {
+    // we wish to publish a message
+    publish(data.body.type, data.body.message);
   }
 };

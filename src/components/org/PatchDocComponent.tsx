@@ -23,7 +23,6 @@ export const PatchDocComponent = (props: Props) => {
   const [tags, setTags] = useState(doc?.tags || []);
 
   useEffect(() => {
-    console.log("focusing...");
     ref.current?.focus();
   }, [addingNewTag]);
 

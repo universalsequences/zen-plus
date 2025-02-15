@@ -98,12 +98,6 @@ interface Branch {
   branches: Instruction[][];
 }
 
-const isNodeInBranch = (node: Node, branch: Branch): boolean => {
-  if (node === branch.rootNode) return true;
-  const forwardNodes = forwardTraversal(branch.rootNode);
-  return forwardNodes.includes(node);
-};
-
 interface BranchContext {
   id: number;
   rootNode: Node;
@@ -112,6 +106,17 @@ interface BranchContext {
 }
 
 export const createInstructions = (nodes: Node[]) => {
+  const isNodeInBranch = (node: Node, branch: Branch): boolean => {
+    if (node === branch.rootNode) return true;
+    const forwardNodes = forwardTraversal(branch.rootNode);
+    if (branch.rootNode.id === "1v") {
+      console.log("branch=", branch);
+      console.log("forward nodes", forwardNodes);
+      console.log("nodes list=", nodes);
+    }
+    return forwardNodes.includes(node);
+  };
+
   const instructions: Instruction[] = [];
   const branchStack: BranchContext[] = [];
   let branchId = 0;
@@ -121,10 +126,11 @@ export const createInstructions = (nodes: Node[]) => {
     if (branchStack.length === 0) return undefined;
     const currentBranch = branchStack[branchStack.length - 1];
 
+    // TODO ***** !!!!!!! this needs to not just use direct connections!!!!!!
     for (let i = 0; i < currentBranch.rootNode.outlets.length; i++) {
       const outlet = currentBranch.rootNode.outlets[i];
-      const directConnections = outlet.connections.map((c) => c.destination);
-      if (directConnections.includes(node)) {
+      const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
+      if (connections.map((x) => x.destination).includes(node)) {
         return i;
       }
     }
@@ -145,6 +151,9 @@ export const createInstructions = (nodes: Node[]) => {
     popIfNecessary(node);
     const initialCurrentBranch = branchStack[branchStack.length - 1];
     let _outlet = getOutletIndex(node);
+    if (node.id === "5u") {
+      console.log("5u current initial branch outlet=%s ", _outlet, initialCurrentBranch);
+    }
     let outletIndexStore = branchStack[branchStack.length - 1]?.outletIndexStore;
     if (_outlet !== undefined) {
       outletIndexStore = _outlet;

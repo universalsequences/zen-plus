@@ -15,6 +15,7 @@ import {
 } from "@/lib/nodes/types";
 import { Coordinates, usePatch } from "@/contexts/PatchContext";
 import { DraggingCable, usePosition } from "@/contexts/PositionContext";
+import { OperatorContextType } from "@/lib/nodes/context";
 
 const strokeColor = "#2ad4bf";
 const Cables = () => {
@@ -326,6 +327,13 @@ const Edge: React.FC<{
     let isAudio = connection.sourceOutlet.connectionType === ConnectionType.AUDIO;
     let isCore = connection.sourceOutlet.connectionType === ConnectionType.CORE;
     let isGL = connection.sourceOutlet.connectionType === ConnectionType.GL;
+    if (
+      isAudio &&
+      (connection.destination as ObjectNode).operatorContextType === OperatorContextType.CORE
+    ) {
+      isAudio = false;
+      isCore = true;
+    }
     let sourceCoord = (connection.source as ObjectNode).position;
     let destCoord = (connection.destination as ObjectNode).position;
     let id = connection.source.id + connection.destination.id;
