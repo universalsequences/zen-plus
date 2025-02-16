@@ -186,6 +186,18 @@ export const compileInstructions = (nodes: Node[]) => {
         loadAtStart: (node as ObjectNode).needsLoad,
       };
 
+      const name = (node as ObjectNode).name;
+      if (isObjectNode(node) && (name === "send" || name === "s")) {
+        if (node.attributes.scope === "subtree") {
+          // we need to find all nodes that match this
+          const key = (node as ObjectNode).arguments[0];
+          instruction.nodes = node.patch
+            .getAllNodes()
+            .filter((x) => x.name === "subscribe" || x.name === "r")
+            .filter((x) => (x as ObjectNode).arguments[0] === key);
+        }
+      }
+
       if (isMessageNode(node, MessageType.Message)) {
         const inbound = getInboundConnections(node.inlets[0])[0];
         if (inbound) {

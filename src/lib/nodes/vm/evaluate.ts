@@ -158,6 +158,10 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
                 ],
               });
             } else {
+              if (instruction.nodes) {
+                // instruction includes nodes, so we tag the object with them so they may use it
+                objectNode.instructionNodes = instruction.nodes;
+              }
               register = objectNode.fn(inputMessage);
               objectsEvaluated?.push(objectNode);
             }
@@ -172,16 +176,6 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
             node &&
             inletNumber !== undefined
           ) {
-            if (node.name?.startsWith("lisp 0 0 0 0 0 0 0 0")) {
-              console.log(
-                "STORE CALLED",
-                node.text,
-                inletNumber,
-                outletNumber,
-                register[outletNumber],
-                node,
-              );
-            }
             if ((node as ObjectNode).arguments) {
               // store results in arguments (for inlets 1...) and inlet (for inlet 0)
               if (inletNumber > 0) {

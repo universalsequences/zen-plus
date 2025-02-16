@@ -213,6 +213,12 @@ export class VM {
       }
       this.alreadyLoaded[nodeId] = true;
       if ((node as ObjectNode).needsLoad) {
+        /*
+        if ((node as ObjectNode).isAsync) {
+          node.receive(node.inlets[0], "bang");
+          continue;
+        }
+        */
         const ret = this.evaluateNode(nodeId, "bang");
         vmEvaluation.instructionsEvaluated.push(...ret.instructionsEvaluated);
         vmEvaluation.replaceMessages.push(...ret.replaceMessages);

@@ -254,6 +254,7 @@ export type ObjectNode = Positioned &
     needsMainThread?: boolean;
     parseAttributes: (text: string, context: OperatorContext) => string;
     processMessageForAttributes: (x: Message) => void;
+    instructionNodes?: ObjectNode[];
   };
 
 export interface SerializableCustom {

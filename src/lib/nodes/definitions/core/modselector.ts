@@ -18,6 +18,7 @@ doc("modselector", {
 });
 
 export const modselector = (node: ObjectNode) => {
+  node.skipCompilation = true;
   if (!node.attributes.input) {
     node.attributes.input = 1;
     node.attributeCallbacks.input = (_message: AttributeValue) => {};

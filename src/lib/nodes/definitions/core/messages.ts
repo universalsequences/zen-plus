@@ -18,8 +18,8 @@ export const send = (node: ObjectNode, name: Lazy) => {
   node.attributeOptions.scope = ["global", "subtree"];
 
   return (message: Message) => {
-    if (node.attributes.scope === "subtree") {
-      queue.publish(name() as string, message, node.patch);
+    if (node.attributes.scope === "subtree" && node.instructionNodes) {
+      queue.publish(name() as string, message, node.instructionNodes);
     } else {
       queue.publish(name() as string, message);
     }
@@ -45,27 +45,10 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
   let lastMessage: Message | null = null;
   const onMessage = (...messages: Message[]) => {
     const message = messages[0];
-    if (messages[1] && (messages[1] as Patch).objectNodes) {
-      // then we have a patch and need to see if this patch is below this one?
-      const patch = messages[1] as Patch;
-      if (subcache[patch.id] !== undefined) {
-        if (!subcache[patch.id]) {
-          return;
-        }
-      } else {
-        let p = node.patch;
-        let found = false;
-        while (p) {
-          if (p === patch) {
-            found = true;
-            break;
-          }
-          p = (p as SubPatch).parentPatch;
-        }
-        subcache[patch.id] = found;
-        if (!found) {
-          return;
-        }
+    if (messages[1] && Array.isArray(messages[1])) {
+      const nodes = messages[1] as ObjectNode[];
+      if (!nodes.includes(node)) {
+        return;
       }
     }
     if (lastName !== name()) {
@@ -94,9 +77,6 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
       (message as Message[]).splice(2, 1);
     }
 
-    if (name() === "bpm") {
-      console.log("subscribed bpm", message);
-    }
     node.send(node.outlets[0], message);
     if (typeof message === "string") {
       lastMessage = message;
@@ -122,9 +102,6 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     }
     const ret = queue.read(name() as string);
     if (ret?.[0]) {
-      if (name() === "bpm") {
-        console.log("sending default bpm", ret[0]);
-      }
       return [ret[0]];
     }
     return [];
