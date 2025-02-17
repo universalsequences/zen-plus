@@ -83,6 +83,8 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     this.disconnectGraph();
     this._setupInitialNodes();
     this.recompileGraph();
+    this.docId = undefined;
+    this.doc = undefined;
     this.parentNode.attributes["Custom Presentation"] = false;
   }
 

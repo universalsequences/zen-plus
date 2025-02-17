@@ -41,6 +41,7 @@ class BufferViewCache {
 // Update batcher
 class UpdateBatcher {
   private pendingUpdates = new Map<string, Set<any>>();
+  private pendingRealTimeUpdates = new Map<string, Set<any>>();
   private frameRequested = false;
   private bufferCache: BufferViewCache;
   private objects: Record<string, ObjectNode>;
@@ -53,51 +54,71 @@ class UpdateBatcher {
   }
 
   queueUpdate(type: string, updates: any[]) {
-    if (!this.pendingUpdates.has(type)) {
-      this.pendingUpdates.set(type, new Set());
+    if (type !== "mainThreadInstructions") {
+      if (!this.pendingUpdates.has(type)) {
+        this.pendingUpdates.set(type, new Set());
+      }
+      for (const update of updates) {
+        this.pendingUpdates.get(type)!.add(update);
+      }
     }
 
-    for (const update of updates) {
-      this.pendingUpdates.get(type)!.add(update);
-    }
-
-    if (!this.frameRequested) {
-      this.frameRequested = true;
-      requestAnimationFrame(() => this.flush());
+    switch (type) {
+      case "mainThreadInstructions":
+        queueMicrotask(() => this.handleMainThreadInstructions(updates));
+        break;
+      default:
+        if (!this.frameRequested) {
+          this.frameRequested = true;
+          requestAnimationFrame(() => this.flush());
+        }
+        break;
     }
   }
 
-  private flush() {
+  private flush(flushType?: string) {
     this.frameRequested = false;
 
-    for (const [type, updates] of this.pendingUpdates) {
+    const pendingUpdates =
+      flushType === "mainThreadInstructions" ? this.pendingRealTimeUpdates : this.pendingUpdates;
+    for (const [type, updates] of pendingUpdates) {
       const updateArray = Array.from(updates);
-      switch (type) {
-        case "attributeUpdates":
-          this.handleAttributeUpdates(updateArray);
-          break;
-        case "mutableValueChanged":
-          this.handleMutableValueChanged(updateArray);
-          break;
-        case "replaceMessages":
-          this.handleReplaceMessages(updateArray);
-          break;
+      switch (flushType) {
         case "mainThreadInstructions":
-          this.handleMainThreadInstructions(updateArray);
-          break;
-        case "onNewValue":
-          this.handleOnNewValue(updateArray);
-          break;
-        case "onNewValues":
-          this.handleOnNewValues(updateArray);
-          break;
-        case "onNewSharedBuffer":
-          this.handleSharedBuffer(updateArray);
+          switch (type) {
+            case "mainThreadInstructions":
+              this.handleMainThreadInstructions(updateArray);
+              break;
+          }
+        default:
+          switch (type) {
+            case "attributeUpdates":
+              this.handleAttributeUpdates(updateArray);
+              break;
+            case "mutableValueChanged":
+              this.handleMutableValueChanged(updateArray);
+              break;
+            case "replaceMessages":
+              this.handleReplaceMessages(updateArray);
+              break;
+            case "mainThreadInstructions":
+              this.handleMainThreadInstructions(updateArray);
+              break;
+            case "onNewValue":
+              this.handleOnNewValue(updateArray);
+              break;
+            case "onNewValues":
+              this.handleOnNewValues(updateArray);
+              break;
+            case "onNewSharedBuffer":
+              this.handleSharedBuffer(updateArray);
+              break;
+          }
           break;
       }
     }
 
-    this.pendingUpdates.clear();
+    pendingUpdates.clear();
   }
 
   private handleAttributeUpdates(attributeUpdates: AttributeUpdate[]) {
@@ -225,7 +246,37 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
     worker.onmessage = (event: MessageEvent) => {
       const { type, body } = event.data;
-      batcherRef.current?.queueUpdate(type, Array.isArray(body) ? body : [body]);
+
+      if (event.data.type === "batchedUpdates") {
+        const { updates } = event.data;
+
+        if (updates.attributeUpdates) {
+          batcherRef.current?.queueUpdate?.("attributeUpdates", updates.attributeUpdates);
+        }
+        if (updates.replaceMessages) {
+          batcherRef.current?.queueUpdate?.("replaceMessages", updates.replaceMessages);
+        }
+        if (updates.mainThreadInstructions) {
+          batcherRef.current?.queueUpdate?.(
+            "mainThreadInstructions",
+            updates.mainThreadInstructions,
+          );
+        }
+        if (updates.onNewSharedBuffer) {
+          batcherRef.current?.queueUpdate?.("onNewSharedBuffer", updates.onNewSharedBuffer);
+        }
+        if (updates.onNewValue) {
+          batcherRef.current?.queueUpdate?.("onNewValue", updates.onNewValue);
+        }
+        if (updates.onNewValues) {
+          batcherRef.current?.queueUpdate?.("onNewValues", updates.onNewValues);
+        }
+        if (updates.mutableValueChanged) {
+          batcherRef.current?.queueUpdate?.("mutableValueChanged", updates.mutableValueChanged);
+        }
+      } else {
+        batcherRef.current?.queueUpdate(type, Array.isArray(body) ? body : [body]);
+      }
     };
 
     worker.postMessage({ type: "init" });

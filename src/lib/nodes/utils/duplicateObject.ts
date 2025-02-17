@@ -8,8 +8,9 @@ interface DuplicateArgs {
   updatePosition: (id: string, position: Coordinate) => void;
 }
 
-export const duplicate = ({ objectNode, newObjectNode, updatePosition }: DuplicateArgs) => {
+export const duplicateObject = ({ objectNode, newObjectNode, updatePosition }: DuplicateArgs) => {
   const copied = new ObjectNodeImpl(objectNode.patch);
+  console.log("need top duplicate =", objectNode);
   if (objectNode.name === "zen") {
     let attr = "";
     if (objectNode.subpatch && objectNode.subpatch.patchType === OperatorContextType.ZEN) {
@@ -36,11 +37,17 @@ export const duplicate = ({ objectNode, newObjectNode, updatePosition }: Duplica
     };
     copied.size = json.size;
   } else {
+    console.log("duplicate occuring");
     let size = objectNode.size;
-    copied.parse(objectNode.text, objectNode.operatorContextType, false);
+    copied.attributes = {
+      ...copied.attributes,
+      ...objectNode.attributes,
+    };
     if (size) {
+      console.log("setting size =", size);
       copied.size = { ...size };
     }
+    copied.parse(objectNode.text, objectNode.operatorContextType, false);
   }
   copied.position.x = objectNode.position.x;
   copied.position.y = objectNode.position.y;

@@ -23,6 +23,7 @@ import { core } from "./core";
 import { data_index } from "./data";
 import SubpatchImpl from "../../Subpatch";
 import type { AttributeValue, SubPatch } from "../../types";
+import { initMemory } from "@/lib/zen";
 
 doc("out", {
   description: "output of patch",
@@ -341,6 +342,10 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   };
 
   return (message: Message) => {
+    if (message === "clear" && node.subpatch?.zenGraph) {
+      console.log("clear called");
+      initMemory(node.subpatch.zenGraph.context, node.audioNode as AudioWorkletNode);
+    }
     return [];
   };
 };

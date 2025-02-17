@@ -16,10 +16,11 @@ import { useStorage } from "@/contexts/StorageContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import type { ObjectNode, SubPatch } from "@/lib/nodes/types";
-import { duplicate } from "@/lib/nodes/utils/duplicateObject";
+import { duplicateObject } from "@/lib/nodes/utils/duplicateObject";
 import { FileIcon, Pencil2Icon, CardStackPlusIcon } from "@radix-ui/react-icons";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { usePosition } from "@/contexts/PositionContext";
+import { setupSkeletonPatch } from "@/lib/utils";
 
 export const SLOT_VIEW_WIDTH = 180;
 export const SLOT_VIEW_HEIGHT = 20;
@@ -113,6 +114,8 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             onClick={() => {
               const subpatch = objectNode.subpatch as SubPatch;
               subpatch.clearPatch();
+              setupSkeletonPatch(subpatch, 2);
+              subpatch.recompileGraph();
               setName("zen");
             }}
             className="w-4 h-4 ml-auto cursor-pointer"
@@ -128,7 +131,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           />
           <CardStackPlusIcon
             onClick={() => {
-              duplicate({ objectNode, newObjectNode, updatePosition });
+              duplicateObject({ objectNode, newObjectNode, updatePosition });
             }}
             className="w-4 h-4 ml-4 mr-3 cursor-pointer"
           />

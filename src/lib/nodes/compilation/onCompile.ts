@@ -52,13 +52,16 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
   const target = parentNode.attributes.target === "C" ? Target.C : Target.Javascript;
   const forceScalar = !parentNode.attributes.SIMD;
 
-  const a = new Date().getTime();
+  let zenGraph: ZenGraph | undefined = undefined;
+  try {
+    zenGraph = Array.isArray(ast)
+      ? zenWithTarget(target, ast[0], forceScalar)
+      : zenWithTarget(target, ast as UGen, forceScalar);
+  } catch (e) {
+    console.log("error compiling patch", patch, e);
+    throw e;
+  }
 
-  const zenGraph: ZenGraph = Array.isArray(ast)
-    ? zenWithTarget(target, ast[0], forceScalar)
-    : zenWithTarget(target, ast as UGen, forceScalar);
-
-  const h = new Date().getTime();
   return {
     zenGraph,
     statement,

@@ -91,51 +91,23 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
 
   onNewSharedBuffer.push(...vm.newSharedBuffers);
 
-  if (attributeUpdates.length > 0) {
+  const updates = {
+    attributeUpdates: attributeUpdates.length > 0 ? attributeUpdates : undefined,
+    replaceMessages: replaceMessages.length > 0 ? replaceMessages : undefined,
+    mainThreadInstructions: mainThreadInstructions.length > 0 ? mainThreadInstructions : undefined,
+    onNewSharedBuffer: onNewSharedBuffer.length > 0 ? onNewSharedBuffer : undefined,
+    onNewValue: onNewValue.length > 0 ? onNewValue : undefined,
+    onNewValues: onNewValues.length > 0 ? onNewValues : undefined,
+    mutableValueChanged: mutableValueChanged.length > 0 ? mutableValueChanged : undefined,
+  };
+
+  // Only send if there are actually updates
+  if (Object.values(updates).some((value) => value !== undefined)) {
     self.postMessage({
-      type: "attributeUpdates",
-      body: attributeUpdates,
+      type: "batchedUpdates",
+      updates,
     });
   }
-  if (replaceMessages.length > 0)
-    self.postMessage({
-      type: "replaceMessages",
-      body: replaceMessages,
-    });
-
-  if (mainThreadInstructions.length > 0)
-    self.postMessage({
-      type: "mainThreadInstructions",
-      body: mainThreadInstructions,
-    });
-
-  if (onNewSharedBuffer.length > 0)
-    self.postMessage({
-      type: "onNewSharedBuffer",
-      body: onNewSharedBuffer,
-    });
-
-  if (onNewValue.length > 0) {
-    self.postMessage({
-      type: "onNewValue",
-      body: onNewValue,
-    });
-  }
-
-  if (onNewValues.length > 0) {
-    self.postMessage({
-      type: "onNewValues",
-      body: onNewValues,
-    });
-  }
-
-  if (mutableValueChanged.length > 0) {
-    self.postMessage({
-      type: "mutableValueChanged",
-      body: mutableValueChanged,
-    });
-  }
-
   vm.clear();
 };
 

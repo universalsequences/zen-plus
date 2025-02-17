@@ -145,13 +145,34 @@ export const compileInstructions = (nodes: Node[]) => {
     }
   };
 
+  const pushInstructionIntoBranchOrRoot = (
+    instruction: Instruction,
+    node: Node,
+    outletIndex: number | undefined,
+  ) => {
+    if (
+      branchStack.length &&
+      !(node as ObjectNode).branching &&
+      outletIndex !== undefined &&
+      branchStack[branchStack.length - 1].branches[outletIndex]
+    ) {
+      branchStack[branchStack.length - 1].branches[outletIndex].push(instruction);
+    } else if ((node as ObjectNode).branching && outletIndex !== undefined) {
+      const branch = branchStack[branchStack.length - 2];
+      if (branch) {
+        branch.branches[outletIndex].push(instruction);
+      } else {
+        instructions.push(instruction);
+      }
+    } else {
+      instructions.push(instruction);
+    }
+  };
+
   for (const node of nodes) {
     popIfNecessary(node);
     const initialCurrentBranch = branchStack[branchStack.length - 1];
     let _outlet = getOutletIndex(node);
-    if (node.id === "5u") {
-      console.log("5u current initial branch outlet=%s ", _outlet, initialCurrentBranch);
-    }
     let outletIndexStore = branchStack[branchStack.length - 1]?.outletIndexStore;
     if (_outlet !== undefined) {
       outletIndexStore = _outlet;
@@ -207,24 +228,9 @@ export const compileInstructions = (nodes: Node[]) => {
         }
       }
 
-      if (
-        branchStack.length &&
-        !(node as ObjectNode).branching &&
-        outletIndex !== undefined &&
-        branchStack[branchStack.length - 1].branches[outletIndex]
-      ) {
-        branchStack[branchStack.length - 1].branches[outletIndex].push(instruction);
-      } else if ((node as ObjectNode).branching && outletIndex !== undefined) {
-        const branch = branchStack[branchStack.length - 2];
-        if (branch) {
-          branch.branches[outletIndex].push(instruction);
-        } else {
-          instructions.push(instruction);
-        }
-      } else {
-        instructions.push(instruction);
-      }
+      pushInstructionIntoBranchOrRoot(instruction, node, outletIndex);
 
+      // handle the branch instruction (if needed)
       if (branchInstructionToInsert) {
         const currentBranch = initialCurrentBranch || branchStack[branchStack.length - 1];
         if (
@@ -248,14 +254,20 @@ export const compileInstructions = (nodes: Node[]) => {
 
         for (const connection of immediateSubPatchConnections) {
           const instruction = createAttributeInstruction(connection.destination as ObjectNode, idx);
+          pushInstructionIntoBranchOrRoot(
+            instruction,
+            node,
+            isBranchingNode || outletIndex === undefined ? idx : outletIndex,
+          );
           instructions.push(instruction);
         }
 
         const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
-        const connectionInstructions = connections
+        const connectionInstructionsToPushIntoRoot = connections
           .flatMap((connection) => {
             const compiled = compileConnection(connection);
             if (branchStack.length) {
+              // if we're in a branch we handle pushing it directly into the branch here
               const branch =
                 branchStack[branchStack.length - 1].branches[
                   isBranchingNode || outletIndex === undefined ? idx : outletIndex
@@ -269,8 +281,8 @@ export const compileInstructions = (nodes: Node[]) => {
           })
           .filter((x) => !!x);
 
-        if (connectionInstructions.length) {
-          instructions.push(...connectionInstructions);
+        if (connectionInstructionsToPushIntoRoot.length) {
+          instructions.push(...connectionInstructionsToPushIntoRoot);
         }
       });
     }

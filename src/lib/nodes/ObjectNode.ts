@@ -282,6 +282,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   }
 
   processMessageForAttributes(message: Message) {
+    if (message === "clear") {
+      this.fn?.(message);
+      return true;
+    }
     if (typeof message === "string" && message !== "bang") {
       const tokens = message.split(" ").filter((x) => x.length > 0);
       const attributeName = tokens[0];

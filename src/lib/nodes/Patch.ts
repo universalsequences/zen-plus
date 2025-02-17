@@ -559,6 +559,9 @@ export class PatchImpl implements Patch {
   }
 
   async initialLoadCompile(base = true) {
+    if (base) {
+      compileVM(this, false);
+    }
     this.sendNumberNodes();
     const subpatch = this as unknown as SubPatch;
     if (!subpatch.parentPatch) {
@@ -627,9 +630,7 @@ export class PatchImpl implements Patch {
 
     this.finishedInitialCompile = true;
     if (needsVMCompile) {
-      const startTime = new Date().getTime();
-      compileVM(this);
-      const endTime = new Date().getTime();
+      compileVM(this, false);
     }
     this.sendWorkerMessage?.({ type: "loadbang" });
     loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));

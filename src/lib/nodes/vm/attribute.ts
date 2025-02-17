@@ -1,4 +1,4 @@
-import type { Message, ObjectNode } from "../types";
+import type { Node, Message, ObjectNode } from "../types";
 import { MainThreadInstruction } from "./evaluate";
 import { Instruction, InstructionType } from "./types";
 
@@ -32,7 +32,10 @@ export const evaluateAttributeInstruction = (
 
   const tokens = message.split(" ");
   const name = tokens[0];
-  const value = Number.parseFloat(tokens[1]);
+  const value =
+    tokens.length === 3
+      ? [Number.parseFloat(tokens[1]), Number.parseFloat(tokens[2])]
+      : Number.parseFloat(tokens[1]);
   // todo - extract time
   const matchingNodes = instruction.nodes?.filter((x) => x.arguments[0] === name) || [];
 

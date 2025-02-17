@@ -24,6 +24,7 @@ import { useStorage } from "@/contexts/StorageContext";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import type { Definition } from "@/lib/docs/docs";
 import { setupSkeletonPatch } from "@/lib/utils";
+import { duplicateObject } from "@/lib/nodes/utils/duplicateObject";
 
 const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode }> = ({
   objectNode,
@@ -234,36 +235,7 @@ const InnerObjectNodeComponent: React.FC<{
   }, [objectNode]);
 
   const duplicate = useCallback(() => {
-    const copied = new ObjectNodeImpl(objectNode.patch);
-
-    if (objectNode.name === "zen") {
-      const typeMap: { [x: number]: string } = {
-        [OperatorContextType.ZEN]: "zen",
-        [OperatorContextType.GL]: "gl",
-        [OperatorContextType.CORE]: "core",
-        [OperatorContextType.AUDIO]: "audio",
-      };
-      const attr = objectNode.subpatch ? ` @type ${typeMap[objectNode.subpatch.patchType]}` : "";
-
-      copied.parse("zen" + attr);
-      const json = objectNode.getJSON();
-      if (copied.subpatch && json.subpatch) {
-        copied.subpatch.fromJSON(json.subpatch, true);
-        copied.attributes = { ...copied.attributes, ...json.attributes };
-        copied.size = json.size;
-      }
-    } else {
-      const size = objectNode.size;
-      copied.parse(objectNode.text, objectNode.operatorContextType, false);
-      if (size) copied.size = { ...size };
-    }
-
-    copied.position = {
-      x: objectNode.position.x + sizeIndexRef.current[objectNode.id].width + 15,
-      y: objectNode.position.y,
-    };
-    newObjectNode(copied, copied.position);
-    updatePosition(copied.id, copied.position);
+    duplicateObject({ objectNode, newObjectNode, updatePosition });
   }, [objectNode, newObjectNode, updatePosition]);
 
   const onMouseDown = useCallback(

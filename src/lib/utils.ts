@@ -24,7 +24,7 @@ export const getUpdatedSize = (objectNode: ObjectNode, size: Size | null): Size 
   return { width: 500, height: 500 };
 };
 
-export const setupSkeletonPatch = (patch: SubPatch) => {
+export const setupSkeletonPatch = (patch: SubPatch, numInlets = 1) => {
   const ZEN = OperatorContextType.ZEN;
   let in1 = new ObjectNodeImpl(patch as Patch);
   in1.parse("in 1", ZEN, false);
@@ -36,6 +36,20 @@ export const setupSkeletonPatch = (patch: SubPatch) => {
   in1.position = { x: 100, y: 100 };
   out1.position = { x: 100, y: 300 };
 
-  patch.objectNodes = [in1, out1];
-  patch.messageNodes = [];
+  if (numInlets === 2) {
+    let in2 = new ObjectNodeImpl(patch as Patch);
+    in2.parse("in 2", ZEN, false);
+
+    let out2 = new ObjectNodeImpl(patch as Patch);
+    out2.parse("out 2", ZEN, false);
+
+    in2.connect(out2, out2.inlets[0], in2.outlets[0], false);
+    in2.position = { x: 200, y: 100 };
+    out2.position = { x: 200, y: 300 };
+    patch.objectNodes = [in1, out1, in2, out2];
+    patch.messageNodes = [];
+  } else {
+    patch.objectNodes = [in1, out1];
+    patch.messageNodes = [];
+  }
 };

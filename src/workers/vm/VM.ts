@@ -213,12 +213,10 @@ export class VM {
       }
       this.alreadyLoaded[nodeId] = true;
       if ((node as ObjectNode).needsLoad) {
-        /*
         if ((node as ObjectNode).isAsync) {
           node.receive(node.inlets[0], "bang");
           continue;
         }
-        */
         const ret = this.evaluateNode(nodeId, "bang");
         vmEvaluation.instructionsEvaluated.push(...ret.instructionsEvaluated);
         vmEvaluation.replaceMessages.push(...ret.replaceMessages);
@@ -242,14 +240,6 @@ export class VM {
       }
       this.alreadyLoaded[nodeId] = true;
       if ((node as MessageNode).messageType === MessageType.Number) {
-        if (node.attributes["scripting name"]) {
-          console.log(
-            "loading number",
-            node.attributes["scripting name"],
-            (node as MessageNode).message,
-            this.nodeInstructions[nodeId],
-          );
-        }
         this.evaluateNode(nodeId, (node as MessageNode).message as number);
       }
     }
@@ -267,7 +257,7 @@ export class VM {
     if (objectNode && objectNode.custom) {
       (objectNode.custom as any).value = num;
     }
-    return this.evaluateNode(nodeId, `${text[0]} ${num}`);
+    return this.evaluateNode(nodeId, `${text[1]} ${num}`);
   }
 }
 

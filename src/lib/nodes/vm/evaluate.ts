@@ -102,6 +102,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           } else {
             // should throw or skip?
           }
+
           break;
         }
         case InstructionType.ReplaceMessage: {
@@ -213,7 +214,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
             register[outletNumber as number] === undefined
               ? initialMessage
               : register[outletNumber as number];
-          if (nodes && outletNumber !== undefined && attributeValue) {
+          if ((nodes?.length || 0) > 0 && outletNumber !== undefined && attributeValue) {
             mainThreadInstructions.push(
               ...evaluateAttributeInstruction(attributeValue as Message, instruction),
             );
