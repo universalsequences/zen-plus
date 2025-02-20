@@ -87,7 +87,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           // trigger/pipe mesasge
           const messageNode = instruction.node as MessageNode;
           if (instruction.outletNumber === undefined) {
-            throw new Error("missing outlet number for pipe");
+            throw new Error("missing outlet number for pipe", instruction);
           }
           const messageToPipe = register[instruction.outletNumber];
 
@@ -107,6 +107,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
         }
         case InstructionType.ReplaceMessage: {
           if (instruction.outletNumber === undefined) {
+            console.log("missing outlet number ofr pipe", instruction);
             throw new Error("missing outlet number for pipe");
           }
           const messageToReplace = register[instruction.outletNumber];
@@ -151,13 +152,15 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           }
           if (objectNode.fn && inputMessage !== undefined) {
             if (objectNode.skipCompilation) {
-              mainThreadInstructions.push({
-                nodeId: objectNode.id,
-                inletMessages: [
-                  inputMessage,
-                  ...objectNode.inlets.slice(1).map((x) => x.lastMessage),
-                ],
-              });
+              if (objectNode.needsMainThread) {
+                mainThreadInstructions.push({
+                  nodeId: objectNode.id,
+                  inletMessages: [
+                    inputMessage,
+                    ...objectNode.inlets.slice(1).map((x) => x.lastMessage),
+                  ],
+                });
+              }
             } else {
               if (instruction.nodes) {
                 // instruction includes nodes, so we tag the object with them so they may use it
@@ -184,7 +187,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
               }
               inlet.lastMessage = register[outletNumber] as Message;
             }
-            if (node.skipCompilation) {
+            if ((node as ObjectNode).needsMainThread) {
               const inletMessages = new Array(node.inlets.length).fill(undefined);
               inletMessages[inletNumber] = register[outletNumber] as Message;
               mainThreadInstructions.push({

@@ -204,6 +204,7 @@ doc("function", {
 });
 export const function_editor = (node: ObjectNode) => {
   node.skipCompilation = true;
+  node.needsMainThread = true;
   if (!node.custom) {
     node.custom = new FunctionEditor(node);
   }

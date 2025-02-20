@@ -535,14 +535,16 @@ export class PatchImpl implements Patch {
     const loadBangs = this.objectNodes.filter(
       (x) => x.operatorContextType === OperatorContextType.CORE && x.needsLoad,
     );
+    /*
     for (const x of loadBangs) {
       x.receive(x.inlets[0], "bang");
     }
+    */
 
     const allNodes = this.getAllNodes();
     const allIds = allNodes.map((x) => x.id);
     const unique = new Set(allIds);
-    if (allIds.length !== unique.size) console.log("unique", this.name, allIds, unique);
+    //if (allIds.length !== unique.size) console.log("unique", this.name, allIds, unique);
     return _connections;
   }
 
@@ -621,7 +623,7 @@ export class PatchImpl implements Patch {
       }
     }
 
-    this.sendAttributeMessages();
+    // this.sendAttributeMessages();
 
     const o = useDeep ? this.getAllNodes() : this.objectNodes;
     const loadBangs = o.filter(

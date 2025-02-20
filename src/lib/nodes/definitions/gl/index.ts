@@ -288,6 +288,7 @@ doc("uniform", {
 
 export const gl_uniform = (node: ObjectNode, name: Lazy, width: Lazy, height: Lazy) => {
   node.needsLoad = true;
+  node.needsMainThread = true;
 
   node.attributeOptions["type"] = ["float", "Sampler2D"];
   if (!node.attributes["type"]) {

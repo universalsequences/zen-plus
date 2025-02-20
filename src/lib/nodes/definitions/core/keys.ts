@@ -6,6 +6,7 @@ doc("key.down", {
   numberOfOutlets: (x) => x,
   inletNames: ["none", "key"],
   description: "outputs bang if key matches",
+  defaultValue: "",
 });
 
 export const keydown: NodeFunction = (node: ObjectNode, key: Lazy) => {
@@ -17,6 +18,10 @@ export const keydown: NodeFunction = (node: ObjectNode, key: Lazy) => {
       return; // Ignore the event if it's from an input field or text box
     }
     const _key = key() === "space" ? " " : key();
+    if (_key === "") {
+      node.send(node.outlets[0], e.key);
+      return;
+    }
     if (e.key === _key) {
       e.preventDefault();
       node.send(node.outlets[0], "bang");

@@ -12,6 +12,7 @@ doc("click", {
 });
 export const z_click = (node: ObjectNode) => {
   let clicker: Clicker;
+  node.needsMainThread = true;
   node.needsLoad = true;
   return (message: Message) => {
     if (!clicker) {
@@ -27,7 +28,7 @@ export const z_click = (node: ObjectNode) => {
       message = parseFloat(message as string);
     }
     if (typeof message === "number") {
-      clicker.click!(44100 * (message - node.patch.audioContext.currentTime));
+      clicker.click!(44100 * (message - (node.patch.audioContext?.currentTime || 0)));
     } else {
       clicker.click!();
     }

@@ -12,6 +12,7 @@ doc("data", {
 });
 
 export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
+  _node.needsMainThread = true;
   let block: BlockGen | null = null;
   let lastChannels: number = 0;
   let lastSize: number = 0;

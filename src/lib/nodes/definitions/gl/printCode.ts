@@ -16,13 +16,11 @@ export const printCode = (statement: Statement): string => {
   const uniforms: Uniforms = {};
   const body = _printStatement(statement, variables, uniforms, 0);
   const _variables = Object.values(variables).sort((a, b) => a.idx - b.idx);
-  console.log("_variables=", _variables);
   let varOut = "";
   for (const variable of _variables) {
     varOut += `let ${variable.name} = ${variable.printed};
 `;
   }
-  console.log("var out=", varOut);
 
   let uniformsString = "{";
   for (const name in uniforms) {

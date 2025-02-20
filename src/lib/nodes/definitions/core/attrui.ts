@@ -29,6 +29,9 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
 
   // node.inlets.forEach(x => x.hidden = true);
   return (_message: Message) => {
+    if (node.patch.isCompiling) {
+      return [];
+    }
     if (!node.controllingParamNode) {
       const _name = name();
       const params = getNodesControllableByAttriUI(node, _name as string);

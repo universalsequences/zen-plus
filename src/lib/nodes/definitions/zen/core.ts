@@ -46,6 +46,7 @@ doc("param", {
 
 export const zen_param = (object: ObjectNode, name: Lazy) => {
   // object.needsLoad = true;
+  object.needsMainThread = true;
   if (object.attributes["default"] === undefined) {
     object.attributes["default"] = 0;
   }

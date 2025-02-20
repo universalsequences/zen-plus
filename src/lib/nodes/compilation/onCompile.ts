@@ -151,8 +151,8 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
               initMemory(zenGraph.context, worklet);
               worklet.port.postMessage({ type: "ready" });
               patch.skipRecompile = true;
-              patch.sendAttributeMessages();
-              patch.sendNumberMessages(true);
+              //patch.sendAttributeMessages();
+              //patch.sendNumberMessages(true);
               const matricesAndBuffers = patch.objectNodes.filter(
                 (x) => x.name === "matrix" || x.name === "buffer",
               );
@@ -238,8 +238,8 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
             }
           }
           patch.skipRecompile = true;
-          patch.sendNumberMessages();
-          patch.sendAttributeMessages();
+          //patch.sendNumberMessages();
+          //patch.sendAttributeMessages();
 
           mapReceive(patch.objectNodes.filter((x) => x.name === "matrix" || x.name === "buffer"));
 

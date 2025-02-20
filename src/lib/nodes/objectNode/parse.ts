@@ -53,6 +53,9 @@ export const parse = (
     // skip vm compilation
     objectNode.skipCompilation = true;
   }
+  if (contextType === OperatorContextType.AUDIO) {
+    objectNode.needsMainThread = true;
+  }
 
   const definition: Definition | null = context.lookupDoc(name);
 
@@ -221,7 +224,7 @@ export const parse = (
     objectNode.operatorContextType === OperatorContextType.CORE
   ) {
     // need to ensure things are straight with objectNode
-    objectNode.receive(objectNode.inlets[0], "bang");
+    //objectNode.receive(objectNode.inlets[0], "bang");
   }
   if (objectNode.patch.registerNewNode) {
     objectNode.patch.registerNewNode(objectNode);
@@ -245,7 +248,7 @@ const setupStaticNumberObject = (objectNode: ObjectNode, num: number, compile: b
   objectNode.operatorContextType = OperatorContextType.NUMBER;
   objectNode.fn = (message: Message) => [num];
   objectNode.inlets.length = 0;
-  objectNode.skipCompilation = true;
+  //objectNode.skipCompilation = true;
   if (objectNode.outlets.length === 0) {
     objectNode.newOutlet();
   }

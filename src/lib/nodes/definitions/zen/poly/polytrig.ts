@@ -61,6 +61,103 @@ export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
     try {
       const validatedTrigger: TriggerMessage = parse(triggerSchema, trigger);
 
+      // Handle string triggers (kept from original)
+      if (typeof trigger === "string") {
+        if (voices[0]) {
+          voices[0].trigger.click!();
+        }
+        return;
+      }
+
+      const time = validatedTrigger.time;
+      const dur = validatedTrigger.duration;
+      const currentTime = node.patch.audioContext?.currentTime as number;
+      let voiceChosen: Voice | undefined;
+
+      // First pass: Look for voices that have never been triggered
+      // or voices that are definitely past their note duration
+      for (const voice of voices) {
+        if (
+          !voice.lastTriggerTime ||
+          (voice.lastTriggerTime &&
+            voice.lastTriggerDuration &&
+            time > voice.lastTriggerTime + voice.lastTriggerDuration)
+        ) {
+          voiceChosen = voice;
+          break;
+        }
+      }
+
+      // Second pass: If no free voice found, use a more sophisticated selection
+      if (!voiceChosen) {
+        let bestScore = -Infinity;
+        let earliestEndTime = Infinity;
+
+        for (const voice of voices) {
+          // Calculate when this voice's current note ends
+          const endTime = voice.lastTriggerTime! + (voice.lastTriggerDuration || 0);
+
+          // Calculate a score based on multiple factors
+          let score = 0;
+
+          // Factor 1: How soon will this voice be free?
+          const timeUntilFree = Math.max(0, endTime - time);
+          score -= timeUntilFree * 100; // Heavily weight voices that will be free sooner
+
+          // Factor 2: Prefer voices that have been playing longer
+          score -= (currentTime - voice.lastTriggerTime!) * 50;
+
+          // Factor 3: Prefer voices with shorter remaining durations
+          if (voice.lastTriggerDuration) {
+            const remainingDuration = Math.max(0, endTime - currentTime);
+            score -= remainingDuration * 25;
+          }
+
+          // Track the earliest end time for fallback
+          if (endTime < earliestEndTime) {
+            earliestEndTime = endTime;
+          }
+
+          // Update best voice if this one has a better score
+          if (score > bestScore) {
+            bestScore = score;
+            voiceChosen = voice;
+          }
+        }
+
+        // Fallback: If no voice chosen (shouldn't happen), take the one that ends soonest
+        if (!voiceChosen) {
+          voiceChosen =
+            voices.find(
+              (v) => v.lastTriggerTime! + (v.lastTriggerDuration || 0) === earliestEndTime,
+            ) || voices[0];
+        }
+      }
+
+      // Update and trigger the chosen voice
+      if (voiceChosen && time) {
+        const _time = (time - currentTime) * 44100;
+        voiceChosen.lastTriggerTime = time;
+        voiceChosen.lastTriggerDuration = dur;
+        voiceChosen.trigger.click!(time);
+
+        // Set parameters
+        for (const key in validatedTrigger) {
+          const _param = voiceChosen.params.find((x) => x.name === key);
+          if (_param) {
+            _param.param.set!(validatedTrigger[key], _time);
+          }
+        }
+      }
+    } catch (e) {
+      console.log("invalid trigger received", trigger, e);
+    }
+  };
+
+  const handleTrigger2 = (trigger: Message) => {
+    try {
+      const validatedTrigger: TriggerMessage = parse(triggerSchema, trigger);
+
       if (typeof trigger === "string") {
         if (voices[0]) {
           voices[0].trigger.click!();

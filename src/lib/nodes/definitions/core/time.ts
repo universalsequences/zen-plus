@@ -9,6 +9,7 @@ doc("currenttime", {
 
 export const currenttime = (_node: ObjectNode) => {
   _node.skipCompilation = true;
+  _node.needsMainThread = true;
   return (_x: Message) => {
     return [_node.patch.audioContext?.currentTime];
   };

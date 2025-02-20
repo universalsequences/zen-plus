@@ -34,6 +34,7 @@ export const metro = (node: ObjectNode, bpm: Lazy) => {
   node.needsLoad = true;
 
   node.skipCompilation = true;
+  node.needsMainThread = true;
 
   // metro needs to be an endpoint node
 

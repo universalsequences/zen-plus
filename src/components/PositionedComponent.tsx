@@ -435,7 +435,7 @@ const PositionedComponent: React.FC<{
         )}
 
         {node?.instructions && (
-          <div className="w-1 h-1 bg-red-500 rounded-full absolute top-0 right-0" />
+          <div className="w-1 h-1 bg-red-4500 rounded-full absolute top-0 right-0" />
         )}
         {!isResizing && !fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent

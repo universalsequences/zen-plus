@@ -186,7 +186,6 @@ export class VM {
    * executes all load bangs / numbers - to be called after initial compile of project
    * */
   loadBang() {
-    console.log("load bang called");
     const vmEvaluation: VMEvaluation = {
       instructionsEvaluated: [],
       replaceMessages: [],

@@ -111,7 +111,6 @@ export const data = (
   };
 
   resp.set = (buf: Float32Array, time?: number, transferable = false) => {
-    console.log("data set=", buf);
     lastData = buf;
     for (let { context, block } of contextBlocks) {
       block.initData = buf;

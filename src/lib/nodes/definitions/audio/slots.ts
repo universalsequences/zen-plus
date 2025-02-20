@@ -5,12 +5,14 @@ import {
   type Message,
   type ObjectNode,
   type SerializedObjectNode,
+  SubPatch,
 } from "../../types";
 import { doc } from "./doc";
 import ObjectNodeImpl from "../../ObjectNode";
 import { sleep } from "../../compilation/onCompile";
 import { OperatorContextType } from "../../context";
 import { getRootPatch } from "../../traverse";
+import { setupSkeletonPatch } from "@/lib/utils";
 
 doc("slots~", {
   description: "connect subpatches in series",
@@ -117,7 +119,9 @@ const connectInputs = (node: ObjectNode) => {
     const _splitter = node.patch.audioContext!.createChannelSplitter(2);
     node.merger.connect(_splitter);
     _splitter.connect(first.merger, 0, 0);
-    _splitter.connect(first.merger, 1, 1);
+    if (first.merger.numberOfInputs > 1) {
+      _splitter.connect(first.merger, 1, 1);
+    }
   }
 };
 
@@ -173,6 +177,7 @@ const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode
     }
     objectNode.setAttribute("slotview", true);
     if (objectNode.subpatch) {
+      setupSkeletonPatch(objectNode.subpatch as SubPatch, 2);
       objectNode.subpatch.name = "";
       objectNode.subpatch.isInsideSlot = true;
       objectNode.subpatch.slotsNode = node;
@@ -211,7 +216,7 @@ const compileSlots = async (node: ObjectNode) => {
   }
 
   // TODO - wait better w/o this wait but is this right?
-  //await waitForCompilation(node.slots);
+  await waitForCompilation(node.slots);
 
   for (const slot of node.slots) {
     slot.subpatch?.setupPostCompile(true, false);
@@ -230,10 +235,9 @@ const compileSlots = async (node: ObjectNode) => {
 const waitForCompilation = async (slots: ObjectNode[]) => {
   let attempts = 0;
   while (slots.some((x) => !x.audioNode || x.subpatch?.skipRecompile)) {
-    await sleep(50);
+    await sleep(5);
     if (++attempts > 150) break;
   }
-  await sleep(200);
 };
 
 const reconnectOutlets = (node: ObjectNode) => {

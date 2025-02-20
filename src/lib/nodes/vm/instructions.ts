@@ -224,7 +224,7 @@ export const compileInstructions = (nodes: Node[]) => {
         if (inbound) {
           instruction.outletNumber = inbound.source.outlets.indexOf(inbound.sourceOutlet);
         } else {
-          console.log("missing outletNumber");
+          console.log("missing outletNumber", instruction, node);
         }
       }
 
