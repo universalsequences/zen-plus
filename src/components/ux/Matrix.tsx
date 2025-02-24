@@ -100,11 +100,13 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       };
       let DIFF = editing.current.startY - client.y;
       let v =
-        editing.current.value + ((min as number) + (max as number) * DIFF) / editing.current.startY;
+        editing.current.value +
+        ((min as number) + ((max as number) - (min as number)) * DIFF) / editing.current.startY;
       if (DIFF < 0) {
         v =
           editing.current.value +
-          ((min as number) + (max as number) * DIFF) / (height - editing.current.startY);
+          ((min as number) + ((max as number) - (min as number)) * DIFF) /
+            (height - editing.current.startY);
       }
       let value = Math.min(max as number, v);
       if (value < (min as number)) {
@@ -148,7 +150,6 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                 .filter((x) => x !== "")
                 .map((x) => parseInt(x));
 
-    console.log("matrix re-render");
     return (
       <div ref={ref} className="flex flex-col">
         {(show === "row" ? _rows.slice(rowToShow as number, (rowToShow as number) + 1) : _rows).map(

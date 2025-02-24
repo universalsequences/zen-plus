@@ -31,7 +31,7 @@ const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode 
   position,
 }) => {
   const { setSelection, selectedNodes, setSelectedNodes } = useSelection();
-  const { updatePosition, sizeIndexRef } = usePosition();
+  const { updatePosition, sizeIndexRef, updateZIndex } = usePosition();
   const { value } = useValue();
   const { lockedMode } = useLocked();
   const lockedModeRef = useRef(lockedMode);
@@ -61,6 +61,7 @@ const ObjectNodeComponent: React.FC<{ position?: string; objectNode: ObjectNode 
       objectNode={objectNode}
       setSelection={setSelection}
       size={objectNode.size || null}
+      updateZIndex={updateZIndex}
       setSelectedNodes={setSelectedNodes}
       updatePosition={updatePosition}
       isSelected={isSelected}
@@ -80,9 +81,11 @@ const InnerObjectNodeComponent: React.FC<{
   setSelectedNodes: React.Dispatch<React.SetStateAction<(ObjectNode | MessageNode)[]>>;
   objectNode: ObjectNode;
   position?: string;
+  updateZIndex: (x: string, index: number) => void;
 }> = ({
   position,
   typeError,
+  updateZIndex,
   updatePosition,
   size,
   setSelection,
@@ -241,6 +244,9 @@ const InnerObjectNodeComponent: React.FC<{
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.shiftKey || isCustomView || lockedModeRef.current || e.button === 2) return;
+      if (objectNode.locked) {
+        return;
+      }
 
       const now = Date.now();
       const isDoubleClick = now - lastSubPatchClick.current < 250;
@@ -287,6 +293,15 @@ const InnerObjectNodeComponent: React.FC<{
     },
     [editing, objectNode, isSelected, isCustomView],
   );
+
+  const moveToBack = useCallback(() => {
+    objectNode.zIndex = -1;
+    updateZIndex(objectNode.id, -1);
+  }, []);
+
+  const lockObject = useCallback((locked: boolean) => {
+    objectNode.locked = locked;
+  }, []);
 
   const showExample = useCallback(async (examplePatch: string) => {
     const serializedSubPatch = await fetchSubPatchForDoc(examplePatch);
@@ -360,6 +375,18 @@ const InnerObjectNodeComponent: React.FC<{
             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
           >
             Duplicate
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            onClick={moveToBack}
+            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
+          >
+            Move to back
+          </ContextMenu.Item>
+          <ContextMenu.Item
+            onClick={() => lockObject(objectNode.locked ? false : true)}
+            className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"
+          >
+            {objectNode.locked ? "Unlock" : "Lock"}
           </ContextMenu.Item>
           <ContextMenu.Item
             onClick={() => setSelectedNodes([objectNode])}

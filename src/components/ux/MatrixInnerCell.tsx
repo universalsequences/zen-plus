@@ -14,6 +14,7 @@ const MatrixInnerCell: React.FC<{
   unit: string;
   valueRef: React.MutableRefObject<number>;
   idx: number;
+  isBar: boolean;
   objectNode: ObjectNode;
   isLine: boolean;
 }> = ({
@@ -22,6 +23,7 @@ const MatrixInnerCell: React.FC<{
   selectedField,
   idx,
   valueRef,
+  isBar,
   unit,
   isFullRadius,
   cornerRadius,
@@ -78,25 +80,57 @@ const MatrixInnerCell: React.FC<{
     if (!ref1.current) return;
 
     const percentage = ((value - min) / (max - min)) * 99 + "%";
-    ref1.current.style.width = !isLine && isFullRadius ? percentage : " ";
-    ref1.current.style.height = isLine ? "2px" : percentage;
+    ref1.current.style.width = isBar
+      ? "8%"
+      : !isLine && !isBar && !isFullRadius
+        ? "99%"
+        : !isLine && isFullRadius
+          ? percentage
+          : " ";
+    console.log("batch style update", ref1.current.style.width);
+    if (isBar) {
+      ref1.current.style.marginLeft = "auto";
+      ref1.current.style.marginRight = "auto";
+      ref1.current.style.left = "0";
+      ref1.current.style.right = "0";
+    } else {
+      //ref1.current.style.marginLeft = "unset";
+      //ref1.current.style.marginRight = "unset";
+      ref1.current.style.left = "unset";
+      ref1.current.style.right = "unset";
+    }
+    ref1.current.style.height = isBar ? percentage : isLine ? "2px" : percentage;
     ref1.current.style.bottom = isLine ? percentage : "0";
     ref1.current.style.backgroundColor = fillColor;
-  }, [value, isLine, max, isFullRadius, fillColor, min]);
+  }, [value, isLine, isBar, max, isFullRadius, fillColor, min]);
 
   return React.useMemo(
     () => (
       <>
-        <div ref={ref1} />
+        <div ref={ref1}>
+          {isBar && (
+            <div
+              style={{
+                width: "300%",
+                left: "-92%",
+                top: -1,
+                backgroundColor: fillColor,
+                aspectRatio: "1/1",
+              }}
+              className=" rounded-full table absolute mx-auto "
+            />
+          )}
+        </div>
         <div className="table absolute h-full w-full flex top-0 left-0 active:opacity-100 opacity-0 hover:opacity-100">
           <div
             ref={ref2}
+            style={{ fontSize: "60%" }}
             className="table absolute top-0 left-0 right-0 bottom-0 m-auto text-white"
           />
         </div>
       </>
     ),
-    [],
+    [fillColor, isBar],
   );
 };
 

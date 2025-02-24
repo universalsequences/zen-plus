@@ -739,7 +739,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       size: this.size,
       operatorContextType: this.operatorContextType,
       script: this.script,
+      locked: this.locked,
     };
+
+    if (this.zIndex === -1) {
+      json.zIndex = -1;
+    }
 
     if (this.steps) {
       json.steps = this.steps;
@@ -805,6 +810,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       const { buffer } = createMatrixBuffer(this, json.buffer.length, _type, _buffer);
       this.buffer = buffer as Float32Array;
     }
+
+    if (json.zIndex === -1) {
+      this.zIndex = -1;
+    }
+
+    this.locked = json.locked;
 
     this.script = json.script;
 

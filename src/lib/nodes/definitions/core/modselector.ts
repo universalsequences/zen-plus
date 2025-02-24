@@ -73,6 +73,10 @@ export const modselector = (node: ObjectNode) => {
     }
     const outlet = source.outlets[outletNumber as number];
 
+    if (!outlet) {
+      return;
+    }
+
     node.saveData = {
       source: source.id,
       outlet: outletNumber,

@@ -13,6 +13,12 @@ const handleCompileReset = (patch: Patch): [ObjectNode[], ObjectNode[]] => {
   patch.storedStatement = undefined;
   patch.historyDependencies = [];
   patch.historyNodes = new Set<ObjectNode>();
+  for (const node of patch.getAllNodes()) {
+    if (node.subpatch) {
+      node.subpatch.historyNodes = new Set<ObjectNode>();
+      node.subpatch.historyDependencies = [];
+    }
+  }
   patch.waiting = true;
 
   // re-parse every node so that we "start from scratch"

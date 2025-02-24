@@ -44,6 +44,7 @@ const createTriggerSchema = (argNames: string[]) => {
 };
 
 export const polytrig = (node: ObjectNode, ...args: Lazy[]) => {
+  node.needsMainThread = true;
   if (!node.attributes.voices) {
     node.attributes.voices = 6;
   }

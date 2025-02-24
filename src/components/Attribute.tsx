@@ -72,7 +72,7 @@ const Attribute = (props: Props) => {
             onClick={() => setOpened(!opened)}
             style={{ backgroundColor: value }}
             className={
-              (opened ? "border border-white" : "border-zinc-600") +
+              (opened ? "border border-white" : "border-zinc-600 border") +
               " rounded-lg w-8 h-3 cursor-pointer"
             }
           />

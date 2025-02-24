@@ -31,6 +31,7 @@ import { LiveMeter } from "./LiveMeter";
 import { Toggle } from "./Toggle";
 import { ZequencerUI } from "./zequencer/ZequencerUI";
 import { ModSelector } from "./ModSelector";
+import { Panel } from "./Panel";
 
 export type NodeProps =
   | {
@@ -75,6 +76,7 @@ export const index: ComponentIndex = {
   buttonoptions: ButtonOptions,
   "zequencer.info": ZequencerInfo,
   modselector: ModSelector,
+  panel: Panel,
 };
 
 export const optionalIndex: ComponentIndex = {

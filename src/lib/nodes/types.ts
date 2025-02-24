@@ -1,6 +1,5 @@
 import React from "react";
 import type { StateChange } from "@/lib/nodes/definitions/core/preset";
-import type Assistant from "@/lib/openai/assistant";
 import type { TypeSuccess, TypeError } from "./typechecker";
 import type { RenderJob } from "@/lib/gl/zen";
 import type { SVGObject } from "./definitions/svg/index";
@@ -37,6 +36,7 @@ export interface Positioned {
   position: Coordinate;
   presentationPosition?: Coordinate;
   zIndex: number;
+  locked?: boolean;
   size?: Size;
 }
 
@@ -377,6 +377,8 @@ export interface SerializedConnection {
 export type SerializedObjectNode = Identifiable & {
   text: string;
   script?: string;
+  locked?: boolean;
+  zIndex?: number;
   position: Coordinate;
   presentationPosition: Coordinate;
   outlets: SerializedOutlet[];

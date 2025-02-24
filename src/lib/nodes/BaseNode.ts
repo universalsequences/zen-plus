@@ -36,6 +36,7 @@ export class BaseNode implements Node {
   id: string;
   position: Coordinate;
   zIndex: number;
+  locked?: boolean;
 
   constructor(patch: Patch) {
     this.id = uuid();

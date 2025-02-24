@@ -54,124 +54,126 @@ export class Matrix {
   }
 }
 
-const setupMatrixAttributes = (_node: ObjectNode) => {
-  let columns = (_node.attributes.columns || 4) as number;
-  let rows = (_node.attributes.rows || 4) as number;
+const setupMatrixAttributes = (node: ObjectNode) => {
+  let columns = (node.attributes.columns || 4) as number;
+  let rows = (node.attributes.rows || 4) as number;
 
-  if (!_node.attributes.fillColor) {
-    _node.attributes.fillColor = "#2ad4bf";
+  node.isResizable = true;
+
+  if (!node.attributes.fillColor) {
+    node.attributes.fillColor = "#2ad4bf";
   }
 
-  if (!_node.attributes.showValue) {
-    _node.attributes.showValue = false;
+  if (!node.attributes.showValue) {
+    node.attributes.showValue = false;
   }
 
-  if (!_node.attributes.fields) {
-    _node.attributes.fields = "";
+  if (!node.attributes.fields) {
+    node.attributes.fields = "";
   }
 
-  if (!_node.attributes.selectedField) {
-    _node.attributes.selectedField = "";
+  if (!node.attributes.selectedField) {
+    node.attributes.selectedField = "";
   }
 
-  _node.newAttribute("options", "");
+  node.newAttribute("options", "");
 
-  _node.newAttribute("round", false);
+  node.newAttribute("round", false);
 
-  if (!_node.attributes.unit) {
-    _node.attributes.unit = "";
+  if (!node.attributes.unit) {
+    node.attributes.unit = "";
   }
 
-  _node.attributeOptions.type = ["float", "uint8", "boolean", "object"];
+  node.attributeOptions.type = ["float", "uint8", "boolean", "object"];
 
-  if (!_node.attributes.type) {
-    _node.attributes.type = "float";
+  if (!node.attributes.type) {
+    node.attributes.type = "float";
   }
 
-  _node.attributeOptions.type = ["float", "uint8", "boolean", "object"];
-  if (!_node.attributes.cornerRadius) {
-    _node.attributes.cornerRadius = "full";
+  node.attributeOptions.type = ["float", "uint8", "boolean", "object"];
+  if (!node.attributes.cornerRadius) {
+    node.attributes.cornerRadius = "full";
   }
 
-  _node.attributeCallbacks.columns = (_cols) => {
+  node.attributeCallbacks.columns = (_cols) => {
     const columns = _cols as number;
-    const rows = _node.attributes.rows as number;
-    const type = _node.attributes.type as MatrixType;
+    const rows = node.attributes.rows as number;
+    const type = node.attributes.type as MatrixType;
     const { buffer, sharedBuffer } = createMatrixBuffer(
-      _node,
+      node,
       columns * rows,
       type,
-      Array.from(_node.buffer as Float32Array).slice(0, columns * rows),
+      Array.from(node.buffer as Float32Array).slice(0, columns * rows),
     );
-    _node.buffer = buffer;
-    _node.sharedBuffer = sharedBuffer;
+    node.buffer = buffer;
+    node.sharedBuffer = sharedBuffer;
   };
 
-  _node.attributeCallbacks.rows = (_rows) => {
+  node.attributeCallbacks.rows = (_rows) => {
     const rows = _rows as number;
-    const columns = _node.attributes.columns as number;
-    const type = _node.attributes.type as MatrixType;
+    const columns = node.attributes.columns as number;
+    const type = node.attributes.type as MatrixType;
     const { buffer, sharedBuffer } = createMatrixBuffer(
-      _node,
+      node,
       columns * rows,
       type,
-      Array.from(_node.buffer as Float32Array).slice(0, columns * rows),
+      Array.from(node.buffer as Float32Array).slice(0, columns * rows),
     );
-    _node.buffer = buffer;
-    _node.sharedBuffer = sharedBuffer;
+    node.buffer = buffer;
+    node.sharedBuffer = sharedBuffer;
   };
 
-  _node.attributeCallbacks.type = (type) => {
+  node.attributeCallbacks.type = (type) => {
     const _type = type as MatrixType;
     const { buffer, sharedBuffer } = createMatrixBuffer(
-      _node,
+      node,
       columns * rows,
       _type,
-      Array.from(_node.buffer as Float32Array).slice(0, columns * rows),
+      Array.from(node.buffer as Float32Array).slice(0, columns * rows),
     );
-    _node.buffer = buffer;
-    _node.sharedBuffer = sharedBuffer;
+    node.buffer = buffer;
+    node.sharedBuffer = sharedBuffer;
   };
 
-  _node.newAttribute("ux", "circle");
-  _node.newAttribute("pageSize", 32);
-  _node.newAttribute("pageStart", 0);
-  _node.newAttribute("show", "all");
-  _node.newAttribute("disabledColumns", "");
+  node.newAttribute("ux", "circle");
+  node.newAttribute("pageSize", 32);
+  node.newAttribute("pageStart", 0);
+  node.newAttribute("show", "all");
+  node.newAttribute("disabledColumns", "");
 
-  _node.attributeOptions.ux = ["circle", "line"];
+  node.attributeOptions.ux = ["circle", "line", "bar"];
 
-  _node.attributeOptions.show = ["all", "row", "column"];
+  node.attributeOptions.show = ["all", "row", "column"];
 
-  if (!_node.attributes.rowToShow) {
-    _node.attributes.rowToShow = 0;
+  if (!node.attributes.rowToShow) {
+    node.attributes.rowToShow = 0;
   }
 
-  if (!_node.attributes.toggle) {
-    _node.attributes.toggle = false;
+  if (!node.attributes.toggle) {
+    node.attributes.toggle = false;
   }
 
-  if (!_node.buffer) {
-    _node.attributes.columns = columns;
-    _node.attributes.rows = rows;
-    const _type = _node.attributes.type as MatrixType;
-    const { buffer, sharedBuffer } = createMatrixBuffer(_node, rows * columns, _type);
-    _node.buffer = buffer;
-    _node.sharedBuffer = sharedBuffer;
+  if (!node.buffer) {
+    node.attributes.columns = columns;
+    node.attributes.rows = rows;
+    const _type = node.attributes.type as MatrixType;
+    const { buffer, sharedBuffer } = createMatrixBuffer(node, rows * columns, _type);
+    node.buffer = buffer;
+    node.sharedBuffer = sharedBuffer;
   }
 
-  if (!_node.custom && _node.buffer) {
-    _node.custom = new Matrix(_node, _node.buffer);
+  if (!node.custom && node.buffer) {
+    node.custom = new Matrix(node, node.buffer);
   }
 
-  if (!_node.attributes.min) {
-    _node.attributes.min = 0;
+  if (!node.attributes.min) {
+    node.attributes.min = 0;
   }
-  if (_node.attributes.max === undefined) {
-    _node.attributes.max = 1;
+  if (node.attributes.max === undefined) {
+    node.attributes.max = 1;
   }
 
-  _node.attributeOptions.cornerRadius = ["sm", "lg", "full"];
+  node.attributeOptions.cornerRadius = ["sm", "lg", "full"];
 
   return { columns, rows };
 };
@@ -375,6 +377,9 @@ export const button = (node: ObjectNode) => {
   }
   const bang = "bang";
   return (message: Message) => {
+    if (typeof message === "string" && message.startsWith("backgroundColor")) {
+      return [];
+    }
     if (node.onNewValue) {
       node.onNewValue(counter++);
     }

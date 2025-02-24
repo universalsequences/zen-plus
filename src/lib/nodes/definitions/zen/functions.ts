@@ -29,11 +29,16 @@ const defun = (node: ObjectNode, ...bodies: Lazy[]) => {
     for (let dep of basePatch.historyDependencies) {
       if (dep.node && backwards.includes(dep.node)) {
         deps.push(dep);
+      } else {
+        console.log("wasnt in the thing", dep);
       }
     }
 
+    console.log("base patch=", basePatch);
+
     let sortDep = ["s" as Operator, ...deps] as Statement[];
     sortDep = sortHistories(sortDep);
+    console.log("history dependencies", sortDep);
 
     _bodies = [_message, ..._bodies];
     if (_bodies.length === 0) {

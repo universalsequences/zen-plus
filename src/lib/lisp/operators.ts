@@ -312,7 +312,7 @@ export const operators = (
     }
     const topic = evaluateExpression(args[0], env);
     const msgs = read(topic as string);
-    return msgs;
+    return [msgs[0]];
   },
 
   floor: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {

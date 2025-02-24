@@ -107,17 +107,16 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
 
     const parentNode = (patch as Patch as SubPatch).parentNode;
 
-    const trivialInputs = 0; //isTrivialGraph(statement);
+    const trivialInputs = isTrivialGraph(statement);
     if (trivialInputs > 0) {
       patch.disconnectGraph();
       // then we need to create a 2 channel gain node and connect it to the merger;
-      const nodes: AudioNode[] = [];
-      const mergerIn = patch.audioContext.createChannelMerger(trivialInputs);
-      const mergerOut = patch.audioContext.createChannelSplitter(trivialInputs);
-      mergerIn.connect(mergerOut);
+      const mergerIn = parentNode.merger || patch.audioContext.createChannelMerger(trivialInputs);
+      //const mergerOut = patch.audioContext.createChannelSplitter(4);
+      //mergerIn.connect(mergerOut);
       parentNode.merger = mergerIn;
-      mergerOut.connect(patch.audioContext.destination);
-      parentNode.useAudioNode(mergerOut);
+      //mergerOut.connect(patch.audioContext.destination);
+      parentNode.useAudioNode(mergerIn);
       return;
     }
     const prepared = prepareAndCompile(patch, statement);

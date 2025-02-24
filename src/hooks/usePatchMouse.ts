@@ -136,6 +136,9 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
       if (selection && selection.patch === patch) {
         let all = [...patch.objectNodes, ...patch.messageNodes];
         let filtered = all.filter((node) => {
+          if (node.locked) {
+            return false;
+          }
           let size = sizeIndexRef.current[node.id];
           let w = size ? size.width || 100 : 100;
           let h = size ? size.height || 7 : 7;

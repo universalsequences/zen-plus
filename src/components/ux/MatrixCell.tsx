@@ -56,6 +56,7 @@ const MatrixCell: React.FC<{
 
   // Memoize these calculations
   const isLine = ux === "line";
+  const isBar = ux === "bar";
   const isFullRadius = cornerRadius === "full";
 
   // Handle selection state
@@ -114,7 +115,7 @@ const MatrixCell: React.FC<{
 
         const startY = e.clientY - rect.top;
         if (editing.current.y === row) {
-          const val = max * ((height - startY) / height);
+          const val = min + (max - min) * ((height - startY) / height);
           toggle(row, col, val);
           valueRef.current = val;
         }
@@ -166,6 +167,7 @@ const MatrixCell: React.FC<{
         selectedField={selectedField}
         isLine={isLine}
         idx={idx}
+        isBar={isBar}
         valueRef={valueRef}
         unit={unit}
         isFullRadius={isFullRadius}

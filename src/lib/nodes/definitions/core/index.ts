@@ -45,6 +45,7 @@ import { send, patchmessage, subscribe } from "./messages";
 import { zfetch } from "./fetch";
 import { slotsout } from "../audio/slots/utils";
 import { modselector } from "./modselector";
+import { panel } from "./panel";
 
 export const api: API = {
   slotsout,
@@ -105,4 +106,5 @@ export const api: API = {
   "xy.control": xy_control,
   "<": lt,
   modselector,
+  panel,
 };

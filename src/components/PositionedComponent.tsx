@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import { useMessage } from "@/contexts/MessageContext";
 import { index } from "./ux/index";
 import IOletsComponent from "./IOletsComponent";
@@ -85,8 +85,6 @@ const PositionedComponent: React.FC<{
           (node as ObjectNode).name === "umenu" ||
           (node as ObjectNode).name === "slots" ||
           (node as ObjectNode).name === "wasmviewer" ||
-          (node as ObjectNode).name === "lisp" ||
-          (node as ObjectNode).name === "matrix" ||
           (node as ObjectNode).name === "button") &&
         node.size
       ) {
@@ -136,6 +134,9 @@ const PositionedComponent: React.FC<{
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       const selectedNodes = selectedNodesRef.current;
+      if (node.locked) {
+        return;
+      }
       if (e.shiftKey) {
         e.stopPropagation();
         if (!selectedNodes.includes(node)) {
@@ -191,8 +192,10 @@ const PositionedComponent: React.FC<{
           origin: { ...node.position },
         });
 
-        node.zIndex = maxZIndexRef.current + 1;
-        updateZIndex(node.id, node.zIndex);
+        if (node.zIndex !== -1) {
+          node.zIndex = maxZIndexRef.current + 1;
+          updateZIndex(node.id, node.zIndex);
+        }
       }
     },
     [setDraggingNode, setSelectedNodes, selectedNodes, patch, selectPatch, isCustomView],
@@ -205,6 +208,9 @@ const PositionedComponent: React.FC<{
 
   const onClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (node.locked) {
+        return;
+      }
       const selectedNodes = selectedNodesRef.current;
       let divRect = ref.current?.getBoundingClientRect();
       if (divRect) {
@@ -350,7 +356,7 @@ const PositionedComponent: React.FC<{
       _style.height = SLOT_VIEW_HEIGHT;
     }
 
-    if (isSelected) {
+    if (isSelected && node.zIndex !== -1) {
       _style.zIndex = 100000000000;
     }
 

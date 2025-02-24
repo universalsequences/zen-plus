@@ -52,6 +52,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   const pool = node.pool || new ListPool();
   node.inlets[node.inlets.length - 1].lastMessage = env as Message;
   node.hasDynamicInlets = true;
+  node.isResizable = true;
 
   if (node.attributes["font-size"] === 9) {
     node.attributes["font-size"] = 11;

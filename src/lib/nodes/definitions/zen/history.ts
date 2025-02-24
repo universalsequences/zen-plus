@@ -119,7 +119,6 @@ export const containsSameHistory = (
   needsInput: boolean,
   depth: number = 0,
   visited = new Set<Statement>(),
-  patch: Patch,
 ): Statement | null => {
   //console.log('contains same history called looking for history', history, statement);
   if (visited.has(statement)) {
@@ -128,9 +127,6 @@ export const containsSameHistory = (
   visited.add(statement);
   if (Array.isArray(statement)) {
     let [operator, ...statements] = statement;
-    if (operator === undefined) {
-      console.log("operator statement what", statement, patch);
-    }
     if ((operator as CompoundOperator).history === history) {
       let loopedHistory = statement;
       let compoundOperator: CompoundOperator = loopedHistory[0] as CompoundOperator;

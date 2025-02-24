@@ -69,8 +69,13 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
         return;
       }
     }
-    if (lastMessage === message && message !== "bang") {
+    if (typeof lastMessage === "string" && lastMessage === message && message !== "bang") {
       return;
+    }
+    if (Array.isArray(message) && Array.isArray(lastMessage) && message.length === 2) {
+      if (message[0] === lastMessage[0] && message[1] === lastMessage[1]) {
+        return;
+      }
     }
     const second = (message as Message[])[2];
     if (second && ((message as Message[])[2] as unknown as SubPatch).patchType !== undefined) {
@@ -78,7 +83,7 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
     }
 
     node.send(node.outlets[0], message);
-    if (typeof message === "string") {
+    if (typeof message === "string" || Array.isArray(message)) {
       lastMessage = message;
     }
   };
