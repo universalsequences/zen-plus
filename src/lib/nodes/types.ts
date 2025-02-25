@@ -302,7 +302,6 @@ export type Patch = Identifiable & {
   outputStatements: Statement[];
   historyNodes: Set<ObjectNode>;
   getAllNodes: (visited?: Set<Patch>) => ObjectNode[];
-  //getAudioNodes: () => ObjectNode[];
   getAllMessageNodes: () => MessageNode[];
   newHistoryDependency: (x: Statement, o: ObjectNode) => void;
   getJSON: () => SerializedPatch;

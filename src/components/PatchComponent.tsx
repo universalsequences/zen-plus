@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useStorage } from "@/contexts/StorageContext";
-import AssistantSidebar from "./AssistantSidebar";
 import { usePatchLoader } from "@/hooks/usePatchLoader";
 import { useLocked } from "@/contexts/LockedContext";
 import { useTilesContext } from "@/contexts/TilesContext";
@@ -10,15 +9,17 @@ import { useMessage } from "@/contexts/MessageContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import Toolbar from "./Toolbar";
 import { useThemeContext } from "@radix-ui/themes";
-import { PatchResizeType } from "@/hooks/useTiles";
 import { useKeyBindings } from "@/hooks/useKeyBindings";
 import { MessageNode, ObjectNode, SubPatch, IOConnection } from "@/lib/nodes/types";
 import { Connections, usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
-import { usePosition, ResizingNode, DraggingNode, Coordinates } from "@/contexts/PositionContext";
+import { usePosition, Coordinates } from "@/contexts/PositionContext";
 import { usePatchMouse } from "@/hooks/usePatchMouse";
 import { PatchResizer } from "./PatchResizer";
 
+/**
+ * Interface for the selection area in the patch
+ */
 interface Selection {
   x1: number;
   y1: number;
@@ -26,6 +27,12 @@ interface Selection {
   y2: number;
 }
 
+/**
+ * PatchComponent represents a single patch in the patcher environment
+ *
+ * This component is responsible for rendering a patch with its nodes
+ * and providing mouse interaction and drag-and-drop functionality.
+ */
 const PatchComponent: React.FC<{
   isWindow?: boolean;
   tileRef: React.RefObject<HTMLDivElement | null>;
@@ -49,6 +56,8 @@ const PatchComponent: React.FC<{
   tileRef,
 }) => {
   useThemeContext();
+
+  // Patch management hooks
   const {
     changeTileForPatch,
     patchDragging,
@@ -57,54 +66,22 @@ const PatchComponent: React.FC<{
     selectedPatch,
     setSelectedPatch,
   } = usePatches();
+  const { updateConnections, patch } = usePatch();
+  const loadPatch = usePatchLoader(patch);
+  const { loadSubPatches } = useStorage();
 
+  // UI state hooks
   const [draggingOver, setDraggingOver] = useState(false);
   const { gridTemplate } = useTilesContext();
   const { updateAttributes, selection } = useSelection();
   const { onNewMessage } = useMessage();
+  const { lockedMode } = useLocked();
 
+  // Mouse and position related hooks
   const { onClick, onMouseUp, onSelectionMove, onMouseDown, setResizingPatch } = usePatchMouse({
     isCustomView,
   });
-
-  const { updateConnections, patch } = usePatch();
-
-  const loadPatch = usePatchLoader(patch);
-
-  useEffect(() => {
-    if (fileToOpen) {
-      if (!(patch as SubPatch).parentPatch) {
-        loadPatch(fileToOpen);
-      }
-      setFileToOpen(null);
-    }
-  }, [fileToOpen]);
-
-  let IS_SELECTED = useRef(selectedPatch);
-  useEffect(() => {
-    IS_SELECTED.current = selectedPatch;
-  }, [selectedPatch]);
-
-  useEffect(() => {
-    if (!isCustomView) {
-      if (!IS_SELECTED.current) {
-        setSelectedPatch(patch);
-      }
-      patch.onNewMessage = onNewMessage;
-    }
-  }, [onNewMessage]);
-
-  useEffect(() => {
-    patch.updateAttributes = updateAttributes;
-  }, [patch, updateAttributes]);
-
-  const { loadSubPatches } = useStorage();
-
-  useEffect(() => {
-    loadSubPatches();
-  }, []);
-
-  let {
+  const {
     scrollRef,
     presentationMode,
     updatePositions,
@@ -114,186 +91,211 @@ const PatchComponent: React.FC<{
     setNearestInlet,
   } = usePosition();
 
-  const { lockedMode } = useLocked();
+  // Zoom functionality
+  const { zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
 
-  let { zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
+  // Selection tracking
+  const isSelectedRef = useRef(selectedPatch);
 
-  if (isCustomView) {
-    presentationMode = true;
-  }
+  // Force presentation mode in custom view
+  const effectivePresentationMode = isCustomView ? true : presentationMode;
 
+  // Load patch from file if needed
+  useEffect(() => {
+    if (fileToOpen && !(patch as SubPatch).parentPatch) {
+      loadPatch(fileToOpen);
+      setFileToOpen(null);
+    }
+  }, [fileToOpen, patch, loadPatch, setFileToOpen]);
+
+  // Track selected patch
+  useEffect(() => {
+    isSelectedRef.current = selectedPatch;
+  }, [selectedPatch]);
+
+  // Set this patch as selected if no other is selected
+  useEffect(() => {
+    if (!isCustomView) {
+      if (!isSelectedRef.current) {
+        setSelectedPatch(patch);
+      }
+      patch.onNewMessage = onNewMessage;
+    }
+  }, [onNewMessage, patch, setSelectedPatch, isCustomView]);
+
+  // Set up attribute update handler
+  useEffect(() => {
+    patch.updateAttributes = updateAttributes;
+  }, [patch, updateAttributes]);
+
+  // Load subpatches on mount
+  useEffect(() => {
+    console.log("loading subpatches...");
+    loadSubPatches();
+  }, [loadSubPatches]);
+
+  // Update message handler
   useEffect(() => {
     patch.onNewMessage = onNewMessage;
   }, [patch, onNewMessage]);
 
+  // Initialize key bindings
   useKeyBindings(scrollRef);
 
+  // Handle dropping patches for rearrangement
   const onDrop = useCallback(() => {
     setDraggingOver(false);
     if (patchDragging) {
       changeTileForPatch(patch, patchDragging);
       setPatchDragging(undefined);
     }
-  }, [patch, patchDragging]);
+  }, [patch, patchDragging, changeTileForPatch, setPatchDragging]);
 
+  // Update positions and connections when patch or presentation mode changes
   useEffect(() => {
-    let positions: Coordinates = {};
-    let connections: Connections = {};
-    for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
-      if (presentationMode && !node.attributes["Include in Presentation"]) {
+    const positions: Coordinates = {};
+    const connections: Connections = {};
+
+    for (const node of [...patch.objectNodes, ...patch.messageNodes]) {
+      // Skip nodes not included in presentation if in presentation mode
+      if (effectivePresentationMode && !node.attributes["Include in Presentation"]) {
         continue;
       }
-      positions[node.id] = presentationMode
+
+      // Use presentation position when in presentation mode
+      positions[node.id] = effectivePresentationMode
         ? node.presentationPosition || node.position
         : node.position;
-      let _connections: IOConnection[] = [];
 
-      for (let outlet of node.outlets) {
-        _connections = [..._connections, ...outlet.connections];
+      // Collect all connections from node outlets
+      const nodeConnections: IOConnection[] = [];
+      for (const outlet of node.outlets) {
+        nodeConnections.push(...outlet.connections);
       }
-      connections[node.id] = _connections;
+      connections[node.id] = nodeConnections;
     }
+
     updatePositions(positions, true);
     updateConnections(connections);
-  }, [patch, presentationMode]);
+  }, [patch, effectivePresentationMode]);
 
-  const mem = React.useMemo(() => {
-    let tile = rootTile ? rootTile.findPatch(patch) : null;
-    let direction =
+  // Render the patch with calculated dimensions and styling
+  return React.useMemo(() => {
+    // Find the tile for this patch and calculate dimensions
+    const tile = rootTile ? rootTile.findPatch(patch) : null;
+
+    // Determine direction based on parent tile
+    const direction =
       tile && tile.parent
         ? tile.parent.splitDirection === "vertical"
           ? "vertical"
           : "horizontal"
         : "";
-    let _direction = direction;
-    if (patch.viewed) {
-      direction = "";
-    } else {
-    }
-    let cl = "w-full h-full " + direction;
+    const directionClass = "w-full h-full " + direction;
 
-    let _maxWidth = null;
-    let _maxHeight = null;
+    // Calculate maximum dimensions based on parent tiles
+    let maxWidthPercent = null;
+    let maxHeightPercent = null;
+
     if (tile && !isCustomView) {
-      let vparent: any = tile.parent;
+      // Find vertical parent
+      let vparent = tile.parent;
       let vprev = tile;
       while (vparent && vparent.splitDirection !== "vertical") {
         vprev = vparent;
         vparent = vparent.parent;
       }
 
-      let hparent: any = tile.parent;
+      // Find horizontal parent
+      let hparent = tile.parent;
       let hprev = tile;
       while (hparent && hparent.splitDirection !== "horizontal") {
         hprev = hparent;
         hparent = hparent.parent;
       }
 
+      // Calculate dimensions based on parent tiles
       if (hparent) {
-        _maxWidth = hparent && hparent.children[0] === hprev ? hparent.size : 100 - hparent.size;
+        maxWidthPercent = hparent.children[0] === hprev ? hparent.size : 100 - hparent.size;
       }
 
       if (vparent) {
-        _maxHeight = vparent && vparent.children[0] === vprev ? vparent.size : 100 - vparent.size;
+        maxHeightPercent = vparent.children[0] === vprev ? vparent.size : 100 - vparent.size;
       }
 
+      // Override dimensions based on parent split direction
       if (tile.parent && tile.parent.splitDirection === "vertical") {
-        _maxWidth = null;
+        maxWidthPercent = null;
       }
       if (tile.parent && tile.parent.splitDirection === "horizontal") {
-        _maxHeight = null;
+        maxHeightPercent = null;
       }
-    } else {
     }
 
-    let keyframe = ``;
-    if (_maxWidth) {
-      keyframe = `@keyframes horizontal-slide-${patch.id} {
-0% { max-width: ${patch.viewed ? 100 : 0}%};
-    100% { max-width: ${_maxWidth}% }
-}
-`;
-    } else {
-      _maxWidth = 100;
-    }
-    if (_maxHeight) {
-      keyframe = `@keyframes vertical-slide-${patch.id} {
-0% { max-height: ${patch.viewed ? 100 : 0}%};
-        100% { max-height: ${_maxHeight}% }
-}
-`;
-    } else {
-      _maxHeight = 100;
-    }
+    // Set default dimensions if not calculated
+    maxWidthPercent = maxWidthPercent || 100;
+    maxHeightPercent = maxHeightPercent || 100;
 
-    let animation = `${_direction}-slide-${patch.id} 0.2s ease`;
+    // Animation definition for smooth transitions
+    const animation = `${direction}-slide-${patch.id} 0.2s ease`;
 
-    let style: any = isCustomView
+    // Apply styling based on view type
+    let style = isCustomView
       ? {}
       : {
           animation,
-          minWidth: _maxWidth + "%",
-          minHeight: _maxHeight + "%",
-          maxWidth: _maxWidth + "%",
-          maxHeight: _maxHeight + "%",
+          minWidth: maxWidthPercent + "%",
+          minHeight: maxHeightPercent + "%",
+          maxWidth: maxWidthPercent + "%",
+          maxHeight: maxHeightPercent + "%",
         };
 
+    // Override style for specific tile arrangement
     if (tile && tile.parent && tile.parent.children[1] === tile && tile.children.length === 0) {
       style = {};
     }
 
-    let isFloatingCustom = false;
+    // Build class list based on component state
+    const classList = [
+      draggingOver ? "dragging-over" : "",
+      tile && tile.parent && tile.parent.children.length === 1 ? "transition-all" : "",
+      "transition-colors duration-300 ease-in-out",
+      directionClass,
+      !isCustomView && patch === selectedPatch ? "selected-patch" : "",
+      isCustomView ? "" : "border border-zinc-100",
+      "flex flex-col relative w-full",
+      effectivePresentationMode ? "presentation" : "",
+      lockedMode ? "locked" : "",
+      isCustomView ? "custom-view" : "tile",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return (
-      <>
-        <div
-          style={style}
-          onDragOver={() => {
-            if (patchDragging) {
-              setDraggingOver(true);
-            }
-          }}
-          onDragLeave={() => {
-            setDraggingOver(false);
-          }}
-          onClick={onClick}
-          onMouseUp={isCustomView ? undefined : onMouseUp}
-          onMouseMove={onSelectionMove}
-          onDrop={onDrop}
-          onMouseDown={onMouseDown}
-          className={
-            (draggingOver ? " dragging-over " : "") +
-            (isFloatingCustom ? " dark-background " : "") +
-            (tile && tile.parent && tile.parent.children.length === 1 ? "transition-all " : "") +
-            "transition-colors duration-300 ease-in-out " +
-            cl +
-            " " +
-            (!isCustomView && patch === selectedPatch ? "selected-patch " : "") +
-            (isCustomView ? "" : " border border-zinc-100 ") +
-            " flex flex-col relative w-full " +
-            (presentationMode ? " presentation " : "") +
-            (lockedMode ? "locked" : "") +
-            (isCustomView ? "" : " tile") +
-            (isCustomView ? " custom-view" : "")
-          }
-        >
-          {!isCustomView && <PatchResizer isCustomView={false} />}
-          <PatchInner
-            isSelected={selectedPatch === patch}
-            visibleObjectNodes={visibleObjectNodes}
-            index={index}
-            isCustomView={isCustomView}
-            zoomRef={zoomRef}
-            zoomableRef={zoomableRef}
-          />
-          {!isCustomView && !isWindow && (
-            <>
-              {" "}
-              <Toolbar patch={patch} />{" "}
-            </>
-          )}
-        </div>
-      </>
+      <div
+        style={style}
+        onDragOver={() => patchDragging && setDraggingOver(true)}
+        onDragLeave={() => setDraggingOver(false)}
+        onClick={onClick}
+        onMouseUp={isCustomView ? undefined : onMouseUp}
+        onMouseMove={onSelectionMove}
+        onDrop={onDrop}
+        onMouseDown={onMouseDown}
+        className={classList}
+      >
+        {!isCustomView && <PatchResizer isCustomView={false} />}
+
+        <PatchInner
+          isSelected={selectedPatch === patch}
+          visibleObjectNodes={visibleObjectNodes}
+          index={index}
+          isCustomView={isCustomView}
+          zoomRef={zoomRef}
+          zoomableRef={zoomableRef}
+        />
+
+        {!isCustomView && !isWindow && <Toolbar patch={patch} />}
+      </div>
     );
   }, [
     patch,
@@ -312,12 +314,16 @@ const PatchComponent: React.FC<{
     selection,
     rootTile,
     lockedMode,
-    presentationMode,
-    lockedMode,
+    effectivePresentationMode,
     draggingOver,
+    onClick,
+    onMouseUp,
+    onSelectionMove,
+    onDrop,
+    onMouseDown,
+    zoomRef,
+    zoomableRef,
   ]);
-
-  return mem;
 };
 
 export default PatchComponent;
