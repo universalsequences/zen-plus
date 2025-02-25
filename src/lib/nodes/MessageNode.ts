@@ -10,12 +10,10 @@ import {
   type Message,
   type MessageObject,
 } from "./types";
-import { BaseNode } from "./ObjectNode";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { isNumber } from "@/utils/isNumber";
 import { parseLispExpression } from "./utils/lisp";
 import { Instruction } from "./vm/types";
-import { evaluate } from "./vm/evaluate";
 import { getRootPatch } from "./traverse";
 import { MockBaseNode } from "../../../test/mocks/MockBaseNode";
 

@@ -119,6 +119,8 @@ export class MockPatch implements Patch {
     return new MockObjectNode(this);
   }
 
+  setupSkeletonPatch() {}
+
   newSubPatch(parentPatch: Patch, parentNode: ObjectNode) {
     return new MockSubPatch(parentPatch, parentNode);
   }
