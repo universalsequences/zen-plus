@@ -1,6 +1,3 @@
-import { BaseNode } from "@/lib/nodes/BaseNode";
-import MessageNodeImpl from "@/lib/nodes/MessageNode";
-import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import type { Patch, IOlet, Message, Coordinate, SubPatch, ObjectNode } from "@/lib/nodes/types";
 import { createContext, useState, useContext, useCallback, useEffect } from "react";
 import { usePatches } from "./PatchesContext";

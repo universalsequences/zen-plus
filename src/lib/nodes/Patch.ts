@@ -1,3 +1,4 @@
+console.log("patch called");
 import {
   type IOConnection,
   type Patch,
@@ -10,7 +11,7 @@ import {
   type MessageNode,
   type SerializedConnection,
 } from "./types";
-import type { BaseNode } from "./BaseNode";
+import type { BaseNode } from "./ObjectNode";
 import type { PresetManager } from "@/lib/nodes/definitions/core/preset";
 import Assistant from "@/lib/openai/assistant";
 import type { ZenGraph } from "@/lib/zen/zen";
@@ -22,7 +23,8 @@ import { currentUUID, uuid, plusUUID, registerUUID } from "@/lib/uuid/IDGenerato
 import type { Statement } from "./definitions/zen/types";
 import { recompileGraph } from "./compilation/recompileGraph";
 import { mergeAndExportToWav } from "@/utils/wav";
-import { onCompile, sleep } from "./compilation/onCompile";
+import { onCompile } from "./compilation/onCompile";
+import { sleep } from "@/utils/sleep";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
 import type { PatchDoc } from "../org/types";
 import Subpatch from "./Subpatch";
@@ -169,6 +171,8 @@ export class PatchImpl implements Patch {
   getBuffer() {
     this.recorderWorklet?.port.postMessage({ message: "flush" });
   }
+
+  setupSkeletonPatch() {}
 
   /**
    * Gets all object nodes within a patch (including sub-patches)
@@ -393,6 +397,10 @@ export class PatchImpl implements Patch {
     }
     json.patchType = (this as Patch as SubPatch).patchType;
     return json;
+  }
+
+  newObjectNode(): ObjectNode {
+    return new ObjectNodeImpl(this);
   }
 
   fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {

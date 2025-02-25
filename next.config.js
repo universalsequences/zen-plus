@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_IS_BROWSER: 'true',
+  },
   async headers() {
     return [
       {

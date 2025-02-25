@@ -1,3 +1,4 @@
+console.log("encapsulate");
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import { OperatorContextType } from "@/lib/nodes/context";
 import type {

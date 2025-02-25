@@ -4,6 +4,7 @@ import { PatchImpl } from "./Patch";
 import { type ObjectNode, type Message, type Patch, type SubPatch, PatchType } from "./types";
 //import ObjectNodeImpl from "./ObjectNode";
 import { MutableValue } from "./definitions/core/MutableValue";
+import { setupSkeletonPatch } from "../utils";
 
 /**
  * The way sub-patches work is there is an ObjectNode that defines a subpatch object
@@ -38,6 +39,10 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     } else {
       this._setupInitialNodes();
     }
+  }
+
+  setupSkeletonPatch() {
+    setupSkeletonPatch(this as SubPatch, 2);
   }
 
   private determinePatchType(parentNodeType: string) {
@@ -88,33 +93,7 @@ export default class Subpatch extends PatchImpl implements SubPatch {
     this.parentNode.attributes["Custom Presentation"] = false;
   }
 
-  _setupInitialNodes() {
-    /*
-    const ZEN = OperatorContextType.ZEN;
-    let in1 = new ObjectNodeImpl(this as Patch);
-    in1.parse("in 1", ZEN, false);
-
-    let in2 = new ObjectNodeImpl(this as Patch);
-    in2.parse("in 2", ZEN, false);
-
-    let out1 = new ObjectNodeImpl(this as Patch);
-    out1.parse("out 1", ZEN, false);
-
-    let out2 = new ObjectNodeImpl(this as Patch);
-    out2.parse("out 2", ZEN, false);
-
-    in1.connect(out1, out1.inlets[0], in1.outlets[0], false);
-    in2.connect(out2, out2.inlets[0], in2.outlets[0], false);
-
-    in1.position = { x: 100, y: 100 };
-    in2.position = { x: 300, y: 100 };
-    out1.position = { x: 100, y: 300 };
-    out2.position = { x: 300, y: 300 };
-
-    this.objectNodes = [in1, out1, in2, out2];
-    this.messageNodes = [];
-    */
-  }
+  _setupInitialNodes() {}
 
   recompileGraph(force?: boolean): void {
     // when recompile graph is called from the UI, we want to go up the tree of patches

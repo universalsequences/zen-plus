@@ -207,6 +207,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
   const fetchPatch = async (x: PatchDoc, isSubPatch = false): Promise<SerializedPatch> => {
     let commit = x.commit;
     let commits = x.commits || [];
+    console.log("fetch patch storage=", storage, ref, commit);
     let fileRef = ref(storage, commit);
     try {
       if (x.patch) {

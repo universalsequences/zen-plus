@@ -1,3 +1,4 @@
+console.log("duplicate obj");
 import type { Coordinate, ObjectNode } from "../types";
 import ObjectNodeImpl from "../ObjectNode";
 import { OperatorContextType } from "../context";

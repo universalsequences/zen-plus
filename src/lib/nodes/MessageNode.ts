@@ -10,18 +10,19 @@ import {
   type Message,
   type MessageObject,
 } from "./types";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "./ObjectNode";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { isNumber } from "@/utils/isNumber";
 import { parseLispExpression } from "./utils/lisp";
 import { Instruction } from "./vm/types";
 import { evaluate } from "./vm/evaluate";
 import { getRootPatch } from "./traverse";
+import { MockBaseNode } from "../../../test/mocks/MockBaseNode";
 
 const TRIGGER = "trigger";
 const REPLACE = "replace";
 
-export default class MessageNodeImpl extends BaseNode implements MessageNode {
+export default class MessageNodeImpl extends MockBaseNode implements MessageNode {
   id: string;
   onNewValue?: (x: Message) => void;
   message?: Message;

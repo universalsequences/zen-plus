@@ -225,6 +225,7 @@ export const createMatrixBuffer = (
 };
 
 export const matrix = (_node: ObjectNode) => {
+  _node.needsUX = true;
   let { columns, rows } = setupMatrixAttributes(_node);
   /**
    * format for messages is [rowIndex, columnIndex, value]
@@ -370,6 +371,8 @@ export const button = (node: ObjectNode) => {
   if (!node.attributes.backgroundColor) {
     node.attributes.backgroundColor = "#2f2f2f";
   }
+
+  node.needsUX = true;
 
   let counter = 0;
   if (!node.size) {

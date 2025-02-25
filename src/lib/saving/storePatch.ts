@@ -1,3 +1,5 @@
+console.log("store");
+
 import { Patch, SubPatch, IOlet, SerializedPatch } from "@/lib/nodes/types";
 import { db } from "@/lib/db/firebase";
 import { addDoc, doc, getDoc, updateDoc, collection } from "firebase/firestore";

@@ -20,6 +20,7 @@ import type { ExportedAudioUnit } from "@/lib/nodes/compilation/export";
 import type { PatchDoc } from "@/lib/org/types";
 import Subpatch from "@/lib/nodes/Subpatch";
 import { VM } from "@/workers/vm/VM";
+import { MockObjectNode } from "./MockObjectNode";
 
 interface GraphContext {
   splitter?: ChannelSplitterNode;
@@ -113,6 +114,10 @@ export class MockPatch implements Patch {
   stopRecording() {}
 
   getBuffer() {}
+
+  newObjectNode(): ObjectNode {
+    return new MockObjectNode(this);
+  }
 
   newSubPatch(parentPatch: Patch, parentNode: ObjectNode) {
     return new MockSubPatch(parentPatch, parentNode);

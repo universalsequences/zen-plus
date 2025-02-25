@@ -9,7 +9,7 @@ import type { OperatorContext, OperatorContextType } from "./context";
 import type { Connections } from "@/contexts/PatchContext";
 import type { Statement } from "./definitions/zen/types";
 import type { Slot } from "./definitions/audio/slots";
-import type { BaseNode } from "./BaseNode";
+import type { BaseNode } from "./ObjectNode";
 import type { ExportedAudioUnit, ParameterData } from "./compilation/export";
 import type {
   FieldSchema,
@@ -219,6 +219,7 @@ export type ObjectNode = Positioned &
     useAudioNode: (x: AudioNode) => void;
     operatorContextType: OperatorContextType;
     needsLoad?: boolean;
+    needsUX?: boolean;
     isResizable?: boolean;
     hasDynamicInlets?: boolean;
     storedLazyMessage?: Lazy;
@@ -280,6 +281,8 @@ export enum PatchType {
 
 export type Patch = Identifiable & {
   clearCache: () => void;
+  newObjectNode: () => ObjectNode;
+  setupSkeletonPatch: () => void;
   statementToExport?: Statement;
   finishedInitialCompile: boolean;
   zenGraph?: ZenGraph;

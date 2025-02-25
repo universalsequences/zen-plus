@@ -1,5 +1,5 @@
 import { isCompiledType } from "../context";
-import { index as UX_INDEX } from "@/components/ux/index";
+//import { index as UX_INDEX } from "@/components/ux/index";
 import { getRootPatch } from "../traverse";
 import {
   type Node,
@@ -97,7 +97,9 @@ const isSourceNode = (node: Node) => {
   }
 
   // UI elements are all source nodes -- i.e. they should be executable via instructions
-  if (((node as ObjectNode).name as string) in UX_INDEX) {
+  // TODO -- every ux node must be marked as ux
+
+  if ((node as ObjectNode).needsUX) {
     return true;
   }
 

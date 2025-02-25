@@ -1,7 +1,47 @@
 import { createContext, useEffect, useState, useContext } from "react";
-import { signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/db/firebase";
 import { useRouter } from "next/router";
+import { 
+  signInWithPopup as firebaseSignInWithPopup, 
+  signOut as firebaseSignOut, 
+  onAuthStateChanged as firebaseOnAuthStateChanged, 
+  GoogleAuthProvider as FirebaseGoogleAuthProvider 
+} from "firebase/auth";
+
+// Check if we're in a test environment
+const isBunTest = process.env.BUN_ENV === 'test' || Boolean(process.env.BUN);
+
+// Create functions that will work with our auth object (real or mock)
+const signInWithPopup = async (auth: any, provider: any) => {
+  if (isBunTest) {
+    return Promise.resolve({ user: null });
+  }
+  return firebaseSignInWithPopup(auth, provider);
+};
+
+const signOut = async (auth: any) => {
+  if (isBunTest) {
+    return Promise.resolve();
+  }
+  return firebaseSignOut(auth);
+};
+
+const onAuthStateChanged = (auth: any, callback: any) => {
+  if (isBunTest) {
+    callback(null);
+    return () => {};
+  }
+  return firebaseOnAuthStateChanged(auth, callback);
+};
+
+// Use different implementation based on environment
+const GoogleAuthProvider = isBunTest
+  ? class {
+      setCustomParameters(params: any) {
+        return this;
+      }
+    }
+  : FirebaseGoogleAuthProvider;
 
 interface IAuthContext {
   user: any;

@@ -1,18 +1,14 @@
 import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "@/constants/slots";
 import {
-  type AttributeValue,
   ConnectionType,
   type Message,
   type ObjectNode,
   type SerializedObjectNode,
-  SubPatch,
 } from "../../types";
 import { doc } from "./doc";
-import ObjectNodeImpl from "../../ObjectNode";
-import { sleep } from "../../compilation/onCompile";
+import { sleep } from "@/utils/sleep";
 import { OperatorContextType } from "../../context";
 import { getRootPatch } from "../../traverse";
-import { setupSkeletonPatch } from "@/lib/utils";
 
 doc("slots~", {
   description: "connect subpatches in series",
@@ -163,12 +159,12 @@ const handleMessage = (node: ObjectNode, message: Message) => {
 };
 
 const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode => {
-  const wrapperNode: ObjectNode = new ObjectNodeImpl(node.patch);
+  const wrapperNode: ObjectNode = node.patch.newObjectNode();
   wrapperNode.parse("zen @type audio");
   if (wrapperNode.subpatch) {
     const subpatch = wrapperNode.subpatch;
     subpatch.isZen = false;
-    const objectNode: ObjectNode = new ObjectNodeImpl(subpatch);
+    const objectNode: ObjectNode = subpatch.newObjectNode();
     subpatch.objectNodes.push(objectNode);
     if (patchType === OperatorContextType.AUDIO) {
       objectNode.parse("zen @type audio");
@@ -177,7 +173,8 @@ const newPatch = (node: ObjectNode, patchType?: OperatorContextType): ObjectNode
     }
     objectNode.setAttribute("slotview", true);
     if (objectNode.subpatch) {
-      setupSkeletonPatch(objectNode.subpatch as SubPatch, 2);
+      objectNode.subpatch.setupSkeletonPatch();
+      //setupSkeletonPatch(objectNode.subpatch as SubPatch, 2);
       objectNode.subpatch.name = "";
       objectNode.subpatch.isInsideSlot = true;
       objectNode.subpatch.slotsNode = node;

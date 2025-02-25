@@ -1,5 +1,5 @@
 import { doc } from "./doc";
-import { ObjectNode } from "../../types";
+import type { ObjectNode } from "../../types";
 
 doc("panel", {
   numberOfInlets: 0,

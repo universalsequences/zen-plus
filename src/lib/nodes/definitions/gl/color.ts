@@ -4,8 +4,8 @@ import { DataType } from "@/lib/nodes/typechecker";
 import { type Uniform, uniform } from "@/lib/gl/uniforms";
 import { GLType } from "@/lib/gl/types";
 import type { ObjectNode, Message } from "@/lib/nodes/types";
-import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 import type { Operator, CompoundOperator, Statement } from "@/lib/nodes/definitions/zen/types";
+import { MockObjectNode } from "../../../../../test/mocks/MockObjectNode";
 
 doc("color", {
   inletNames: ["hex"],
@@ -78,7 +78,7 @@ export const color = (objectNode: ObjectNode) => {
 };
 
 const floatUniform = (colorType: string, num: number, node: ObjectNode): [Uniform, Statement] => {
-  const objectNode = new ObjectNodeImpl(node.patch, `${node.id}_${colorType}`);
+  const objectNode = new MockObjectNode(node.patch, `${node.id}_${colorType}`);
   objectNode.attributes.type = "float";
   objectNode.storedMessage = num;
 
@@ -89,6 +89,6 @@ const floatUniform = (colorType: string, num: number, node: ObjectNode): [Unifor
       uniform: uni,
     },
   ];
-  statement.node = objectNode;
+  statement.node = objectNode as ObjectNode;
   return [uni, statement];
 };

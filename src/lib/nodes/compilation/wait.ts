@@ -1,5 +1,5 @@
 import { Patch } from "../types";
-import { sleep } from "./onCompile";
+import { sleep } from "@/utils/sleep";
 
 export const waitForBuffers = async (patch: Patch) => {
   let buffers = patch.getAllNodes().filter((x) => x.name === "buffer");

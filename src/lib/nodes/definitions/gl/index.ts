@@ -20,7 +20,6 @@ import { Operator, CompoundOperator, Statement } from "@/lib/nodes/definitions/z
 import { ObjectNode, Message, Lazy } from "@/lib/nodes/types";
 import * as gl from "@/lib/gl/index";
 import { registerFunction, compileStatement } from "@/lib/nodes/definitions/gl/AST";
-import { PatchImpl } from "../../Patch";
 
 export const doc = (name: string, definition: Definition, registerName: string = name) => {
   DOC.doc(name, definition);

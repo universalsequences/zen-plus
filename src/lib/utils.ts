@@ -1,3 +1,4 @@
+console.log("UTILS");
 import { ObjectNode, Patch, Size, SubPatch } from "@/lib/nodes/types";
 import ObjectNodeImpl from "./nodes/ObjectNode";
 import { OperatorContextType } from "./nodes/context";
