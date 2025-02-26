@@ -254,14 +254,14 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
   const batcherRef = useRef<UpdateBatcher>();
   const ringBufferRef = useRef<RingBuffer>();
   const sharedMemoryRef = useRef<SharedMemoryManager>();
-  
+
   // Set up polling interval for checking messages from the worker
   // This will be null when not active
   const pollingIntervalRef = useRef<number | null>(null);
   const perfMonitorIntervalRef = useRef<number | null>(null);
-  
+
   // Constants
-  const RING_BUFFER_SIZE = 1024 * 1024; // 1MB buffer size
+  const RING_BUFFER_SIZE = 32 * 1024 * 1024; // 1MB buffer size
   const MIN_POLLING_INTERVAL = 5; // Minimum 5ms polling interval when active
   const MAX_POLLING_INTERVAL = 30; // Maximum 30ms polling interval when idle
   const POLLING_BACKOFF_FACTOR = 1.2; // Increase polling interval by this factor when no messages
@@ -272,50 +272,55 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     const worker = new Worker(new URL("../workers/core", import.meta.url));
     workerRef.current = worker;
     batcherRef.current = new UpdateBatcher(objectsRef.current, messagesRef.current);
-    
+
     try {
       // Check if SharedArrayBuffer is supported
-      if (typeof SharedArrayBuffer === 'undefined') {
-        throw new Error('SharedArrayBuffer is not supported in this browser');
+      if (typeof SharedArrayBuffer === "undefined") {
+        throw new Error("SharedArrayBuffer is not supported in this browser");
       }
-      
+
       // Check if crossOriginIsolated is enabled (required for SharedArrayBuffer in modern browsers)
       if (!self.crossOriginIsolated) {
         console.warn(
-          'Cross-origin isolation is not enabled. SharedArrayBuffer requires ' +
-          'Cross-Origin-Opener-Policy: same-origin and ' +
-          'Cross-Origin-Embedder-Policy: require-corp headers.'
+          "Cross-origin isolation is not enabled. SharedArrayBuffer requires " +
+            "Cross-Origin-Opener-Policy: same-origin and " +
+            "Cross-Origin-Embedder-Policy: require-corp headers.",
         );
         // Continue anyway as some environments might still allow it
       }
-      
+
       // Create a RingBuffer for bidirectional communication
       // Direction is set to MAIN_TO_WORKER for sending from main thread
       console.log(`Initializing ring buffer with size: ${RING_BUFFER_SIZE} bytes`);
-      const ringBuffer = new RingBuffer(RING_BUFFER_SIZE, undefined, BufferDirection.MAIN_TO_WORKER);
+      const ringBuffer = new RingBuffer(
+        RING_BUFFER_SIZE,
+        undefined,
+        BufferDirection.MAIN_TO_WORKER,
+      );
       ringBufferRef.current = ringBuffer;
-      
+
       // Create a SharedMemoryManager for direct memory access between threads
       console.log(`Initializing shared memory manager`);
       const sharedMemory = new SharedMemoryManager();
       sharedMemoryRef.current = sharedMemory;
-      
+
       // Send the SharedArrayBuffer to the worker
-      worker.postMessage({ 
-        type: "initRingBuffer", 
+      worker.postMessage({
+        type: "initRingBuffer",
         buffer: ringBuffer.getBuffer(),
-        sharedMemory: sharedMemory.getBuffer()
+        sharedMemory: sharedMemory.getBuffer(),
       });
-      
-      console.log('Successfully initialized shared memory communication');
+
+      console.log("Successfully initialized shared memory communication");
     } catch (error) {
-      console.error('Error initializing shared buffers:', error);
-      console.log('Falling back to standard message passing');
+      console.error("Error initializing shared buffers:", error);
+      console.log("Falling back to standard message passing");
       // Initialize without shared buffers
       worker.postMessage({ type: "init" });
     }
 
     worker.onmessage = (event: MessageEvent) => {
+      //console.log("on message received=", event);
       const { type, body } = event.data;
 
       if (event.data.type === "batchedUpdates") {
@@ -356,47 +361,54 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     const startPolling = () => {
       // Only start if not already polling
       if (pollingIntervalRef.current === null) {
+        console.log("MAIN: Starting ring buffer polling");
         // Use dynamic polling for CPU efficiency
         let currentInterval = MIN_POLLING_INTERVAL;
         let consecutiveEmptyPolls = 0;
-        
+
         const poll = () => {
           try {
             let foundMessage = false;
             if (ringBufferRef.current?.canRead()) {
+              //console.log("MAIN: Ring buffer has data to read");
               const message = ringBufferRef.current.read();
               if (message) {
+                //console.log("MAIN: Read message from ring buffer:", message.type, message.nodeId);
                 // Process message from worker
                 handleWorkerMessage(message);
                 foundMessage = true;
-                
+
                 // If we found a message, reset to minimum interval
                 // as there's likely more activity to process
                 currentInterval = MIN_POLLING_INTERVAL;
                 consecutiveEmptyPolls = 0;
+              } else {
+                //console.log("MAIN: Ring buffer read returned undefined");
               }
+            } else {
+              //console.log("MAIN: canRead() returned false");
             }
-            
+
             if (!foundMessage) {
               // Gradually back off polling frequency when idle
               consecutiveEmptyPolls++;
               if (consecutiveEmptyPolls > 5) {
                 currentInterval = Math.min(
-                  currentInterval * POLLING_BACKOFF_FACTOR, 
-                  MAX_POLLING_INTERVAL
+                  currentInterval * POLLING_BACKOFF_FACTOR,
+                  MAX_POLLING_INTERVAL,
                 );
               }
             }
           } catch (error) {
-            console.error('Error in ring buffer polling:', error);
+            console.error("Error in ring buffer polling:", error);
             // If we encounter an error, reset the buffer to avoid getting stuck
             ringBufferRef.current?.clear(true);
           }
-          
+
           // Schedule next poll with dynamic interval
           pollingIntervalRef.current = window.setTimeout(poll, currentInterval);
         };
-        
+
         // Start the first poll
         pollingIntervalRef.current = window.setTimeout(poll, MIN_POLLING_INTERVAL);
       }
@@ -409,7 +421,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       if (message.type === MessageType.MAIN_THREAD_INSTRUCTION) {
         const instruction = message.message;
         const node = objectsRef.current[instruction.nodeId];
-        
+
         if (node) {
           // Process instruction immediately to bypass batching for critical instructions
           const { inlets, arguments: args, fn } = node;
@@ -434,14 +446,14 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           ) {
             instruction.inletMessages[0] = node.inlets[0].lastMessage;
           }
-          
+
           if (instruction.inletMessages[0] !== undefined && fn) {
             node.receive(node.inlets[0], instruction.inletMessages[0]);
           }
         }
         return;
       }
-      
+
       // For other messages, queue them through the batcher
       switch (message.type) {
         case MessageType.NEW_SHARED_BUFFER:
@@ -467,27 +479,27 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         perfMonitorIntervalRef.current = window.setInterval(() => {
           if (sharedMemoryRef.current) {
             // Report main thread metrics
-            const memoryEstimate = window.performance?.memory?.usedJSHeapSize 
-              ? window.performance.memory.usedJSHeapSize / (1024 * 1024) 
+            const memoryEstimate = window.performance?.memory?.usedJSHeapSize
+              ? window.performance.memory.usedJSHeapSize / (1024 * 1024)
               : 0;
-            
+
             sharedMemoryRef.current.reportMemoryUsage(memoryEstimate);
-            
+
             // Calculate main thread CPU utilization (simplified)
             sharedMemoryRef.current.reportCPULoad(false, Math.random() * 20);
-            
+
             // Update active node count
             sharedMemoryRef.current.updateNodeStats(Object.keys(objectsRef.current).length);
           }
         }, PERF_MONITOR_INTERVAL);
       }
     };
-    
+
     // Start performance monitoring after worker is ready
-    worker.addEventListener('message', function onReady(event) {
-      if (event.data.type === 'ringBufferReady') {
+    worker.addEventListener("message", function onReady(event) {
+      if (event.data.type === "ringBufferReady") {
         startPerformanceMonitoring();
-        worker.removeEventListener('message', onReady);
+        worker.removeEventListener("message", onReady);
       }
     });
 
@@ -496,17 +508,17 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         window.clearTimeout(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
-      
+
       if (perfMonitorIntervalRef.current !== null) {
         window.clearInterval(perfMonitorIntervalRef.current);
         perfMonitorIntervalRef.current = null;
       }
-      
+
       // Clear all shared resources
       if (ringBufferRef.current) {
         ringBufferRef.current.clear(true);
       }
-      
+
       worker.terminate();
     };
   }, []);
@@ -515,13 +527,18 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     if (((body as EvaluateNodeBody).body?.message as Statement)?.node) {
       return;
     }
-    
+
+    if (body.type === "setCompilation") {
+      workerRef.current?.postMessage(body);
+      return;
+    }
+
     // Try to use ring buffer first for eligible message types
     if (ringBufferRef.current) {
       let messageType: MessageType | null = null;
-      let nodeId = '';
+      let nodeId = "";
       let messageData = null;
-      
+
       // Map message body to ring buffer format
       switch (body.type) {
         case "evaluateNode":
@@ -541,11 +558,11 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           break;
         case "loadbang":
           messageType = MessageType.LOADBANG;
-          nodeId = 'global';
+          nodeId = "global";
           break;
         case "publish":
           messageType = MessageType.PUBLISH;
-          nodeId = 'global';
+          nodeId = "global";
           messageData = body.body;
           break;
         case "attrui":
@@ -553,23 +570,22 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           nodeId = body.body.nodeId;
           messageData = body.body.message;
           break;
-        case "setCompilation":
-          messageType = MessageType.SET_COMPILATION;
-          nodeId = 'global';
-          messageData = body.body;
-          break;
       }
-      
+
       // If eligible for ring buffer and we can write to it
       if (messageType && ringBufferRef.current.canWrite()) {
         const success = ringBufferRef.current.write(messageType, nodeId, messageData);
         if (success) {
+          //console.log("successfully wrote ", messageType, nodeId, messageData);
           // Message was successfully written to the ring buffer
           return;
         }
+      } else {
+        console.log("can't write", messageType, body);
       }
+    } else {
     }
-    
+
     // Fallback to postMessage for larger messages or if ring buffer is full
     workerRef.current?.postMessage(body);
   }, []);
@@ -596,10 +612,8 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     if (!sharedMemoryRef.current) return null;
     return sharedMemoryRef.current.getPerformanceMetrics();
   }, []);
-  
+
   return (
-    <WorkerContext.Provider value={{ getPerformanceMetrics }}>
-      {children}
-    </WorkerContext.Provider>
+    <WorkerContext.Provider value={{ getPerformanceMetrics }}>{children}</WorkerContext.Provider>
   );
 };

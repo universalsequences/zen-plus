@@ -104,15 +104,15 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
 
   // Try using ring buffer for critical real-time updates first
   let sentViaRingBuffer = false;
-  
+
   if (ringBuffer && mainThreadInstructions && mainThreadInstructions.length > 0) {
     // Send main thread instructions via ring buffer for lower latency
     for (const instruction of mainThreadInstructions) {
       if (ringBuffer.canWrite()) {
         const success = ringBuffer.write(
-          MessageType.MAIN_THREAD_INSTRUCTION, 
-          instruction.nodeId, 
-          instruction
+          MessageType.MAIN_THREAD_INSTRUCTION,
+          instruction.nodeId,
+          instruction,
         );
         // If any fail, we'll fall back to postMessage for all
         if (!success) {
@@ -126,22 +126,26 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
       }
     }
   }
-  
+
   // If we couldn't send via ring buffer or there are other updates,
   // use regular postMessage
-  if (!sentViaRingBuffer || 
-      attributeUpdates.length > 0 || 
-      replaceMessages.length > 0 ||
-      onNewSharedBuffer.length > 0 ||
-      onNewValue.length > 0 ||
-      onNewValues.length > 0 ||
-      mutableValueChanged.length > 0) {
-    
+  if (
+    !sentViaRingBuffer ||
+    attributeUpdates.length > 0 ||
+    replaceMessages.length > 0 ||
+    onNewSharedBuffer.length > 0 ||
+    onNewValue.length > 0 ||
+    onNewValues.length > 0 ||
+    mutableValueChanged.length > 0
+  ) {
     const updates = {
       // Don't include mainThreadInstructions if we sent them via ring buffer
       attributeUpdates: attributeUpdates.length > 0 ? attributeUpdates : undefined,
       replaceMessages: replaceMessages.length > 0 ? replaceMessages : undefined,
-      mainThreadInstructions: (!sentViaRingBuffer && mainThreadInstructions.length > 0) ? mainThreadInstructions : undefined,
+      mainThreadInstructions:
+        !sentViaRingBuffer && mainThreadInstructions.length > 0
+          ? mainThreadInstructions
+          : undefined,
       onNewSharedBuffer: onNewSharedBuffer.length > 0 ? onNewSharedBuffer : undefined,
       onNewValue: onNewValue.length > 0 ? onNewValue : undefined,
       onNewValues: onNewValues.length > 0 ? onNewValues : undefined,
@@ -156,7 +160,7 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
       });
     }
   }
-  
+
   vm.clear();
 };
 
@@ -192,11 +196,8 @@ const processRingBufferMessage = (message: { type: MessageType; nodeId: string; 
       }
       break;
     case MessageType.SET_COMPILATION:
-      const { onNewSharedBuffer } = vm.setNodes(
-        message.message.objects, 
-        message.message.messages
-      );
-      
+      const { onNewSharedBuffer } = vm.setNodes(message.message.objects, message.message.messages);
+
       // Send shared buffers via regular postMessage since they're already using SharedArrayBuffer
       if (onNewSharedBuffer.length > 0) {
         self.postMessage({
@@ -204,7 +205,7 @@ const processRingBufferMessage = (message: { type: MessageType; nodeId: string; 
           body: onNewSharedBuffer,
         });
       }
-      
+
       vm.setNodeInstructions(message.message.nodeInstructions);
       break;
   }
@@ -216,7 +217,7 @@ const startPolling = () => {
     pollingActive = true;
     let currentInterval = MIN_POLLING_INTERVAL;
     let consecutiveEmptyPolls = 0;
-    
+
     const poll = () => {
       try {
         let foundMessage = false;
@@ -225,39 +226,39 @@ const startPolling = () => {
           if (message) {
             processRingBufferMessage(message);
             foundMessage = true;
-            
+
             // Update message count in shared memory
             if (sharedMemory) {
               sharedMemory.reportMessageProcessed();
             }
-            
+
             // Reset polling interval since we're active
             currentInterval = MIN_POLLING_INTERVAL;
             consecutiveEmptyPolls = 0;
           }
         }
-        
+
         if (!foundMessage) {
           // Gradually back off polling frequency when idle
           consecutiveEmptyPolls++;
           if (consecutiveEmptyPolls > 5) {
             currentInterval = Math.min(
-              currentInterval * POLLING_BACKOFF_FACTOR, 
-              MAX_POLLING_INTERVAL
+              currentInterval * POLLING_BACKOFF_FACTOR,
+              MAX_POLLING_INTERVAL,
             );
           }
         }
       } catch (error) {
-        console.error('Error in worker ring buffer polling:', error);
+        console.error("Error in worker ring buffer polling:", error);
         // If we encounter an error, reset the buffer to avoid getting stuck
         ringBuffer?.clear(true);
       }
-      
+
       if (pollingActive) {
         pollingTimeoutId = setTimeout(poll, currentInterval) as unknown as number;
       }
     };
-    
+
     poll();
   }
 };
@@ -266,83 +267,83 @@ const startPolling = () => {
 const startPerformanceMonitoring = () => {
   if (!perfMonitoringActive && sharedMemory) {
     perfMonitoringActive = true;
-    
+
     const monitorPerformance = () => {
       if (!sharedMemory) return;
-      
+
       // Report worker metrics
       try {
         // Calculate worker load (simplified)
         sharedMemory.reportCPULoad(true, Math.random() * 25);
-        
+
         // Report instruction count from VM
         const instructionCount = vm.totalInstructionsEvaluated;
         sharedMemory.setInt32(MemoryOffsets.INSTRUCTION_COUNT, instructionCount);
-        
+
         // Update timestamp to indicate data is fresh
         sharedMemory.updateTimestamp();
       } catch (err) {
-        console.error('Error updating shared memory metrics:', err);
+        console.error("Error updating shared memory metrics:", err);
       }
-      
+
       if (perfMonitoringActive) {
         setTimeout(monitorPerformance, PERF_MONITOR_INTERVAL);
       }
     };
-    
+
     monitorPerformance();
   }
 };
 
 self.onmessage = async (e: MessageEvent) => {
   const data = e.data;
-  
+
   // Handle initialization of the ring buffer and shared memory
   if (data.type === "initRingBuffer") {
     try {
       // Check if both buffers are properly provided and are SharedArrayBuffers
-      if (data.buffer instanceof SharedArrayBuffer &&
-          data.sharedMemory instanceof SharedArrayBuffer) {
-          
+      if (
+        data.buffer instanceof SharedArrayBuffer &&
+        data.sharedMemory instanceof SharedArrayBuffer
+      ) {
         // Initialize ring buffer with the shared buffer from the main thread
         // Set direction to WORKER_TO_MAIN for writing from worker to main
         ringBuffer = new RingBuffer(0, data.buffer, BufferDirection.WORKER_TO_MAIN);
-        
+
         // Initialize shared memory manager
         sharedMemory = new SharedMemoryManager(0, data.sharedMemory);
-        
+
         // Add totalInstructionsEvaluated property to VM if not already there
-        if (!('totalInstructionsEvaluated' in vm)) {
-          Object.defineProperty(vm, 'totalInstructionsEvaluated', {
+        if (!("totalInstructionsEvaluated" in vm)) {
+          Object.defineProperty(vm, "totalInstructionsEvaluated", {
             value: 0,
-            writable: true
+            writable: true,
           });
         }
-        
+
         // Notify main thread that the ring buffer is ready
         self.postMessage({ type: "ringBufferReady" });
-        
+
         // Start polling for messages
         startPolling();
-        
+
         // Start performance monitoring
         startPerformanceMonitoring();
-        
-        console.log('Worker: SharedArrayBuffer initialized successfully');
+
+        console.log("Worker: SharedArrayBuffer initialized successfully");
         return;
       }
     } catch (error) {
-      console.error('Worker: Error initializing shared buffers:', error);
+      console.error("Worker: Error initializing shared buffers:", error);
     }
-    
+
     // If we get here, something went wrong with SharedArrayBuffer initialization
     // Fall through to standard initialization
-    console.warn('Worker: SharedArrayBuffer initialization failed, using standard messaging');
+    console.warn("Worker: SharedArrayBuffer initialization failed, using standard messaging");
   }
-  
+
   // Handle regular message types (fallback for messages not sent via ring buffer)
   if (data.type === "setCompilation") {
-    //console.log("received worker message", data.body.objects);
     const { onNewSharedBuffer } = vm.setNodes(data.body.objects, data.body.messages);
     if (onNewSharedBuffer.length > 0) {
       self.postMessage({
