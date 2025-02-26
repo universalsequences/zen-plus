@@ -80,12 +80,7 @@ export type MessageBody =
 const vm = new VM();
 let ringBuffer: RingBuffer | null = null;
 let sharedMemory: SharedMemoryManager | null = null;
-let pollingActive = false;
 let perfMonitoringActive = false;
-let pollingTimeoutId: number | null = null;
-const MIN_POLLING_INTERVAL = 5; // Minimum 5ms polling interval when active
-const MAX_POLLING_INTERVAL = 30; // Maximum 30ms polling interval when idle
-const POLLING_BACKOFF_FACTOR = 1.2; // Increase polling interval by this factor when no messages
 const PERF_MONITOR_INTERVAL = 1000; // 1s performance monitoring interval
 
 // sends one round of instructions evaluation to the main thread
@@ -211,55 +206,10 @@ const processRingBufferMessage = (message: { type: MessageType; nodeId: string; 
   }
 };
 
-// Start polling the ring buffer for messages
-const startPolling = () => {
-  if (!pollingActive && ringBuffer) {
-    pollingActive = true;
-    let currentInterval = MIN_POLLING_INTERVAL;
-    let consecutiveEmptyPolls = 0;
-
-    const poll = () => {
-      try {
-        let foundMessage = false;
-        if (ringBuffer?.canRead()) {
-          const message = ringBuffer.read();
-          if (message) {
-            processRingBufferMessage(message);
-            foundMessage = true;
-
-            // Update message count in shared memory
-            if (sharedMemory) {
-              sharedMemory.reportMessageProcessed();
-            }
-
-            // Reset polling interval since we're active
-            currentInterval = MIN_POLLING_INTERVAL;
-            consecutiveEmptyPolls = 0;
-          }
-        }
-
-        if (!foundMessage) {
-          // Gradually back off polling frequency when idle
-          consecutiveEmptyPolls++;
-          if (consecutiveEmptyPolls > 5) {
-            currentInterval = Math.min(
-              currentInterval * POLLING_BACKOFF_FACTOR,
-              MAX_POLLING_INTERVAL,
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error in worker ring buffer polling:", error);
-        // If we encounter an error, reset the buffer to avoid getting stuck
-        ringBuffer?.clear(true);
-      }
-
-      if (pollingActive) {
-        pollingTimeoutId = setTimeout(poll, currentInterval) as unknown as number;
-      }
-    };
-
-    poll();
+// Check for messages when signaled rather than polling
+const processInitialMessages = () => {
+  if (ringBuffer?.canRead()) {
+    processRingBufferData();
   }
 };
 
@@ -295,8 +245,39 @@ const startPerformanceMonitoring = () => {
   }
 };
 
+// Function to process data from the ring buffer
+const processRingBufferData = () => {
+  try {
+    if (ringBuffer?.canRead()) {
+      const message = ringBuffer.read();
+      if (message) {
+        processRingBufferMessage(message);
+        
+        // Update message count in shared memory
+        if (sharedMemory) {
+          sharedMemory.reportMessageProcessed();
+        }
+        
+        // Process more messages if available
+        // Continue processing as long as there are messages to avoid building up backlog
+        if (ringBuffer.canRead()) {
+          setTimeout(processRingBufferData, 0); // Schedule with microtask to avoid stack overflow
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error processing ring buffer data:", error);
+  }
+};
+
 self.onmessage = async (e: MessageEvent) => {
   const data = e.data;
+
+  // Handle signal that data is available in the ring buffer
+  if (data.type === "ringBufferDataAvailable") {
+    processRingBufferData();
+    return;
+  }
 
   // Handle initialization of the ring buffer and shared memory
   if (data.type === "initRingBuffer") {
@@ -309,6 +290,11 @@ self.onmessage = async (e: MessageEvent) => {
         // Initialize ring buffer with the shared buffer from the main thread
         // Set direction to WORKER_TO_MAIN for writing from worker to main
         ringBuffer = new RingBuffer(0, data.buffer, BufferDirection.WORKER_TO_MAIN);
+        
+        // Set up signal callback to notify main thread when data is available
+        ringBuffer.setSignalCallback(() => {
+          self.postMessage({ type: "ringBufferDataAvailable" });
+        });
 
         // Initialize shared memory manager
         sharedMemory = new SharedMemoryManager(0, data.sharedMemory);
@@ -324,8 +310,8 @@ self.onmessage = async (e: MessageEvent) => {
         // Notify main thread that the ring buffer is ready
         self.postMessage({ type: "ringBufferReady" });
 
-        // Start polling for messages
-        startPolling();
+        // Check for any initial messages
+        processInitialMessages();
 
         // Start performance monitoring
         startPerformanceMonitoring();

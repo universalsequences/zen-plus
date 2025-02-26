@@ -139,6 +139,17 @@ export class RingBuffer {
     return this.direction;
   }
 
+  // Callback function to signal that new data is available
+  private signalCallback?: () => void;
+  
+  /**
+   * Set a callback function to be called when new data is written to the buffer
+   * This enables a signal-based approach instead of polling
+   */
+  setSignalCallback(callback: () => void): void {
+    this.signalCallback = callback;
+  }
+
   /**
    * Writes a message to the ring buffer in the current direction
    * Returns true if the message was written successfully
@@ -310,6 +321,11 @@ export class RingBuffer {
         this.view.setUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR, newWritePtr);
       } else {
         this.view.setUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR, newWritePtr);
+      }
+      
+      // Signal that new data is available (if callback is set)
+      if (this.signalCallback) {
+        this.signalCallback();
       }
 
       return true;

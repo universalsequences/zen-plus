@@ -255,16 +255,11 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
   const ringBufferRef = useRef<RingBuffer>();
   const sharedMemoryRef = useRef<SharedMemoryManager>();
 
-  // Set up polling interval for checking messages from the worker
-  // This will be null when not active
-  const pollingIntervalRef = useRef<number | null>(null);
+  // Reference for performance monitoring interval
   const perfMonitorIntervalRef = useRef<number | null>(null);
 
   // Constants
-  const RING_BUFFER_SIZE = 32 * 1024 * 1024; // 1MB buffer size
-  const MIN_POLLING_INTERVAL = 5; // Minimum 5ms polling interval when active
-  const MAX_POLLING_INTERVAL = 30; // Maximum 30ms polling interval when idle
-  const POLLING_BACKOFF_FACTOR = 1.2; // Increase polling interval by this factor when no messages
+  const RING_BUFFER_SIZE = 32 * 1024 * 1024; // 32MB buffer size
   const PERF_MONITOR_INTERVAL = 1000; // 1s performance monitoring interval
 
   useEffect(() => {
@@ -297,6 +292,12 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         undefined,
         BufferDirection.MAIN_TO_WORKER,
       );
+      
+      // Set up signal callback to notify worker when data is available
+      ringBuffer.setSignalCallback(() => {
+        worker.postMessage({ type: "ringBufferDataAvailable" });
+      });
+      
       ringBufferRef.current = ringBuffer;
 
       // Create a SharedMemoryManager for direct memory access between threads
@@ -319,10 +320,35 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       worker.postMessage({ type: "init" });
     }
 
-    worker.onmessage = (event: MessageEvent) => {
-      //console.log("on message received=", event);
-      const { type, body } = event.data;
+    // Function to process data from the ring buffer
+    const processRingBufferData = () => {
+      try {
+        if (ringBufferRef.current?.canRead()) {
+          const message = ringBufferRef.current.read();
+          if (message) {
+            handleWorkerMessage(message);
+            
+            // Continue processing messages if more are available
+            // This prevents backlogs by processing all available messages
+            if (ringBufferRef.current.canRead()) {
+              setTimeout(processRingBufferData, 0); // Use microtask to avoid stack overflow
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error processing ring buffer data:", error);
+      }
+    };
 
+    worker.onmessage = (event: MessageEvent) => {
+      const { type, body } = event.data;
+      
+      // Handle signal that data is available in the ring buffer
+      if (type === "ringBufferDataAvailable") {
+        processRingBufferData();
+        return;
+      }
+      
       if (event.data.type === "batchedUpdates") {
         const { updates } = event.data;
 
@@ -351,66 +377,17 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           batcherRef.current?.queueUpdate?.("mutableValueChanged", updates.mutableValueChanged);
         }
       } else if (type === "ringBufferReady") {
-        // Worker has acknowledged the ring buffer, start polling
-        startPolling();
+        // Worker has acknowledged the ring buffer is ready
+        checkInitialMessages();
       } else {
         batcherRef.current?.queueUpdate(type, Array.isArray(body) ? body : [body]);
       }
     };
 
-    const startPolling = () => {
-      // Only start if not already polling
-      if (pollingIntervalRef.current === null) {
-        console.log("MAIN: Starting ring buffer polling");
-        // Use dynamic polling for CPU efficiency
-        let currentInterval = MIN_POLLING_INTERVAL;
-        let consecutiveEmptyPolls = 0;
-
-        const poll = () => {
-          try {
-            let foundMessage = false;
-            if (ringBufferRef.current?.canRead()) {
-              //console.log("MAIN: Ring buffer has data to read");
-              const message = ringBufferRef.current.read();
-              if (message) {
-                //console.log("MAIN: Read message from ring buffer:", message.type, message.nodeId);
-                // Process message from worker
-                handleWorkerMessage(message);
-                foundMessage = true;
-
-                // If we found a message, reset to minimum interval
-                // as there's likely more activity to process
-                currentInterval = MIN_POLLING_INTERVAL;
-                consecutiveEmptyPolls = 0;
-              } else {
-                //console.log("MAIN: Ring buffer read returned undefined");
-              }
-            } else {
-              //console.log("MAIN: canRead() returned false");
-            }
-
-            if (!foundMessage) {
-              // Gradually back off polling frequency when idle
-              consecutiveEmptyPolls++;
-              if (consecutiveEmptyPolls > 5) {
-                currentInterval = Math.min(
-                  currentInterval * POLLING_BACKOFF_FACTOR,
-                  MAX_POLLING_INTERVAL,
-                );
-              }
-            }
-          } catch (error) {
-            console.error("Error in ring buffer polling:", error);
-            // If we encounter an error, reset the buffer to avoid getting stuck
-            ringBufferRef.current?.clear(true);
-          }
-
-          // Schedule next poll with dynamic interval
-          pollingIntervalRef.current = window.setTimeout(poll, currentInterval);
-        };
-
-        // Start the first poll
-        pollingIntervalRef.current = window.setTimeout(poll, MIN_POLLING_INTERVAL);
+    // Check for any existing messages in the buffer
+    const checkInitialMessages = () => {
+      if (ringBufferRef.current?.canRead()) {
+        processRingBufferData();
       }
     };
 
@@ -499,16 +476,12 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     worker.addEventListener("message", function onReady(event) {
       if (event.data.type === "ringBufferReady") {
         startPerformanceMonitoring();
+        checkInitialMessages(); // Check for any initial messages
         worker.removeEventListener("message", onReady);
       }
     });
 
     return () => {
-      if (pollingIntervalRef.current !== null) {
-        window.clearTimeout(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-
       if (perfMonitorIntervalRef.current !== null) {
         window.clearInterval(perfMonitorIntervalRef.current);
         perfMonitorIntervalRef.current = null;
