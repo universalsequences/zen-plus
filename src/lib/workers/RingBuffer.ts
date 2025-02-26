@@ -65,12 +65,22 @@ export class RingBuffer {
    * @param existingBuffer Optional existing SharedArrayBuffer to use
    * @param direction Which direction this instance will use for writing
    */
-  constructor(sizeInBytes: number, existingBuffer?: SharedArrayBuffer, direction: BufferDirection = BufferDirection.MAIN_TO_WORKER) {
+  constructor(sizeInBytes: number = 1024 * 1024, existingBuffer?: SharedArrayBuffer, direction: BufferDirection = BufferDirection.MAIN_TO_WORKER) {
     if (existingBuffer) {
       // Use existing buffer (e.g., when worker receives the buffer from main thread)
       this.buffer = existingBuffer;
       this.view = new DataView(this.buffer);
       this.bufferSize = this.view.getUint32(RingBuffer.BUFFER_SIZE);
+      
+      // Make sure the buffer is already initialized
+      if (this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR) === 0) {
+        console.error('Buffer not properly initialized');
+        // Re-initialize
+        this.view.setUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR, RingBuffer.HEADER_SIZE);
+        this.view.setUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR, RingBuffer.HEADER_SIZE);
+        this.view.setUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR, RingBuffer.HEADER_SIZE + this.bufferSize);
+        this.view.setUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR, RingBuffer.HEADER_SIZE + this.bufferSize);
+      }
     } else {
       // Create new buffer
       const totalSize = sizeInBytes * 2 + RingBuffer.HEADER_SIZE;
@@ -87,6 +97,9 @@ export class RingBuffer {
       this.view.setUint32(RingBuffer.BUFFER_SIZE, sizeInBytes);
       this.view.setUint8(RingBuffer.MAIN_TO_WORKER_LOCK, 0);
       this.view.setUint8(RingBuffer.WORKER_TO_MAIN_LOCK, 0);
+      
+      // Add some debugging info
+      console.log(`RingBuffer initialized with size ${sizeInBytes} bytes`);
     }
     
     this.direction = direction;
@@ -104,6 +117,13 @@ export class RingBuffer {
    */
   setDirection(direction: BufferDirection): void {
     this.direction = direction;
+  }
+  
+  /**
+   * Get the current direction of this RingBuffer instance
+   */
+  getDirection(): BufferDirection {
+    return this.direction;
   }
   
   /**
@@ -266,87 +286,106 @@ export class RingBuffer {
    * Returns undefined if no message is available
    */
   read(): { type: MessageType; nodeId: string; message: any } | undefined {
-    // Determine which buffer to read from (opposite of the direction we write to)
-    let writePtr: number, readPtr: number, bufferStart: number, readPtrOffset: number, lockOffset: number;
-    
-    if (this.direction === BufferDirection.MAIN_TO_WORKER) {
-      // Main thread reads from worker-to-main buffer
-      writePtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR);
-      readPtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR);
-      bufferStart = RingBuffer.HEADER_SIZE + this.bufferSize;
-      readPtrOffset = RingBuffer.WORKER_TO_MAIN_READ_PTR;
-      lockOffset = RingBuffer.WORKER_TO_MAIN_LOCK;
-    } else {
-      // Worker reads from main-to-worker buffer
-      writePtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR);
-      readPtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR);
-      bufferStart = RingBuffer.HEADER_SIZE;
-      readPtrOffset = RingBuffer.MAIN_TO_WORKER_READ_PTR;
-      lockOffset = RingBuffer.MAIN_TO_WORKER_LOCK;
-    }
-    
-    // Check if there's data to read
-    if (readPtr === writePtr) {
-      return undefined; // Buffer is empty
-    }
-    
-    // Try to acquire lock
-    if (Atomics.compareExchange(new Uint8Array(this.buffer), lockOffset, 0, 1) !== 0) {
-      return undefined; // Couldn't get lock, another thread is reading
-    }
-    
     try {
-      // Recheck if there's data after acquiring lock
-      if (readPtr === writePtr) {
-        return undefined; // Buffer became empty
-      }
+      // Determine which buffer to read from (opposite of the direction we write to)
+      let writePtr: number, readPtr: number, bufferStart: number, readPtrOffset: number, lockOffset: number;
       
-      const bufferEnd = bufferStart + this.bufferSize;
-      const wrappedReadPtr = ((readPtr - bufferStart) % this.bufferSize) + bufferStart;
-      
-      // Read the message type
-      const type = this.view.getUint8(wrappedReadPtr) as MessageType;
-      
-      // Read the message length
-      const lengthPtr = (wrappedReadPtr + 1) % this.bufferSize + bufferStart;
-      let messageLength: number;
-      
-      if (lengthPtr + 4 <= bufferEnd) {
-        // Length doesn't wrap
-        messageLength = this.view.getUint32(lengthPtr);
+      if (this.direction === BufferDirection.MAIN_TO_WORKER) {
+        // Main thread reads from worker-to-main buffer
+        writePtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR);
+        readPtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR);
+        bufferStart = RingBuffer.HEADER_SIZE + this.bufferSize;
+        readPtrOffset = RingBuffer.WORKER_TO_MAIN_READ_PTR;
+        lockOffset = RingBuffer.WORKER_TO_MAIN_LOCK;
       } else {
-        // Length wraps around buffer end
-        messageLength = 0;
-        const bytesAtEnd = bufferEnd - lengthPtr;
-        for (let i = 0; i < bytesAtEnd; i++) {
-          messageLength |= this.view.getUint8(lengthPtr + i) << (8 * i);
-        }
-        for (let i = 0; i < 4 - bytesAtEnd; i++) {
-          messageLength |= this.view.getUint8(bufferStart + i) << (8 * (bytesAtEnd + i));
-        }
+        // Worker reads from main-to-worker buffer
+        writePtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR);
+        readPtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR);
+        bufferStart = RingBuffer.HEADER_SIZE;
+        readPtrOffset = RingBuffer.MAIN_TO_WORKER_READ_PTR;
+        lockOffset = RingBuffer.MAIN_TO_WORKER_LOCK;
       }
       
-      // Sanity check message length to prevent errors
-      // Cap at a reasonable size and ensure it's positive
-      const MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
-      if (messageLength <= 0 || messageLength > MAX_MESSAGE_SIZE) {
-        console.error(`Invalid message length detected: ${messageLength}, resetting buffer`);
-        // Reset the read pointer to avoid getting stuck in a bad state
-        if (this.direction === BufferDirection.MAIN_TO_WORKER) {
-          this.view.setUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR, writePtr);
-        } else {
-          this.view.setUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR, writePtr);
-        }
+      // Validate pointers to ensure they're in range
+      const bufferEnd = bufferStart + this.bufferSize;
+      if (writePtr < bufferStart || writePtr >= bufferEnd ||
+          readPtr < bufferStart || readPtr >= bufferEnd) {
+        console.error('Invalid buffer pointers in read(), resetting');
+        this.clear();
         return undefined;
       }
       
-      // Allocate buffer for encoded message
-      const messageBuffer = new ArrayBuffer(messageLength);
+      // Check if there's data to read
+      if (readPtr === writePtr) {
+        return undefined; // Buffer is empty
+      }
       
-      // Read the message data
-      const messageHeaderSize = 5; // type + length
-      const messageStartRelative = (wrappedReadPtr + messageHeaderSize) % this.bufferSize;
-      const messageStart = messageStartRelative + bufferStart;
+      // Try to acquire lock
+      if (Atomics.compareExchange(new Uint8Array(this.buffer), lockOffset, 0, 1) !== 0) {
+        return undefined; // Couldn't get lock, another thread is reading
+      }
+      
+      try {
+        // Recheck if there's data after acquiring lock
+        if (readPtr === writePtr) {
+          return undefined; // Buffer became empty
+        }
+        
+        const wrappedReadPtr = ((readPtr - bufferStart) % this.bufferSize) + bufferStart;
+        
+        // Read the message type - make sure we're not reading past buffer end
+        if (wrappedReadPtr >= bufferEnd) {
+          console.error('Read pointer out of range', wrappedReadPtr, bufferEnd);
+          // Reset to beginning of buffer
+          this.view.setUint32(readPtrOffset, bufferStart);
+          return undefined;
+        }
+        
+        const type = this.view.getUint8(wrappedReadPtr) as MessageType;
+        
+        // Read the message length
+        const lengthPtr = (wrappedReadPtr + 1) % this.bufferSize + bufferStart;
+        if (lengthPtr >= bufferEnd) {
+          console.error('Length pointer out of range', lengthPtr, bufferEnd);
+          // Reset to beginning of buffer
+          this.view.setUint32(readPtrOffset, bufferStart);
+          return undefined;
+        }
+        
+        let messageLength: number;
+        
+        if (lengthPtr + 4 <= bufferEnd) {
+          // Length doesn't wrap
+          messageLength = this.view.getUint32(lengthPtr);
+        } else {
+          // Length wraps around buffer end
+          messageLength = 0;
+          const bytesAtEnd = bufferEnd - lengthPtr;
+          for (let i = 0; i < bytesAtEnd; i++) {
+            messageLength |= this.view.getUint8(lengthPtr + i) << (8 * i);
+          }
+          for (let i = 0; i < 4 - bytesAtEnd; i++) {
+            messageLength |= this.view.getUint8(bufferStart + i) << (8 * (bytesAtEnd + i));
+          }
+        }
+        
+        // Sanity check message length to prevent errors
+        // Cap at a reasonable size and ensure it's positive
+        const MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
+        if (messageLength <= 0 || messageLength > MAX_MESSAGE_SIZE) {
+          console.error(`Invalid message length detected: ${messageLength}, resetting buffer`);
+          // Reset the read pointer to avoid getting stuck in a bad state
+          this.view.setUint32(readPtrOffset, writePtr);
+          return undefined;
+        }
+        
+        // Allocate buffer for encoded message
+        const messageBuffer = new ArrayBuffer(messageLength);
+        
+        // Read the message data
+        const messageHeaderSize = 5; // type + length
+        const messageStartRelative = (wrappedReadPtr + messageHeaderSize) % this.bufferSize;
+        const messageStart = messageStartRelative + bufferStart;
       
       try {
         // Handle message that wraps around the buffer end
@@ -392,28 +431,28 @@ export class RingBuffer {
         });
         
         // Reset the read pointer to avoid getting stuck in a bad state
-        if (this.direction === BufferDirection.MAIN_TO_WORKER) {
-          this.view.setUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR, writePtr);
-        } else {
-          this.view.setUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR, writePtr);
-        }
+        this.view.setUint32(readPtrOffset, writePtr);
         return undefined;
       }
       
       // Update the read pointer
       const newReadPtr = (wrappedReadPtr + messageHeaderSize + messageLength) % this.bufferSize + bufferStart;
+      this.view.setUint32(readPtrOffset, newReadPtr);
       
-      if (this.direction === BufferDirection.MAIN_TO_WORKER) {
-        this.view.setUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR, newReadPtr);
-      } else {
-        this.view.setUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR, newReadPtr);
+      try {
+        // Decode message
+        return this.decodeMessage(messageBuffer, type);
+      } catch (error) {
+        console.error('Error decoding message from buffer:', error);
+        return undefined;
       }
-      
-      // Decode message
-      return this.decodeMessage(messageBuffer, type);
-    } finally {
-      // Release lock
-      Atomics.store(new Uint8Array(this.buffer), lockOffset, 0);
+      } finally {
+        // Always release lock
+        Atomics.store(new Uint8Array(this.buffer), lockOffset, 0);
+      }
+    } catch (error) {
+      console.error('Unexpected error in read():', error);
+      return undefined;
     }
   }
   
@@ -555,35 +594,46 @@ export class RingBuffer {
     
     // Special handling for TypedArrays which are common in audio processing
     if (value instanceof Float32Array) {
-      const buffer = new ArrayBuffer(5 + value.length * 4); // 1 byte type + 4 bytes length + data
+      // Need to ensure proper alignment - we'll use 8 byte alignment for safety
+      const headerSize = 8; // 1 byte type + 4 bytes length + 3 bytes padding for alignment
+      const buffer = new ArrayBuffer(headerSize + value.length * 4);
       const view = new DataView(buffer);
       view.setUint8(0, RingBuffer.VALUE_TYPE_FLOAT32_ARRAY);
       view.setUint32(1, value.length);
       
-      // Copy the Float32Array data
-      new Float32Array(buffer, 5, value.length).set(value);
+      // Copy the Float32Array data (with proper alignment at 8 bytes)
+      const dataArray = new Float32Array(buffer);
+      // Start at index 2 in the Float32Array view (which is byte offset 8)
+      dataArray.set(value, 2);
       return buffer;
     }
     
     if (value instanceof Float64Array) {
-      const buffer = new ArrayBuffer(5 + value.length * 8); // 1 byte type + 4 bytes length + data
+      // Float64Array already requires 8-byte alignment
+      const headerSize = 8; // 1 byte type + 4 bytes length + 3 bytes padding for alignment
+      const buffer = new ArrayBuffer(headerSize + value.length * 8);
       const view = new DataView(buffer);
       view.setUint8(0, RingBuffer.VALUE_TYPE_FLOAT64_ARRAY);
       view.setUint32(1, value.length);
       
-      // Copy the Float64Array data
-      new Float64Array(buffer, 5, value.length).set(value);
+      // Copy the Float64Array data (with proper alignment)
+      const dataArray = new Float64Array(buffer);
+      // Start at index 1 in the Float64Array view (which is byte offset 8)
+      dataArray.set(value, 1);
       return buffer;
     }
     
     if (value instanceof Int32Array) {
-      const buffer = new ArrayBuffer(5 + value.length * 4); // 1 byte type + 4 bytes length + data
+      const headerSize = 8; // 1 byte type + 4 bytes length + 3 bytes padding for alignment
+      const buffer = new ArrayBuffer(headerSize + value.length * 4);
       const view = new DataView(buffer);
       view.setUint8(0, RingBuffer.VALUE_TYPE_INT32_ARRAY);
       view.setUint32(1, value.length);
       
-      // Copy the Int32Array data
-      new Int32Array(buffer, 5, value.length).set(value);
+      // Copy the Int32Array data (with proper alignment)
+      const dataArray = new Int32Array(buffer);
+      // Start at index 2 in the Int32Array view (which is byte offset 8)
+      dataArray.set(value, 2);
       return buffer;
     }
     
@@ -681,10 +731,14 @@ export class RingBuffer {
    * Decode a value from its binary representation
    */
   private decodeValue(buffer: ArrayBuffer, offset: number = 0): any {
-    if (buffer.byteLength <= offset) return undefined;
+    if (!buffer || buffer.byteLength <= offset) {
+      console.error('Invalid or empty buffer in decodeValue');
+      return undefined;
+    }
     
-    const view = new DataView(buffer);
-    const valueType = view.getUint8(offset);
+    try {
+      const view = new DataView(buffer);
+      const valueType = view.getUint8(offset);
     
     switch (valueType) {
       case RingBuffer.VALUE_TYPE_NULL:
@@ -767,43 +821,61 @@ export class RingBuffer {
         return result;
         
       case RingBuffer.VALUE_TYPE_FLOAT32_ARRAY:
-        if (buffer.byteLength < offset + 5) {
+        if (buffer.byteLength < offset + 8) {
           console.error('Invalid buffer length for Float32Array decoding');
           return new Float32Array(0);
         }
         const float32Length = view.getUint32(offset + 1);
-        if (buffer.byteLength < offset + 5 + float32Length * 4) {
+        if (buffer.byteLength < offset + 8 + float32Length * 4) {
           console.error('Invalid Float32Array length for buffer size');
           return new Float32Array(0);
         }
-        // Create a view directly into the buffer for best performance
-        return new Float32Array(buffer, offset + 5, float32Length);
+        // Create a new Float32Array with the data (to avoid alignment issues)
+        const float32Data = new Float32Array(float32Length);
+        const srcFloat32Array = new Float32Array(buffer);
+        // Copy from index 2 (8 byte offset) to our new array
+        for (let i = 0; i < float32Length; i++) {
+          float32Data[i] = srcFloat32Array[i + 2];
+        }
+        return float32Data;
         
       case RingBuffer.VALUE_TYPE_FLOAT64_ARRAY:
-        if (buffer.byteLength < offset + 5) {
+        if (buffer.byteLength < offset + 8) {
           console.error('Invalid buffer length for Float64Array decoding');
           return new Float64Array(0);
         }
         const float64Length = view.getUint32(offset + 1);
-        if (buffer.byteLength < offset + 5 + float64Length * 8) {
+        if (buffer.byteLength < offset + 8 + float64Length * 8) {
           console.error('Invalid Float64Array length for buffer size');
           return new Float64Array(0);
         }
-        // Create a view directly into the buffer for best performance
-        return new Float64Array(buffer, offset + 5, float64Length);
+        // Create a new Float64Array with the data
+        const float64Data = new Float64Array(float64Length);
+        const srcFloat64Array = new Float64Array(buffer);
+        // Copy from index 1 (8 byte offset) to our new array
+        for (let i = 0; i < float64Length; i++) {
+          float64Data[i] = srcFloat64Array[i + 1];
+        }
+        return float64Data;
         
       case RingBuffer.VALUE_TYPE_INT32_ARRAY:
-        if (buffer.byteLength < offset + 5) {
+        if (buffer.byteLength < offset + 8) {
           console.error('Invalid buffer length for Int32Array decoding');
           return new Int32Array(0);
         }
         const int32Length = view.getUint32(offset + 1);
-        if (buffer.byteLength < offset + 5 + int32Length * 4) {
+        if (buffer.byteLength < offset + 8 + int32Length * 4) {
           console.error('Invalid Int32Array length for buffer size');
           return new Int32Array(0);
         }
-        // Create a view directly into the buffer for best performance
-        return new Int32Array(buffer, offset + 5, int32Length);
+        // Create a new Int32Array with the data
+        const int32Data = new Int32Array(int32Length);
+        const srcInt32Array = new Int32Array(buffer);
+        // Copy from index 2 (8 byte offset) to our new array
+        for (let i = 0; i < int32Length; i++) {
+          int32Data[i] = srcInt32Array[i + 2];
+        }
+        return int32Data;
       
       case RingBuffer.VALUE_TYPE_OBJECT:
         if (buffer.byteLength < offset + 5) {
@@ -828,6 +900,10 @@ export class RingBuffer {
       default:
         console.error('Unknown value type:', valueType);
         return undefined;
+    }
+    } catch (error) {
+      console.error('Error in decodeValue:', error);
+      return undefined;
     }
   }
   
