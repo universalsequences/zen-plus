@@ -99,7 +99,6 @@ export const counter = (node: ObjectNode) => {
 
     // Return the current value and a "bang" if a carry was triggered.
     const x = [current, carryFlag ? "bang" : undefined];
-    console.log(x);
     return x;
   };
 };

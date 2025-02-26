@@ -87,7 +87,6 @@ const MatrixInnerCell: React.FC<{
         : !isLine && isFullRadius
           ? percentage
           : " ";
-    console.log("batch style update", ref1.current.style.width);
     if (isBar) {
       ref1.current.style.marginLeft = "auto";
       ref1.current.style.marginRight = "auto";

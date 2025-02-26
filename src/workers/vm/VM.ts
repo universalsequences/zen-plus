@@ -69,6 +69,9 @@ export class VM {
   onNewValues: OnNewValues[] = [];
   newSharedBuffers: OnNewSharedBuffer[] = [];
   mutableValueChanged: MutableValueChanged[] = [];
+  
+  // Performance tracking
+  totalInstructionsEvaluated: number = 0;
 
   sendEvaluationToMainThread?: (evaluation: VMEvaluation) => void;
 
@@ -147,28 +150,20 @@ export class VM {
     if (!instructions) {
       throw new Error("no instructions found");
     }
+    
+    // Evaluate instructions
+    const evaluation = evaluate(instructions, message);
+    
+    // Update performance metrics
+    this.totalInstructionsEvaluated += evaluation.instructionsEvaluated.length;
+    
     const vmEvaluation: VMEvaluation = {
-      ...evaluate(instructions, message),
+      ...evaluation,
       onNewValue: this.onNewValue,
       onNewValues: this.onNewValues,
       onNewSharedBuffer: this.newSharedBuffers,
       mutableValueChanged: this.mutableValueChanged,
     };
-
-    /*
-    console.log(
-      "%cVM evaluated message=%s instructions=%s at node=[%s] instructions=%s",
-      "color:magenta",
-      typeof message === "object" ? "[object]" : message,
-      instructions.length,
-      (this.nodes[nodeId] as ObjectNode)?.text ||
-        ((this.nodes[nodeId] as MessageNode)?.messageType === MessageType.Number
-          ? "NUMBER"
-          : nodeId),
-      vmEvaluation.instructionsEvaluated.length,
-      vmEvaluation.instructionsEvaluated,
-    );
-    */
 
     return vmEvaluation;
   }

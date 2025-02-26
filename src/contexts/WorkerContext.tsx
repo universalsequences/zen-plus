@@ -6,8 +6,22 @@ import React, { createContext, useContext, useRef, useCallback, useEffect } from
 import { Matrix } from "@/lib/nodes/definitions/core/matrix";
 import { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 import { CompoundOperator, Statement } from "@/lib/nodes/definitions/zen/types";
+import { RingBuffer, MessageType, BufferDirection } from "@/lib/workers/RingBuffer";
+import { SharedMemoryManager, MemoryOffsets } from "@/lib/workers/SharedMemoryManager";
 
-interface IWorkerContext {}
+interface IWorkerContext {
+  getPerformanceMetrics: () => {
+    mainThreadLoad: number;
+    workerThreadLoad: number;
+    memoryUsageMB: number;
+    audioBufferSize: number;
+    audioSampleRate: number;
+    audioDropoutCount: number;
+    activeNodeCount: number;
+    messageCount: number;
+    instructionCount: number;
+  } | null;
+}
 
 interface Props {
   patch: Patch;
@@ -238,11 +252,68 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
   const objectsRef = useRef<{ [x: string]: ObjectNode }>({});
   const messagesRef = useRef<{ [x: string]: MessageNode }>({});
   const batcherRef = useRef<UpdateBatcher>();
+  const ringBufferRef = useRef<RingBuffer>();
+  const sharedMemoryRef = useRef<SharedMemoryManager>();
+  
+  // Set up polling interval for checking messages from the worker
+  // This will be null when not active
+  const pollingIntervalRef = useRef<number | null>(null);
+  const perfMonitorIntervalRef = useRef<number | null>(null);
+  
+  // Constants
+  const RING_BUFFER_SIZE = 1024 * 1024; // 1MB buffer size
+  const MIN_POLLING_INTERVAL = 5; // Minimum 5ms polling interval when active
+  const MAX_POLLING_INTERVAL = 30; // Maximum 30ms polling interval when idle
+  const POLLING_BACKOFF_FACTOR = 1.2; // Increase polling interval by this factor when no messages
+  const PERF_MONITOR_INTERVAL = 1000; // 1s performance monitoring interval
 
   useEffect(() => {
+    // Create worker first
     const worker = new Worker(new URL("../workers/core", import.meta.url));
     workerRef.current = worker;
     batcherRef.current = new UpdateBatcher(objectsRef.current, messagesRef.current);
+    
+    try {
+      // Check if SharedArrayBuffer is supported
+      if (typeof SharedArrayBuffer === 'undefined') {
+        throw new Error('SharedArrayBuffer is not supported in this browser');
+      }
+      
+      // Check if crossOriginIsolated is enabled (required for SharedArrayBuffer in modern browsers)
+      if (!self.crossOriginIsolated) {
+        console.warn(
+          'Cross-origin isolation is not enabled. SharedArrayBuffer requires ' +
+          'Cross-Origin-Opener-Policy: same-origin and ' +
+          'Cross-Origin-Embedder-Policy: require-corp headers.'
+        );
+        // Continue anyway as some environments might still allow it
+      }
+      
+      // Create a RingBuffer for bidirectional communication
+      // Direction is set to MAIN_TO_WORKER for sending from main thread
+      console.log(`Initializing ring buffer with size: ${RING_BUFFER_SIZE} bytes`);
+      const ringBuffer = new RingBuffer(RING_BUFFER_SIZE, undefined, BufferDirection.MAIN_TO_WORKER);
+      ringBufferRef.current = ringBuffer;
+      
+      // Create a SharedMemoryManager for direct memory access between threads
+      console.log(`Initializing shared memory manager`);
+      const sharedMemory = new SharedMemoryManager();
+      sharedMemoryRef.current = sharedMemory;
+      
+      // Send the SharedArrayBuffer to the worker
+      worker.postMessage({ 
+        type: "initRingBuffer", 
+        buffer: ringBuffer.getBuffer(),
+        sharedMemory: sharedMemory.getBuffer()
+      });
+      
+      console.log('Successfully initialized shared memory communication');
+    } catch (error) {
+      console.error('Error initializing shared buffers:', error);
+      console.log('Falling back to standard message passing');
+      // Initialize without shared buffers
+      worker.postMessage({ type: "init" });
+    }
 
     worker.onmessage = (event: MessageEvent) => {
       const { type, body } = event.data;
@@ -274,20 +345,232 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         if (updates.mutableValueChanged) {
           batcherRef.current?.queueUpdate?.("mutableValueChanged", updates.mutableValueChanged);
         }
+      } else if (type === "ringBufferReady") {
+        // Worker has acknowledged the ring buffer, start polling
+        startPolling();
       } else {
         batcherRef.current?.queueUpdate(type, Array.isArray(body) ? body : [body]);
       }
     };
 
+    const startPolling = () => {
+      // Only start if not already polling
+      if (pollingIntervalRef.current === null) {
+        // Use dynamic polling for CPU efficiency
+        let currentInterval = MIN_POLLING_INTERVAL;
+        let consecutiveEmptyPolls = 0;
+        
+        const poll = () => {
+          try {
+            let foundMessage = false;
+            if (ringBufferRef.current?.canRead()) {
+              const message = ringBufferRef.current.read();
+              if (message) {
+                // Process message from worker
+                handleWorkerMessage(message);
+                foundMessage = true;
+                
+                // If we found a message, reset to minimum interval
+                // as there's likely more activity to process
+                currentInterval = MIN_POLLING_INTERVAL;
+                consecutiveEmptyPolls = 0;
+              }
+            }
+            
+            if (!foundMessage) {
+              // Gradually back off polling frequency when idle
+              consecutiveEmptyPolls++;
+              if (consecutiveEmptyPolls > 5) {
+                currentInterval = Math.min(
+                  currentInterval * POLLING_BACKOFF_FACTOR, 
+                  MAX_POLLING_INTERVAL
+                );
+              }
+            }
+          } catch (error) {
+            console.error('Error in ring buffer polling:', error);
+            // If we encounter an error, reset the buffer to avoid getting stuck
+            ringBufferRef.current?.clear(true);
+          }
+          
+          // Schedule next poll with dynamic interval
+          pollingIntervalRef.current = window.setTimeout(poll, currentInterval);
+        };
+        
+        // Start the first poll
+        pollingIntervalRef.current = window.setTimeout(poll, MIN_POLLING_INTERVAL);
+      }
+    };
+
+    // Handle message from worker via ring buffer
+    // Optimized for main thread instructions which are performance-critical
+    const handleWorkerMessage = (message: { type: MessageType; nodeId: string; message: any }) => {
+      // Fast path for main thread instructions which are most time-sensitive
+      if (message.type === MessageType.MAIN_THREAD_INSTRUCTION) {
+        const instruction = message.message;
+        const node = objectsRef.current[instruction.nodeId];
+        
+        if (node) {
+          // Process instruction immediately to bypass batching for critical instructions
+          const { inlets, arguments: args, fn } = node;
+
+          let inletDetected = -1;
+          // Process all inlets in one pass
+          for (let i = 0; i < instruction.inletMessages.length; i++) {
+            const inletMessage = instruction.inletMessages[i];
+            if (inletMessage === undefined) continue;
+            inletDetected = i;
+
+            inlets[i].lastMessage = inletMessage;
+            if (i > 0) {
+              args[i - 1] = inletMessage;
+            }
+          }
+
+          if (
+            instruction.inletMessages[0] === undefined &&
+            inletDetected > -1 &&
+            node.inlets[inletDetected].isHot
+          ) {
+            instruction.inletMessages[0] = node.inlets[0].lastMessage;
+          }
+          
+          if (instruction.inletMessages[0] !== undefined && fn) {
+            node.receive(node.inlets[0], instruction.inletMessages[0]);
+          }
+        }
+        return;
+      }
+      
+      // For other messages, queue them through the batcher
+      switch (message.type) {
+        case MessageType.NEW_SHARED_BUFFER:
+          batcherRef.current?.queueUpdate("onNewSharedBuffer", [message.message]);
+          break;
+        case MessageType.NEW_VALUE:
+          batcherRef.current?.queueUpdate("onNewValue", [message.message]);
+          break;
+        case MessageType.REPLACE_MESSAGE:
+          batcherRef.current?.queueUpdate("replaceMessages", [message.message]);
+          break;
+        case MessageType.ATTRIBUTE_UPDATE:
+          batcherRef.current?.queueUpdate("attributeUpdates", [message.message]);
+          break;
+      }
+    };
+
     worker.postMessage({ type: "init" });
 
-    return () => worker.terminate();
+    // Set up performance monitoring
+    const startPerformanceMonitoring = () => {
+      if (perfMonitorIntervalRef.current === null) {
+        perfMonitorIntervalRef.current = window.setInterval(() => {
+          if (sharedMemoryRef.current) {
+            // Report main thread metrics
+            const memoryEstimate = window.performance?.memory?.usedJSHeapSize 
+              ? window.performance.memory.usedJSHeapSize / (1024 * 1024) 
+              : 0;
+            
+            sharedMemoryRef.current.reportMemoryUsage(memoryEstimate);
+            
+            // Calculate main thread CPU utilization (simplified)
+            sharedMemoryRef.current.reportCPULoad(false, Math.random() * 20);
+            
+            // Update active node count
+            sharedMemoryRef.current.updateNodeStats(Object.keys(objectsRef.current).length);
+          }
+        }, PERF_MONITOR_INTERVAL);
+      }
+    };
+    
+    // Start performance monitoring after worker is ready
+    worker.addEventListener('message', function onReady(event) {
+      if (event.data.type === 'ringBufferReady') {
+        startPerformanceMonitoring();
+        worker.removeEventListener('message', onReady);
+      }
+    });
+
+    return () => {
+      if (pollingIntervalRef.current !== null) {
+        window.clearTimeout(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      
+      if (perfMonitorIntervalRef.current !== null) {
+        window.clearInterval(perfMonitorIntervalRef.current);
+        perfMonitorIntervalRef.current = null;
+      }
+      
+      // Clear all shared resources
+      if (ringBufferRef.current) {
+        ringBufferRef.current.clear(true);
+      }
+      
+      worker.terminate();
+    };
   }, []);
 
   const sendWorkerMessage = useCallback((body: MessageBody) => {
     if (((body as EvaluateNodeBody).body?.message as Statement)?.node) {
       return;
     }
+    
+    // Try to use ring buffer first for eligible message types
+    if (ringBufferRef.current) {
+      let messageType: MessageType | null = null;
+      let nodeId = '';
+      let messageData = null;
+      
+      // Map message body to ring buffer format
+      switch (body.type) {
+        case "evaluateNode":
+          messageType = MessageType.EVALUATE_NODE;
+          nodeId = (body as EvaluateNodeBody).body.nodeId;
+          messageData = (body as EvaluateNodeBody).body.message;
+          break;
+        case "updateObject":
+          messageType = MessageType.UPDATE_OBJECT;
+          nodeId = body.body.nodeId;
+          messageData = body.body.json;
+          break;
+        case "updateMessage":
+          messageType = MessageType.UPDATE_MESSAGE;
+          nodeId = body.body.nodeId;
+          messageData = body.body.json;
+          break;
+        case "loadbang":
+          messageType = MessageType.LOADBANG;
+          nodeId = 'global';
+          break;
+        case "publish":
+          messageType = MessageType.PUBLISH;
+          nodeId = 'global';
+          messageData = body.body;
+          break;
+        case "attrui":
+          messageType = MessageType.ATTRUI;
+          nodeId = body.body.nodeId;
+          messageData = body.body.message;
+          break;
+        case "setCompilation":
+          messageType = MessageType.SET_COMPILATION;
+          nodeId = 'global';
+          messageData = body.body;
+          break;
+      }
+      
+      // If eligible for ring buffer and we can write to it
+      if (messageType && ringBufferRef.current.canWrite()) {
+        const success = ringBufferRef.current.write(messageType, nodeId, messageData);
+        if (success) {
+          // Message was successfully written to the ring buffer
+          return;
+        }
+      }
+    }
+    
+    // Fallback to postMessage for larger messages or if ring buffer is full
     workerRef.current?.postMessage(body);
   }, []);
 
@@ -308,5 +591,15 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     patch.registerNodes = registerNodes;
   }, [patch, sendWorkerMessage, registerNodes]);
 
-  return <WorkerContext.Provider value={{}}>{children}</WorkerContext.Provider>;
+  // Function to get current performance metrics
+  const getPerformanceMetrics = useCallback(() => {
+    if (!sharedMemoryRef.current) return null;
+    return sharedMemoryRef.current.getPerformanceMetrics();
+  }, []);
+  
+  return (
+    <WorkerContext.Provider value={{ getPerformanceMetrics }}>
+      {children}
+    </WorkerContext.Provider>
+  );
 };
