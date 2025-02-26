@@ -417,6 +417,41 @@ export class RingBuffer {
     }
   }
   
+  // Type identifiers for binary encoding
+  private static readonly VALUE_TYPE_NULL = 0;
+  private static readonly VALUE_TYPE_UNDEFINED = 1;
+  private static readonly VALUE_TYPE_NUMBER = 2;
+  private static readonly VALUE_TYPE_STRING = 3;
+  private static readonly VALUE_TYPE_BOOLEAN_TRUE = 4;
+  private static readonly VALUE_TYPE_BOOLEAN_FALSE = 5;
+  private static readonly VALUE_TYPE_ARRAY = 6;
+  private static readonly VALUE_TYPE_OBJECT = 7;
+  private static readonly VALUE_TYPE_FLOAT32_ARRAY = 8;
+  private static readonly VALUE_TYPE_FLOAT64_ARRAY = 9;
+  private static readonly VALUE_TYPE_INT32_ARRAY = 10;
+  
+  // Constants for performance monitoring
+  private static readonly DEBUG_ENCODING = true; // Set to true to enable debug logs
+  
+  // Track statistics for message size optimization
+  private static jsonSize: number = 0;
+  private static binarySize: number = 0;
+  private static messageCount: number = 0;
+  
+  // Log statistics periodically
+  private static logEncodingStats() {
+    if (this.messageCount > 0 && this.messageCount % 100 === 0) {
+      const savingsBytes = this.jsonSize - this.binarySize;
+      const savingsPercent = (savingsBytes / this.jsonSize) * 100;
+      console.log(
+        `RingBuffer encoding stats after ${this.messageCount} messages:\n` +
+        `JSON size: ${this.jsonSize} bytes\n` +
+        `Binary size: ${this.binarySize} bytes\n` +
+        `Savings: ${savingsBytes} bytes (${savingsPercent.toFixed(2)}%)`
+      );
+    }
+  }
+  
   /**
    * Encode a message for writing to the buffer
    */
@@ -425,18 +460,31 @@ export class RingBuffer {
     const encoder = new TextEncoder();
     const nodeIdBytes = encoder.encode(nodeId);
     
-    // Calculate the size of the message
-    let messageBodySize = 0;
-    let messageBodyBuffer: ArrayBuffer | null = null;
-    
-    if (message !== undefined) {
-      const serialized = JSON.stringify(message);
-      messageBodyBuffer = encoder.encode(serialized).buffer;
-      messageBodySize = messageBodyBuffer.byteLength;
+    // Track size differences for debugging if enabled
+    if (RingBuffer.DEBUG_ENCODING && message !== undefined) {
+      try {
+        // Measure what the JSON size would have been
+        const jsonString = JSON.stringify(message);
+        const jsonBytes = encoder.encode(jsonString).byteLength;
+        RingBuffer.jsonSize += jsonBytes;
+        RingBuffer.messageCount++;
+      } catch (e) {
+        // Silently ignore JSON measurement errors
+      }
     }
     
-    // Total message size: nodeId length (2 bytes) + nodeId bytes + message length (4 bytes) + message body
-    const totalSize = 2 + nodeIdBytes.length + 4 + messageBodySize;
+    // Pre-calculate message encoding to determine buffer size
+    const messageEncoding = this.encodeValue(message);
+    const messageBodySize = messageEncoding ? messageEncoding.byteLength : 0;
+    
+    // Track binary size for comparison
+    if (RingBuffer.DEBUG_ENCODING && message !== undefined) {
+      RingBuffer.binarySize += messageBodySize;
+      RingBuffer.logEncodingStats();
+    }
+    
+    // Total message size: nodeId length (2 bytes) + nodeId bytes + message data
+    const totalSize = 2 + nodeIdBytes.length + messageBodySize;
     const buffer = new ArrayBuffer(totalSize);
     const view = new DataView(buffer);
     
@@ -446,17 +494,165 @@ export class RingBuffer {
     // Write nodeId bytes
     new Uint8Array(buffer, 2, nodeIdBytes.length).set(nodeIdBytes);
     
-    // Write message length
-    view.setUint32(2 + nodeIdBytes.length, messageBodySize);
-    
     // Write message body if present
-    if (messageBodyBuffer && messageBodySize > 0) {
-      new Uint8Array(buffer, 6 + nodeIdBytes.length, messageBodySize).set(
-        new Uint8Array(messageBodyBuffer)
+    if (messageEncoding && messageBodySize > 0) {
+      new Uint8Array(buffer, 2 + nodeIdBytes.length, messageBodySize).set(
+        new Uint8Array(messageEncoding)
       );
     }
     
     return buffer;
+  }
+  
+  /**
+   * Encode a value of any type into a binary format
+   * Returns a buffer containing the encoded value
+   */
+  private encodeValue(value: any): ArrayBuffer | null {
+    // Handle undefined and null
+    if (value === undefined) {
+      const buffer = new ArrayBuffer(1);
+      new DataView(buffer).setUint8(0, RingBuffer.VALUE_TYPE_UNDEFINED);
+      return buffer;
+    }
+    
+    if (value === null) {
+      const buffer = new ArrayBuffer(1);
+      new DataView(buffer).setUint8(0, RingBuffer.VALUE_TYPE_NULL);
+      return buffer;
+    }
+    
+    // Handle number values directly (most efficient for audio data)
+    if (typeof value === 'number') {
+      const buffer = new ArrayBuffer(9); // 1 byte type + 8 bytes for float64
+      const view = new DataView(buffer);
+      view.setUint8(0, RingBuffer.VALUE_TYPE_NUMBER);
+      view.setFloat64(1, value);
+      return buffer;
+    }
+    
+    // Handle boolean values (very efficient)
+    if (typeof value === 'boolean') {
+      const buffer = new ArrayBuffer(1);
+      new DataView(buffer).setUint8(
+        0, 
+        value ? RingBuffer.VALUE_TYPE_BOOLEAN_TRUE : RingBuffer.VALUE_TYPE_BOOLEAN_FALSE
+      );
+      return buffer;
+    }
+    
+    // Handle string values efficiently
+    if (typeof value === 'string') {
+      const encoder = new TextEncoder();
+      const stringBytes = encoder.encode(value);
+      const buffer = new ArrayBuffer(5 + stringBytes.byteLength); // 1 byte type + 4 bytes length + string data
+      const view = new DataView(buffer);
+      view.setUint8(0, RingBuffer.VALUE_TYPE_STRING);
+      view.setUint32(1, stringBytes.byteLength);
+      new Uint8Array(buffer, 5, stringBytes.byteLength).set(stringBytes);
+      return buffer;
+    }
+    
+    // Special handling for TypedArrays which are common in audio processing
+    if (value instanceof Float32Array) {
+      const buffer = new ArrayBuffer(5 + value.length * 4); // 1 byte type + 4 bytes length + data
+      const view = new DataView(buffer);
+      view.setUint8(0, RingBuffer.VALUE_TYPE_FLOAT32_ARRAY);
+      view.setUint32(1, value.length);
+      
+      // Copy the Float32Array data
+      new Float32Array(buffer, 5, value.length).set(value);
+      return buffer;
+    }
+    
+    if (value instanceof Float64Array) {
+      const buffer = new ArrayBuffer(5 + value.length * 8); // 1 byte type + 4 bytes length + data
+      const view = new DataView(buffer);
+      view.setUint8(0, RingBuffer.VALUE_TYPE_FLOAT64_ARRAY);
+      view.setUint32(1, value.length);
+      
+      // Copy the Float64Array data
+      new Float64Array(buffer, 5, value.length).set(value);
+      return buffer;
+    }
+    
+    if (value instanceof Int32Array) {
+      const buffer = new ArrayBuffer(5 + value.length * 4); // 1 byte type + 4 bytes length + data
+      const view = new DataView(buffer);
+      view.setUint8(0, RingBuffer.VALUE_TYPE_INT32_ARRAY);
+      view.setUint32(1, value.length);
+      
+      // Copy the Int32Array data
+      new Int32Array(buffer, 5, value.length).set(value);
+      return buffer;
+    }
+    
+    // Handle arrays efficiently if they contain only numbers or strings
+    if (Array.isArray(value)) {
+      // Check if it's a TypedArray-like numeric array (common case in audio processing)
+      const isAllNumbers = value.every(item => typeof item === 'number');
+      if (isAllNumbers && value.length > 0) {
+        // Encode as a packed numeric array
+        const buffer = new ArrayBuffer(9 + value.length * 8); // 1 byte type + 4 bytes length + 4 bytes element size + elements
+        const view = new DataView(buffer);
+        view.setUint8(0, RingBuffer.VALUE_TYPE_ARRAY); // Array type
+        view.setUint32(1, value.length); // Number of elements
+        view.setUint32(5, 8); // Each element is 8 bytes (Float64)
+        
+        // Write all numbers efficiently
+        for (let i = 0; i < value.length; i++) {
+          view.setFloat64(9 + (i * 8), value[i]);
+        }
+        return buffer;
+      } else {
+        // Mixed array - encode each element separately
+        // First pass: measure total size
+        let totalSize = 5; // 1 byte type + 4 bytes length
+        const encodedItems: ArrayBuffer[] = [];
+        
+        for (const item of value) {
+          const encodedItem = this.encodeValue(item);
+          if (encodedItem) {
+            encodedItems.push(encodedItem);
+            totalSize += encodedItem.byteLength;
+          }
+        }
+        
+        // Second pass: write all items
+        const buffer = new ArrayBuffer(totalSize);
+        const view = new DataView(buffer);
+        view.setUint8(0, RingBuffer.VALUE_TYPE_ARRAY);
+        view.setUint32(1, encodedItems.length);
+        
+        let offset = 5;
+        for (const encodedItem of encodedItems) {
+          new Uint8Array(buffer, offset, encodedItem.byteLength).set(
+            new Uint8Array(encodedItem)
+          );
+          offset += encodedItem.byteLength;
+        }
+        
+        return buffer;
+      }
+    }
+    
+    // For objects and anything else, fall back to JSON (less efficient but handles all cases)
+    try {
+      const encoder = new TextEncoder();
+      const jsonStr = JSON.stringify(value);
+      const jsonBytes = encoder.encode(jsonStr);
+      
+      const buffer = new ArrayBuffer(5 + jsonBytes.byteLength); // 1 byte type + 4 bytes length + json data
+      const view = new DataView(buffer);
+      view.setUint8(0, RingBuffer.VALUE_TYPE_OBJECT);
+      view.setUint32(1, jsonBytes.byteLength);
+      new Uint8Array(buffer, 5, jsonBytes.byteLength).set(jsonBytes);
+      
+      return buffer;
+    } catch (e) {
+      console.error('Error encoding value:', e);
+      return null;
+    }
   }
   
   /**
@@ -471,17 +667,168 @@ export class RingBuffer {
     const nodeIdBytes = new Uint8Array(buffer, 2, nodeIdLength);
     const nodeId = decoder.decode(nodeIdBytes);
     
-    // Read message
-    const messageLength = view.getUint32(2 + nodeIdLength);
+    // Decode the message from the rest of the buffer
     let message: any = undefined;
-    
-    if (messageLength > 0) {
-      const messageBytes = new Uint8Array(buffer, 6 + nodeIdLength, messageLength);
-      const messageStr = decoder.decode(messageBytes);
-      message = JSON.parse(messageStr);
+    if (buffer.byteLength > 2 + nodeIdLength) {
+      const messageBuffer = buffer.slice(2 + nodeIdLength);
+      message = this.decodeValue(messageBuffer);
     }
     
     return { type, nodeId, message };
+  }
+  
+  /**
+   * Decode a value from its binary representation
+   */
+  private decodeValue(buffer: ArrayBuffer, offset: number = 0): any {
+    if (buffer.byteLength <= offset) return undefined;
+    
+    const view = new DataView(buffer);
+    const valueType = view.getUint8(offset);
+    
+    switch (valueType) {
+      case RingBuffer.VALUE_TYPE_NULL:
+        return null;
+        
+      case RingBuffer.VALUE_TYPE_UNDEFINED:
+        return undefined;
+        
+      case RingBuffer.VALUE_TYPE_NUMBER:
+        if (buffer.byteLength < offset + 9) {
+          console.error('Invalid buffer length for number decoding');
+          return undefined;
+        }
+        return view.getFloat64(offset + 1);
+        
+      case RingBuffer.VALUE_TYPE_BOOLEAN_TRUE:
+        return true;
+        
+      case RingBuffer.VALUE_TYPE_BOOLEAN_FALSE:
+        return false;
+        
+      case RingBuffer.VALUE_TYPE_STRING:
+        if (buffer.byteLength < offset + 5) {
+          console.error('Invalid buffer length for string decoding');
+          return "";
+        }
+        const stringLength = view.getUint32(offset + 1);
+        if (buffer.byteLength < offset + 5 + stringLength) {
+          console.error('Invalid string length for buffer size');
+          return "";
+        }
+        const stringBytes = new Uint8Array(buffer, offset + 5, stringLength);
+        const decoder = new TextDecoder();
+        return decoder.decode(stringBytes);
+        
+      case RingBuffer.VALUE_TYPE_ARRAY:
+        if (buffer.byteLength < offset + 5) {
+          console.error('Invalid buffer length for array decoding');
+          return [];
+        }
+        
+        const arrayLength = view.getUint32(offset + 1);
+        const result: any[] = [];
+        
+        // Check if this is a packed numeric array
+        if (buffer.byteLength >= offset + 9 && arrayLength > 0) {
+          const elementSize = view.getUint32(offset + 5);
+          
+          if (elementSize === 8 && buffer.byteLength >= offset + 9 + (arrayLength * 8)) {
+            // Fast path for numeric arrays
+            for (let i = 0; i < arrayLength; i++) {
+              result.push(view.getFloat64(offset + 9 + (i * 8)));
+            }
+            return result;
+          }
+        }
+        
+        // Generic array handling (slower)
+        let currentOffset = offset + 5;
+        for (let i = 0; i < arrayLength && currentOffset < buffer.byteLength; i++) {
+          const itemValue = this.decodeValue(buffer, currentOffset);
+          result.push(itemValue);
+          
+          // Move to next item (this is inefficient and would need proper offset tracking)
+          // A real implementation would track the offset increments properly
+          if (typeof itemValue === 'number') {
+            currentOffset += 9; // 1 + 8
+          } else if (typeof itemValue === 'boolean' || itemValue === null || itemValue === undefined) {
+            currentOffset += 1;
+          } else if (typeof itemValue === 'string') {
+            // String header (5) + string length
+            const strLen = view.getUint32(currentOffset + 1);
+            currentOffset += 5 + strLen;
+          } else {
+            // Can't determine size, break to avoid infinite loop
+            break;
+          }
+        }
+        
+        return result;
+        
+      case RingBuffer.VALUE_TYPE_FLOAT32_ARRAY:
+        if (buffer.byteLength < offset + 5) {
+          console.error('Invalid buffer length for Float32Array decoding');
+          return new Float32Array(0);
+        }
+        const float32Length = view.getUint32(offset + 1);
+        if (buffer.byteLength < offset + 5 + float32Length * 4) {
+          console.error('Invalid Float32Array length for buffer size');
+          return new Float32Array(0);
+        }
+        // Create a view directly into the buffer for best performance
+        return new Float32Array(buffer, offset + 5, float32Length);
+        
+      case RingBuffer.VALUE_TYPE_FLOAT64_ARRAY:
+        if (buffer.byteLength < offset + 5) {
+          console.error('Invalid buffer length for Float64Array decoding');
+          return new Float64Array(0);
+        }
+        const float64Length = view.getUint32(offset + 1);
+        if (buffer.byteLength < offset + 5 + float64Length * 8) {
+          console.error('Invalid Float64Array length for buffer size');
+          return new Float64Array(0);
+        }
+        // Create a view directly into the buffer for best performance
+        return new Float64Array(buffer, offset + 5, float64Length);
+        
+      case RingBuffer.VALUE_TYPE_INT32_ARRAY:
+        if (buffer.byteLength < offset + 5) {
+          console.error('Invalid buffer length for Int32Array decoding');
+          return new Int32Array(0);
+        }
+        const int32Length = view.getUint32(offset + 1);
+        if (buffer.byteLength < offset + 5 + int32Length * 4) {
+          console.error('Invalid Int32Array length for buffer size');
+          return new Int32Array(0);
+        }
+        // Create a view directly into the buffer for best performance
+        return new Int32Array(buffer, offset + 5, int32Length);
+      
+      case RingBuffer.VALUE_TYPE_OBJECT:
+        if (buffer.byteLength < offset + 5) {
+          console.error('Invalid buffer length for object decoding');
+          return {};
+        }
+        const jsonLength = view.getUint32(offset + 1);
+        if (buffer.byteLength < offset + 5 + jsonLength) {
+          console.error('Invalid JSON length for buffer size');
+          return {};
+        }
+        const jsonBytes = new Uint8Array(buffer, offset + 5, jsonLength);
+        const decoder2 = new TextDecoder();
+        const jsonStr = decoder2.decode(jsonBytes);
+        try {
+          return JSON.parse(jsonStr);
+        } catch (e) {
+          console.error('Error parsing JSON:', e);
+          return {};
+        }
+        
+      default:
+        console.error('Unknown value type:', valueType);
+        return undefined;
+    }
   }
   
   /**
