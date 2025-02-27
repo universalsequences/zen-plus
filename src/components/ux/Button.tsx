@@ -1,17 +1,18 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { useLocked } from "@/contexts/LockedContext";
 import { useValue } from "@/contexts/ValueContext";
 import { ObjectNode } from "@/lib/nodes/types";
 
 const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { value: message } = useValue();
-  //const message = 0;
   const { lockedMode } = useLocked();
   const [isAnimating, setIsAnimating] = useState(false);
-  const animationTimer = useRef<NodeJS.Timeout>();
-
+  const timerRef = useRef<number | null>(null);
+  const messageRef = useRef<any>(undefined);
+  
   const { label, fillColor, backgroundColor } = objectNode.attributes;
   const { width, height } = objectNode.size || { width: 50, height: 50 };
+  const containerSize = Math.max(width, height);
 
   // Memoize the click handler
   const handleClick = useCallback(() => {
@@ -20,50 +21,65 @@ const Button: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }
   }, [lockedMode, objectNode]);
 
-  // Use CSS transitions for smooth animation
-  React.useEffect(() => {
-    if (message !== undefined) {
-      // Clear any existing animation timer
-      if (animationTimer.current) {
-        clearTimeout(animationTimer.current);
+  // Track message changes and safely manage animation state
+  useEffect(() => {
+    // Only trigger animation when message actually changes
+    if (message !== messageRef.current) {
+      messageRef.current = message;
+
+      // Clear any existing timer to prevent state conflicts
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
       }
-
-      // Reset animation state
-      setIsAnimating(false);
-
-      // Force a reflow to restart animation
-      requestAnimationFrame(() => {
-        setIsAnimating(true);
-        animationTimer.current = setTimeout(() => {
-          setIsAnimating(false);
-        }, 1000);
-      });
+      
+      // Start animation
+      setIsAnimating(true);
+      
+      // Set timer to turn off animation
+      timerRef.current = window.setTimeout(() => {
+        setIsAnimating(false);
+        timerRef.current = null;
+      }, 50);
     }
-
+    
+    // Clean up on unmount or before next effect
     return () => {
-      if (animationTimer.current) {
-        clearTimeout(animationTimer.current);
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [message]);
 
-  const containerSize = Math.max(width, height);
+  // Ensure animation never gets stuck on component unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Pre-compute static styles for better performance
+  const containerStyle = {
+    backgroundColor: backgroundColor as string,
+    width: containerSize,
+    height: containerSize,
+  };
+
+  const innerStyle = {
+    backgroundColor: isAnimating ? "white" : fillColor as string,
+  };
 
   return (
     <div
       onClick={handleClick}
-      style={{
-        backgroundColor: backgroundColor as string,
-        width: containerSize,
-        height: containerSize,
-      }}
+      style={containerStyle}
       className="flex"
     >
       <div
-        style={{
-          backgroundColor: fillColor as string,
-        }}
-        className={`${isAnimating ? "animate-color" : ""} m-1 border border-1 rounded-full flex-1 flex${
+        style={innerStyle}
+        className={`m-1 border border-1 rounded-full flex-1 flex${
           lockedMode ? " cursor-pointer" : ""
         }`}
       >
