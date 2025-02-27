@@ -18,26 +18,28 @@ export const oscilloscope = (node: ObjectNode) => {
 
   node.isResizable = true;
 
-  let gainNode: GainNode;
-  let analyser1: AnalyserNode;
-  let analyser2: AnalyserNode;
-  const splitter = node.patch.audioContext.createChannelSplitter(2);
+  if (node.patch.audioContext) {
+    let gainNode: GainNode;
+    let analyser1: AnalyserNode;
+    let analyser2: AnalyserNode;
+    const splitter = node.patch.audioContext.createChannelSplitter(2);
 
-  if (!node.audioNode) {
-    gainNode = node.patch.audioContext.createGain();
-    analyser1 = node.patch.audioContext.createAnalyser();
-    analyser1.fftSize = 512;
-    analyser2 = node.patch.audioContext.createAnalyser();
-    analyser2.fftSize = 512;
-    const merger = node.patch.audioContext.createChannelMerger(2);
-    node.merger = merger;
-    node.audioNode = gainNode;
-    merger.connect(gainNode);
-    node.auxAudioNodes = [analyser1, analyser2];
+    if (!node.audioNode) {
+      gainNode = node.patch.audioContext.createGain();
+      analyser1 = node.patch.audioContext.createAnalyser();
+      analyser1.fftSize = 512;
+      analyser2 = node.patch.audioContext.createAnalyser();
+      analyser2.fftSize = 512;
+      const merger = node.patch.audioContext.createChannelMerger(2);
+      node.merger = merger;
+      node.audioNode = gainNode;
+      merger.connect(gainNode);
+      node.auxAudioNodes = [analyser1, analyser2];
 
-    gainNode.connect(splitter);
-    splitter.connect(analyser1, 0);
-    splitter.connect(analyser2, 1);
+      gainNode.connect(splitter);
+      splitter.connect(analyser1, 0);
+      splitter.connect(analyser2, 1);
+    }
   }
 
   return (_message: Message) => {

@@ -15,10 +15,11 @@ export enum MessageType {
 
   // Worker-to-Main message types
   MAIN_THREAD_INSTRUCTION = 101,
-  NEW_SHARED_BUFFER = 102,
-  NEW_VALUE = 103,
-  REPLACE_MESSAGE = 104,
-  ATTRIBUTE_UPDATE = 105,
+  OPTIMIZED_MAIN_THREAD_INSTRUCTION = 102,
+  NEW_SHARED_BUFFER = 103,
+  NEW_VALUE = 104,
+  REPLACE_MESSAGE = 105,
+  ATTRIBUTE_UPDATE = 106,
 }
 
 // Buffer directions
@@ -158,9 +159,13 @@ export class RingBuffer {
   write(type: MessageType, nodeId: string, message?: any): boolean {
     //console.log(`RingBuffer.write - type=${type}, nodeId=${nodeId}, direction=${this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN"}`);
 
-    // Special case for optimized publish format
+    // Special cases for optimized message formats
     if (type === MessageType.PUBLISH_OPTIMIZED) {
       return this.writeOptimizedPublish(nodeId, message);
+    }
+
+    if (type === MessageType.OPTIMIZED_MAIN_THREAD_INSTRUCTION) {
+      return this.writeOptimizedMainThreadInstruction(nodeId, message);
     }
 
     // Determine which buffer to use based on direction
@@ -346,7 +351,10 @@ export class RingBuffer {
    * Format: {type: string, subType: integer, value: float}
    * This is much more efficient than the general message encoding
    */
-  writeOptimizedPublish(nodeId: string, message: { type: string, subType: number, value: number }): boolean {
+  writeOptimizedPublish(
+    nodeId: string,
+    message: { type: string; subType: number; value: number },
+  ): boolean {
     // Determine which buffer to use based on direction
     let writePtr: number, readPtr: number, bufferStart: number, lockOffset: number;
 
@@ -396,14 +404,14 @@ export class RingBuffer {
       // 2 bytes for type string length + type string bytes
       // 4 bytes for subType integer
       // 8 bytes for value float64
-      
+
       const encoder = new TextEncoder();
       const typeStrBytes = encoder.encode(message.type);
       const nodeIdBytes = encoder.encode(nodeId);
-      
+
       // Calculate total message size
       const totalSize = 1 + 2 + nodeIdBytes.length + 2 + typeStrBytes.length + 4 + 8;
-      
+
       // Check if we have enough space
       if (totalSize > availableSpace) {
         return false; // Not enough space
@@ -466,7 +474,12 @@ export class RingBuffer {
   /**
    * Helper method to increment a pointer in the ring buffer, handling wrapping
    */
-  private incrementPointer(pointer: number, increment: number, bufferStart: number, bufferEnd: number): number {
+  private incrementPointer(
+    pointer: number,
+    increment: number,
+    bufferStart: number,
+    bufferEnd: number,
+  ): number {
     const newPointer = pointer + increment;
     if (newPointer >= bufferEnd) {
       // Wrap around to beginning of buffer area
@@ -555,10 +568,19 @@ export class RingBuffer {
         }
 
         const type = this.view.getUint8(wrappedReadPtr) as MessageType;
-        
-        // Special case for optimized publish message format
+
+        // Special cases for optimized message formats
         if (type === MessageType.PUBLISH_OPTIMIZED) {
           return this.readOptimizedPublish(wrappedReadPtr, bufferStart, bufferEnd, readPtrOffset);
+        }
+
+        if (type === MessageType.OPTIMIZED_MAIN_THREAD_INSTRUCTION) {
+          return this.readOptimizedMainThreadInstruction(
+            wrappedReadPtr,
+            bufferStart,
+            bufferEnd,
+            readPtrOffset,
+          );
         }
 
         // Read the message length
@@ -1151,77 +1173,282 @@ export class RingBuffer {
    */
   // Helper to check if buffer is currently empty
   /**
+   * Write an optimized main thread instruction to the buffer
+   * Format: {nodeId: string, optimizedDataType: OptimizedDataType, message: number | number[]}
+   */
+  writeOptimizedMainThreadInstruction(
+    nodeId: string,
+    data: { optimizedDataType: number; message: number | number[] },
+  ): boolean {
+    // Determine which buffer to use based on direction
+    let writePtr: number, readPtr: number, bufferStart: number, lockOffset: number;
+
+    if (this.direction === BufferDirection.MAIN_TO_WORKER) {
+      writePtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR);
+      readPtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR);
+      bufferStart = RingBuffer.HEADER_SIZE;
+      lockOffset = RingBuffer.MAIN_TO_WORKER_LOCK;
+    } else {
+      writePtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR);
+      readPtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR);
+      bufferStart = RingBuffer.HEADER_SIZE + this.bufferSize;
+      lockOffset = RingBuffer.WORKER_TO_MAIN_LOCK;
+    }
+
+    // Try to acquire lock
+    if (Atomics.compareExchange(new Uint8Array(this.buffer), lockOffset, 0, 1) !== 0) {
+      return false; // Couldn't get lock, another thread is writing
+    }
+
+    try {
+      // Calculate available space
+      let availableSpace: number;
+      const bufferEnd = bufferStart + this.bufferSize;
+
+      if (writePtr >= readPtr) {
+        // Write pointer is ahead or equal to read pointer
+        const wrappedWritePtr = ((writePtr - bufferStart) % this.bufferSize) + bufferStart;
+        const wrappedReadPtr = ((readPtr - bufferStart) % this.bufferSize) + bufferStart;
+
+        if (wrappedWritePtr >= wrappedReadPtr) {
+          // Normal case: writePtr ahead of readPtr
+          availableSpace = bufferEnd - wrappedWritePtr + (wrappedReadPtr - bufferStart) - 1;
+        } else {
+          // Wrapped case: readPtr ahead of writePtr
+          availableSpace = wrappedReadPtr - wrappedWritePtr - 1;
+        }
+      } else {
+        // Read pointer is ahead of write pointer (unusual case)
+        availableSpace = readPtr - writePtr - 1;
+      }
+
+      // Encode the data based on the optimized data type
+      const encoder = new TextEncoder();
+      const nodeIdBytes = encoder.encode(nodeId);
+
+      // Message size depends on data type and message
+      let messageSize = 0;
+      const isArray = Array.isArray(data.message);
+
+      // Storage requirements:
+      // 1 byte for message type
+      // 2 bytes for nodeId length + nodeId bytes
+      // 1 byte for optimizedDataType
+      // 4 bytes for array length (if array)
+      // 8 bytes per number (Float64 encoding)
+
+      if (isArray) {
+        messageSize = 1 + 2 + nodeIdBytes.length + 1 + 4 + (data.message as number[]).length * 8;
+      } else {
+        messageSize = 1 + 2 + nodeIdBytes.length + 1 + 8; // Single number
+      }
+
+      if (messageSize > availableSpace) {
+        return false; // Not enough space
+      }
+
+      const wrappedWritePtr = ((writePtr - bufferStart) % this.bufferSize) + bufferStart;
+      let currentPtr = wrappedWritePtr;
+
+      // Write message type
+      this.view.setUint8(currentPtr, MessageType.OPTIMIZED_MAIN_THREAD_INSTRUCTION);
+      currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+
+      // Write nodeId length
+      this.view.setUint16(currentPtr, nodeIdBytes.length);
+      currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
+
+      // Write nodeId bytes
+      for (let i = 0; i < nodeIdBytes.length; i++) {
+        this.view.setUint8(currentPtr, nodeIdBytes[i]);
+        currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+      }
+
+      // Write optimized data type
+      this.view.setUint8(currentPtr, data.optimizedDataType);
+      currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+
+      // Write message data based on type
+      if (isArray) {
+        // Write array length
+        this.view.setUint32(currentPtr, (data.message as number[]).length);
+        currentPtr = this.incrementPointer(currentPtr, 4, bufferStart, bufferEnd);
+
+        // Write array elements
+        for (let i = 0; i < (data.message as number[]).length; i++) {
+          this.view.setFloat64(currentPtr, (data.message as number[])[i]);
+          currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
+        }
+      } else {
+        // Write single number
+        this.view.setFloat64(currentPtr, data.message as number);
+        currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
+      }
+
+      // Update the write pointer
+      if (this.direction === BufferDirection.MAIN_TO_WORKER) {
+        this.view.setUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR, currentPtr);
+      } else {
+        this.view.setUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR, currentPtr);
+      }
+
+      // Signal that new data is available
+      if (this.signalCallback) {
+        this.signalCallback();
+      }
+
+      return true;
+    } finally {
+      // Release the lock
+      Atomics.store(new Uint8Array(this.buffer), lockOffset, 0);
+    }
+  }
+
+  /**
    * Read an optimized publish message from the buffer
    */
   private readOptimizedPublish(
-    readPtr: number, 
-    bufferStart: number, 
-    bufferEnd: number, 
-    readPtrOffset: number
+    readPtr: number,
+    bufferStart: number,
+    bufferEnd: number,
+    readPtrOffset: number,
   ): { type: MessageType; nodeId: string; message: any } | undefined {
     try {
       // readPtr is pointing at the message type byte
       // Move to the next byte to read nodeId length
       let currentPtr = this.incrementPointer(readPtr, 1, bufferStart, bufferEnd);
-      
+
       // Read nodeId length
       const nodeIdLength = this.view.getUint16(currentPtr);
       currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
-      
+
       // Read nodeId bytes
       const nodeIdBytes = new Uint8Array(nodeIdLength);
       for (let i = 0; i < nodeIdLength; i++) {
         nodeIdBytes[i] = this.view.getUint8(currentPtr);
         currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
       }
-      
+
       const decoder = new TextDecoder();
       const nodeId = decoder.decode(nodeIdBytes);
-      
+
       // Read type string length
       const typeStrLength = this.view.getUint16(currentPtr);
       currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
-      
+
       // Read type string bytes
       const typeStrBytes = new Uint8Array(typeStrLength);
       for (let i = 0; i < typeStrLength; i++) {
         typeStrBytes[i] = this.view.getUint8(currentPtr);
         currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
       }
-      
+
       const typeStr = decoder.decode(typeStrBytes);
-      
+
       // Read subType integer
       const subType = this.view.getInt32(currentPtr);
       currentPtr = this.incrementPointer(currentPtr, 4, bufferStart, bufferEnd);
-      
+
       // Read value float
       const value = this.view.getFloat64(currentPtr);
       currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
-      
+
       // Update read pointer
       this.view.setUint32(readPtrOffset, currentPtr);
-      
+
       // Format the message as expected by the receiver
       const publishData = {
         type: typeStr,
         subType: subType,
-        value: value
+        value: value,
       };
-      
+
       // Construct a message that matches the expected format
       const reconstructedMessage = {
         type: MessageType.PUBLISH,
         nodeId,
         message: {
           type: typeStr,
-          message: [subType, value]
-        }
+          message: [subType, value],
+        },
       };
-      
+
       return reconstructedMessage;
     } catch (error) {
       console.error("Error reading optimized publish message:", error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Read an optimized main thread instruction message from the buffer
+   */
+  private readOptimizedMainThreadInstruction(
+    readPtr: number,
+    bufferStart: number,
+    bufferEnd: number,
+    readPtrOffset: number,
+  ): { type: MessageType; nodeId: string; message: any } | undefined {
+    try {
+      // readPtr is pointing at the message type byte
+      // Move to the next byte to read nodeId length
+      let currentPtr = this.incrementPointer(readPtr, 1, bufferStart, bufferEnd);
+
+      // Read nodeId length
+      const nodeIdLength = this.view.getUint16(currentPtr);
+      currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
+
+      // Read nodeId bytes
+      const nodeIdBytes = new Uint8Array(nodeIdLength);
+      for (let i = 0; i < nodeIdLength; i++) {
+        nodeIdBytes[i] = this.view.getUint8(currentPtr);
+        currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+      }
+
+      const decoder = new TextDecoder();
+      const nodeId = decoder.decode(nodeIdBytes);
+
+      // Read optimized data type
+      const optimizedDataType = this.view.getUint8(currentPtr);
+      currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+
+      // Read message data based on type
+      let message: number | number[];
+
+      if (optimizedDataType === 2) {
+        // FLOAT_ARRAY
+        // Read array length
+        const arrayLength = this.view.getUint32(currentPtr);
+        currentPtr = this.incrementPointer(currentPtr, 4, bufferStart, bufferEnd);
+
+        // Read array elements
+        const numberArray = new Array(arrayLength);
+        for (let i = 0; i < arrayLength; i++) {
+          numberArray[i] = this.view.getFloat64(currentPtr);
+          currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
+        }
+        message = numberArray;
+      } else {
+        // NUMBER
+        // Read single number
+        message = this.view.getFloat64(currentPtr);
+        currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
+      }
+
+      // Update read pointer
+      this.view.setUint32(readPtrOffset, currentPtr);
+
+      // Return as a mainThreadInstruction with only inlet[0] set
+      return {
+        type: MessageType.MAIN_THREAD_INSTRUCTION,
+        nodeId,
+        message: {
+          nodeId,
+          inletMessages: [message],
+        },
+      };
+    } catch (error) {
+      console.error("Error reading optimized main thread instruction:", error);
       return undefined;
     }
   }

@@ -1,21 +1,13 @@
-import { replaceAll } from "@/lib/zen/replaceAll";
-
 import type { Operator, Statement } from "../definitions/zen/types";
-import { ConnectionType, type Node, type ObjectNode, type Patch, type SubPatch } from "../types";
+import { type Node, type ObjectNode, type Patch, type SubPatch } from "../types";
 import { compileStatement } from "../definitions/zen/AST";
-import { printStatement } from "../definitions/zen/AST";
-import { type Arg, createWorklet, type UGen, type ZenGraph, zenWithTarget } from "@/lib/zen";
+import { createWorklet, type UGen, type ZenGraph, zenWithTarget } from "@/lib/zen";
 import type { ZenWorklet } from "@/lib/zen/worklet";
 import type { PatchImpl } from "../Patch";
-import { publish } from "@/lib/messaging/queue";
-import { getRootPatch, traverseForwards } from "../traverse";
+import { traverseForwards } from "../traverse";
 import { Target } from "@/lib/zen/targets";
 import { containsSameHistory } from "../definitions/zen/history";
-import { printAndMinify } from "./minify";
-import { mapReceive } from "./recompileGraph";
 import { waitForBuffers } from "./wait";
-import { initMemory } from "@/lib/zen/memory/initialize";
-import { exportParameters, exportToAudioUnit } from "./export";
 import { sortHistories } from "./histories";
 import { isTrivialGraph } from "./trivialGraph";
 import { onZenCompilation } from "./onZenCompilation";
@@ -31,7 +23,7 @@ const constructStatements = (patch: PatchImpl, statement: Statement) => {
     const hist = ((dependency as Statement[])[0] as any).history;
     // make sure the hist is somewhere in the statement
     if (hist) {
-      if (containsSameHistory(hist, statement, false, undefined, undefined, patch)) {
+      if (containsSameHistory(hist, statement, false, undefined, undefined)) {
         _statement.push(dependency as any);
       } else {
       }

@@ -111,7 +111,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           // trigger/pipe mesasge
           const messageNode = instruction.node as MessageNode;
           if (instruction.outletNumber === undefined) {
-            throw new Error("missing outlet number for pipe", instruction);
+            throw new Error("missing outlet number for pipe");
           }
           const messageToPipe = register[instruction.outletNumber];
 
@@ -220,7 +220,8 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
               }
               inlet.lastMessage = register[outletNumber] as Message;
             }
-            if ((node as ObjectNode).needsMainThread) {
+            /*
+            if (false && (node as ObjectNode).needsMainThread) {
               const inletMessages = new Array(node.inlets.length).fill(undefined);
               inletMessages[inletNumber] = register[outletNumber] as Message;
               mainThreadInstructions.push({
@@ -228,6 +229,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
                 inletMessages,
               });
             }
+            */
           }
           break;
         }
@@ -284,6 +286,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
       replaceMessages,
       instructionsEvaluated: [],
       attributeUpdates,
+      optimizedMainThreadInstructions,
     };
   }
 };

@@ -1,6 +1,10 @@
-import { Patch, ObjectNode, MessageNode } from "@/lib/nodes/types";
-import { AttributeUpdate, MainThreadInstruction } from "@/lib/nodes/vm/evaluate";
-import { MutableValueChanged, OnNewSharedBuffer, OnNewValue } from "@/workers/vm/VM";
+import { OptimizedDataType, Patch, ObjectNode, MessageNode } from "@/lib/nodes/types";
+import {
+  AttributeUpdate,
+  MainThreadInstruction,
+  OptimizedMainThreadInstruction,
+} from "@/lib/nodes/vm/evaluate";
+import { MutableValueChanged, OnNewSharedBuffer, OnNewValue, OnNewValues } from "@/workers/vm/VM";
 import { EvaluateNodeBody, MessageBody } from "@/workers/core";
 import React, { createContext, useContext, useRef, useCallback, useEffect } from "react";
 import { Matrix } from "@/lib/nodes/definitions/core/matrix";
@@ -95,37 +99,43 @@ class UpdateBatcher {
 
     const pendingUpdates =
       flushType === "mainThreadInstructions" ? this.pendingRealTimeUpdates : this.pendingUpdates;
+
     for (const [type, updates] of pendingUpdates) {
       const updateArray = Array.from(updates);
       switch (flushType) {
         case "mainThreadInstructions":
           switch (type) {
             case "mainThreadInstructions":
-              this.handleMainThreadInstructions(updateArray);
+              this.handleMainThreadInstructions(updateArray as MainThreadInstruction[]);
               break;
           }
         default:
           switch (type) {
             case "attributeUpdates":
-              this.handleAttributeUpdates(updateArray);
+              this.handleAttributeUpdates(updateArray as AttributeUpdate[]);
               break;
             case "mutableValueChanged":
-              this.handleMutableValueChanged(updateArray);
+              this.handleMutableValueChanged(updateArray as MutableValueChanged[]);
               break;
             case "replaceMessages":
               this.handleReplaceMessages(updateArray);
               break;
             case "mainThreadInstructions":
-              this.handleMainThreadInstructions(updateArray);
+              this.handleMainThreadInstructions(updateArray as MainThreadInstruction[]);
+              break;
+            case "optimizedMainThreadInstructions":
+              this.handleOptimizedMainThreadInstructions(
+                updateArray as OptimizedMainThreadInstruction[],
+              );
               break;
             case "onNewValue":
-              this.handleOnNewValue(updateArray);
+              this.handleOnNewValue(updateArray as OnNewValue[]);
               break;
             case "onNewValues":
-              this.handleOnNewValues(updateArray);
+              this.handleOnNewValues(updateArray as OnNewValues[]);
               break;
             case "onNewSharedBuffer":
-              this.handleSharedBuffer(updateArray);
+              this.handleSharedBuffer(updateArray as OnNewSharedBuffer[]);
               break;
           }
           break;
@@ -169,7 +179,6 @@ class UpdateBatcher {
   }
 
   private handleMainThreadInstructions(instructions: MainThreadInstruction[]) {
-    console.log("main thread instructions=", instructions);
     for (const { nodeId, inletMessages } of instructions) {
       const node = this.objects[nodeId];
       if (!node) continue;
@@ -199,6 +208,17 @@ class UpdateBatcher {
       if (inletMessages[0] !== undefined && fn) {
         node.receive(node.inlets[0], inletMessages[0]);
       }
+    }
+  }
+
+  private handleOptimizedMainThreadInstructions(instructions: OptimizedMainThreadInstruction[]) {
+    for (const { nodeId, message } of instructions) {
+      const node = this.objects[nodeId];
+      if (!node?.fn) continue;
+
+      // For optimized instructions, we only care about inlet[0]
+      node.inlets[0].lastMessage = message;
+      node.receive(node.inlets[0], message);
     }
   }
 
@@ -365,6 +385,12 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
             updates.mainThreadInstructions,
           );
         }
+        if (updates.optimizedMainThreadInstructions) {
+          batcherRef.current?.queueUpdate?.(
+            "optimizedMainThreadInstructions",
+            updates.optimizedMainThreadInstructions,
+          );
+        }
         if (updates.onNewSharedBuffer) {
           batcherRef.current?.queueUpdate?.("onNewSharedBuffer", updates.onNewSharedBuffer);
         }
@@ -447,6 +473,24 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         return;
       }
 
+      // Handle optimized main thread instructions - even faster path
+      if (message.type === MessageType.OPTIMIZED_MAIN_THREAD_INSTRUCTION) {
+        const instruction = message.message;
+        const node = objectsRef.current[instruction.nodeId];
+
+        if (node && node.fn) {
+          // For optimized format we only care about inlet[0]
+          const inletMessage = instruction.inletMessages[0];
+
+          // Update inlet with the message
+          node.inlets[0].lastMessage = inletMessage;
+
+          // Call the node's receive function directly
+          node.receive(node.inlets[0], inletMessage);
+        }
+        return;
+      }
+
       // For other messages, queue them through the batcher
       switch (message.type) {
         case MessageType.NEW_SHARED_BUFFER:
@@ -472,12 +516,6 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         perfMonitorIntervalRef.current = window.setInterval(() => {
           if (sharedMemoryRef.current) {
             // Report main thread metrics
-            const memoryEstimate = window.performance?.memory?.usedJSHeapSize
-              ? window.performance.memory.usedJSHeapSize / (1024 * 1024)
-              : 0;
-
-            sharedMemoryRef.current.reportMemoryUsage(memoryEstimate);
-
             // Calculate main thread CPU utilization (simplified)
             sharedMemoryRef.current.reportCPULoad(false, Math.random() * 20);
 
@@ -576,16 +614,6 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         case "loadbang":
           messageType = MessageType.LOADBANG;
           nodeId = "global";
-          break;
-        case "publish":
-          messageType = MessageType.PUBLISH;
-          nodeId = "global";
-          messageData = body.body;
-          break;
-        case "publish-optimized":
-          messageType = MessageType.PUBLISH_OPTIMIZED;
-          nodeId = "global";
-          messageData = body.body;
           break;
         case "attrui":
           messageType = MessageType.ATTRUI;

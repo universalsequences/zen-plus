@@ -109,9 +109,41 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
 
   // Try using ring buffer for critical real-time updates first
   let sentViaRingBuffer = false;
+  let sentOptimizedViaRingBuffer = false;
 
+  // First try to send optimized main thread instructions via ring buffer
+  if (
+    ringBuffer &&
+    data.optimizedMainThreadInstructions &&
+    data.optimizedMainThreadInstructions.length > 0
+  ) {
+    sentOptimizedViaRingBuffer = true;
+    for (const instruction of data.optimizedMainThreadInstructions) {
+      if (ringBuffer.canWrite()) {
+        const success = ringBuffer.write(
+          MessageType.OPTIMIZED_MAIN_THREAD_INSTRUCTION,
+          instruction.nodeId,
+          {
+            optimizedDataType: instruction.optimizedDataType,
+            message: instruction.message,
+          },
+        );
+        // If any fail, we'll fall back to regular main thread instructions
+        if (!success) {
+          sentOptimizedViaRingBuffer = false;
+          break;
+        }
+      } else {
+        sentOptimizedViaRingBuffer = false;
+        break;
+      }
+    }
+  }
+
+  // Then send regular main thread instructions via ring buffer
   if (ringBuffer && mainThreadInstructions && mainThreadInstructions.length > 0) {
     // Send main thread instructions via ring buffer for lower latency
+    sentViaRingBuffer = true;
     for (const instruction of mainThreadInstructions) {
       if (ringBuffer.canWrite()) {
         const success = ringBuffer.write(
@@ -124,7 +156,6 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
           sentViaRingBuffer = false;
           break;
         }
-        sentViaRingBuffer = true;
       } else {
         sentViaRingBuffer = false;
         break;
@@ -135,7 +166,7 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
   // If we couldn't send via ring buffer or there are other updates,
   // use regular postMessage
   if (
-    !sentViaRingBuffer ||
+    (!sentViaRingBuffer && !sentOptimizedViaRingBuffer) ||
     attributeUpdates.length > 0 ||
     replaceMessages.length > 0 ||
     onNewSharedBuffer.length > 0 ||
@@ -144,12 +175,16 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
     mutableValueChanged.length > 0
   ) {
     const updates = {
-      // Don't include mainThreadInstructions if we sent them via ring buffer
+      // Don't include instructions if we sent them via ring buffer
       attributeUpdates: attributeUpdates.length > 0 ? attributeUpdates : undefined,
       replaceMessages: replaceMessages.length > 0 ? replaceMessages : undefined,
       mainThreadInstructions:
         !sentViaRingBuffer && mainThreadInstructions.length > 0
           ? mainThreadInstructions
+          : undefined,
+      optimizedMainThreadInstructions:
+        !sentOptimizedViaRingBuffer && data.optimizedMainThreadInstructions?.length > 0
+          ? data.optimizedMainThreadInstructions
           : undefined,
       onNewSharedBuffer: onNewSharedBuffer.length > 0 ? onNewSharedBuffer : undefined,
       onNewValue: onNewValue.length > 0 ? onNewValue : undefined,

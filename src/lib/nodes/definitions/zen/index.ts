@@ -68,7 +68,7 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
     _node.attributes.io = isAudio ? "audio" : "other";
   }
 
-  if (isAudio && !_node.audioNode) {
+  if (isAudio && !_node.audioNode && _node.patch.audioContext) {
     // need to create an audio node that connects to speakers
     let ctxt = _node.patch.audioContext;
     let gain = ctxt.createGain();
@@ -197,9 +197,9 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   }
   parentNode.inlets[inputNumber - 1].node = node;
 
-  if (isAudio && !node.audioNode) {
+  let ctxt = node.patch.audioContext;
+  if (isAudio && !node.audioNode && ctxt) {
     // need to create an audio node that connects to speakers
-    let ctxt = node.patch.audioContext;
     let gain = ctxt.createGain();
     gain.gain.value = 1;
     node.audioNode = gain;
@@ -208,7 +208,6 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
 
     let patchAudio = (node.patch as SubPatch).parentNode.merger;
     if (patchAudio) {
-      let outputNumber = args[0]() as number;
       let splitter = ctxt.createChannelSplitter(16);
       patchAudio.connect(splitter);
       splitter.connect(gain, inputNumber - 1, 0);
@@ -220,7 +219,7 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.outlets[0].connectionType = ConnectionType.AUDIO;
   }
 
-  return (message: Message) => {
+  return (_message: Message) => {
     if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
       if (node.attributes["type"] === "core") {
         return [];
@@ -255,7 +254,7 @@ doc("zen", {
   },
 });
 
-const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
+const zen: NodeFunction = (node: ObjectNode, ..._args: Lazy[]) => {
   let noType = false;
   if (!node.attributes.type) {
     noType = true;
@@ -286,7 +285,7 @@ const zen: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
     node.attributes.target = "JS";
     node.attributeOptions.target = ["C", "JS"];
   }
-  node.attributeCallbacks.target = (opt: AttributeValue) => {
+  node.attributeCallbacks.target = (_opt: AttributeValue) => {
     if (node.subpatch?.isZenBase()) {
       node.subpatch?.recompileGraph();
     }

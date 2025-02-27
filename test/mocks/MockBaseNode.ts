@@ -20,6 +20,7 @@ import { OperatorContextType, isCompiledType } from "@/lib/nodes/context";
 import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { VMEvaluation } from "@/workers/vm/VM";
+import { BaseNode } from "@/lib/nodes/ObjectNode";
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode)
@@ -168,16 +169,6 @@ export class MockBaseNode implements Node {
         this.patch.recompileGraph();
       }
     }
-
-    if (this.patch.registerConnect) {
-      this.patch.registerConnect(
-        this,
-        destination as BaseNode,
-        destination.inlets.indexOf(inlet),
-        this.outlets.indexOf(outlet),
-      );
-    }
-
     return connection;
   }
 

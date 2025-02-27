@@ -8,7 +8,9 @@ const UMenu: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { sizeIndex } = usePosition();
   const { width, height } = objectNode.size || { width: 72, height: 18 };
   const { lockedMode } = useLocked();
-  let [selectedOption, setSelectedOption] = useState(objectNode.custom?.value || "");
+  let [selectedOption, setSelectedOption] = useState<string>(
+    (objectNode.custom?.value as string) || "",
+  );
   let { value: message } = useValue();
   const isNarrow = width < 24;
 

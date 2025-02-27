@@ -50,9 +50,11 @@ export const metro = (node: ObjectNode, bpm: Lazy) => {
           node.send(node.outlets[0], { time, stepNumber } as any);
         };
 
-        const gain = node.patch.audioContext.createGain();
-        gain.gain.value = 0;
-        gain.connect(node.patch.audioContext.destination);
+        if (node.patch.audioContext) {
+          const gain = node.patch.audioContext.createGain();
+          gain.gain.value = 0;
+          gain.connect(node.patch.audioContext.destination);
+        }
 
         if (typeof bpm() === "number") {
           updateBPM(worklet as AudioWorkletNode, bpm() as number);
@@ -104,6 +106,9 @@ export const schedule = (objectNode: ObjectNode, lookahead: Lazy) => {
 
   const toDelete: MessageObject[] = [];
   const onTick = () => {
+    if (!objectNode.patch.audioContext) {
+      return;
+    }
     const _lookahead = lookahead() as number;
     const now = objectNode.patch.audioContext.currentTime;
     for (const event of events) {

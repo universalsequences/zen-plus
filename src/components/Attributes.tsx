@@ -94,7 +94,7 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
           </div>
           {node.debugTopologicalIndex !== undefined &&
             Object.keys(node.debugTopologicalIndex).map((key) => (
-              <div className="text-bold">
+              <div key={key} className="text-bold">
                 t_index[{key}]: {node.debugTopologicalIndex?.[key]}
               </div>
             ))}
@@ -103,16 +103,16 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
             {node.debugInstructions
               ?.slice((node.debugInstructionIndex as number) - 8)
               .map((x, i) => (
-                <div className={i === 7 ? "text-white" : "text-zinc-400"}>
+                <div key={i} className={i === 7 ? "text-white" : "text-zinc-400"}>
                   {x.type}_{x.node?.id}
                 </div>
               ))}
           </div>
-          {node.inlets?.map((x, i) => (
-            <div>
+          {/*node.inlets?.map((x, i) => (
+            <div key={i}>
               in {i + 1}: {printLispExpression(x.lastMessage as Message)}
             </div>
-          ))}
+          ))*/}
           {doc && <div className="mt-2 w-52">{doc.description}</div>}
           {doc?.examplePatch && (
             <button

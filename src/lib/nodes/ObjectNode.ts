@@ -1077,7 +1077,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     if (json.buffer && json.attributes) {
       const _type = json.attributes.type as MatrixType;
       const _buffer = json.buffer.map((x) => (Number.isNaN(x) ? 0 : x));
-      const { buffer } = createMatrixBuffer(this, json.buffer.length, _type, _buffer);
+      const { buffer } = createMatrixBuffer(this, json.buffer.length, _type, _buffer as number[]);
       this.buffer = buffer as Float32Array;
     }
 

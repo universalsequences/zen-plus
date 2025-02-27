@@ -235,7 +235,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
             }
             updateConnections(connections);
             patch.recompileGraph();
-            patch.assistant.nodesAdded = nodes;
+            //patch.assistant.nodesAdded = nodes;
             resolve(nodes);
           }
         });
@@ -250,8 +250,8 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
   }, [patch]);
 
   const resume = useCallback(() => {
-    if (patch && patch.audioContext.state === "suspended") {
-      patch.audioContext.resume();
+    if (patch?.audioContext?.state === "suspended") {
+      patch.audioContext?.resume();
     }
   }, [patch]);
 

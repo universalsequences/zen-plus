@@ -22,7 +22,7 @@ export const send = (node: ObjectNode, name: Lazy) => {
   // this is a node that has a name
   // any "receives" can simply look for this name in the graph and find it
 
-  if (!node.audioNode) {
+  if (!node.audioNode && node.patch.audioContext) {
     const gainNode = node.patch.audioContext.createGain();
     node.audioNode = gainNode;
     gainNode.gain.value = 1;
@@ -77,7 +77,7 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
     // need some sort of "publish message" when a new publish is received so it can re=look for connections
 
     if (!node.audioNode) {
-      const gainNode = node.patch.audioContext.createGain();
+      const gainNode = node.patch.audioContext!.createGain();
       node.audioNode = gainNode;
       gainNode.gain.value = 1;
     }
@@ -99,10 +99,7 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
     }
 
     if (_name) {
-      const _nodes = findSends(
-        _name as string,
-        num() === "" ? null : (num() as number),
-      );
+      const _nodes = findSends(_name as string, num() === "" ? null : (num() as number));
 
       oldNodes = _nodes;
       for (const _node of _nodes) {
@@ -200,14 +197,13 @@ export const publishPatchSignals = (
         }
         objectNode.signalOptions = signalOptions;
         let outputs = outputNumbers.length;
-        let merger = objectNode.patch.audioContext.createChannelMerger(outputs);
-        let mergeSplitter =
-          objectNode.patch.audioContext.createChannelSplitter(outputs);
+        let merger = objectNode.patch.audioContext!.createChannelMerger(outputs);
+        let mergeSplitter = objectNode.patch.audioContext!.createChannelSplitter(outputs);
         merger.connect(mergeSplitter);
         objectNode.audioNode = mergeSplitter;
         let i = 0;
         if (node.audioNode) {
-          let splitter = node.patch.audioContext.createChannelSplitter(
+          let splitter = node.patch.audioContext!.createChannelSplitter(
             node.audioNode.channelCount,
           );
           node.audioNode.connect(splitter);

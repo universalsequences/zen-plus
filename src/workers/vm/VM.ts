@@ -185,6 +185,7 @@ export class VM {
   loadBang() {
     const vmEvaluation: VMEvaluation = {
       instructionsEvaluated: [],
+      optimizedMainThreadInstructions: [],
       replaceMessages: [],
       objectsEvaluated: [],
       mainThreadInstructions: [],
@@ -218,6 +219,7 @@ export class VM {
         vmEvaluation.replaceMessages.push(...ret.replaceMessages);
         vmEvaluation.objectsEvaluated?.push(...(ret.objectsEvaluated || []));
         vmEvaluation.mainThreadInstructions.push(...ret.mainThreadInstructions);
+        vmEvaluation.optimizedMainThreadInstructions.push(...ret.optimizedMainThreadInstructions);
         vmEvaluation.onNewValue.push(...ret.onNewValue);
         vmEvaluation.onNewSharedBuffer.push(...ret.onNewSharedBuffer);
         vmEvaluation.mutableValueChanged.push(...ret.mutableValueChanged);

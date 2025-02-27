@@ -48,7 +48,6 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
   // object.needsLoad = true;
   object.needsMainThread = true;
   object.inlets[0].optimizedDataType = [OptimizedDataType.NUMBER, OptimizedDataType.FLOAT_ARRAY];
-  ``;
   if (object.attributes["default"] === undefined) {
     object.attributes["default"] = 0;
   }
@@ -96,7 +95,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     let isScheduleSet = Array.isArray(x) && typeof x[0] === "number";
     if (typeof x === "number" || isScheduleSet) {
       if (Array.isArray(x)) {
-        if (isNaN(x[0])) {
+        if (isNaN(x[0] as number)) {
           return [];
         }
         object.storedMessage = x[0] as number;
@@ -107,7 +106,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         object.storedParameterValue = value as number;
         object.storedMessage = value as number;
       } else {
-        if (isNaN(x)) {
+        if (isNaN(x as number)) {
           return [];
         }
         object.storedMessage = x as number;

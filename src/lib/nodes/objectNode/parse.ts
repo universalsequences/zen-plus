@@ -226,9 +226,6 @@ export const parse = (
     // need to ensure things are straight with objectNode
     //objectNode.receive(objectNode.inlets[0], "bang");
   }
-  if (objectNode.patch.registerNewNode) {
-    objectNode.patch.registerNewNode(objectNode);
-  }
 
   if (objectNode.definition?.isHot) {
     for (const inlet of objectNode.inlets) {

@@ -175,7 +175,6 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
     }
     return result;
   }
-
   function evaluateAtom(atom: Atom, env: Environment, index = 0): Message {
     if (isSymbol(atom)) {
       const inputKey = (atom as Symbol).value;
@@ -203,3 +202,5 @@ export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
   }
   return evaluate;
 };
+
+export const createTreeWalkingContext = createContext;

@@ -58,6 +58,9 @@ const Audio: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         let len = ev.dataTransfer.items.length;
         let file: File = ev.dataTransfer.items[0].getAsFile() as File;
         let audioContext = objectNode.patch.audioContext;
+        if (!audioContext) {
+          return;
+        }
         let [buffer, length] = await getBlob(
           file,
           audioContext,

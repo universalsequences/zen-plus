@@ -3,6 +3,7 @@ import { MutableValue } from "@/lib/nodes/definitions/core/MutableValue";
 import {
   type IOConnection,
   type Patch,
+  type Message,
   type SubPatch,
   PatchType,
   type SerializedPatch,

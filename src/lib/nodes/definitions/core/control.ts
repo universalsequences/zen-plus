@@ -55,7 +55,7 @@ doc("filter.i=", {
   description: "passes message if message matches condition",
 });
 export const filter_arg_eq: NodeFunction = (_node: ObjectNode, arg: Lazy, condition: Lazy) => {
-  node.branching = true;
+  _node.branching = true;
   return (message: Message) => {
     if (arg() === condition()) {
       return [message];

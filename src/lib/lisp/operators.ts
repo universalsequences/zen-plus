@@ -197,22 +197,22 @@ export const operators = (
 
   "+": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
     if (args.length === 0) return 0;
-    
+
     // Start with initial value of 0 or empty string
-    let result = 0;
-    
+    let result: string | number = 0;
+
     // Evaluate each argument and add to result
     for (let i = 0; i < args.length; i++) {
       const value = evaluateExpression(args[i], env);
-      
+
       // First value determines if we're doing string concat or number addition
       if (i === 0 && typeof value === "string") {
         result = "";
       }
-      
+
       result = (result as any) + value;
     }
-    
+
     return result;
   },
 
@@ -220,12 +220,12 @@ export const operators = (
     if (args.length === 0) {
       throw new Error("Subtraction requires at least one argument");
     }
-    
+
     if (args.length === 1) {
       // Unary negation
       return -Number(evaluateExpression(args[0], env));
     }
-    
+
     // Binary subtraction
     const minuend = Number(evaluateExpression(args[0], env));
     const subtrahend = Number(evaluateExpression(args[1], env));
@@ -234,14 +234,14 @@ export const operators = (
 
   "*": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
     if (args.length === 0) return 1;
-    
+
     let result = 1;
-    
+
     // Evaluate each argument and multiply with result
     for (let i = 0; i < args.length; i++) {
       result *= Number(evaluateExpression(args[i], env));
     }
-    
+
     return result;
   },
 
@@ -249,14 +249,14 @@ export const operators = (
     if (args.length !== 2) {
       throw new Error("Division requires exactly two arguments");
     }
-    
+
     const dividend = Number(evaluateExpression(args[0], env));
     const divisor = Number(evaluateExpression(args[1], env));
-    
+
     if (divisor === 0) {
       throw new Error("Division by zero");
     }
-    
+
     return dividend / divisor;
   },
 

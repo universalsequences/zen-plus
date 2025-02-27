@@ -1,6 +1,6 @@
 import { doc } from "./doc";
 import { Operator, Statement, CompoundOperator } from "./types";
-import { Lazy, ObjectNode, Message } from "../../types";
+import { Lazy, ObjectNode, Message, OptimizedDataType } from "../../types";
 import { memoZen, memo } from "./memo";
 import { Clicker, click, ParamGen, param } from "@/lib/zen/index";
 
@@ -14,6 +14,8 @@ export const z_click = (node: ObjectNode) => {
   let clicker: Clicker;
   node.needsMainThread = true;
   node.needsLoad = true;
+  node.inlets[0].optimizedDataType = [OptimizedDataType.NUMBER];
+
   return (message: Message) => {
     if (!clicker) {
       clicker = click();

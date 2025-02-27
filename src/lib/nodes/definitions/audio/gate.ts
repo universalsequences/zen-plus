@@ -14,6 +14,9 @@ export const gate: NodeFunction = (node: ObjectNode) => {
   const ctx = node.patch.audioContext;
   let splitter: ChannelSplitterNode;
   const setup = (numberOfInputs: number) => {
+    if (!ctx) {
+      return;
+    }
     if (node.merger) {
       node.merger.disconnect();
     }
@@ -51,11 +54,12 @@ export const gate: NodeFunction = (node: ObjectNode) => {
       const index = message % gainNodes.length;
       for (let i = 0; i < gainNodes.length; i++) {
         const gainValue = i === index ? 1 : 0;
-        console.log("setting gain", i, gainValue);
-        gainNodes[i].gain.linearRampToValueAtTime(
-          gainValue,
-          node.patch.audioContext.currentTime + 0.01,
-        );
+        if (node.patch.audioContext) {
+          gainNodes[i].gain.linearRampToValueAtTime(
+            gainValue,
+            node.patch.audioContext.currentTime + 0.01,
+          );
+        }
       }
     }
     return [];
@@ -75,6 +79,9 @@ export const route: NodeFunction = (node: ObjectNode) => {
   let merger: ChannelMergerNode;
 
   const setup = (numberOfOutputs: number) => {
+    if (!ctx) {
+      return;
+    }
     if (node.merger) {
       node.merger.disconnect();
     }
@@ -114,11 +121,12 @@ export const route: NodeFunction = (node: ObjectNode) => {
       const index = message % gainNodes.length;
       for (let i = 0; i < gainNodes.length; i++) {
         const gainValue = i === index ? 1 : 0;
-        console.log("setting gain", i, gainValue);
-        gainNodes[i].gain.linearRampToValueAtTime(
-          gainValue,
-          node.patch.audioContext.currentTime + 0.01,
-        );
+        if (node.patch.audioContext) {
+          gainNodes[i].gain.linearRampToValueAtTime(
+            gainValue,
+            node.patch.audioContext.currentTime + 0.01,
+          );
+        }
       }
     }
     return [];

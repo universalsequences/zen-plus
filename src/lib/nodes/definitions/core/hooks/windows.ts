@@ -1,4 +1,4 @@
-import type { Message, ObjectNode, Patch } from "@/lib/nodes/types";
+import type { Message, ObjectNode, Patch, Node } from "@/lib/nodes/types";
 import { doc } from "../doc";
 import { getRootPatch } from "@/lib/nodes/traverse";
 import { isObjectNode } from "@/lib/nodes/vm/instructions";
@@ -13,7 +13,7 @@ export const setPatchWindows = (node: ObjectNode) => {
   return (nodes: Message) => {
     const root = getRootPatch(node.patch);
     if (root.setPatchWindows) {
-      if (Array.isArray(nodes) && isObjectNode(nodes[0])) {
+      if (Array.isArray(nodes) && isObjectNode(nodes[0] as Node)) {
         const patches = nodes
           .filter((x) => (x as ObjectNode).attributes["Custom Presentation"])
           .map((x) => (x as ObjectNode).subpatch as Patch);
@@ -37,14 +37,15 @@ doc("setSideNodeWindow", {
 export const setSideNodeWindow = (node: ObjectNode) => {
   return (node: Message) => {
     console.log("set side node window called", node);
-    if (isObjectNode(node)) {
-      const root = getRootPatch((node as ObjectNode).patch);
+    if (isObjectNode(node as Node)) {
+      const objectNode = node as ObjectNode;
+      const root = getRootPatch(objectNode.patch);
       if (root.setSideNodeWindow) {
-        if (node.subpatch) {
-          node.subpatch.lockedMode = true;
-          node.subpatch.presentationMode = true;
+        if (objectNode.subpatch) {
+          objectNode.subpatch.lockedMode = true;
+          objectNode.subpatch.presentationMode = true;
         }
-        root.setSideNodeWindow(node);
+        root.setSideNodeWindow(objectNode);
       }
     }
     return [];

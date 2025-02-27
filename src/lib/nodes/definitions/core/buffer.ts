@@ -81,7 +81,7 @@ export const buffer: NodeFunction = (node: ObjectNode) => {
               console.log("tryna do arraybuffertoarray...");
               const [buffer, length] = await arrayBufferToArray(
                 arrayBuffer,
-                node.patch.audioContext,
+                node.patch.audioContext!,
                 node.attributes["data format"] as string,
                 node.attributes.channels as number,
               );

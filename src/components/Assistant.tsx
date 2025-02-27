@@ -59,7 +59,7 @@ const Assistant = () => {
           style={{ backgroundColor: "#595959c2", zIndex: 1000000 }}
           className="flex flex-col  w-64 p-4 items-start"
         >
-          {patch.assistant.messages.length > 0 && (
+          {/*patch.assistant.messages.length > 0 && (
             <div style={{ maxHeight: 200 }} className="flex flex-col overflow-scroll w-full">
               {patch.assistant.messages.map((x, i) => (
                 <div key={i} className="flex flex-col w-full text-xs">
@@ -70,7 +70,7 @@ const Assistant = () => {
                 </div>
               ))}
             </div>
-          )}
+          )*/}
           <div className="flex flex-col w-full">
             <textarea
               style={{ maxHeight: 200, overflowY: "scroll" }}
