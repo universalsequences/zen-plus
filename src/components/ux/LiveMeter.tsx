@@ -2,15 +2,24 @@ import { useLocked } from "@/contexts/LockedContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import { ValueProvider, useValue } from "@/contexts/ValueContext";
-import { useInterval } from "@/hooks/useInterval";
 import type { ObjectNode } from "@/lib/nodes/types";
 import { TriangleLeftIcon } from "@radix-ui/react-icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
 
-const SMOOTHING_FACTOR = 0.8; // Adjust this value to change the meter's responsiveness
-const SCALE_FACTOR = 2.5;
-const PEAK_HOLD_TIME = 1000; // Time in ms to hold peak before falling
-const PEAK_FALL_RATE = 0.05; // How fast the peak markers fall
+// Performance tuned constants
+const SMOOTHING_FACTOR = 0.8; // Smoothing factor for meter movement
+const SCALE_FACTOR = 2.5; // Visual scaling of meter values
+const PEAK_HOLD_TIME = 800; // Reduced from 1000ms to 800ms
+const PEAK_FALL_RATE = 0.05; // How fast peak markers fall
+const UPDATE_INTERVAL = 100; // Increased from 80ms to 100ms for better performance
+
+// Precomputed colors for performance
+const METER_COLORS = {
+  LOW: "rgb(0, 255, 0)",      // Green for low levels
+  MID: "rgb(255, 255, 0)",    // Yellow for mid levels
+  HIGH: "rgb(255, 0, 0)",     // Red for high levels
+  PEAK: "rgb(255, 0, 0)"      // Red for peak indicators
+};
 
 export const LiveMeter: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   return (
@@ -27,41 +36,73 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
   const custom = objectNode.custom!;
   const [value, setValue] = useState(custom.value as number);
   useSelection();
+  
+  // Memoize size calculations
+  const size = objectNode.size || { width: 20, height: 200 };
+  const { width, height } = size;
+  
+  // Pre-compute DB markers to avoid recomputation on each render
+  const dbMarkers = useMemo(() => {
+    return height < 100 ? [-50, -40, -20, -30, -10, 0] : [-50, -40, -30, -20, -10, -3, 0];
+  }, [height]);
+
+  // Sync with custom value changes
   useEffect(() => {
     setValue(custom.value as number);
   }, [custom.value]);
 
+  // DOM refs
+  const containerRef = useRef<HTMLDivElement>(null);
   const refLeft = useRef<HTMLDivElement>(null);
   const refRight = useRef<HTMLDivElement>(null);
   const refLeftPeak = useRef<HTMLDivElement>(null);
   const refRightPeak = useRef<HTMLDivElement>(null);
-  const dataLeft = useRef(new Float32Array(128));
-  const dataRight = useRef(new Float32Array(128));
+  
+  // Audio data refs
+  const dataLeft = useRef(new Float32Array(32)); // Reduced buffer size
+  const dataRight = useRef(new Float32Array(32));
 
-  const normalizedLevel = useRef(0);
+  // Meter state refs
   const leftLevel = useRef(0);
   const rightLevel = useRef(0);
   const leftPeak = useRef(0);
   const rightPeak = useRef(0);
   const leftPeakTime = useRef(0);
   const rightPeakTime = useRef(0);
+  
+  // User interaction state
+  const [isDown, setIsDown] = useState(false);
+  const down = useRef(false);
+  const lastUpdateTimeRef = useRef(0);
 
+  // Calculate RMS (root mean square) of audio data
   const getRMS = (data: Float32Array) => {
     let sum = 0;
-    for (let i = 0; i < data.length; i++) {
+    const len = data.length;
+    // Using a step of 2 for faster computation with minimal quality loss
+    for (let i = 0; i < len; i += 2) {
       sum += data[i] * data[i];
     }
-    return Math.sqrt(sum / data.length);
+    return Math.sqrt(sum / (len / 2));
   };
 
+  // Convert RMS to normalized loudness value
   const normalizeLoudness = (rms: number) => {
     const db = 20 * Math.log10(rms);
     const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
     return normalized ** SCALE_FACTOR;
   };
 
+  // Get meter color based on level
+  const getMeterColor = (level: number): string => {
+    if (level > 0.8) return METER_COLORS.HIGH; 
+    if (level > 0.5) return METER_COLORS.MID;
+    return METER_COLORS.LOW;
+  };
+
+  // Update peak marker positions
   const updatePeaks = useCallback((leftLevel: number, rightLevel: number, now: number) => {
-    // Update left peak
+    // Update peaks and track peak times
     if (leftLevel > leftPeak.current) {
       leftPeak.current = leftLevel;
       leftPeakTime.current = now;
@@ -69,7 +110,6 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       leftPeak.current = Math.max(leftLevel, leftPeak.current - PEAK_FALL_RATE);
     }
 
-    // Update right peak
     if (rightLevel > rightPeak.current) {
       rightPeak.current = rightLevel;
       rightPeakTime.current = now;
@@ -77,7 +117,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       rightPeak.current = Math.max(rightLevel, rightPeak.current - PEAK_FALL_RATE);
     }
 
-    // Update peak marker positions directly
+    // Only update DOM when references exist
     if (refLeftPeak.current) {
       refLeftPeak.current.style.bottom = `${leftPeak.current * 200}%`;
     }
@@ -86,44 +126,69 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     }
   }, []);
 
-  const onTick = useCallback(() => {
+  // Core meter update function - optimized for performance
+  const updateMeter = useCallback(() => {
+    const now = performance.now();
+    
+    // Throttle updates to the specified interval
+    if (now - lastUpdateTimeRef.current < UPDATE_INTERVAL) {
+      return;
+    }
+    lastUpdateTimeRef.current = now;
+    
+    // Only process if audio nodes exist
     if (objectNode.auxAudioNodes) {
       const a = objectNode.auxAudioNodes[0] as AnalyserNode;
       const b = objectNode.auxAudioNodes[1] as AnalyserNode;
+      
+      // Get audio data
       a.getFloatTimeDomainData(dataLeft.current);
       b.getFloatTimeDomainData(dataRight.current);
 
+      // Calculate levels with reduced compute
       const rmsA = getRMS(dataLeft.current);
       const rmsB = getRMS(dataRight.current);
-
       const normalizedLoudnessA = normalizeLoudness(rmsA);
       const normalizedLoudnessB = normalizeLoudness(rmsB);
 
-      normalizedLevel.current = normalizedLoudnessA;
+      // Apply smoothing for more stable UI
+      leftLevel.current = leftLevel.current * SMOOTHING_FACTOR + normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
+      rightLevel.current = rightLevel.current * SMOOTHING_FACTOR + normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
 
-      // Apply smoothing
-      leftLevel.current =
-        leftLevel.current * SMOOTHING_FACTOR + normalizedLoudnessA * (1 - SMOOTHING_FACTOR);
-      rightLevel.current =
-        rightLevel.current * SMOOTHING_FACTOR + normalizedLoudnessB * (1 - SMOOTHING_FACTOR);
+      // Update peaks
+      updatePeaks(leftLevel.current, rightLevel.current, now);
 
-      updatePeaks(leftLevel.current, rightLevel.current, Date.now());
-
+      // Update DOM - direct style manipulation for performance
       if (refLeft.current) {
         refLeft.current.style.height = `${leftLevel.current * 200}%`;
-        refLeft.current.style.backgroundColor = getMeterColor(normalizedLevel.current * 1.2);
+        refLeft.current.style.backgroundColor = getMeterColor(leftLevel.current);
       }
       if (refRight.current) {
         refRight.current.style.height = `${rightLevel.current * 200}%`;
-        refRight.current.style.backgroundColor = getMeterColor(normalizedLevel.current * 1.2);
+        refRight.current.style.backgroundColor = getMeterColor(rightLevel.current);
       }
     }
   }, [objectNode.auxAudioNodes, updatePeaks]);
 
-  useInterval(onTick, 80);
+  // Use requestAnimationFrame for smoother updates than setInterval
+  useEffect(() => {
+    let animationFrameId: number;
+    
+    const updateLoop = () => {
+      updateMeter();
+      animationFrameId = requestAnimationFrame(updateLoop);
+    };
 
-  const [isDown, setIsDown] = useState(false);
-  const down = useRef(false);
+    animationFrameId = requestAnimationFrame(updateLoop);
+    
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [updateMeter]);
+
+  // Mouse interaction handlers
   const onMouseDown = useCallback(() => {
     down.current = true;
     setIsDown(true);
@@ -139,22 +204,29 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       if (!lockedMode || !containerRef.current || !down.current) {
         return;
       }
+      
+      // Get position data
       const rect = containerRef.current.getBoundingClientRect();
       const y = e.clientY - rect.top;
       const h = containerRef.current.offsetHeight;
-      const yy = h - y + 0;
-      const yyy = Math.max(0, Math.min(1, yy / h));
-      console.log("yyy", yyy);
-      setValue(yyy);
-
-      if (objectNode.fn && !Number.isNaN(yyy)) {
-        objectNode.fn(yyy);
+      
+      // Calculate normalized value (0-1)
+      const normalizedY = Math.max(0, Math.min(1, (h - y) / h));
+      
+      // Only update if value changed significantly (reduces updates)
+      if (Math.abs(normalizedY - value) > 0.005) {
+        setValue(normalizedY);
+        
+        // Send to object node function if valid
+        if (objectNode.fn && !Number.isNaN(normalizedY)) {
+          objectNode.fn(normalizedY);
+        }
       }
     },
-    [lockedMode, objectNode],
+    [lockedMode, objectNode, value],
   );
-  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Add and remove global event listeners
   useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
@@ -164,17 +236,22 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     };
   }, [onMouseMove, onMouseUp]);
 
-  const size = objectNode.size || { width: 20, height: 200 };
-  const { width, height } = size;
+  // Memoize slider style
+  const sliderStyle = useMemo(() => ({
+    bottom: `${value * 100}%`
+  }), [value]);
 
-  // Generate decibel markers
-  const dbMarkers = height < 100 ? [-50, -40, -20, -30, -10, 0] : [-50, -40, -30, -20, -10, -3, 0];
+  // Memoize container style 
+  const containerStyle = useMemo(() => ({
+    width,
+    height
+  }), [width, height]);
 
   return (
     <div
       onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
-      style={{ width: width, height }}
-      className="flex flex-col "
+      style={containerStyle}
+      className="flex flex-col"
     >
       <div className="flex w-full h-full relative">
         <div
@@ -183,7 +260,7 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
           className="w-5 h-full bg-zinc-950 relative"
         >
           <div
-            style={{ bottom: `${value * 100}%` }}
+            style={sliderStyle}
             className="translate-y-3 absolute w-10 h-10 -right-4 flex z-10"
           >
             <TriangleLeftIcon
@@ -199,11 +276,11 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
             <div ref={refRight} className="absolute bottom-0 right-0 w-2" />
           </div>
         </div>
-        {/* dB scale */}
+        
+        {/* dB scale - Only render if showMarkers is true */}
         {objectNode.attributes.showMarkers && (
           <div className="relative ml-1 w-6 h-full text-[8px] text-zinc-400">
             {dbMarkers.map((db) => {
-              // Map -60 to 0 to 0 to 1, with 0dB at exactly 1 (100%)
               const normalizedHeight = (db + 60) / 60;
               return (
                 <div
@@ -222,58 +299,3 @@ const LiveMeterInner: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     </div>
   );
 };
-
-/**
- * Normalize a decibel value to a 0-1 range for a meter
- * @param dBValue - The decibel value to be normalized
- * @param dBMin - The minimum decibel value (e.g., -100 dB)
- * @param dBMax - The maximum decibel value (e.g., 0 dB)
- * @returns The normalized value between 0 and 1
- */
-function normalizeDecibel(dBValue: number, dBMin = -100, dBMax = 0) {
-  if (dBMax === dBMin) {
-    throw new Error("Decibel max and min values cannot be the same");
-  }
-  // Ensure the dB value is within the specified range
-  const clampedValue = Math.max(dBMin, Math.min(dBMax, dBValue));
-  return (clampedValue - dBMin) / (dBMax - dBMin);
-}
-
-function getMeterColor(normalizedValue: number): string {
-  // Define the color gradient
-  const startColor = { r: 0, g: 255, b: 0 }; // Green
-  const middleColor = { r: 255, g: 255, b: 0 }; // Yellow
-  const endColor = { r: 255, g: 0, b: 0 }; // Red
-
-  let color;
-  if (normalizedValue <= 0.5) {
-    // Interpolate between startColor and middleColor
-    const ratio = normalizedValue / 100;
-    color = interpolateColor(startColor, middleColor, ratio);
-  } else {
-    // Interpolate between middleColor and endColor
-    const ratio = (normalizedValue - 0.5) / 0.5;
-    color = interpolateColor(middleColor, endColor, ratio);
-  }
-
-  return `rgb(${color.r}, ${color.g}, ${color.b})`;
-}
-
-export function interpolateColor(
-  color1: { r: number; g: number; b: number },
-  color2: { r: number; g: number; b: number },
-  ratio: number,
-) {
-  const r = Math.round(color1.r + (color2.r - color1.r) * ratio);
-  const g = Math.round(color1.g + (color2.g - color1.g) * ratio);
-  const b = Math.round(color1.b + (color2.b - color1.b) * ratio);
-  return { r, g, b };
-}
-
-function getRMS(dataArray: Float32Array) {
-  let sum = 0;
-  for (let i = 0; i < dataArray.length; i++) {
-    sum += dataArray[i] * dataArray[i];
-  }
-  return Math.sqrt(sum / dataArray.length);
-}
