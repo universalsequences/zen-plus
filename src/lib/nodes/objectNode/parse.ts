@@ -218,15 +218,6 @@ export const parse = (
     objectNode.isInletSumSpecialCase = false;
   }
 
-  if (
-    objectNode.needsLoad &&
-    objectNode.inlets[0] &&
-    objectNode.operatorContextType === OperatorContextType.CORE
-  ) {
-    // need to ensure things are straight with objectNode
-    //objectNode.receive(objectNode.inlets[0], "bang");
-  }
-
   if (objectNode.definition?.isHot) {
     for (const inlet of objectNode.inlets) {
       inlet.isHot = true;
@@ -243,9 +234,8 @@ export const parse = (
 
 const setupStaticNumberObject = (objectNode: ObjectNode, num: number, compile: boolean) => {
   objectNode.operatorContextType = OperatorContextType.NUMBER;
-  objectNode.fn = (message: Message) => [num];
+  objectNode.fn = (_message: Message) => [num];
   objectNode.inlets.length = 0;
-  //objectNode.skipCompilation = true;
   if (objectNode.outlets.length === 0) {
     objectNode.newOutlet();
   }
@@ -255,7 +245,7 @@ const setupStaticNumberObject = (objectNode: ObjectNode, num: number, compile: b
 };
 
 const setupStaticListObject = (objectNode: ObjectNode, array: number[], compile: boolean) => {
-  objectNode.fn = (message: Message) => [array];
+  objectNode.fn = (_message: Message) => [array];
   if (objectNode.outlets.length === 0) {
     objectNode.newOutlet();
   }

@@ -1,8 +1,9 @@
-import React, { useMemo, useEffect, useState, useRef, useCallback } from "react";
-import MatrixInnerCell from "./MatrixInnerCell";
+// This component has been replaced by a canvas-based implementation in Matrix.tsx.
+// This file is kept for backwards compatibility but is no longer used.
+
+import React from "react";
 import { Position } from "./Matrix";
 import { ObjectNode } from "@/lib/nodes/types";
-import { useValue } from "@/contexts/ValueContext";
 
 const MatrixCell: React.FC<{
   selectedField: string;
@@ -25,159 +26,8 @@ const MatrixCell: React.FC<{
   row: number;
   col: number;
   editing: React.MutableRefObject<Position | null>;
-}> = ({
-  idx,
-  row,
-  col,
-  selectedField,
-  editing,
-  objectNode,
-  isDisabled,
-  unit,
-  lockedMode,
-  showValue,
-  type,
-  toggle,
-  cornerRadius,
-  width,
-  height,
-  max,
-  fillColor,
-  ux,
-  min,
-  _idx,
-}) => {
-  const [isSelected, setIsSelected] = useState<boolean>(false);
-  useValue();
-
-  const valueRef = useRef(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const ref1 = useRef<HTMLDivElement>(null);
-
-  // Memoize these calculations
-  const isLine = ux === "line";
-  const isBar = ux === "bar";
-  const isFullRadius = cornerRadius === "full";
-
-  // Handle selection state
-  useEffect(() => {
-    if (objectNode.saveData !== undefined) {
-      setIsSelected((objectNode.saveData as number) === _idx);
-    }
-  }, [objectNode.saveData, _idx]);
-
-  // Handle className updates
-  useEffect(() => {
-    if (ref1.current) {
-      ref1.current.className = `${
-        isLine ? "absolute w-full" : isFullRadius ? "m-auto" : "absolute bottom-0 w-full"
-      } rounded-${cornerRadius}`;
-    }
-  }, [isLine, isFullRadius, cornerRadius]);
-
-  // Memoize event handlers
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (!lockedMode) return;
-
-      e.stopPropagation();
-      if (
-        !objectNode.attributes.toggle &&
-        (type === "float" || type === "uint8" || type === "object")
-      ) {
-        const rect = ref.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const startY = e.clientY - rect.top;
-        editing.current = {
-          x: col,
-          y: row,
-          value: valueRef.current,
-          startY,
-        };
-      } else {
-        toggle(row, col);
-      }
-    },
-    [lockedMode, objectNode.attributes.toggle, type, col, row, toggle],
-  );
-
-  const handleMouseOver = useCallback(
-    (e: React.MouseEvent) => {
-      if (!editing.current || (editing.current.x === col && editing.current.y === row)) return;
-
-      if (
-        !objectNode.attributes.toggle &&
-        (type === "float" || type === "uint8" || type === "object")
-      ) {
-        const rect = ref.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const startY = e.clientY - rect.top;
-        if (editing.current.y === row) {
-          const val = min + (max - min) * ((height - startY) / height);
-          toggle(row, col, val);
-          valueRef.current = val;
-        }
-        editing.current = {
-          x: col,
-          y: row,
-          value: valueRef.current,
-          startY,
-        };
-      }
-    },
-    [editing, col, row, height, max, toggle, objectNode.attributes.toggle, type],
-  );
-
-  // Memoize style object
-  const style = useMemo(
-    () => ({
-      backgroundColor: isSelected ? "#fafafa42" : "",
-      borderColor: isSelected ? "white" : "",
-      width,
-      minWidth: 10,
-      minHeight: 10,
-      margin: "2px",
-      height,
-    }),
-    [isSelected, width, height],
-  );
-
-  // Memoize className
-  const className = useMemo(
-    () =>
-      `${isDisabled ? "opacity-10 pointer-events-none" : ""} relative flex rounded-${cornerRadius} overflow-hidden border bg-black-clear2 border-zinc-800 cursor-pointer active:bg-zinc-800 active:border-zinc-100`,
-    [isDisabled, cornerRadius],
-  );
-
-  return (
-    <div
-      ref={ref}
-      onMouseDown={handleMouseDown}
-      onMouseOver={handleMouseOver}
-      onClick={lockedMode ? (e) => e.stopPropagation() : undefined}
-      style={style}
-      className={className}
-    >
-      <MatrixInnerCell
-        ref1={ref1}
-        min={min}
-        objectNode={objectNode}
-        selectedField={selectedField}
-        isLine={isLine}
-        idx={idx}
-        isBar={isBar}
-        valueRef={valueRef}
-        unit={unit}
-        isFullRadius={isFullRadius}
-        cornerRadius={cornerRadius}
-        max={max}
-        showValue={showValue}
-        fillColor={fillColor}
-      />
-    </div>
-  );
+}> = () => {
+  return null; // This component is no longer used
 };
 
 export default React.memo(MatrixCell);
