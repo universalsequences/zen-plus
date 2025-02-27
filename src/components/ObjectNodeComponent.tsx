@@ -63,7 +63,9 @@ const ObjectNodeComponent: React.FC<ObjectNodeComponentProps> = ({ objectNode, p
       // Send bang to any onPatchSelect objects in subpatch
       objectNode.subpatch?.objectNodes
         .filter((x) => x.name === "onPatchSelect")
-        .forEach((node) => node.receive(node.inlets[0], "bang"));
+        .forEach((node) => {
+          node.receive(node.inlets[0], "bang");
+        });
     }
   }, [isSelected, objectNode]);
 

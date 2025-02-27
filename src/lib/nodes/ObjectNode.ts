@@ -837,7 +837,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         return;
       }
       inlet.lastMessage = message;
-      //evaluate(this.instructions, message);
       this.patch.sendWorkerMessage?.({
         type: "evaluateNode",
         body: {

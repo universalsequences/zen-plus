@@ -292,12 +292,12 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         undefined,
         BufferDirection.MAIN_TO_WORKER,
       );
-      
+
       // Set up signal callback to notify worker when data is available
       ringBuffer.setSignalCallback(() => {
         worker.postMessage({ type: "ringBufferDataAvailable" });
       });
-      
+
       ringBufferRef.current = ringBuffer;
 
       // Create a SharedMemoryManager for direct memory access between threads
@@ -327,7 +327,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           const message = ringBufferRef.current.read();
           if (message) {
             handleWorkerMessage(message);
-            
+
             // Continue processing messages if more are available
             // This prevents backlogs by processing all available messages
             if (ringBufferRef.current.canRead()) {
@@ -342,13 +342,13 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
     worker.onmessage = (event: MessageEvent) => {
       const { type, body } = event.data;
-      
+
       // Handle signal that data is available in the ring buffer
       if (type === "ringBufferDataAvailable") {
         processRingBufferData();
         return;
       }
-      
+
       if (event.data.type === "batchedUpdates") {
         const { updates } = event.data;
 
@@ -403,10 +403,25 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           // Process instruction immediately to bypass batching for critical instructions
           const { inlets, arguments: args, fn } = node;
 
+          let firstInletMessage = instruction.inletMessages[0];
           let inletDetected = -1;
           // Process all inlets in one pass
           for (let i = 0; i < instruction.inletMessages.length; i++) {
-            const inletMessage = instruction.inletMessages[i];
+            let inletMessage = instruction.inletMessages[i];
+            if (
+              inletMessage &&
+              typeof inletMessage === "object" &&
+              inletMessage["0"] !== undefined
+            ) {
+              let array = [];
+              for (let key in inletMessage) {
+                array[parseInt(key)] = inletMessage[key];
+              }
+              inletMessage = array;
+              if (i === 0) {
+                firstInletMessage = array;
+              }
+            }
             if (inletMessage === undefined) continue;
             inletDetected = i;
 
@@ -425,7 +440,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           }
 
           if (instruction.inletMessages[0] !== undefined && fn) {
-            node.receive(node.inlets[0], instruction.inletMessages[0]);
+            node.receive(node.inlets[0], firstInletMessage);
           }
         }
         return;
@@ -501,7 +516,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       return;
     }
 
-    if (body.type === "setCompilation") {
+    if (body.type === "setCompilation" || body.type === "publish") {
       workerRef.current?.postMessage(body);
       return;
     }
@@ -554,7 +569,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           return;
         }
       } else {
-        console.log("can't write", messageType, body);
+        //console.log("can't write", messageType, body);
       }
     } else {
     }

@@ -141,7 +141,7 @@ export class RingBuffer {
 
   // Callback function to signal that new data is available
   private signalCallback?: () => void;
-  
+
   /**
    * Set a callback function to be called when new data is written to the buffer
    * This enables a signal-based approach instead of polling
@@ -322,7 +322,7 @@ export class RingBuffer {
       } else {
         this.view.setUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR, newWritePtr);
       }
-      
+
       // Signal that new data is available (if callback is set)
       if (this.signalCallback) {
         this.signalCallback();
@@ -1018,13 +1018,6 @@ export class RingBuffer {
   }
 
   canWrite(bytesNeeded: number = 100): boolean {
-    /*
-    console.log(
-      "RingBuffer.canWrite called, direction =",
-      this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN",
-    );
-    */
-
     // First check if the lock is available
     let lockOffset: number;
 
@@ -1070,22 +1063,6 @@ export class RingBuffer {
 
       // Calculate available space
       let availableSpace: number;
-
-      /*
-      console.log("RINGBUFFER canWrite debug:", {
-        direction:
-          this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN",
-        writePtr,
-        readPtr,
-        bufferStart,
-        bufferEnd,
-        pointerDiff: writePtr - readPtr,
-        mainToWorkerWritePtr: this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR),
-        mainToWorkerReadPtr: this.view.getUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR),
-        workerToMainWritePtr: this.view.getUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR),
-        workerToMainReadPtr: this.view.getUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR),
-      });
-      */
 
       // In ring buffers, we need to fix the problem of distinguishing between empty and full
       // The key issue: when read_ptr == write_ptr, is the buffer empty or full?

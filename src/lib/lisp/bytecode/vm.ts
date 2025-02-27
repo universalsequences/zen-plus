@@ -1,0 +1,1046 @@
+import { Instruction, OpCode, BytecodeFunction, VMFunction, Pattern } from './opcodes';
+import { ListPool } from '../ListPool';
+import { LispError } from '../eval';
+import { isSymbol } from '../types';
+import type { Message, Environment, LocatedExpression } from '../types';
+
+// Stack frame for function calls
+type Frame = {
+  function: VMFunction;
+  ip: number;        // Instruction pointer
+  stackBase: number; // Base of the stack for this frame
+  env: Environment;  // Environment for this frame
+};
+
+/**
+ * Virtual Machine to execute bytecode
+ */
+export class VM {
+  private stack: any[] = [];
+  private sp: number = 0;      // Stack pointer
+  private frames: Frame[] = [];
+  private fp: number = -1;     // Frame pointer
+  private debugging: boolean = false;
+
+  constructor(
+    private pool: ListPool,
+    private globalEnv: Environment,
+  ) {}
+
+  // Enable or disable debug output
+  setDebug(debug: boolean): void {
+    this.debugging = debug;
+  }
+  
+  // Get stack state for debugging
+  debugStack(): any[] {
+    return this.stack.slice(0, this.sp);
+  }
+
+  // Reset the VM to initial state
+  reset(): void {
+    this.stack = [];
+    this.sp = 0;
+    this.frames = [];
+    this.fp = -1;
+  }
+
+  // Push a value onto the stack
+  private push(value: any): void {
+    this.stack[this.sp++] = value;
+  }
+
+  // Pop a value from the stack
+  private pop(): any {
+    if (this.sp <= 0) {
+      throw new Error("Stack underflow");
+    }
+    return this.stack[--this.sp];
+  }
+
+  // Peek at the top value on the stack without popping
+  private peek(offset: number = 0): any {
+    return this.stack[this.sp - 1 - offset];
+  }
+
+  // Call a function
+  private callFunction(func: any, argCount: number): void {
+    // Log function call if debugging
+    if (this.debugging) {
+      console.log(`VM callFunction: type=${typeof func}, argCount=${argCount}, func=`, func);
+      console.log('Stack before function call:', this.stack.slice(0, this.sp));
+    }
+    
+    // Pop the function from the stack, but keep a reference to it
+    const actualFunc = this.pop();
+    
+    if (this.debugging) {
+      console.log('Actual function to call:', actualFunc);
+    }
+    
+    // Special case for calling a string as function
+    if (typeof actualFunc === 'string') {
+      // This is a function name, look it up in the environment
+      const env = this.currentEnv();
+      const fnKey = `${actualFunc}_fn`;
+      
+      if (fnKey in env) {
+        const realFunc = env[fnKey];
+        
+        if (this.debugging) {
+          console.log(`Looking up function ${actualFunc} in environment:`, realFunc);
+        }
+        
+        // Extract arguments
+        const args = new Array(argCount);
+        for (let i = argCount - 1; i >= 0; i--) {
+          args[i] = this.pop();
+        }
+        
+        // Push the real function back
+        this.push(realFunc);
+        
+        // Push the arguments back
+        for (let i = 0; i < args.length; i++) {
+          this.push(args[i]);
+        }
+        
+        // Call the real function
+        return this.callFunction(realFunc, argCount);
+      } else {
+        throw new Error(`Unknown function: ${actualFunc}`);
+      }
+    }
+    
+    // Handle a bytecode function directly
+    if (typeof actualFunc === 'object' && actualFunc !== null) {
+      // Handle two cases:
+      // 1. A VMFunction object with a 'code' property
+      // 2. A direct BytecodeFunction object (from the constants pool)
+      
+      let functionCode;
+      if ('code' in actualFunc) {
+        // Case 1: VMFunction object
+        functionCode = (actualFunc as VMFunction).code;
+      } else if ('instructions' in actualFunc && 'constants' in actualFunc) {
+        // Case 2: Direct BytecodeFunction object
+        functionCode = actualFunc;
+      } else {
+        // Not a valid function object
+        if (this.debugging) {
+          console.warn(`Cannot call object of type:`, actualFunc);
+        }
+        this.push(null);
+        return;
+      }
+      
+      // Extract arguments
+      const args = new Array(argCount);
+      for (let i = argCount - 1; i >= 0; i--) {
+        args[i] = this.pop();
+      }
+      
+      if (this.debugging) {
+        console.log('VM function args:', args);
+        console.log('Function code:', functionCode);
+      }
+      
+      // Create a VMFunction if necessary
+      const vmFunc: VMFunction = 'code' in actualFunc ? 
+                                actualFunc as VMFunction : 
+                                { code: functionCode as BytecodeFunction };
+      
+      // Create new environment for function call
+      const frameEnv = Object.create(this.currentEnv());
+      
+      // Bind arguments to parameters using the parameter names from the function
+      if (functionCode.arity > 0) {
+        if (functionCode.paramNames && functionCode.paramNames.length > 0) {
+          // Use the actual parameter names from the function definition
+          for (let i = 0; i < Math.min(functionCode.arity, args.length); i++) {
+            const paramName = functionCode.paramNames[i];
+            frameEnv[paramName] = args[i];
+            
+            if (this.debugging) {
+              console.log(`Binding param ${paramName} = ${args[i]}`);
+            }
+          }
+        } else {
+          // Fallback to generic parameter names if not available
+          const paramNames = ['x', 'y', 'z', 'a', 'b', 'c', 'd', 'e', 'f'];
+          for (let i = 0; i < Math.min(functionCode.arity, args.length); i++) {
+            frameEnv[paramNames[i]] = args[i];
+          }
+        }
+      }
+      
+      // Create frame
+      const frame: Frame = {
+        function: vmFunc,
+        ip: 0,
+        stackBase: this.sp,
+        env: frameEnv
+      };
+
+      // Add frame to call stack
+      this.frames[++this.fp] = frame;
+      
+      if (this.debugging) {
+        console.log('Created new call frame:', frame);
+      }
+    } else if (typeof actualFunc === 'function') {
+      // Native function - extract args and call directly
+      const args = new Array(argCount);
+      for (let i = argCount - 1; i >= 0; i--) {
+        args[i] = this.pop();
+      }
+      
+      if (this.debugging) {
+        console.log('Native function args:', args);
+      }
+      
+      try {
+        // Call the native function with the current environment
+        const env = this.currentEnv();
+        
+        // Try to call as func(env)(...args) first
+        let fnResult;
+        try {
+          fnResult = actualFunc(env);
+          
+          if (this.debugging) {
+            console.log('Function after applying env:', fnResult);
+          }
+          
+          if (typeof fnResult === 'function') {
+            // The expected format: func(env)(...args)
+            const result = fnResult(...args);
+            
+            if (this.debugging) {
+              console.log('Result after applying args:', result);
+            }
+            
+            this.push(result);
+            return;
+          }
+        } catch (fnErr) {
+          if (this.debugging) {
+            console.warn('Error calling with env first:', fnErr);
+          }
+        }
+        
+        // If that fails, try direct application: func(...args)
+        const result = actualFunc(...args);
+        
+        if (this.debugging) {
+          console.log('Result of direct call:', result);
+        }
+        
+        this.push(result);
+      } catch (err) {
+        if (this.debugging) {
+          console.error('Error calling native function:', err);
+        }
+        // Push null on error to avoid crashing
+        this.push(null);
+      }
+    } else {
+      // For now during development, just log and return null instead of crashing
+      if (this.debugging) {
+        console.warn(`Cannot call value of type ${typeof actualFunc}:`, actualFunc);
+      }
+      this.push(null);
+    }
+  }
+
+  // Match and call a function with pattern matching
+  private callPatternFunction(func: any, argCount: number): void {
+    if (this.debugging) {
+      console.log("callPatternFunction with:", func, "argCount:", argCount);
+      console.log("Current environment:", this.currentEnv());
+    }
+    
+    // Pop function from stack - this could be the function name or the function object
+    const actualFunc = this.pop();
+    const name = typeof actualFunc === 'string' ? actualFunc : 
+                (actualFunc && typeof actualFunc === 'object' && 'name' in actualFunc ? 
+                 actualFunc.name : "anonymous");
+    
+    // Build the pattern key and function key
+    const patternKey = `${name}_patterns`;
+    const functionKey = `${name}_fn`;
+    const env = this.currentEnv();
+    
+    // Extract args for pattern matching
+    const args = new Array(argCount);
+    for (let i = argCount - 1; i >= 0; i--) {
+      args[i] = this.pop();
+    }
+    
+    if (this.debugging) {
+      console.log("Pattern matching args:", args);
+      console.log(`Looking for patterns with key: ${patternKey}`);
+      console.log(`Looking for function with key: ${functionKey}`);
+    }
+    
+    // Check if we have both patterns and a function implementation 
+    if (patternKey in env && functionKey in env) {
+      // Get the pattern array and the function
+      const patterns = env[patternKey];
+      const functionImpl = env[functionKey];
+      
+      if (this.debugging) {
+        console.log("Found patterns:", patterns);
+        console.log("Found function:", functionImpl);
+      }
+      
+      // Try to match patterns
+      for (const pattern of patterns) {
+        const matched = this.matchPattern(pattern, args);
+        if (matched) {
+          if (this.debugging) {
+            console.log("Pattern matched!");
+          }
+          
+          // We found a match! Now call the function with these arguments
+          // by putting them back on the stack
+          
+          // Push the function first
+          this.push(functionImpl);
+          
+          // Push args back on the stack
+          for (let i = 0; i < args.length; i++) {
+            this.push(args[i]);
+          }
+          
+          // Call the function normally
+          this.callFunction(functionImpl, args.length);
+          return;
+        }
+      }
+      
+      throw new Error(`No matching pattern found for function ${name}`);
+    }
+    
+    // If we don't have patterns or the function, try a regular function call
+    // by putting the function and args back on the stack
+    
+    // Put function back on stack
+    this.push(actualFunc);
+    
+    // Put args back on stack
+    for (let i = 0; i < args.length; i++) {
+      this.push(args[i]);
+    }
+    
+    // Call the function normally
+    this.callFunction(actualFunc, args.length);
+  }
+
+  // Match pattern against arguments
+  private matchPattern(pattern: Pattern, args: any[]): boolean {
+    if (this.debugging) {
+      console.log("Matching pattern:", pattern);
+      console.log("Against args:", args);
+    }
+    
+    if (pattern.params.length !== args.length) return false;
+
+    for (let i = 0; i < pattern.params.length; i++) {
+      const p = pattern.params[i];
+      const arg = args[i];
+
+      if (isObjectLiteral(p)) {
+        if (typeof arg !== 'object' || arg === null) {
+          if (this.debugging) {
+            console.log(`Arg ${i} is not an object:`, arg);
+          }
+          return false;
+        }
+        
+        const pObject = p as any;
+        const argObject = arg as Record<string, any>;
+        
+        if (this.debugging) {
+          console.log("Matching object pattern:", pObject);
+          console.log("Against object:", argObject);
+        }
+
+        // We only need to check properties that aren't symbols
+        for (const [key, value] of Object.entries(pObject.properties)) {
+          if (isSymbol(value)) {
+            // This is a binding, not a constraint
+            continue;
+          }
+          
+          if (argObject[key] !== value) {
+            if (this.debugging) {
+              console.log(`Property mismatch: ${key} = ${argObject[key]} vs ${value}`);
+            }
+            return false;
+          }
+        }
+      } else if (isSymbol(p)) {
+        // Symbol will bind to any value
+        if (this.debugging) {
+          console.log(`Symbol pattern matches any value:`, arg);
+        }
+        continue;
+      } else {
+        // Direct equality check
+        if (p !== arg) {
+          if (this.debugging) {
+            console.log(`Direct mismatch: ${p} !== ${arg}`);
+          }
+          return false;
+        }
+      }
+    }
+
+    // Apply any predicates
+    if (pattern.predicates) {
+      for (let i = 0; i < pattern.predicates.length; i++) {
+        if (!pattern.predicates[i](args[i])) {
+          if (this.debugging) {
+            console.log(`Predicate ${i} failed for arg:`, args[i]);
+          }
+          return false;
+        }
+      }
+    }
+
+    if (this.debugging) {
+      console.log("Pattern matched successfully!");
+    }
+    return true;
+  }
+
+  // Bind pattern values to environment
+  private bindPatternValues(pattern: Pattern, args: any[], env: Environment): void {
+    if (this.debugging) {
+      console.log("Binding pattern values:", pattern, args);
+    }
+    
+    // For the def pattern, we need to handle the object differently
+    // In our implementation, we called the function with a single object parameter
+    if (args.length === 1 && typeof args[0] === 'object') {
+      // This is an object argument in our pattern matching
+      if (pattern.params.length === 1 && isObjectLiteral(pattern.params[0])) {
+        const p = pattern.params[0] as any;
+        const arg = args[0] as Record<string, any>;
+        
+        if (this.debugging) {
+          console.log("Binding object pattern:", p);
+          console.log("To argument:", arg);
+        }
+        
+        // When using def, we already put the whole object as 'obj' variable
+        env['obj'] = arg;
+        
+        // Also bind individual properties to their pattern variables
+        for (const [key, value] of Object.entries(p.properties)) {
+          if (isSymbol(value)) {
+            const symbolName = (value as any).value;
+            env[symbolName] = arg[key];
+            
+            if (this.debugging) {
+              console.log(`Binding ${symbolName} = ${arg[key]}`);
+            }
+          }
+        }
+      }
+    } else {
+      // Regular pattern binding for multiple arguments
+      
+      // Bind original args to $1, $2 etc
+      args.forEach((arg, i) => {
+        env[`$${i + 1}`] = arg;
+      });
+  
+      // Bind destructured values
+      for (let i = 0; i < pattern.params.length; i++) {
+        const p = pattern.params[i];
+        const arg = args[i];
+  
+        if (isObjectLiteral(p)) {
+          // Bind variables from object pattern
+          const pObject = p as any;
+          const argObject = arg as Record<string, any>;
+          
+          for (const [key, value] of Object.entries(pObject.properties)) {
+            if (isSymbol(value)) {
+              env[(value as any).value] = argObject[key];
+            }
+          }
+        } else if (isSymbol(p)) {
+          // Simple variable binding
+          env[(p as any).value] = arg;
+        }
+      }
+    }
+    
+    if (this.debugging) {
+      console.log("Pattern bound environment:", env);
+    }
+  }
+
+  // Get the current environment
+  private currentEnv(): Environment {
+    return this.fp >= 0 ? this.frames[this.fp].env : this.globalEnv;
+  }
+
+  // Get the current frame
+  private currentFrame(): Frame {
+    if (this.fp < 0) {
+      throw new Error("No active frame");
+    }
+    return this.frames[this.fp];
+  }
+
+  // Execute bytecode
+  execute(code: BytecodeFunction): any {
+    const vmFunc: VMFunction = { code };
+    this.reset();
+    
+    // Create initial frame
+    const frame: Frame = {
+      function: vmFunc,
+      ip: 0,
+      stackBase: 0,
+      env: this.globalEnv,
+    };
+    
+    this.frames[++this.fp] = frame;
+    
+    try {
+      if (this.debugging) {
+        console.log("Starting VM execution with bytecode:", code);
+      }
+      
+      // Run until completion or error
+      const result = this.run();
+      
+      if (this.debugging) {
+        console.log("VM execution complete, result:", result);
+        console.log("Final stack state:", this.stack.slice(0, this.sp));
+        console.log("Frames remaining:", this.frames.slice(0, this.fp + 1));
+      }
+      
+      // If we still have frames, something went wrong
+      if (this.fp >= 0) {
+        if (this.debugging) {
+          console.warn("Warning: VM execution finished with frames remaining!");
+        }
+        // Try to clean up and return whatever is on top of the stack
+        return this.sp > 0 ? this.stack[this.sp - 1] : null;
+      }
+      
+      return result;
+    } catch (error) {
+      if (this.debugging) {
+        console.error("VM execution error:", error);
+      }
+      this.reset();
+      throw error;
+    }
+  }
+
+  // Execute a single frame until it returns or completes
+  private executeFrame(): any {
+    if (this.fp < 0) {
+      throw new Error("No active frame to execute");
+    }
+    
+    while (true) {
+      const frame = this.currentFrame();
+      const { function: func, ip } = frame;
+      const { instructions } = func.code;
+      
+      // If we've reached the end of instructions
+      if (ip >= instructions.length) {
+        // Get the result from the top of the stack
+        const result = this.sp > 0 ? this.pop() : null;
+        
+        // Pop this frame
+        this.fp--;
+        
+        if (this.debugging) {
+          console.log(`Frame execution complete, returning value: ${result}`);
+        }
+        
+        return result;
+      }
+      
+      // Get the current instruction
+      const instruction = instructions[ip];
+      
+      if (this.debugging) {
+        console.log(`[DEBUG] Executing in frame: ${OpCode[instruction.opcode]} operand=${instruction.operand}`);
+        if (instruction.opcode === OpCode.CALL || instruction.opcode === OpCode.RETURN) {
+          console.log(`Current stack:`, this.stack.slice(0, this.sp));
+        }
+      }
+      
+      // Increment the instruction pointer
+      frame.ip++;
+      
+      // Process this instruction
+      switch (instruction.opcode) {
+        case OpCode.PUSH_CONSTANT:
+          this.push(func.code.constants[instruction.operand]);
+          break;
+          
+        case OpCode.PUSH_SYMBOL:
+          this.push({ type: "Symbol", value: func.code.symbolNames[instruction.operand] });
+          break;
+          
+        case OpCode.POP:
+          this.pop();
+          break;
+          
+        case OpCode.LOAD:
+          {
+            const name = instruction.operand;
+            const env = this.currentEnv();
+            if (name in env) {
+              this.push(env[name]);
+            } else if (name.startsWith("$")) {
+              throw new Error(`Unknown input: ${name}`);
+            } else {
+              this.push(null);
+            }
+          }
+          break;
+          
+        case OpCode.LOAD_FN:
+          {
+            const name = instruction.operand;
+            const fnName = `${name}_fn`;
+            const env = this.currentEnv();
+            
+            if (this.debugging) {
+              console.log(`Loading function ${name} from environment`);
+              console.log(`Looking for ${fnName} in:`, env);
+            }
+            
+            if (fnName in env) {
+              const fn = env[fnName];
+              
+              if (this.debugging) {
+                console.log(`Found function:`, fn);
+              }
+              
+              this.push(fn);
+            } else {
+              throw new Error(`Unknown function: ${name}`);
+            }
+          }
+          break;
+          
+        case OpCode.STORE:
+          {
+            const name = instruction.operand;
+            const value = this.pop();
+            const env = this.currentEnv();
+            env[name] = value;
+            this.push(value); // Push back for expressions like (set x 42)
+          }
+          break;
+          
+        case OpCode.MAKE_LIST:
+          {
+            const count = instruction.operand;
+            const list = this.pool.get();
+            for (let i = count - 1; i >= 0; i--) {
+              list[i] = this.pop();
+            }
+            this.push(list);
+          }
+          break;
+          
+        case OpCode.MAKE_OBJECT:
+          {
+            const count = instruction.operand;
+            const obj = this.pool.getObject();
+            for (let i = 0; i < count; i++) {
+              const value = this.pop();
+              const key = this.pop();
+              obj[key] = value;
+            }
+            this.push(obj);
+          }
+          break;
+          
+        case OpCode.GET_PROP:
+          {
+            const propName = this.pop();
+            const obj = this.pop();
+            if (typeof obj === 'object' && obj !== null) {
+              this.push(obj[propName]);
+            } else {
+              throw new Error("Cannot get property from non-object");
+            }
+          }
+          break;
+          
+        case OpCode.GET_INDEX:
+          {
+            const index = this.pop();
+            const list = this.pop();
+            if (Array.isArray(list) || ArrayBuffer.isView(list)) {
+              this.push(list[index]);
+            } else {
+              throw new Error("Cannot get index from non-list");
+            }
+          }
+          break;
+          
+        case OpCode.SPREAD:
+          {
+            const value = this.pop();
+            if (Array.isArray(value)) {
+              for (let i = 0; i < value.length; i++) {
+                this.push(value[i]);
+              }
+              this.push(value.length); // Push count for MAKE_LIST to use
+            } else if (typeof value === 'object' && value !== null) {
+              let count = 0;
+              for (const key in value) {
+                this.push(key);
+                this.push(value[key]);
+                count++;
+              }
+              this.push(count); // Push count for MAKE_OBJECT to use
+            } else {
+              throw new Error("Cannot spread non-object or non-array");
+            }
+          }
+          break;
+          
+        case OpCode.CALL:
+          {
+            const argCount = instruction.operand;
+            
+            if (this.debugging) {
+              console.log(`Executing CALL with ${argCount} arguments`);
+              console.log("Stack before CALL:", this.stack.slice(0, this.sp));
+            }
+            
+            // Get the function from the stack (but don't pop it yet)
+            const func = this.stack[this.sp - argCount - 1];
+            
+            if (this.debugging) {
+              console.log("Function to call:", func);
+            }
+            
+            // Extract the arguments
+            const args = new Array(argCount);
+            for (let i = argCount - 1; i >= 0; i--) {
+              args[i] = this.stack[this.sp - i - 1];
+            }
+            
+            if (this.debugging) {
+              console.log("Arguments:", args);
+            }
+            
+            // Now pop everything off the stack
+            this.sp -= (argCount + 1);
+            
+            // Handle different function types
+            if (typeof func === 'function') {
+              // Native JS function
+              try {
+                // Try with environment first, then direct
+                const env = this.currentEnv();
+                const curried = func(env);
+                
+                let result;
+                if (typeof curried === 'function') {
+                  result = curried(...args);
+                } else {
+                  result = func(...args);
+                }
+                
+                this.push(result);
+              } catch (err) {
+                if (this.debugging) {
+                  console.error("Error calling function:", err);
+                }
+                this.push(null);
+              }
+            } else if (typeof func === 'string') {
+              // Function name, lookup in environment
+              const fnName = `${func}_fn`;
+              const env = this.currentEnv();
+              
+              if (fnName in env) {
+                const actualFunc = env[fnName];
+                
+                try {
+                  if (typeof actualFunc === 'function') {
+                    // Same logic as above
+                    const curried = actualFunc(env);
+                    
+                    let result;
+                    if (typeof curried === 'function') {
+                      result = curried(...args);
+                    } else {
+                      result = actualFunc(...args);
+                    }
+                    
+                    this.push(result);
+                  } else if (typeof actualFunc === 'object' && actualFunc !== null) {
+                    // It's a bytecode function
+                    // Set up the call frame for it
+                    
+                    // Determine if it's a VMFunction or BytecodeFunction
+                    let bytecode: BytecodeFunction;
+                    if ('code' in actualFunc) {
+                      bytecode = (actualFunc as VMFunction).code;
+                    } else if ('instructions' in actualFunc) {
+                      bytecode = actualFunc as BytecodeFunction;
+                    } else {
+                      throw new Error("Invalid function object");
+                    }
+                    
+                    // Create a new environment for the function
+                    const frameEnv = Object.create(this.currentEnv());
+                    
+                    // Bind arguments to parameters
+                    if (bytecode.paramNames && bytecode.paramNames.length > 0) {
+                      // Bind using parameter names
+                      for (let i = 0; i < Math.min(bytecode.arity, args.length); i++) {
+                        const paramName = bytecode.paramNames[i];
+                        frameEnv[paramName] = args[i];
+                        
+                        if (this.debugging) {
+                          console.log(`Binding param ${paramName} = ${args[i]}`);
+                        }
+                      }
+                    } else {
+                      // Fallback to generic parameter names
+                      const genericNames = ['x', 'y', 'z', 'a', 'b', 'c'];
+                      for (let i = 0; i < Math.min(bytecode.arity, args.length); i++) {
+                        frameEnv[genericNames[i]] = args[i];
+                        
+                        if (this.debugging) {
+                          console.log(`Binding generic param ${genericNames[i]} = ${args[i]}`);
+                        }
+                      }
+                    }
+                    
+                    // Create a new VMFunction
+                    const vmFunc: VMFunction = 
+                      'code' in actualFunc ? actualFunc as VMFunction : { code: bytecode };
+                    
+                    // Create a new frame
+                    const frame: Frame = {
+                      function: vmFunc,
+                      ip: 0,
+                      stackBase: this.sp,
+                      env: frameEnv
+                    };
+                    
+                    // Add the frame to the call stack
+                    this.frames[++this.fp] = frame;
+                    
+                    // Execute the function's bytecode immediately
+                    const result = this.executeFrame();
+                    
+                    // Push the result onto the stack
+                    this.push(result);
+                  }
+                } catch (err) {
+                  if (this.debugging) {
+                    console.error("Error calling function by name:", err);
+                  }
+                  this.push(null);
+                }
+              } else {
+                if (this.debugging) {
+                  console.error(`Unknown function: ${func}`);
+                }
+                this.push(null);
+              }
+            } else if (typeof func === 'object' && func !== null) {
+              // This is a bytecode function object
+              try {
+                if (this.debugging) {
+                  console.log("Executing bytecode function object:", func);
+                  console.log("With arguments:", args);
+                }
+                
+                // Create a new environment for the function
+                const frameEnv = Object.create(this.currentEnv());
+                
+                // Determine if it's a VMFunction or BytecodeFunction
+                let bytecode: BytecodeFunction;
+                if ('code' in func) {
+                  bytecode = (func as VMFunction).code;
+                } else if ('instructions' in func) {
+                  bytecode = func as BytecodeFunction;
+                } else {
+                  throw new Error("Invalid function object");
+                }
+                
+                // Bind arguments to parameters
+                if (bytecode.paramNames && bytecode.paramNames.length > 0) {
+                  // Bind using parameter names
+                  for (let i = 0; i < Math.min(bytecode.arity, args.length); i++) {
+                    const paramName = bytecode.paramNames[i];
+                    frameEnv[paramName] = args[i];
+                    
+                    if (this.debugging) {
+                      console.log(`Binding param ${paramName} = ${args[i]}`);
+                    }
+                  }
+                } else {
+                  // Fallback to generic parameter names
+                  const genericNames = ['x', 'y', 'z', 'a', 'b', 'c'];
+                  for (let i = 0; i < Math.min(bytecode.arity, args.length); i++) {
+                    frameEnv[genericNames[i]] = args[i];
+                    
+                    if (this.debugging) {
+                      console.log(`Binding generic param ${genericNames[i]} = ${args[i]}`);
+                    }
+                  }
+                }
+                
+                // Create a new VMFunction
+                const vmFunc: VMFunction = 
+                  'code' in func ? func as VMFunction : { code: bytecode };
+                
+                // Create a new frame
+                const frame: Frame = {
+                  function: vmFunc,
+                  ip: 0,
+                  stackBase: this.sp,
+                  env: frameEnv
+                };
+                
+                // Add the frame to the call stack
+                this.frames[++this.fp] = frame;
+                
+                // Execute the function's bytecode immediately
+                const result = this.executeFrame();
+                
+                // Push the result onto the stack
+                this.push(result);
+              } catch (err) {
+                if (this.debugging) {
+                  console.error("Error calling bytecode function:", err);
+                }
+                this.push(null);
+              }
+            } else {
+              if (this.debugging) {
+                console.warn(`Cannot call value of type ${typeof func}:`, func);
+              }
+              this.push(null);
+            }
+          }
+          break;
+          
+        case OpCode.CALL_PATTERN:
+          {
+            const argCount = instruction.operand;
+            const funcValue = this.pop();
+            this.callPatternFunction(funcValue, argCount);
+          }
+          break;
+          
+        case OpCode.RETURN:
+          {
+            if (this.debugging) {
+              console.log("Executing RETURN, stack:", this.stack.slice(0, this.sp));
+            }
+            
+            const result = this.pop();
+            
+            if (this.debugging) {
+              console.log("Function returning value:", result);
+            }
+            
+            // Pop frame
+            this.fp--;
+            
+            // Return the result up to the caller
+            return result;
+          }
+          
+        case OpCode.JUMP:
+          frame.ip = instruction.offset!;
+          break;
+          
+        case OpCode.JUMP_IF_FALSE:
+          {
+            const condition = this.pop();
+            if (!condition) {
+              frame.ip = instruction.offset!;
+            }
+          }
+          break;
+          
+        case OpCode.JUMP_IF_TRUE:
+          {
+            const condition = this.pop();
+            if (condition) {
+              frame.ip = instruction.offset!;
+            }
+          }
+          break;
+          
+        case OpCode.MATCH_PATTERN:
+          {
+            const patternIndex = instruction.operand;
+            const pattern = func.code.patterns[patternIndex];
+            const argCount = pattern.params.length;
+            
+            // Extract args for pattern matching
+            const args = new Array(argCount);
+            for (let i = 0; i < argCount; i++) {
+              args[i] = this.stack[this.sp - argCount + i];
+            }
+            
+            const matched = this.matchPattern(pattern, args);
+            this.push(matched);
+          }
+          break;
+          
+        case OpCode.BIND_PATTERN:
+          {
+            const patternIndex = instruction.operand;
+            const pattern = func.code.patterns[patternIndex];
+            const argCount = pattern.params.length;
+            
+            // Extract args
+            const args = new Array(argCount);
+            for (let i = 0; i < argCount; i++) {
+              args[i] = this.stack[this.sp - argCount + i];
+            }
+            
+            // Bind pattern
+            this.bindPatternValues(pattern, args, this.currentEnv());
+          }
+          break;
+          
+        default:
+          throw new Error(`Unknown opcode: ${instruction.opcode}`);
+      }
+    }
+  }
+
+  // Run the VM
+  private run(): any {
+    // Just execute the top-level frame
+    return this.executeFrame();
+  }
+}
+
+// Helper function to determine if a value is an object literal
+function isObjectLiteral(value: any): boolean {
+  return typeof value === 'object' && 
+         value !== null && 
+         value.type === 'object' && 
+         'properties' in value;
+}

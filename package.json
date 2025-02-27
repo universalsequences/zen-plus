@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "bun test",
+    "lisp-benchmark": "bun run test/lisp-benchmark.ts",
+    "lisp-bytecode-test": "bun run test/lisp-bytecode-simple.ts",
+    "lisp-minimal": "bun run test/lisp-bytecode-minimal.ts",
+    "bytecode-minimal": "bun run test/bytecode-minimal.ts",
+    "bytecode-bare": "bun run test/bytecode-bare-minimal.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

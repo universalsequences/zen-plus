@@ -27,9 +27,9 @@ export const zen_data = (_node: ObjectNode, size: Lazy, channels: Lazy) => {
   }
   return (inputData: Message): Statement[] => {
     if (lastSize !== size() || lastChannels !== channels()) {
-      block = null;
-      lastChannels = channels() as number;
-      lastSize = size() as number;
+      //block = null;
+      //lastChannels = channels() as number;
+      //lastSize = size() as number;
     }
     if (!block) {
       let initBuffer: Float32Array | undefined = Array.isArray(inputData)

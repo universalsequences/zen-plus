@@ -545,20 +545,6 @@ export class PatchImpl implements Patch {
         custom.hydrateSerializedPresets(nodes);
       }
     }
-
-    const loadBangs = this.objectNodes.filter(
-      (x) => x.operatorContextType === OperatorContextType.CORE && x.needsLoad,
-    );
-    /*
-    for (const x of loadBangs) {
-      x.receive(x.inlets[0], "bang");
-    }
-    */
-
-    const allNodes = this.getAllNodes();
-    const allIds = allNodes.map((x) => x.id);
-    const unique = new Set(allIds);
-    //if (allIds.length !== unique.size) console.log("unique", this.name, allIds, unique);
     return _connections;
   }
 

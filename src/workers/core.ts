@@ -252,12 +252,12 @@ const processRingBufferData = () => {
       const message = ringBuffer.read();
       if (message) {
         processRingBufferMessage(message);
-        
+
         // Update message count in shared memory
         if (sharedMemory) {
           sharedMemory.reportMessageProcessed();
         }
-        
+
         // Process more messages if available
         // Continue processing as long as there are messages to avoid building up backlog
         if (ringBuffer.canRead()) {
@@ -290,7 +290,7 @@ self.onmessage = async (e: MessageEvent) => {
         // Initialize ring buffer with the shared buffer from the main thread
         // Set direction to WORKER_TO_MAIN for writing from worker to main
         ringBuffer = new RingBuffer(0, data.buffer, BufferDirection.WORKER_TO_MAIN);
-        
+
         // Set up signal callback to notify main thread when data is available
         ringBuffer.setSignalCallback(() => {
           self.postMessage({ type: "ringBufferDataAvailable" });

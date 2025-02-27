@@ -69,7 +69,7 @@ export class VM {
   onNewValues: OnNewValues[] = [];
   newSharedBuffers: OnNewSharedBuffer[] = [];
   mutableValueChanged: MutableValueChanged[] = [];
-  
+
   // Performance tracking
   totalInstructionsEvaluated: number = 0;
 
@@ -150,13 +150,13 @@ export class VM {
     if (!instructions) {
       throw new Error("no instructions found");
     }
-    
+
     // Evaluate instructions
     const evaluation = evaluate(instructions, message);
-    
+
     // Update performance metrics
     this.totalInstructionsEvaluated += evaluation.instructionsEvaluated.length;
-    
+
     const vmEvaluation: VMEvaluation = {
       ...evaluation,
       onNewValue: this.onNewValue,

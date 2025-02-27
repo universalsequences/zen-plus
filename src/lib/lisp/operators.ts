@@ -196,34 +196,68 @@ export const operators = (
   },
 
   "+": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
-    return args.reduce(
-      (sum, arg) => {
-        return (sum as any) + evaluateExpression(arg, env);
-      },
-      typeof args[0].expression === "string" ? "" : 0,
-    );
+    if (args.length === 0) return 0;
+    
+    // Start with initial value of 0 or empty string
+    let result = 0;
+    
+    // Evaluate each argument and add to result
+    for (let i = 0; i < args.length; i++) {
+      const value = evaluateExpression(args[i], env);
+      
+      // First value determines if we're doing string concat or number addition
+      if (i === 0 && typeof value === "string") {
+        result = "";
+      }
+      
+      result = (result as any) + value;
+    }
+    
+    return result;
   },
 
   "-": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
+    if (args.length === 0) {
+      throw new Error("Subtraction requires at least one argument");
+    }
+    
     if (args.length === 1) {
+      // Unary negation
       return -Number(evaluateExpression(args[0], env));
     }
-    return Number(
-      (evaluateExpression(args[0], env) as number) - (evaluateExpression(args[1], env) as number),
-    );
+    
+    // Binary subtraction
+    const minuend = Number(evaluateExpression(args[0], env));
+    const subtrahend = Number(evaluateExpression(args[1], env));
+    return minuend - subtrahend;
   },
 
   "*": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
-    return args.reduce(
-      (product, arg) => (product as number) * Number(evaluateExpression(arg, env)),
-      1,
-    );
+    if (args.length === 0) return 1;
+    
+    let result = 1;
+    
+    // Evaluate each argument and multiply with result
+    for (let i = 0; i < args.length; i++) {
+      result *= Number(evaluateExpression(args[i], env));
+    }
+    
+    return result;
   },
 
   "/": (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
-    return Number(
-      (evaluateExpression(args[0], env) as number) / (evaluateExpression(args[1], env) as number),
-    );
+    if (args.length !== 2) {
+      throw new Error("Division requires exactly two arguments");
+    }
+    
+    const dividend = Number(evaluateExpression(args[0], env));
+    const divisor = Number(evaluateExpression(args[1], env));
+    
+    if (divisor === 0) {
+      throw new Error("Division by zero");
+    }
+    
+    return dividend / divisor;
   },
 
   dot: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
@@ -425,9 +459,11 @@ export const operators = (
   },
 
   list: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
-    return args.map((arg, i) => {
-      return evaluateExpression(arg, env);
-    });
+    const result = [];
+    for (let i = 0; i < args.length; i++) {
+      result.push(evaluateExpression(args[i], env));
+    }
+    return result;
   },
 
   car: (expression: LocatedExpression) => (args: LocatedExpression[], env: Environment) => {
