@@ -1,6 +1,6 @@
 import { doc } from "./doc";
 import { Operator, Statement, CompoundOperator } from "./types";
-import { Lazy, ObjectNode, Message } from "../../types";
+import { Lazy, ObjectNode, Message, OptimizedDataType } from "../../types";
 import { memoZen, memo } from "./memo";
 import { ParamGen, param } from "@/lib/zen/index";
 
@@ -47,6 +47,8 @@ doc("param", {
 export const zen_param = (object: ObjectNode, name: Lazy) => {
   // object.needsLoad = true;
   object.needsMainThread = true;
+  object.inlets[0].optimizedDataType = [OptimizedDataType.NUMBER, OptimizedDataType.FLOAT_ARRAY];
+  ``;
   if (object.attributes["default"] === undefined) {
     object.attributes["default"] = 0;
   }

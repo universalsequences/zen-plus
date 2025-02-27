@@ -48,6 +48,15 @@ export interface PublishBody {
   };
 }
 
+export interface PublishOptimizedBody {
+  type: "publish-optimized";
+  body: {
+    type: string;
+    subType: number;
+    value: number;
+  };
+}
+
 export interface UpdateNodeBody {
   type: "updateObject";
   body: {
@@ -69,6 +78,7 @@ export interface LoadBangBody {
 }
 
 export type MessageBody =
+  | PublishOptimizedBody
   | SetCompilationBody
   | EvaluateNodeBody
   | UpdateNodeBody

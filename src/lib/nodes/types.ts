@@ -135,7 +135,13 @@ export type IOlet = Identifiable & {
   markedMessages?: MarkedMessage[];
   node?: ObjectNode;
   callback?: (x: Message) => void;
+  optimizedDataType?: OptimizedDataType[];
 };
+
+export enum OptimizedDataType {
+  NUMBER = 1,
+  FLOAT_ARRAY = 2,
+}
 
 export type MarkedMessage = {
   message: Message;

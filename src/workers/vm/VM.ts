@@ -20,6 +20,7 @@ import type { NodeInstructions } from "../core";
 import {
   AttributeUpdate,
   MainThreadInstruction,
+  OptimizedMainThreadInstruction,
   ReplaceMessage,
   evaluate,
 } from "@/lib/nodes/vm/evaluate";
@@ -45,6 +46,7 @@ export interface VMEvaluation {
   replaceMessages: ReplaceMessage[];
   objectsEvaluated?: ObjectNode[];
   mainThreadInstructions: MainThreadInstruction[];
+  optimizedMainThreadInstructions: OptimizedMainThreadInstruction[];
   onNewValue: OnNewValue[];
   onNewSharedBuffer: OnNewSharedBuffer[];
   mutableValueChanged: MutableValueChanged[];

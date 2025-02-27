@@ -9,8 +9,9 @@ export enum MessageType {
   UPDATE_MESSAGE = 3,
   LOADBANG = 4,
   PUBLISH = 5,
-  ATTRUI = 6,
-  SET_COMPILATION = 7,
+  PUBLISH_OPTIMIZED = 6,
+  ATTRUI = 7,
+  SET_COMPILATION = 8,
 
   // Worker-to-Main message types
   MAIN_THREAD_INSTRUCTION = 101,
@@ -156,6 +157,11 @@ export class RingBuffer {
    */
   write(type: MessageType, nodeId: string, message?: any): boolean {
     //console.log(`RingBuffer.write - type=${type}, nodeId=${nodeId}, direction=${this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN"}`);
+
+    // Special case for optimized publish format
+    if (type === MessageType.PUBLISH_OPTIMIZED) {
+      return this.writeOptimizedPublish(nodeId, message);
+    }
 
     // Determine which buffer to use based on direction
     let writePtr: number, readPtr: number, bufferStart: number, lockOffset: number;
@@ -336,6 +342,140 @@ export class RingBuffer {
   }
 
   /**
+   * Specialized method for writing publish messages with optimized format
+   * Format: {type: string, subType: integer, value: float}
+   * This is much more efficient than the general message encoding
+   */
+  writeOptimizedPublish(nodeId: string, message: { type: string, subType: number, value: number }): boolean {
+    // Determine which buffer to use based on direction
+    let writePtr: number, readPtr: number, bufferStart: number, lockOffset: number;
+
+    if (this.direction === BufferDirection.MAIN_TO_WORKER) {
+      writePtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR);
+      readPtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_READ_PTR);
+      bufferStart = RingBuffer.HEADER_SIZE;
+      lockOffset = RingBuffer.MAIN_TO_WORKER_LOCK;
+    } else {
+      writePtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR);
+      readPtr = this.view.getUint32(RingBuffer.WORKER_TO_MAIN_READ_PTR);
+      bufferStart = RingBuffer.HEADER_SIZE + this.bufferSize;
+      lockOffset = RingBuffer.WORKER_TO_MAIN_LOCK;
+    }
+
+    // Try to acquire lock
+    if (Atomics.compareExchange(new Uint8Array(this.buffer), lockOffset, 0, 1) !== 0) {
+      return false; // Couldn't get lock, another thread is writing
+    }
+
+    try {
+      // Calculate available space
+      let availableSpace: number;
+      const bufferEnd = bufferStart + this.bufferSize;
+
+      if (writePtr >= readPtr) {
+        // Write pointer is ahead or equal to read pointer
+        const wrappedWritePtr = ((writePtr - bufferStart) % this.bufferSize) + bufferStart;
+        const wrappedReadPtr = ((readPtr - bufferStart) % this.bufferSize) + bufferStart;
+
+        if (wrappedWritePtr >= wrappedReadPtr) {
+          // Normal case: writePtr ahead of readPtr
+          availableSpace = bufferEnd - wrappedWritePtr + (wrappedReadPtr - bufferStart) - 1;
+        } else {
+          // Wrapped case: readPtr ahead of writePtr
+          availableSpace = wrappedReadPtr - wrappedWritePtr - 1;
+        }
+      } else {
+        // Read pointer is ahead of write pointer (unusual case)
+        availableSpace = readPtr - writePtr - 1;
+      }
+
+      // For optimized publish we need:
+      // 1 byte for message type
+      // 2 bytes for nodeId length (always empty string or "global")
+      // nodeId bytes (minimal)
+      // 2 bytes for type string length + type string bytes
+      // 4 bytes for subType integer
+      // 8 bytes for value float64
+      
+      const encoder = new TextEncoder();
+      const typeStrBytes = encoder.encode(message.type);
+      const nodeIdBytes = encoder.encode(nodeId);
+      
+      // Calculate total message size
+      const totalSize = 1 + 2 + nodeIdBytes.length + 2 + typeStrBytes.length + 4 + 8;
+      
+      // Check if we have enough space
+      if (totalSize > availableSpace) {
+        return false; // Not enough space
+      }
+
+      const wrappedWritePtr = ((writePtr - bufferStart) % this.bufferSize) + bufferStart;
+      let currentPtr = wrappedWritePtr;
+
+      // Write message type
+      this.view.setUint8(currentPtr, MessageType.PUBLISH_OPTIMIZED);
+      currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+
+      // Write nodeId length
+      this.view.setUint16(currentPtr, nodeIdBytes.length);
+      currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
+
+      // Write nodeId bytes
+      for (let i = 0; i < nodeIdBytes.length; i++) {
+        this.view.setUint8(currentPtr, nodeIdBytes[i]);
+        currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+      }
+
+      // Write type string length
+      this.view.setUint16(currentPtr, typeStrBytes.length);
+      currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
+
+      // Write type string bytes
+      for (let i = 0; i < typeStrBytes.length; i++) {
+        this.view.setUint8(currentPtr, typeStrBytes[i]);
+        currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+      }
+
+      // Write subType as Int32
+      this.view.setInt32(currentPtr, message.subType);
+      currentPtr = this.incrementPointer(currentPtr, 4, bufferStart, bufferEnd);
+
+      // Write value as Float64
+      this.view.setFloat64(currentPtr, message.value);
+      currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
+
+      // Update the write pointer atomically
+      if (this.direction === BufferDirection.MAIN_TO_WORKER) {
+        this.view.setUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR, currentPtr);
+      } else {
+        this.view.setUint32(RingBuffer.WORKER_TO_MAIN_WRITE_PTR, currentPtr);
+      }
+
+      // Signal that new data is available (if callback is set)
+      if (this.signalCallback) {
+        this.signalCallback();
+      }
+
+      return true;
+    } finally {
+      // Release lock
+      Atomics.store(new Uint8Array(this.buffer), lockOffset, 0);
+    }
+  }
+
+  /**
+   * Helper method to increment a pointer in the ring buffer, handling wrapping
+   */
+  private incrementPointer(pointer: number, increment: number, bufferStart: number, bufferEnd: number): number {
+    const newPointer = pointer + increment;
+    if (newPointer >= bufferEnd) {
+      // Wrap around to beginning of buffer area
+      return bufferStart + (newPointer - bufferEnd);
+    }
+    return newPointer;
+  }
+
+  /**
    * Reads a message from the ring buffer in the opposite direction
    * Returns undefined if no message is available
    */
@@ -415,6 +555,11 @@ export class RingBuffer {
         }
 
         const type = this.view.getUint8(wrappedReadPtr) as MessageType;
+        
+        // Special case for optimized publish message format
+        if (type === MessageType.PUBLISH_OPTIMIZED) {
+          return this.readOptimizedPublish(wrappedReadPtr, bufferStart, bufferEnd, readPtrOffset);
+        }
 
         // Read the message length
         const lengthPtr = ((wrappedReadPtr + 1) % this.bufferSize) + bufferStart;
@@ -1005,6 +1150,82 @@ export class RingBuffer {
    * @param bytesNeeded Optional number of bytes we want to write (default: 100)
    */
   // Helper to check if buffer is currently empty
+  /**
+   * Read an optimized publish message from the buffer
+   */
+  private readOptimizedPublish(
+    readPtr: number, 
+    bufferStart: number, 
+    bufferEnd: number, 
+    readPtrOffset: number
+  ): { type: MessageType; nodeId: string; message: any } | undefined {
+    try {
+      // readPtr is pointing at the message type byte
+      // Move to the next byte to read nodeId length
+      let currentPtr = this.incrementPointer(readPtr, 1, bufferStart, bufferEnd);
+      
+      // Read nodeId length
+      const nodeIdLength = this.view.getUint16(currentPtr);
+      currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
+      
+      // Read nodeId bytes
+      const nodeIdBytes = new Uint8Array(nodeIdLength);
+      for (let i = 0; i < nodeIdLength; i++) {
+        nodeIdBytes[i] = this.view.getUint8(currentPtr);
+        currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+      }
+      
+      const decoder = new TextDecoder();
+      const nodeId = decoder.decode(nodeIdBytes);
+      
+      // Read type string length
+      const typeStrLength = this.view.getUint16(currentPtr);
+      currentPtr = this.incrementPointer(currentPtr, 2, bufferStart, bufferEnd);
+      
+      // Read type string bytes
+      const typeStrBytes = new Uint8Array(typeStrLength);
+      for (let i = 0; i < typeStrLength; i++) {
+        typeStrBytes[i] = this.view.getUint8(currentPtr);
+        currentPtr = this.incrementPointer(currentPtr, 1, bufferStart, bufferEnd);
+      }
+      
+      const typeStr = decoder.decode(typeStrBytes);
+      
+      // Read subType integer
+      const subType = this.view.getInt32(currentPtr);
+      currentPtr = this.incrementPointer(currentPtr, 4, bufferStart, bufferEnd);
+      
+      // Read value float
+      const value = this.view.getFloat64(currentPtr);
+      currentPtr = this.incrementPointer(currentPtr, 8, bufferStart, bufferEnd);
+      
+      // Update read pointer
+      this.view.setUint32(readPtrOffset, currentPtr);
+      
+      // Format the message as expected by the receiver
+      const publishData = {
+        type: typeStr,
+        subType: subType,
+        value: value
+      };
+      
+      // Construct a message that matches the expected format
+      const reconstructedMessage = {
+        type: MessageType.PUBLISH,
+        nodeId,
+        message: {
+          type: typeStr,
+          message: [subType, value]
+        }
+      };
+      
+      return reconstructedMessage;
+    } catch (error) {
+      console.error("Error reading optimized publish message:", error);
+      return undefined;
+    }
+  }
+
   private isBufferEmpty(): boolean {
     if (this.direction === BufferDirection.MAIN_TO_WORKER) {
       const writePtr = this.view.getUint32(RingBuffer.MAIN_TO_WORKER_WRITE_PTR);

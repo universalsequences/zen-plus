@@ -27,20 +27,23 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
       return;
     }
 
-    // need to batch these all together and then send them off ideally via the damn buffer
+    // Send messages using the optimized format for better performance
     patch.sendWorkerMessage?.({
-      type: "publish",
+      type: "publish-optimized",
       body: {
-        message: [e.data.subType, e.data.body],
         type: e.data.type,
+        subType: e.data.subType,
+        value: e.data.body,
       },
     });
 
+    /*
     parentNode.send(parentNode.outlets[0], {
       type: e.data.type,
       subType: e.data.subType,
       data: e.data.body,
     });
+    */
   };
 
   patch.disconnectGraph();

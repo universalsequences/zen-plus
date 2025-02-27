@@ -1,5 +1,5 @@
 import { Instruction, InstructionType } from "./types";
-import { AttributeValue, Message, MessageNode, ObjectNode } from "../types";
+import { AttributeValue, Message, MessageNode, ObjectNode, OptimizedDataType } from "../types";
 import { evaluateAttributeInstruction } from "./attribute";
 import { isObjectNode } from "./instructions";
 
@@ -17,6 +17,12 @@ export interface MainThreadInstruction {
   inletMessages: (Message | undefined)[];
 }
 
+export interface OptimizedMainThreadInstruction {
+  nodeId: string;
+  optimizedDataType: OptimizedDataType;
+  message: number | number[];
+}
+
 export interface ReplaceMessage {
   messageId: string;
   message?: Message;
@@ -28,11 +34,29 @@ export interface AttributeUpdate {
   message: AttributeValue;
 }
 
+const matchesDataType = (
+  dataTypes: OptimizedDataType[],
+  message: Message,
+): OptimizedDataType | null => {
+  if (typeof message === "number") {
+    if (dataTypes.includes(OptimizedDataType.NUMBER)) {
+      return OptimizedDataType.NUMBER;
+    }
+  }
+  if (Array.isArray(message) && message.every((x) => typeof x === "number")) {
+    if (dataTypes.includes(OptimizedDataType.FLOAT_ARRAY)) {
+      return OptimizedDataType.FLOAT_ARRAY;
+    }
+  }
+  return null;
+};
+
 export const evaluate = (_instructions: Instruction[], _initialMessage: Message = "bang") => {
   let initialMessage: Message | undefined = _initialMessage;
   const replaceMessages: ReplaceMessage[] = [];
   const objectsEvaluated: ObjectNode[] = [];
   const mainThreadInstructions: MainThreadInstruction[] = [];
+  const optimizedMainThreadInstructions: OptimizedMainThreadInstruction[] = [];
   const attributeUpdates: AttributeUpdate[] = [];
 
   // TODO - need to keep track of all STOREs into nodes with skipCompilation along w/
@@ -152,7 +176,16 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           }
           if (objectNode.fn && inputMessage !== undefined) {
             if (objectNode.skipCompilation) {
-              if (objectNode.needsMainThread) {
+              const { optimizedDataType } = objectNode.inlets[0];
+              const matchedDataType =
+                optimizedDataType && matchesDataType(optimizedDataType, inputMessage);
+              if (matchedDataType) {
+                optimizedMainThreadInstructions.push({
+                  nodeId: objectNode.id,
+                  optimizedDataType: matchedDataType,
+                  message: inputMessage as number | number[],
+                });
+              } else if (objectNode.needsMainThread) {
                 mainThreadInstructions.push({
                   nodeId: objectNode.id,
                   inletMessages: [
@@ -241,6 +274,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
       replaceMessages,
       instructionsEvaluated: emittedInstructions,
       attributeUpdates,
+      optimizedMainThreadInstructions,
     };
   } catch (e) {
     console.log("error=", e);

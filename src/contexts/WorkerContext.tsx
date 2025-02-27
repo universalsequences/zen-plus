@@ -169,6 +169,7 @@ class UpdateBatcher {
   }
 
   private handleMainThreadInstructions(instructions: MainThreadInstruction[]) {
+    console.log("main thread instructions=", instructions);
     for (const { nodeId, inletMessages } of instructions) {
       const node = this.objects[nodeId];
       if (!node) continue;
@@ -516,7 +517,35 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       return;
     }
 
-    if (body.type === "setCompilation" || body.type === "publish") {
+    if (body.type === "setCompilation") {
+      workerRef.current?.postMessage(body);
+      return;
+    }
+
+    // Handle optimized publish message
+    if (body.type === "publish-optimized") {
+      if (ringBufferRef.current && ringBufferRef.current.canWrite()) {
+        const success = ringBufferRef.current.write(
+          MessageType.PUBLISH_OPTIMIZED,
+          "global",
+          body.body,
+        );
+        if (success) {
+          return;
+        }
+      }
+      // Fallback to regular publish if optimized fails
+      workerRef.current?.postMessage({
+        type: "publish",
+        body: {
+          message: [body.body.subType, body.body.value],
+          type: body.body.type,
+        },
+      });
+      return;
+    }
+
+    if (body.type === "publish") {
       workerRef.current?.postMessage(body);
       return;
     }
@@ -550,6 +579,11 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           break;
         case "publish":
           messageType = MessageType.PUBLISH;
+          nodeId = "global";
+          messageData = body.body;
+          break;
+        case "publish-optimized":
+          messageType = MessageType.PUBLISH_OPTIMIZED;
           nodeId = "global";
           messageData = body.body;
           break;
