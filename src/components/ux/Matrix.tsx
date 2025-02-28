@@ -17,6 +17,8 @@ export interface Position {
   relativePosition: number;
   // Keep track of the previous value
   lastSetValue: number;
+  // Keep track of the precise unrounded value for calculations (only used in rounded mode)
+  preciseValue: number;
   // Last mouse Y position
   lastMouseY: number;
 }
@@ -29,7 +31,7 @@ interface VisitedCell {
 
 const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let attributes = objectNode.attributes;
-  let { attributesIndex } = useSelection();
+  useSelection();
   let editing = useRef<Position | null>(null);
   let canvasRef = useRef<HTMLCanvasElement>(null);
   let containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   // Values state - will be updated when the buffer changes
   const [values, setValues] = useState<number[]>([]);
   const { value: valueUpdate } = useValue();
-  const { sizeIndex } = usePosition();
+  usePosition();
   const { lockedMode } = useLocked();
 
   // Get size from objectNode, defaulting to 100x100 if not set
@@ -418,13 +420,30 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
       // Scale the movement to a change in value (negative movement = lower value)
       const valueRange = (max as number) - (min as number);
-      const sensitivity = 2.0; // Adjust sensitivity as needed
+      const sensitivity = 1.0; // Same sensitivity for both modes
+
+      // Calculate value change exactly the same way for both modes
       const valueChange = (verticalMovement / editInfo.cellHeight) * valueRange * sensitivity;
 
-      // Start from last set value and apply the change
-      return editInfo.lastSetValue + valueChange;
+      // Use precise value for calculations in rounded mode if available
+      let baseValue;
+      if (objectNode.attributes["round"] && "preciseValue" in editInfo) {
+        baseValue = editInfo.preciseValue;
+      } else {
+        baseValue = editInfo.lastSetValue;
+      }
+
+      const newPreciseValue = baseValue + valueChange;
+
+      // Return both the precise value for internal tracking and the displayed value
+      return {
+        preciseValue: newPreciseValue,
+        displayValue: objectNode.attributes["round"]
+          ? Math.round(newPreciseValue)
+          : newPreciseValue,
+      };
     },
-    [min, max],
+    [min, max, objectNode.attributes],
   );
 
   const onMouseMove = useCallback(
@@ -437,27 +456,30 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       const mouseY = e.clientY - rect.top;
 
       // Calculate new value based on the movement from last position
-      const newValue = calculateValueFromMovement(mouseY, editing.current);
+      const { preciseValue, displayValue } = calculateValueFromMovement(mouseY, editing.current);
 
-      // Clamp value to min/max range
-      const clampedValue = Math.max(min as number, Math.min(max as number, newValue));
+      // If the display value hasn't changed, we can exit early to prevent unnecessary updates
+      if (displayValue === editing.current.lastSetValue) {
+        return;
+      }
+
+      // Clamp value to min/max range (for display value)
+      const clampedValue = Math.max(min as number, Math.min(max as number, displayValue));
 
       // Handle NaN
       const finalValue = isNaN(clampedValue) ? 0 : clampedValue;
 
-      // Round if needed
-      const roundedValue = objectNode.attributes["round"] ? Math.round(finalValue) : finalValue;
-
-      // Update the value
-      toggle(editing.current.y, editing.current.x, roundedValue);
+      // Update the value in the matrix
+      toggle(editing.current.y, editing.current.x, finalValue);
       if (objectNode.custom) {
         (objectNode.custom as any as mat.Matrix).update();
       }
 
-      // Update editing state with new value and position
+      // Update editing state with new values and position
       editing.current = {
         ...editing.current,
-        lastSetValue: roundedValue,
+        lastSetValue: finalValue,
+        preciseValue: preciseValue, // Keep track of the precise value for next calculation
         lastMouseY: mouseY,
       };
 
@@ -543,6 +565,23 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         const idx = row * (columns as number) + col;
         const value = values[idx] || 0;
 
+        // Set initial values based on click position when needed
+        let initialValue = value;
+        let preciseValue = value;
+
+        if (objectNode.attributes["round"] && value === 0) {
+          // Map vertical position to value range
+          // relativePosition is 0 at bottom, 1 at top of cell
+          const range = (max as number) - (min as number);
+          // Calculate precise value based on vertical position
+          preciseValue = (min as number) + relativePosition * range;
+          // Round for display
+          initialValue = Math.round(preciseValue);
+
+          // Update the value immediately for better feedback
+          toggle(row, col, initialValue);
+        }
+
         // Store the mouse position and current value
         const mouseY = e.clientY - rect.top;
 
@@ -550,12 +589,13 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         editing.current = {
           x: col,
           y: row,
-          value,
+          value: initialValue,
           startY,
           rowOffset,
           cellHeight,
           relativePosition,
-          lastSetValue: value,
+          lastSetValue: initialValue,
+          preciseValue: preciseValue, // Track precise unrounded value
           lastMouseY: mouseY,
         };
 
@@ -575,6 +615,9 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       type,
       disabledColumnsArray,
       objectNode.attributes.toggle,
+      objectNode.attributes,
+      min,
+      max,
       addVisitedCell,
     ],
   );
