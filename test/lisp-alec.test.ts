@@ -29,7 +29,7 @@ describe("Lisp Syntax to Bytecode Tests", () => {
   });
 
   // Helper function to parse, compile, and execute code
-  const runCode = (code: string, debug = false) => {
+  const runCode = (code: string, debug = false, showInstructions = false) => {
     vm.setDebug(debug);
     if (debug) {
       console.log(`Executing code: ${code}`);
@@ -38,7 +38,7 @@ describe("Lisp Syntax to Bytecode Tests", () => {
     const ast = parse(code);
     const bytecode = compiler.compile(ast);
 
-    if (debug) {
+    if (debug || showInstructions) {
       console.log("Compiled bytecode:", JSON.stringify(bytecode, null, 2));
     }
 
@@ -195,21 +195,59 @@ describe("Lisp Syntax to Bytecode Tests", () => {
 
     it("should support object property access", () => {
       expect(
-        runCode(
-          `(set point { x 5 y 10 })
-          (get point "x")`,
-        ),
+        runCode(`
+          (set point { x 5 y 10 })
+          (get point "x")`),
       ).toBe(5);
     });
 
     it("should support object spread", () => {
       expect(
-        runCode(
-          `(set p1 { x 1 y 2 })
+        runCode(`
+         (set p1 { x 1 y 2 })
          (set p2 { ... p1 z 3 })
-(get p2 "z")`,
+         (+ (get p2 "x") (get p2 "z"))`),
+      ).toBe(4);
+    });
+  });
+
+  describe("deep", () => {
+    it("should support deep recusion", () => {
+      expect(
+        runCode(`(defun sum (n)
+        (if (<= n 0)
+            0
+            (+ n (sum (- n 1)))))
+      (sum 50)
+`),
+      ).toBe(1275);
+    });
+
+    it("should handle fibonacci", () => {
+      const fibonacciCode = `
+        (defun fibonacci (n)
+          (if (< n 2)
+              n
+              (+ (fibonacci (- n 1))
+                 (fibonacci (- n 2)))))
+        (fibonacci 20)
+      `;
+      expect(runCode(fibonacciCode)).toBe(6765);
+    });
+  });
+
+  describe("def", () => {
+    it("should handle defs", () => {
+      expect(
+        runCode(
+          `
+(def sq (x) (* x x))
+(sq 5)
+`,
+          true,
+          true,
         ),
-      ).toBe(3);
+      ).toBe(25);
     });
   });
 });

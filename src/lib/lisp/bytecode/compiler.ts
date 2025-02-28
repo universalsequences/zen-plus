@@ -121,6 +121,8 @@ export class Compiler {
           return this.compileArithmeticOp(list, OpCode.GTE);
         case "==":
           return this.compileArithmeticOp(list, OpCode.EQ);
+        case "get":
+          return this.compileGetProp(list);
       }
 
       // For function calls where the function name is a symbol
@@ -163,6 +165,8 @@ export class Compiler {
     const pattern = list[2]; // This is the pattern object or expression
     const body = list[3];
 
+    console.log("compile def=", fnName, pattern, body);
+
     // First, create a simple function that takes the pattern arguments
     // Create a function definition that will handle the pattern matching
     const funcDef: FunctionDefinition = {
@@ -175,6 +179,8 @@ export class Compiler {
       ], // Single parameter 'obj' that will be destructured
       body: body,
     };
+
+    console.log("compile def=");
 
     // Compile the function and store it in the environment
     this.compileFunction(funcDef, fnName);
@@ -219,9 +225,17 @@ export class Compiler {
 
       // Store the pattern in the environment
       const patternsArray = this.addConstant([patternObj]);
+
+      console.log("creating simple patterns array=", patternObj);
       this.emit(OpCode.PUSH_CONSTANT, patternsArray);
       this.emit(OpCode.STORE, `${fnName}_patterns`);
     }
+  }
+
+  private compileGetProp(list: LocatedExpression[]): void {
+    this.compileExpression(list[1]);
+    this.compileExpression(list[2]);
+    this.emit(OpCode.GET_PROP);
   }
 
   // Compile defun (simple function definition)
@@ -298,7 +312,7 @@ export class Compiler {
       // Store function in environment
       this.emit(OpCode.STORE, `${name}_fn`);
       // Push null as the result of function definition
-      this.emit(OpCode.PUSH_CONSTANT, this.addConstant(null));
+      //this.emit(OpCode.PUSH_CONSTANT, this.addConstant(null));
     }
   }
 
@@ -442,8 +456,10 @@ export class Compiler {
       this.compileExpression(value);
     }
 
+    const propCountIndex = this.addConstant(propertyCount);
+    this.emit(OpCode.PUSH_CONSTANT, propCountIndex);
     // Create object from the properties on the stack
-    this.emit(OpCode.MAKE_OBJECT, propertyCount);
+    this.emit(OpCode.MAKE_OBJECT, spread ? 1 : 0);
   }
 
   // Compile atom (number, string, boolean, null, or symbol)

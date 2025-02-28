@@ -282,6 +282,7 @@ export class VM {
 
   // Match and call a function with pattern matching
   private callPatternFunction(func: any, argCount: number): void {
+    console.log("call pattern function");
     if (this.debugging) {
       console.log("callPatternFunction with:", func, "argCount:", argCount);
       console.log("Current environment:", this.currentEnv());
@@ -733,6 +734,9 @@ export class VM {
         case OpCode.LOAD:
           {
             const name = instruction.operand;
+            if (this.debugging) {
+              console.log("looking for name=", name, this.hasInScope(name));
+            }
             if (this.hasInScope(name)) {
               if (this.debugging) console.log("loading from scope", name, this.getFromScope(name));
               this.push(this.getFromScope(name));
@@ -743,6 +747,7 @@ export class VM {
             } else if (name.startsWith("$")) {
               throw new Error(`Unknown input: ${name}`);
             } else {
+              if (this.debugging) console.log("pushing null");
               this.push(null);
             }
           }
@@ -769,6 +774,7 @@ export class VM {
             const value = this.pop();
             prod *= value;
           }
+          if (this.debugging) console.log("mul=", prod);
           this.push(prod);
           break;
         }
@@ -846,12 +852,21 @@ export class VM {
 
         case OpCode.MAKE_OBJECT:
           {
-            const count = instruction.operand;
+            let count = this.pop(); //instruction.operand;
             const obj = this.pool.getObject();
             for (let i = 0; i < count; i++) {
               const value = this.pop();
               const key = this.pop();
               obj[key] = value;
+            }
+
+            if (instruction.operand) {
+              let count = this.pop();
+              for (let i = 0; i < count; i++) {
+                const key = this.pop();
+                const value = this.pop();
+                obj[key] = value;
+              }
             }
             this.push(obj);
           }
@@ -862,7 +877,7 @@ export class VM {
             const propName = this.pop();
             const obj = this.pop();
             if (typeof obj === "object" && obj !== null) {
-              this.push(obj[propName]);
+              this.push(obj[propName.slice(1, propName.length - 1)]);
             } else {
               throw new Error("Cannot get property from non-object");
             }
@@ -891,9 +906,11 @@ export class VM {
               this.push(value.length); // Push count for MAKE_LIST to use
             } else if (typeof value === "object" && value !== null) {
               let count = 0;
+              let y: any[] = [];
               for (const key in value) {
-                this.push(key);
+                y.push(key, value[key]);
                 this.push(value[key]);
+                this.push(key);
                 count++;
               }
               this.push(count); // Push count for MAKE_OBJECT to use
@@ -1002,6 +1019,10 @@ export class VM {
                     const parentEnv = (actualFunc as any).env || this.currentEnv();
                     const frameEnv = Object.create(parentEnv);
 
+                    if (this.debugging) {
+                      console.log("bytecode function");
+                      console.log("binding bytecode param names=", bytecode.paramNames);
+                    }
                     // Bind arguments to parameters
                     if (bytecode.paramNames && bytecode.paramNames.length > 0) {
                       // Bind using parameter names
