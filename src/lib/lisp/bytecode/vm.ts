@@ -210,7 +210,6 @@ export class VM {
       };
 
       // Add frame to call stack
-      console.log("INCR FP=", this.fp);
       this.frames[++this.fp] = frame;
 
       if (this.debugging) {
@@ -302,7 +301,6 @@ export class VM {
     // Build the pattern key and function key
     const patternKey = `${name}_patterns`;
     const functionKey = `${name}_fn`;
-    console.log("args = ");
 
     if (this.debugging) {
       console.log("Pattern matching args:", args);
@@ -368,7 +366,6 @@ export class VM {
           // For simple patterns, bind x directly to the argument value
           if (paramNames.length > 0 && args.length > 0) {
             for (let i = 0; i < Math.min(paramNames.length, args.length); i++) {
-              console.log(`Manually binding ${paramNames[i]} = ${args[i]}`);
               frameEnv[paramNames[i]] = args[i];
             }
 
@@ -378,7 +375,6 @@ export class VM {
 
           // Push args back on the stack
           for (let i = 0; i < fixedArgs.length; i++) {
-            console.log("pushing arg=", fixedArgs[i]);
             this.push(fixedArgs[i]);
           }
 
@@ -386,7 +382,6 @@ export class VM {
           this.push(f);
 
           // Call the function normally
-          console.log("call function normally=", fixedArgs.length, pattern.params);
           const result = this.callFunction(f, fixedArgs.length);
 
           // Keep the result on the stack
@@ -435,7 +430,6 @@ export class VM {
     // containing a single symbol - we should match this against any value
     if (pattern.params.length === 1 && Array.isArray(pattern.params[0])) {
       const firstParam = pattern.params[0];
-      console.log("Simple parameter pattern:", firstParam);
 
       // If it's a simple list of symbols, it will match any value (like (x))
       if (
@@ -443,14 +437,12 @@ export class VM {
         firstParam[0].expression &&
         firstParam[0].expression.type === "Symbol"
       ) {
-        console.log("Simple symbol pattern always matches:", firstParam);
         return true; // Always match for simple patterns like (x)
       }
 
       // For numeric patterns like (def fib (1) 1), match directly against the value
       if (firstParam.length === 1 && typeof firstParam[0].expression === "number") {
         const numValue = firstParam[0].expression;
-        console.log(`Numeric pattern ${numValue} against:`, args[0]);
         return args[0] === numValue;
       }
     }
@@ -497,7 +489,6 @@ export class VM {
         continue;
       } else {
         // Direct equality check
-        console.log("direct check", p, arg);
         if (p !== arg) {
           if (this.debugging) {
             console.log(`Direct mismatch: ${p} !== ${arg}`);
@@ -674,7 +665,6 @@ export class VM {
       env: this.globalEnv,
     };
 
-    console.log("execute INCR FP=", this.fp);
     this.frames[++this.fp] = frame;
 
     try {
@@ -723,7 +713,6 @@ export class VM {
 
   // Execute a single frame until it returns or completes
   private executeFrame(checkTimeout?: () => void): any {
-    console.log("********************* execute frame this.fp=", this.fp);
     if (this.fp < 0) {
       throw new Error("No active frame to execute");
     }
@@ -744,15 +733,12 @@ export class VM {
       const { function: func, ip } = frame;
       const { instructions } = func.code;
 
-      console.log("ip=%s len=%s", ip, instructions.length, instructions.slice(ip));
-
       // If we've reached the end of instructions
       if (ip >= instructions.length) {
         // Get the result from the top of the stack
         const result = this.sp > 0 ? this.pop() : null;
 
         // Pop this frame
-        console.log("************************ EXECUTE FRAME DECR FRAME=%s", this.fp);
         this.fp--;
 
         if (this.debugging) {
@@ -1169,7 +1155,6 @@ export class VM {
                     };
 
                     // Add the frame to the call stack
-                    console.log("vmFunc INCR FP=", this.fp);
                     this.frames[++this.fp] = frame;
 
                     // Execute the function's bytecode immediately
@@ -1252,7 +1237,6 @@ export class VM {
                 };
 
                 // Add the frame to the call stack
-                console.log("vmFunc2 INCR FP=", this.fp);
                 this.frames[++this.fp] = frame;
 
                 // Execute the function's bytecode immediately
@@ -1278,21 +1262,112 @@ export class VM {
         case OpCode.CALL_PATTERN:
           {
             const argCount = instruction.operand;
+
+            // Extract arguments directly
             let args = new Array(argCount);
-            for (let i = 0; i < args.length; i++) {
-              args[i] = this.pop();
+            for (let i = 0; i < argCount; i++) {
+              args[i] = this.stack[this.sp - argCount + i];
             }
-            const funcValue = this.pop();
 
-            // We want to complete this instruction before continuing,
-            // so we decrement the frame's instruction pointer by one
-            // This way, after CALL_PATTERN completes, we'll resume
-            // with the next instruction
+            // Get the function name or object (but don't pop yet)
+            const funcValue = this.stack[this.sp - argCount - 1];
 
-            // Call the pattern function - it will push its result on the stack
-            this.callPatternFunction(funcValue, argCount, args);
+            // Now we can safely pop everything
+            this.sp -= argCount + 1;
 
-            // Now restore the instruction pointer so we continue with the next instruction
+            // Get function name
+            const name = typeof funcValue === "string" ? funcValue : "anonymous";
+
+            // Build the pattern and function keys
+            const patternKey = `${name}_patterns`;
+            const functionKey = `${name}_fn`;
+
+            // Check if we have patterns and a function implementation
+            if (this.hasInScope(patternKey) && this.hasInScope(functionKey)) {
+              // Get the patterns and function
+              const patterns = this.getFromScope(patternKey) as Pattern[];
+              const functionImpl = this.getFromScope(functionKey);
+
+              // Try to match patterns
+              for (const pattern of patterns) {
+                const matched = this.matchPattern(pattern, args);
+                if (matched) {
+                  // Extract parameter names from the pattern
+                  const paramNames = pattern.params
+                    .map((x) => {
+                      if (x[0] && x[0].expression && x[0].expression.type === "Symbol") {
+                        return x[0].expression.value;
+                      }
+                      return null;
+                    })
+                    .filter(Boolean);
+
+                  // Create a function with the correct parameter names
+                  const f = {
+                    ...functionImpl,
+                    paramNames: paramNames.length > 0 ? paramNames : functionImpl.paramNames,
+                  };
+
+                  // Create a new environment for the function
+                  const frameEnv = Object.create(this.currentEnv());
+
+                  // Bind parameters directly
+                  if (paramNames.length > 0) {
+                    for (let i = 0; i < Math.min(paramNames.length, args.length); i++) {
+                      console.log(`Binding parameter ${paramNames[i]} = ${args[i]}`);
+                      frameEnv[paramNames[i]] = args[i];
+                    }
+                  }
+
+                  // Get the bytecode
+                  let bytecode;
+                  if ("code" in f) {
+                    bytecode = (f as VMFunction).code;
+                  } else if ("instructions" in f) {
+                    bytecode = f as BytecodeFunction;
+                  } else {
+                    throw new Error("Invalid function object");
+                  }
+
+                  // Create a VMFunction
+                  const vmFunc: VMFunction = "code" in f ? (f as VMFunction) : { code: bytecode };
+
+                  // Add environment
+                  vmFunc.env = frameEnv;
+
+                  // Create a new frame
+                  const newFrame: Frame = {
+                    function: vmFunc,
+                    ip: 0,
+                    stackBase: this.sp,
+                    env: frameEnv,
+                  };
+
+                  // Push the frame
+                  console.log("NEW FRAME push, fp=", this.fp);
+                  this.frames[++this.fp] = newFrame;
+
+                  // Execute the frame directly
+                  console.log("Executing frame in CALL_PATTERN");
+                  const result = this.executeFrame(checkTimeout);
+                  console.log("CALL_PATTERN result:", result);
+
+                  // Push the result to the stack
+                  this.push(result);
+
+                  // We've handled this - continue to next instruction
+                  break;
+                }
+              }
+            } else {
+              // If no pattern match or pattern function found,
+              // use the original call pattern function
+              this.push(funcValue);
+              for (let i = 0; i < args.length; i++) {
+                this.push(args[i]);
+              }
+              this.callPatternFunction(funcValue, argCount, args);
+            }
           }
           break;
 
@@ -1304,7 +1379,6 @@ export class VM {
           }
 
           // Pop frame
-          console.log("DECR FRAME=", this.fp);
           this.fp--;
 
           // Return the result up to the caller

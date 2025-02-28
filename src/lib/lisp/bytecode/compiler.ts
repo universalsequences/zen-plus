@@ -140,7 +140,6 @@ export class Compiler {
       const argCount = list.length - 1;
       if (this.patternFunctions.has(symbol)) {
         // Use pattern matching call for functions defined with 'def'
-        console.log(`Using CALL_PATTERN for function: ${symbol}`);
         this.emit(OpCode.CALL_PATTERN, argCount);
       } else {
         // Regular function call
@@ -173,8 +172,6 @@ export class Compiler {
     const pattern = list[2]; // This is the pattern object or expression
     const body = list[3];
 
-    console.log("compile def=", fnName, pattern, body);
-
     // Register this as a pattern function
     this.patternFunctions.add(fnName);
 
@@ -190,8 +187,6 @@ export class Compiler {
       ], // Single parameter 'obj' that will be destructured
       body: body,
     };
-
-    console.log("compile def=");
 
     // Compile the function and store it in the environment
     this.compileFunction(funcDef, fnName);
@@ -237,7 +232,6 @@ export class Compiler {
       // Store the pattern in the environment
       const patternsArray = this.addConstant([patternObj]);
 
-      console.log("creating simple patterns array=", patternObj);
       this.emit(OpCode.PUSH_CONSTANT, patternsArray);
       this.emit(OpCode.STORE, `${fnName}_patterns`);
     }

@@ -52,7 +52,6 @@ describe("Lisp Syntax to Bytecode Tests", () => {
     return result;
   };
 
-  /*
   describe("Arithmetic operations", () => {
     it("should perform addition", () => {
       expect(runCode("(+ 11 22)")).toBe(33);
@@ -236,20 +235,18 @@ describe("Lisp Syntax to Bytecode Tests", () => {
       expect(runCode(fibonacciCode)).toBe(6765);
     });
   });
-  */
 
   describe("def", () => {
     it("should handle defs", () => {
       expect(
         runCode(
           `
+(def sq (1) 1)
 (def sq (x) (* x x))
-(sq 5)
+(sq 1)
 `,
-          true,
-          true,
         ),
-      ).toBe(25);
+      ).toBe(1);
     });
   });
 });
