@@ -281,15 +281,16 @@ export class VM {
   }
 
   // Match and call a function with pattern matching
-  private callPatternFunction(func: any, argCount: number): void {
-    console.log("call pattern function");
+  private callPatternFunction(func: any, argCount: number, args: any[]): void {
     if (this.debugging) {
       console.log("callPatternFunction with:", func, "argCount:", argCount);
       console.log("Current environment:", this.currentEnv());
     }
 
+    this.pop();
+
     // Pop function from stack - this could be the function name or the function object
-    const actualFunc = this.pop();
+    const actualFunc = func;
     const name =
       typeof actualFunc === "string"
         ? actualFunc
@@ -300,15 +301,11 @@ export class VM {
     // Build the pattern key and function key
     const patternKey = `${name}_patterns`;
     const functionKey = `${name}_fn`;
-
-    // Extract args for pattern matching
-    const args = new Array(argCount);
-    for (let i = argCount - 1; i >= 0; i--) {
-      args[i] = this.pop();
-    }
+    console.log("args = ");
 
     if (this.debugging) {
       console.log("Pattern matching args:", args);
+      console.log("stack currently", this.stack.slice(0, this.sp));
       console.log(`Looking for patterns with key: ${patternKey}`);
       console.log(`Looking for function with key: ${functionKey}`);
     }
@@ -318,6 +315,9 @@ export class VM {
       // Get the pattern array and the function
       const patterns = this.getFromScope(patternKey) as Pattern[];
       const functionImpl = this.getFromScope(functionKey);
+      if (this.debugging) {
+        console.log("pattern key/function key found in scope", patterns);
+      }
 
       if (this.debugging) {
         console.log("Found patterns:", patterns);
@@ -329,22 +329,33 @@ export class VM {
         const matched = this.matchPattern(pattern, args);
         if (matched) {
           if (this.debugging) {
-            console.log("Pattern matched!");
+            console.log("Pattern matched!", matched);
+            console.log("Pattern =!", pattern);
           }
 
           // We found a match! Now call the function with these arguments
           // by putting them back on the stack
 
           // Push the function first
-          this.push(functionImpl);
+          console.log("pushed function");
 
           // Push args back on the stack
           for (let i = 0; i < args.length; i++) {
+            console.log("pushing arg=", args[i]);
             this.push(args[i]);
           }
+          const paramNames = pattern.params.map((x) => x[0].expression.value);
+
+          const f = {
+            ...functionImpl,
+            paramNames,
+          };
+
+          this.push(f);
 
           // Call the function normally
-          this.callFunction(functionImpl, args.length);
+          console.log("call function normally=", args.length, pattern.params);
+          this.callFunction(f, args.length);
           return;
         }
       }
@@ -375,6 +386,31 @@ export class VM {
     }
 
     if (pattern.params.length !== args.length) return false;
+
+    // Special case for simple patterns like (def sq (x) ...)
+    // For simple parameter patterns like (x), the pattern.params[0] will be a list
+    // containing a single symbol - we should match this against any value
+    if (pattern.params.length === 1 && Array.isArray(pattern.params[0])) {
+      const firstParam = pattern.params[0];
+      console.log("Simple parameter pattern:", firstParam);
+
+      // If it's a simple list of symbols, it will match any value (like (x))
+      if (
+        firstParam.length === 1 &&
+        firstParam[0].expression &&
+        firstParam[0].expression.type === "Symbol"
+      ) {
+        console.log("Simple symbol pattern always matches:", firstParam);
+        return true; // Always match for simple patterns like (x)
+      }
+
+      // For numeric patterns like (def fib (1) 1), match directly against the value
+      if (firstParam.length === 1 && typeof firstParam[0].expression === "number") {
+        const numValue = firstParam[0].expression;
+        console.log(`Numeric pattern ${numValue} against:`, args[0]);
+        return args[0] === numValue;
+      }
+    }
 
     for (let i = 0; i < pattern.params.length; i++) {
       const p = pattern.params[i];
@@ -418,6 +454,7 @@ export class VM {
         continue;
       } else {
         // Direct equality check
+        console.log("direct check", p, arg);
         if (p !== arg) {
           if (this.debugging) {
             console.log(`Direct mismatch: ${p} !== ${arg}`);
@@ -454,6 +491,29 @@ export class VM {
     // Set a maximum depth for pattern matching to prevent infinite loops
     const MAX_DEPTH = 10;
     let depth = 0;
+
+    // Special case for simple patterns like (def sq (x) ...)
+    if (pattern.params.length === 1 && Array.isArray(pattern.params[0])) {
+      const firstParam = pattern.params[0];
+      console.log("Binding simple parameter pattern:", firstParam);
+
+      // Simple list pattern like (x), bind the arg directly to the name
+      if (
+        firstParam.length === 1 &&
+        firstParam[0].expression &&
+        firstParam[0].expression.type === "Symbol"
+      ) {
+        const symbolName = firstParam[0].expression.value;
+        console.log(`Binding ${symbolName} =`, args[0]);
+
+        // For a pattern like (def sq (x) ...), bind x to args[0]
+        // But also keep obj for backward compatibility
+        env[symbolName] = args[0];
+        env["obj"] = args[0];
+
+        return;
+      }
+    }
 
     // For the def pattern, we need to handle the object differently
     // In our implementation, we called the function with a single object parameter
@@ -675,7 +735,7 @@ export class VM {
           {
             const constant = func.code.constants[instruction.operand];
             if (this.debugging) {
-              console.log("pushing", constant);
+              console.log("pushing constant=", constant);
             }
 
             // If it's a function, attach the current environment to it
@@ -1168,8 +1228,12 @@ export class VM {
         case OpCode.CALL_PATTERN:
           {
             const argCount = instruction.operand;
+            let args = new Array(argCount);
+            for (let i = 0; i < args.length; i++) {
+              args[i] = this.pop();
+            }
             const funcValue = this.pop();
-            this.callPatternFunction(funcValue, argCount);
+            this.callPatternFunction(funcValue, argCount, args);
           }
           break;
 
@@ -1177,7 +1241,7 @@ export class VM {
           const result = this.pop();
 
           if (this.debugging) {
-            console.log("Function returning value:", result);
+            console.log("OpCode.RETURN Function returning value:", result);
           }
 
           // Pop frame
@@ -1190,7 +1254,6 @@ export class VM {
         case OpCode.JUMP:
           frame.ip = instruction.offset!;
           break;
-
         case OpCode.JUMP_IF_FALSE:
           {
             const condition = this.pop();
@@ -1222,6 +1285,7 @@ export class VM {
             }
 
             const matched = this.matchPattern(pattern, args);
+            console.log("match pattern returned=", matched);
             this.push(matched);
           }
           break;

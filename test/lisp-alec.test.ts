@@ -244,7 +244,7 @@ describe("Lisp Syntax to Bytecode Tests", () => {
 (def sq (x) (* x x))
 (sq 5)
 `,
-          true,
+          false,
           true,
         ),
       ).toBe(25);

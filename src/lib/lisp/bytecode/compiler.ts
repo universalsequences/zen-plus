@@ -20,6 +20,7 @@ export class Compiler {
   private symbolNames: string[] = [];
   private instructions: Instruction[] = [];
   private patterns: Pattern[] = [];
+  private patternFunctions: Set<string> = new Set();
 
   // Find or add a constant value to the constant pool
   private addConstant(value: any): number {
@@ -135,9 +136,16 @@ export class Compiler {
         this.compileExpression(list[i]);
       }
 
-      // Call the function with the arguments
+      // Check if this is a pattern function (defined with 'def')
       const argCount = list.length - 1;
-      this.emit(OpCode.CALL, argCount);
+      if (this.patternFunctions.has(symbol)) {
+        // Use pattern matching call for functions defined with 'def'
+        console.log(`Using CALL_PATTERN for function: ${symbol}`);
+        this.emit(OpCode.CALL_PATTERN, argCount);
+      } else {
+        // Regular function call
+        this.emit(OpCode.CALL, argCount);
+      }
       return;
     }
 
@@ -166,6 +174,9 @@ export class Compiler {
     const body = list[3];
 
     console.log("compile def=", fnName, pattern, body);
+
+    // Register this as a pattern function
+    this.patternFunctions.add(fnName);
 
     // First, create a simple function that takes the pattern arguments
     // Create a function definition that will handle the pattern matching
@@ -520,6 +531,7 @@ export class Compiler {
     this.symbolNames = [];
     this.instructions = [];
     this.patterns = [];
+    this.patternFunctions = new Set(); // Reset pattern functions for each compile
 
     // Compile each expression in the program
     for (let i = 0; i < ast.length; i++) {
