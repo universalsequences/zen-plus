@@ -670,10 +670,12 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
       const mouseY = e.clientY - rect.top;
       const idx = row * (columns as number) + col;
+      //editing.current.lastSetValue = (objectNode.buffer?.[idx] || 0) as number;
 
       // Use the last set value as the base for the new cell
       // Calculate the change based on vertical movement from the last position
-      const newValue = calculateValueFromMovement(mouseY, editing.current);
+      const ret = calculateValueFromMovement(mouseY, editing.current);
+      const newValue = ret.displayValue;
 
       // Clamp and update the value
       const clampedValue = Math.max(min as number, Math.min(max as number, newValue));
