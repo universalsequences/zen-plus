@@ -1,4 +1,4 @@
-import { OpCode, Instruction, BytecodeFunction, Pattern } from './opcodes';
+import { OpCode, Instruction, BytecodeFunction, Pattern } from "./opcodes";
 import type {
   Expression,
   Symbol,
@@ -8,9 +8,9 @@ import type {
   FunctionDefinition,
   AST,
   LocatedExpression,
-  Environment
-} from '../types';
-import { isSymbol } from '../types';
+  Environment,
+} from "../types";
+import { isSymbol } from "../types";
 
 /**
  * Compiler class for converting Lisp AST to bytecode
@@ -24,14 +24,20 @@ export class Compiler {
   // Find or add a constant value to the constant pool
   private addConstant(value: any): number {
     // Check if the constant already exists
-    const existingIndex = this.constants.findIndex(c => 
-      c === value || (typeof c === 'object' && c !== null && typeof value === 'object' && 
-                     value !== null && JSON.stringify(c) === JSON.stringify(value)));
-    
+    const existingIndex = this.constants.findIndex(
+      (c) =>
+        c === value ||
+        (typeof c === "object" &&
+          c !== null &&
+          typeof value === "object" &&
+          value !== null &&
+          JSON.stringify(c) === JSON.stringify(value)),
+    );
+
     if (existingIndex !== -1) {
       return existingIndex;
     }
-    
+
     // Add the new constant
     this.constants.push(value);
     return this.constants.length - 1;
@@ -43,7 +49,7 @@ export class Compiler {
     if (existingIndex !== -1) {
       return existingIndex;
     }
-    
+
     this.symbolNames.push(name);
     return this.symbolNames.length - 1;
   }
@@ -55,7 +61,7 @@ export class Compiler {
       opcode,
       operand,
       offset,
-      line
+      line,
     });
     return index;
   }
@@ -64,7 +70,7 @@ export class Compiler {
   private patchJump(jumpIndex: number): void {
     const jump = this.instructions[jumpIndex];
     const offset = this.instructions.length;
-    
+
     jump.offset = offset;
   }
 
@@ -83,32 +89,50 @@ export class Compiler {
 
       // Handle special forms first
       switch (symbol) {
-        case 'def': 
+        case "def":
           return this.compileDef(list);
-        case 'defun': 
+        case "defun":
           return this.compileDefun(list);
-        case 'if': 
+        case "if":
           return this.compileIf(list);
-        case 'let': 
+        case "let":
           return this.compileLet(list);
-        case 'set': 
+        case "set":
           return this.compileSet(list);
-        case 'lambda': 
+        case "lambda":
           return this.compileLambda(list);
-        case 'quote': 
+        case "quote":
           return this.compileQuote(list[1]);
+        case "+":
+          return this.compileArithmeticOp(list, OpCode.ADD);
+        case "-":
+          return this.compileArithmeticOp(list, OpCode.SUB);
+        case "*":
+          return this.compileArithmeticOp(list, OpCode.MUL);
+        case "/":
+          return this.compileArithmeticOp(list, OpCode.DIV);
+        case ">":
+          return this.compileArithmeticOp(list, OpCode.GT);
+        case "<":
+          return this.compileArithmeticOp(list, OpCode.LT);
+        case "<=":
+          return this.compileArithmeticOp(list, OpCode.LTE);
+        case ">=":
+          return this.compileArithmeticOp(list, OpCode.GTE);
+        case "==":
+          return this.compileArithmeticOp(list, OpCode.EQ);
       }
-      
+
       // For function calls where the function name is a symbol
       // Just push the function name as a string
       const constIndex = this.addConstant(symbol);
       this.emit(OpCode.PUSH_CONSTANT, constIndex);
-      
+
       // Then compile each argument
       for (let i = 1; i < list.length; i++) {
         this.compileExpression(list[i]);
       }
-      
+
       // Call the function with the arguments
       const argCount = list.length - 1;
       this.emit(OpCode.CALL, argCount);
@@ -118,12 +142,12 @@ export class Compiler {
     // Regular function call where the function is an expression
     // First compile the function
     this.compileExpression(list[0]);
-    
+
     // Then compile each argument
     for (let i = 1; i < list.length; i++) {
       this.compileExpression(list[i]);
     }
-    
+
     // Call the function with (list.length - 1) arguments
     const argCount = list.length - 1;
     this.emit(OpCode.CALL, argCount);
@@ -143,39 +167,44 @@ export class Compiler {
     // Create a function definition that will handle the pattern matching
     const funcDef: FunctionDefinition = {
       type: "function",
-      params: [{ 
-        expression: { type: "Symbol", value: "obj" },
-        location: pattern.location
-      }], // Single parameter 'obj' that will be destructured
-      body: body
+      params: [
+        {
+          expression: { type: "Symbol", value: "obj" },
+          location: pattern.location,
+        },
+      ], // Single parameter 'obj' that will be destructured
+      body: body,
     };
-    
+
     // Compile the function and store it in the environment
     this.compileFunction(funcDef, fnName);
-    
+
     // Check if it's an object pattern
-    if (pattern.expression && 
-        typeof pattern.expression === 'object' && 
-        (pattern.expression as any).type === 'object') {
-      
+    if (
+      pattern.expression &&
+      typeof pattern.expression === "object" &&
+      (pattern.expression as any).type === "object"
+    ) {
       // It's an object pattern
       const objPattern = pattern.expression as ObjectLiteral;
-      
+
       // Create a simplified pattern object for the VM
       const patternObj: any = {
-        params: [{ 
-          type: "object", 
-          properties: {} 
-        }],
+        params: [
+          {
+            type: "object",
+            properties: {},
+          },
+        ],
         body: 0, // Will be set by the VM at runtime
-        predicates: []
+        predicates: [],
       };
-      
+
       // Add properties to the pattern
       for (const [key, value] of Object.entries(objPattern.properties)) {
         patternObj.params[0].properties[key] = value.expression;
       }
-      
+
       // Store the pattern in the environment
       const patternsArray = this.addConstant([patternObj]);
       this.emit(OpCode.PUSH_CONSTANT, patternsArray);
@@ -185,9 +214,9 @@ export class Compiler {
       const patternObj: any = {
         params: [pattern.expression],
         body: 0,
-        predicates: []
+        predicates: [],
       };
-      
+
       // Store the pattern in the environment
       const patternsArray = this.addConstant([patternObj]);
       this.emit(OpCode.PUSH_CONSTANT, patternsArray);
@@ -209,7 +238,7 @@ export class Compiler {
     const funcDef: FunctionDefinition = {
       type: "function",
       params: params, // Just the actual parameters, without the function name
-      body
+      body,
     };
 
     // Compile the function definition
@@ -225,25 +254,25 @@ export class Compiler {
     const savedConstants = this.constants;
     const savedSymbols = this.symbolNames;
     const savedPatterns = this.patterns;
-    
+
     this.instructions = [];
     this.constants = [];
     this.symbolNames = [];
     this.patterns = [];
-    
+
     // Extract parameter names for binding
-    const paramNames = params.map(p => {
+    const paramNames = params.map((p) => {
       if (isSymbol(p)) {
         return (p.expression as Symbol).value;
       } else {
         throw new Error("Function parameters must be symbols");
       }
     });
-    
+
     // Compile function body
     this.compileExpression(body);
     this.emit(OpCode.RETURN);
-    
+
     // Create the function bytecode
     const functionCode: BytecodeFunction = {
       instructions: this.instructions,
@@ -252,19 +281,19 @@ export class Compiler {
       arity: paramNames.length, // Number of parameters this function takes
       variadic: false,
       patterns: this.patterns,
-      paramNames: paramNames // Store parameter names for binding
+      paramNames: paramNames, // Store parameter names for binding
     };
-    
+
     // Restore original context
     this.instructions = savedInstructions;
     this.constants = savedConstants;
     this.symbolNames = savedSymbols;
     this.patterns = savedPatterns;
-    
+
     // Add function to constants and push it on the stack
     const constIndex = this.addConstant(functionCode);
     this.emit(OpCode.PUSH_CONSTANT, constIndex);
-    
+
     if (name) {
       // Store function in environment
       this.emit(OpCode.STORE, `${name}_fn`);
@@ -278,25 +307,25 @@ export class Compiler {
     if (list.length !== 4) {
       throw new Error("if statement requires condition, then, and else expressions");
     }
-    
+
     // Compile condition
     this.compileExpression(list[1]);
-    
+
     // Emit jump-if-false instruction (we'll patch the offset later)
     const jumpIfFalseIndex = this.emit(OpCode.JUMP_IF_FALSE, null);
-    
+
     // Compile 'then' branch
     this.compileExpression(list[2]);
-    
+
     // Emit jump instruction to skip the 'else' branch (we'll patch the offset later)
     const jumpIndex = this.emit(OpCode.JUMP, null);
-    
+
     // Patch the jump-if-false to jump to the 'else' branch
     this.patchJump(jumpIfFalseIndex);
-    
+
     // Compile 'else' branch
     this.compileExpression(list[3]);
-    
+
     // Patch the unconditional jump to skip the 'else' branch
     this.patchJump(jumpIndex);
   }
@@ -306,32 +335,32 @@ export class Compiler {
     if (list.length < 3) {
       throw new Error("let requires bindings and at least one body expression");
     }
-    
+
     const bindings = list[1].expression as LocatedExpression[];
     const body = list.slice(2);
-    
+
     // Compile each binding
     for (const binding of bindings) {
       if (!Array.isArray(binding.expression) || binding.expression.length !== 2) {
         throw new Error("let bindings must be pairs of [name value]");
       }
-      
+
       const [varName, varValue] = binding.expression;
       if (!isSymbol(varName)) {
         throw new Error("variable name in let binding must be a symbol");
       }
-      
+
       // Compile the value expression
       this.compileExpression(varValue);
-      
+
       // Store it in the environment
       this.emit(OpCode.STORE, (varName.expression as Symbol).value);
     }
-    
+
     // Compile body expressions
     for (let i = 0; i < body.length; i++) {
       this.compileExpression(body[i]);
-      
+
       // Pop result of all but the last expression
       if (i < body.length - 1) {
         this.emit(OpCode.POP);
@@ -344,17 +373,17 @@ export class Compiler {
     if (list.length !== 3) {
       throw new Error("set requires a variable name and a value");
     }
-    
+
     const varName = list[1];
     const value = list[2];
-    
+
     if (!isSymbol(varName)) {
       throw new Error("set requires a symbol as first argument");
     }
-    
+
     // Compile the value expression
     this.compileExpression(value);
-    
+
     // Store the value in the variable
     this.emit(OpCode.STORE, (varName.expression as Symbol).value);
   }
@@ -364,19 +393,26 @@ export class Compiler {
     if (list.length !== 3) {
       throw new Error("lambda requires parameter list and body");
     }
-    
+
     const params = list[1].expression as LocatedExpression[];
     const body = list[2];
-    
+
     // Create a function definition
     const funcDef: FunctionDefinition = {
       type: "function",
       params: params,
-      body: body
+      body: body,
     };
-    
+
     // Compile the function
     this.compileFunction(funcDef);
+  }
+
+  private compileArithmeticOp(list: LocatedExpression[], opcode: OpCode): void {
+    for (let i = list.length; i >= 1; i--) {
+      this.compileExpression(list[i]);
+    }
+    this.emit(opcode, list.length - 1);
   }
 
   // Compile quoted expression
@@ -390,14 +426,14 @@ export class Compiler {
   private compileObject(obj: ObjectLiteral): void {
     const { spread, properties } = obj;
     let propertyCount = Object.keys(properties).length;
-    
+
     // If there's a spread object, evaluate it first
     if (spread) {
       this.compileExpression(spread);
       this.emit(OpCode.SPREAD);
       // SPREAD will push key-value pairs onto the stack
     }
-    
+
     // Compile each property
     for (const [key, value] of Object.entries(properties)) {
       // Push key and value onto the stack
@@ -405,7 +441,7 @@ export class Compiler {
       this.emit(OpCode.PUSH_CONSTANT, keyConstIndex);
       this.compileExpression(value);
     }
-    
+
     // Create object from the properties on the stack
     this.emit(OpCode.MAKE_OBJECT, propertyCount);
   }
@@ -414,7 +450,7 @@ export class Compiler {
   private compileAtom(atom: Atom): void {
     if (isSymbol(atom)) {
       const symbolValue = (atom as Symbol).value;
-      
+
       // Check if it's a function reference
       if (symbolValue.endsWith("_fn")) {
         const funcName = symbolValue.slice(0, -3); // Remove _fn suffix
@@ -439,9 +475,9 @@ export class Compiler {
       this.emit(OpCode.PUSH_CONSTANT, nullConstIndex);
       return;
     }
-    
+
     const expression = expr.expression;
-    
+
     if (Array.isArray(expression)) {
       this.compileList(expression as List);
     } else if (typeof expression === "object" && expression !== null) {
@@ -468,17 +504,17 @@ export class Compiler {
     this.symbolNames = [];
     this.instructions = [];
     this.patterns = [];
-    
+
     // Compile each expression in the program
     for (let i = 0; i < ast.length; i++) {
       this.compileExpression(ast[i]);
-      
+
       // Pop result of all but the last expression
       if (i < ast.length - 1) {
         this.emit(OpCode.POP);
       }
     }
-    
+
     // Return the compiled program
     return {
       instructions: this.instructions,
@@ -486,7 +522,7 @@ export class Compiler {
       symbolNames: this.symbolNames,
       arity: 0,
       variadic: false,
-      patterns: this.patterns
+      patterns: this.patterns,
     };
   }
 }

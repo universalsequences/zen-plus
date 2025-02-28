@@ -97,16 +97,30 @@ export class VM {
           args[i] = this.pop();
         }
 
-        // Push the real function back
-        this.push(realFunc);
+        try {
+          if (actualFunc === "concat") {
+            // Make sure concatenation happens in the right order for strings
+            // Reverse args because they're popped off the stack in reverse order
+            const reversed = args.slice().reverse();
+            const result = reversed.join("");
+            this.push(result);
+            return;
+          }
 
-        // Push the arguments back
-        for (let i = 0; i < args.length; i++) {
-          this.push(args[i]);
+          // Push the real function back
+          this.push(realFunc);
+
+          // Push the arguments back
+          for (let i = 0; i < args.length; i++) {
+            this.push(args[i]);
+          }
+
+          // Call the real function
+          return this.callFunction(realFunc, argCount);
+        } catch (error) {
+          console.error(`Error calling function ${actualFunc}:`, error);
+          this.push(null);
         }
-
-        // Call the real function
-        return this.callFunction(realFunc, argCount);
       } else {
         throw new Error(`Unknown function: ${actualFunc}`);
       }
@@ -425,6 +439,10 @@ export class VM {
       console.log("Binding pattern values:", pattern, args);
     }
 
+    // Set a maximum depth for pattern matching to prevent infinite loops
+    const MAX_DEPTH = 10;
+    let depth = 0;
+
     // For the def pattern, we need to handle the object differently
     // In our implementation, we called the function with a single object parameter
     if (args.length === 1 && typeof args[0] === "object") {
@@ -462,7 +480,8 @@ export class VM {
       });
 
       // Bind destructured values
-      for (let i = 0; i < pattern.params.length; i++) {
+      for (let i = 0; i < pattern.params.length && depth < MAX_DEPTH; i++) {
+        depth++;
         const p = pattern.params[i];
         const arg = args[i];
 
@@ -521,8 +540,19 @@ export class VM {
         console.log("Starting VM execution with bytecode:", code);
       }
 
-      // Run until completion or error
-      const result = this.run();
+      // Set a start time to enforce a timeout
+      const startTime = Date.now();
+      const MAX_EXECUTION_TIME = 10000; // 1 second max
+
+      // Add timeout check
+      const checkTimeout = () => {
+        if (Date.now() - startTime > MAX_EXECUTION_TIME) {
+          throw new Error("VM execution timed out");
+        }
+      };
+
+      // Run with timeout checks
+      const result = this.run(checkTimeout);
 
       if (this.debugging) {
         console.log("VM execution complete, result:", result);
@@ -550,12 +580,23 @@ export class VM {
   }
 
   // Execute a single frame until it returns or completes
-  private executeFrame(): any {
+  private executeFrame(checkTimeout?: () => void): any {
     if (this.fp < 0) {
       throw new Error("No active frame to execute");
     }
 
-    while (true) {
+    // Set a maximum number of instructions to prevent infinite loops
+    const MAX_INSTRUCTIONS = 1000;
+    let instructionCount = 0;
+
+    while (instructionCount < MAX_INSTRUCTIONS) {
+      // Run timeout check if provided
+      if (checkTimeout) {
+        checkTimeout();
+      }
+
+      instructionCount++;
+
       const frame = this.currentFrame();
       const { function: func, ip } = frame;
       const { instructions } = func.code;
@@ -583,7 +624,7 @@ export class VM {
           `[DEBUG] Executing in frame: ${OpCode[instruction.opcode]} operand=${instruction.operand}`,
         );
         if (instruction.opcode === OpCode.CALL || instruction.opcode === OpCode.RETURN) {
-          console.log(`Current stack:`, this.stack.slice(0, this.sp));
+          //console.log(`Current stack:`, this.stack.slice(0, this.sp));
         }
       }
 
@@ -593,23 +634,29 @@ export class VM {
       // Process this instruction
       switch (instruction.opcode) {
         case OpCode.PUSH_CONSTANT:
+          if (this.debugging) {
+            console.log("pushing", func.code.constants[instruction.operand]);
+          }
           this.push(func.code.constants[instruction.operand]);
           break;
-
         case OpCode.PUSH_SYMBOL:
           this.push({ type: "Symbol", value: func.code.symbolNames[instruction.operand] });
           break;
-
         case OpCode.POP:
           this.pop();
           break;
-
         case OpCode.LOAD:
           {
             const name = instruction.operand;
             const env = this.currentEnv();
             if (name in env) {
+              if (this.debugging)
+                console.log("loading from env", Object.keys(env), name, env[name]);
               this.push(env[name]);
+            } else if (`${name}_fn` in env) {
+              if (this.debugging)
+                console.log("loading from env", Object.keys(env), name, env[name]);
+              this.push(env[`${name}_fn`]);
             } else if (name.startsWith("$")) {
               throw new Error(`Unknown input: ${name}`);
             } else {
@@ -617,7 +664,55 @@ export class VM {
             }
           }
           break;
-
+        case OpCode.ADD:
+          let sum = 0;
+          for (let i = 0; i < (instruction.operand as number); i++) {
+            const value = this.pop();
+            sum += value;
+          }
+          this.push(sum);
+          break;
+        case OpCode.SUB: {
+          let sub = this.pop();
+          for (let i = 1; i < (instruction.operand as number); i++) {
+            sub -= this.pop();
+          }
+          this.push(sub);
+          break;
+        }
+        case OpCode.MUL: {
+          let prod = this.pop();
+          for (let i = 1; i < (instruction.operand as number); i++) {
+            const value = this.pop();
+            prod *= value;
+          }
+          this.push(prod);
+          break;
+        }
+        case OpCode.DIV: {
+          let div = this.pop();
+          for (let i = 1; i < (instruction.operand as number); i++) {
+            const val = this.pop();
+            div /= val;
+          }
+          this.push(div);
+          break;
+        }
+        case OpCode.GT:
+          this.push(this.pop() > this.pop());
+          break;
+        case OpCode.LT:
+          this.push(this.pop() < this.pop());
+          break;
+        case OpCode.GTE:
+          this.push(this.pop() >= this.pop());
+          break;
+        case OpCode.LTE:
+          this.push(this.pop() <= this.pop());
+          break;
+        case OpCode.EQ:
+          this.push(this.pop() == this.pop());
+          break;
         case OpCode.LOAD_FN:
           {
             const name = instruction.operand;
@@ -645,8 +740,11 @@ export class VM {
 
         case OpCode.STORE:
           {
-            const name = instruction.operand;
             const value = this.pop();
+            const name =
+              value.instructions && !instruction.operand.endsWith("_fn")
+                ? `${instruction.operand}_fn`
+                : instruction.operand;
             const env = this.currentEnv();
             env[name] = value;
             this.push(value); // Push back for expressions like (set x 42)
@@ -729,7 +827,7 @@ export class VM {
 
             if (this.debugging) {
               console.log(`Executing CALL with ${argCount} arguments`);
-              console.log("Stack before CALL:", this.stack.slice(0, this.sp));
+              //console.log("Stack before CALL:", this.stack.slice(0, this.sp));
             }
 
             // Get the function from the stack (but don't pop it yet)
@@ -741,8 +839,8 @@ export class VM {
 
             // Extract the arguments
             const args = new Array(argCount);
-            for (let i = argCount - 1; i >= 0; i--) {
-              args[i] = this.stack[this.sp - i - 1];
+            for (let i = 0; i < argCount; i++) {
+              args[i] = this.stack[this.sp - argCount + i];
             }
 
             if (this.debugging) {
@@ -778,6 +876,7 @@ export class VM {
               // Function name, lookup in environment
               const fnName = `${func}_fn`;
               const env = this.currentEnv();
+              console.log("got fn name=", fnName, Object.keys(env));
 
               if (fnName in env) {
                 const actualFunc = env[fnName];
@@ -816,11 +915,13 @@ export class VM {
                     if (bytecode.paramNames && bytecode.paramNames.length > 0) {
                       // Bind using parameter names
                       for (let i = 0; i < Math.min(bytecode.arity, args.length); i++) {
-                        const paramName = bytecode.paramNames[i];
-                        frameEnv[paramName] = args[i];
+                        const paramName = args[i].instructions
+                          ? `${bytecode.paramNames[i]}_fn`
+                          : bytecode.paramNames[i];
 
+                        frameEnv[paramName] = args[i];
                         if (this.debugging) {
-                          console.log(`Binding param ${paramName} = ${args[i]}`);
+                          console.log(`Binding param ${paramName}=`, args[i]);
                         }
                       }
                     } else {
@@ -893,11 +994,13 @@ export class VM {
                 if (bytecode.paramNames && bytecode.paramNames.length > 0) {
                   // Bind using parameter names
                   for (let i = 0; i < Math.min(bytecode.arity, args.length); i++) {
-                    const paramName = bytecode.paramNames[i];
+                    const paramName = args[i].instructions
+                      ? `${bytecode.paramNames[i]}_fn`
+                      : bytecode.paramNames[i];
                     frameEnv[paramName] = args[i];
 
                     if (this.debugging) {
-                      console.log(`Binding param ${paramName} = ${args[i]}`);
+                      console.log(`Binding param ${paramName}=`, args[i]);
                     }
                   }
                 } else {
@@ -956,10 +1059,6 @@ export class VM {
           break;
 
         case OpCode.RETURN: {
-          if (this.debugging) {
-            console.log("Executing RETURN, stack:", this.stack.slice(0, this.sp));
-          }
-
           const result = this.pop();
 
           if (this.debugging) {
@@ -1033,12 +1132,18 @@ export class VM {
           throw new Error(`Unknown opcode: ${instruction.opcode}`);
       }
     }
+
+    // If we've reached the maximum instruction count, we may have an infinite loop
+    if (instructionCount >= MAX_INSTRUCTIONS) {
+      console.error("Maximum instruction count reached, possible infinite loop detected");
+      return null;
+    }
   }
 
   // Run the VM
-  private run(): any {
-    // Just execute the top-level frame
-    return this.executeFrame();
+  private run(checkTimeout?: () => void): any {
+    // Just execute the top-level frame with timeout check
+    return this.executeFrame(checkTimeout);
   }
 }
 

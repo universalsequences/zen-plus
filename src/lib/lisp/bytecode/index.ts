@@ -132,7 +132,7 @@ export class BytecodeInterpreter {
 }
 
 // Flag to enable/disable bytecode interpreter
-let bytecodeEnabled = false;
+let bytecodeEnabled = true; // Set to true by default
 
 // Function to toggle bytecode interpreter
 export function toggleBytecodeInterpreter(enable?: boolean): boolean {
