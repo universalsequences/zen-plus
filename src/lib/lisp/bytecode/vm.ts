@@ -81,14 +81,26 @@ export class VM {
     // Special case for calling a string as function
     if (typeof actualFunc === "string") {
       // This is a function name, look it up in the environment
-      const env = this.currentEnv();
       const fnKey = `${actualFunc}_fn`;
 
-      if (fnKey in env) {
-        const realFunc = env[fnKey];
+      if (this.debugging) {
+        console.log(`Looking up function ${actualFunc} in scope chain`);
+        // Log the scope chain for debugging
+        let env = this.currentEnv();
+        let depth = 0;
+        console.log("Scope chain:");
+        while (env) {
+          console.log(`Level ${depth}:`, Object.keys(env));
+          env = Object.getPrototypeOf(env);
+          depth++;
+        }
+      }
+
+      if (this.hasInScope(fnKey)) {
+        const realFunc = this.getFromScope(fnKey);
 
         if (this.debugging) {
-          console.log(`Looking up function ${actualFunc} in environment:`, realFunc);
+          console.log(`Found function ${actualFunc}:`, realFunc);
         }
 
         // Extract arguments
@@ -287,7 +299,6 @@ export class VM {
     // Build the pattern key and function key
     const patternKey = `${name}_patterns`;
     const functionKey = `${name}_fn`;
-    const env = this.currentEnv();
 
     // Extract args for pattern matching
     const args = new Array(argCount);
@@ -302,10 +313,10 @@ export class VM {
     }
 
     // Check if we have both patterns and a function implementation
-    if (patternKey in env && functionKey in env) {
+    if (this.hasInScope(patternKey) && this.hasInScope(functionKey)) {
       // Get the pattern array and the function
-      const patterns = env[patternKey] as Pattern[];
-      const functionImpl = env[functionKey];
+      const patterns = this.getFromScope(patternKey) as Pattern[];
+      const functionImpl = this.getFromScope(functionKey);
 
       if (this.debugging) {
         console.log("Found patterns:", patterns);
@@ -512,6 +523,32 @@ export class VM {
     return this.fp >= 0 ? this.frames[this.fp].env : this.globalEnv;
   }
 
+  // Check if a variable exists in the scope chain
+  private hasInScope(name: string): boolean {
+    let env = this.currentEnv();
+
+    // Walk up the prototype chain to check for the variable
+    while (env) {
+      if (name in env) return true;
+      env = Object.getPrototypeOf(env);
+    }
+
+    return false;
+  }
+
+  // Get a variable from the scope chain
+  private getFromScope(name: string): any {
+    let env = this.currentEnv();
+
+    // Walk up the prototype chain to find the variable
+    while (env) {
+      if (name in env) return env[name];
+      env = Object.getPrototypeOf(env);
+    }
+
+    return undefined;
+  }
+
   // Get the current frame
   private currentFrame(): Frame {
     if (this.fp < 0) {
@@ -634,10 +671,58 @@ export class VM {
       // Process this instruction
       switch (instruction.opcode) {
         case OpCode.PUSH_CONSTANT:
-          if (this.debugging) {
-            console.log("pushing", func.code.constants[instruction.operand]);
+          {
+            const constant = func.code.constants[instruction.operand];
+            if (this.debugging) {
+              console.log("pushing", constant);
+            }
+
+            // If it's a function, attach the current environment to it
+            // This is crucial for closures to work properly
+            if (constant && typeof constant === "object") {
+              if ("instructions" in constant) {
+                // Make a deep clone of the function
+                const closureFunc = JSON.parse(JSON.stringify(constant));
+                // Mark string constants to be resolved from closure environment
+                // This is important for nested lambdas that reference outer variables
+                if (closureFunc.constants) {
+                  closureFunc.constants = closureFunc.constants.map((c: any) => {
+                    if (
+                      typeof c === "string" &&
+                      (this.hasInScope(c) || this.hasInScope(`${c}_fn`))
+                    ) {
+                      return { type: "closure_ref", name: c };
+                    }
+                    return c;
+                  });
+                }
+                // Add the current environment to the function
+                (closureFunc as any).env = this.currentEnv();
+                this.push(closureFunc);
+              } else if (constant.type === "lambda" && constant.capturedNames) {
+                // Handle lambdas with explicitly captured variables
+                const closureObj = { ...constant };
+                closureObj.env = this.currentEnv();
+                this.push(closureObj);
+              } else if (constant.type === "closure_ref") {
+                if (this.debugging) console.log("pushing closure ref scope");
+                // Resolve a closure reference (variable captured from outer scope)
+                const name = constant.name;
+                if (this.hasInScope(name)) {
+                  this.push(this.getFromScope(name));
+                } else if (this.hasInScope(`${name}_fn`)) {
+                  if (this.debugging) console.log("pushing functionn scope");
+                  this.push(this.getFromScope(`${name}_fn`));
+                } else {
+                  this.push(name); // Fall back to treating it as a string
+                }
+              } else {
+                this.push(constant);
+              }
+            } else {
+              this.push(constant);
+            }
           }
-          this.push(func.code.constants[instruction.operand]);
           break;
         case OpCode.PUSH_SYMBOL:
           this.push({ type: "Symbol", value: func.code.symbolNames[instruction.operand] });
@@ -648,15 +733,13 @@ export class VM {
         case OpCode.LOAD:
           {
             const name = instruction.operand;
-            const env = this.currentEnv();
-            if (name in env) {
+            if (this.hasInScope(name)) {
+              if (this.debugging) console.log("loading from scope", name, this.getFromScope(name));
+              this.push(this.getFromScope(name));
+            } else if (this.hasInScope(`${name}_fn`)) {
               if (this.debugging)
-                console.log("loading from env", Object.keys(env), name, env[name]);
-              this.push(env[name]);
-            } else if (`${name}_fn` in env) {
-              if (this.debugging)
-                console.log("loading from env", Object.keys(env), name, env[name]);
-              this.push(env[`${name}_fn`]);
+                console.log("loading function from scope", name, this.getFromScope(`${name}_fn`));
+              this.push(this.getFromScope(`${name}_fn`));
             } else if (name.startsWith("$")) {
               throw new Error(`Unknown input: ${name}`);
             } else {
@@ -717,15 +800,14 @@ export class VM {
           {
             const name = instruction.operand;
             const fnName = `${name}_fn`;
-            const env = this.currentEnv();
 
             if (this.debugging) {
-              console.log(`Loading function ${name} from environment`);
-              console.log(`Looking for ${fnName} in:`, env);
+              console.log(`Loading function ${name} from scope chain`);
+              console.log(`Looking for ${fnName}`);
             }
 
-            if (fnName in env) {
-              const fn = env[fnName];
+            if (this.hasInScope(fnName)) {
+              const fn = this.getFromScope(fnName);
 
               if (this.debugging) {
                 console.log(`Found function:`, fn);
@@ -834,7 +916,7 @@ export class VM {
             const func = this.stack[this.sp - argCount - 1];
 
             if (this.debugging) {
-              console.log("Function to call:", func);
+              console.log("Function to call (argCount=%s):", argCount, func);
             }
 
             // Extract the arguments
@@ -873,17 +955,23 @@ export class VM {
                 this.push(null);
               }
             } else if (typeof func === "string") {
-              // Function name, lookup in environment
+              // Function name, lookup in scope chain
               const fnName = `${func}_fn`;
-              const env = this.currentEnv();
-              console.log("got fn name=", fnName, Object.keys(env));
 
-              if (fnName in env) {
-                const actualFunc = env[fnName];
+              if (this.hasInScope(fnName)) {
+                const actualFunc = this.getFromScope(fnName);
+
+                if (this.debugging) {
+                  console.log(`Found function in scope: ${fnName}`, actualFunc);
+                }
 
                 try {
                   if (typeof actualFunc === "function") {
                     // Same logic as above
+                    // Get the current environment
+                    //
+                    const env = this.currentEnv();
+                    // Pass the environment to the function
                     const curried = actualFunc(env);
 
                     let result;
@@ -909,7 +997,10 @@ export class VM {
                     }
 
                     // Create a new environment for the function
-                    const frameEnv = Object.create(this.currentEnv());
+                    // If the function has a captured environment, use that instead of the current environment
+                    // This ensures closures have access to their lexical scope
+                    const parentEnv = (actualFunc as any).env || this.currentEnv();
+                    const frameEnv = Object.create(parentEnv);
 
                     // Bind arguments to parameters
                     if (bytecode.paramNames && bytecode.paramNames.length > 0) {
@@ -973,12 +1064,15 @@ export class VM {
               // This is a bytecode function object
               try {
                 if (this.debugging) {
-                  console.log("Executing bytecode function object:", func);
+                  console.log("Executing bytecode function object:");
                   console.log("With arguments:", args);
                 }
 
                 // Create a new environment for the function
-                const frameEnv = Object.create(this.currentEnv());
+                // If the function has a captured environment, use that instead of the current environment
+                // This ensures closures have access to their lexical scope
+                const parentEnv = (func as any).env || this.currentEnv();
+                const frameEnv = Object.create(parentEnv);
 
                 // Determine if it's a VMFunction or BytecodeFunction
                 let bytecode: BytecodeFunction;

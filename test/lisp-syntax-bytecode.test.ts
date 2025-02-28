@@ -16,41 +16,58 @@ describe("Lisp Syntax to Bytecode Tests", () => {
     // Reset for each test
     pool = new ListPool();
     compiler = new Compiler();
-    
+
     // Setup environment
     env = {};
-    
+
     // Add primitive operators
-    env["+_fn"] = (e: any) => (...args: any[]) => {
-      if (typeof args[0] === 'string') {
-        return args.join(''); // String concatenation
-      }
-      return args.reduce((a, b) => a + b, 0); // Addition
-    };
-    
-    env["-_fn"] = (e: any) => (...args: any[]) => {
-      if (args.length === 1) return -args[0]; // Unary negation
-      return args.reduce((a, b, i) => i === 0 ? a : a - b, args[0]); // Subtraction
-    };
-    
-    env["*_fn"] = (e: any) => (...args: any[]) => {
-      return args.reduce((a, b) => a * b, 1); // Multiplication
-    };
-    
-    env["//_fn"] = (e: any) => (...args: any[]) => {
-      if (args.length === 1) return 1 / args[0]; // Reciprocal
-      return args.reduce((a, b, i) => i === 0 ? a : a / b, args[0]); // Division
-    };
-    
+    env["+_fn"] =
+      (e: any) =>
+      (...args: any[]) => {
+        if (typeof args[0] === "string") {
+          return args.join(""); // String concatenation
+        }
+        return args.reduce((a, b) => a + b, 0); // Addition
+      };
+
+    env["-_fn"] =
+      (e: any) =>
+      (...args: any[]) => {
+        if (args.length === 1) return -args[0]; // Unary negation
+        return args.reduce((a, b, i) => (i === 0 ? a : a - b), args[0]); // Subtraction
+      };
+
+    env["*_fn"] =
+      (e: any) =>
+      (...args: any[]) => {
+        return args.reduce((a, b) => a * b, 1); // Multiplication
+      };
+
+    env["//_fn"] =
+      (e: any) =>
+      (...args: any[]) => {
+        if (args.length === 1) return 1 / args[0]; // Reciprocal
+        return args.reduce((a, b, i) => (i === 0 ? a : a / b), args[0]); // Division
+      };
+
     // Comparison operators
-    env["=_fn"] = (e: any) => (...args: any[]) => args[0] === args[1];
-    env["<_fn"] = (e: any) => (...args: any[]) => args[0] < args[1];
-    env[">_fn"] = (e: any) => (...args: any[]) => args[0] > args[1];
-    
+    env["=_fn"] =
+      (e: any) =>
+      (...args: any[]) =>
+        args[0] === args[1];
+    env["<_fn"] =
+      (e: any) =>
+      (...args: any[]) =>
+        args[0] < args[1];
+    env[">_fn"] =
+      (e: any) =>
+      (...args: any[]) =>
+        args[0] > args[1];
+
     // Create VM with environment
     vm = new VM(pool, env);
     vm.setDebug(false); // Disable debug output for cleaner tests
-    
+
     // Enable bytecode interpreter
     toggleBytecodeInterpreter(true);
   });
@@ -58,30 +75,34 @@ describe("Lisp Syntax to Bytecode Tests", () => {
   // Helper function to parse, compile, and execute code
   const runCode = (code: string, debug = false) => {
     // Enable debug for specific operations
-    if (code === "(- 10 5)" || code === "(// 10 2)" || 
-        code.includes("(> 5 3)") || code.includes("(< 5 3)")) {
+    if (
+      code === "(- 10 5)" ||
+      code === "(// 10 2)" ||
+      code.includes("(> 5 3)") ||
+      code.includes("(< 5 3)")
+    ) {
       debug = true;
     }
-    
+
     if (debug) {
       console.log(`Executing code: ${code}`);
       vm.setDebug(true);
     }
-    
+
     const ast = parse(code);
     const bytecode = compiler.compile(ast);
-    
+
     if (debug) {
       console.log("Compiled bytecode:", JSON.stringify(bytecode, null, 2));
     }
-    
+
     const result = vm.execute(bytecode);
-    
+
     if (debug) {
       console.log("Result:", result);
       vm.setDebug(false);
     }
-    
+
     return result;
   };
 
@@ -131,16 +152,16 @@ describe("Lisp Syntax to Bytecode Tests", () => {
   describe("If expressions", () => {
     it("should evaluate the true branch when condition is true", () => {
       expect(runCode("(if true 42 99)")).toBe(42);
-      expect(runCode("(if (> 5 3) \"yes\" \"no\")")).toBe('"yes"');
+      expect(runCode('(if (> 5 3) "yes" "no")')).toBe('"yes"');
     });
 
     it("should evaluate the false branch when condition is false", () => {
       expect(runCode("(if false 42 99)")).toBe(99);
-      expect(runCode("(if (< 5 3) \"yes\" \"no\")")).toBe('"no"');
+      expect(runCode('(if (< 5 3) "yes" "no")')).toBe('"no"');
     });
 
     it("should nest if expressions", () => {
-      expect(runCode("(if (> 10 5) (if (< 3 2) \"a\" \"b\") \"c\")")).toBe('"b"');
+      expect(runCode('(if (> 10 5) (if (< 3 2) "a" "b") "c")')).toBe('"b"');
     });
   });
 
@@ -209,58 +230,58 @@ describe("Lisp Syntax to Bytecode Tests", () => {
       `;
       expect(runCode(fibonacciCode)).toBe(13);
     });
-    
+
     it("should support higher-order functions", () => {
       const higherOrderCode = `
         (defun apply-twice (f x)
           (f (f x)))
-        
+
         (defun add5 (n)
           (+ n 5))
-          
+
         (apply-twice add5 3)
       `;
       expect(runCode(higherOrderCode)).toBe(13); // 3 + 5 + 5 = 13
     });
-    
+
     it("should support closures with captured variables", () => {
       const closureCode = `
         (defun make-adder (n)
           (lambda (x) (+ x n)))
-          
+
         (let ((add10 (make-adder 10)))
           (add10 5))
       `;
       expect(runCode(closureCode)).toBe(15); // 10 + 5 = 15
     });
   });
-  
+
   describe("Functional programming constructs", () => {
     it("should support function composition", () => {
       const compositionCode = `
         (defun compose (f g)
           (lambda (x) (f (g x))))
-          
-        (defun double (x) (* x 2))
-        (defun square (x) (* x x))
-        
+
+        (defun double (y) (* y 2))
+        (defun square (z) (* z z))
+
         (let ((double-then-square (compose square double)))
           (double-then-square 3))
       `;
       expect(runCode(compositionCode)).toBe(36); // (3*2)^2 = 6^2 = 36
     });
-    
+
     it("should support currying", () => {
       const curryingCode = `
         (defun curry-add (x)
           (lambda (y) (+ x y)))
-          
+
         (let ((add7 (curry-add 7)))
           (add7 8))
       `;
       expect(runCode(curryingCode)).toBe(15); // 7 + 8 = 15
     });
-    
+
     it("should support recursion with accumulators", () => {
       const tailRecursionCode = `
         (defun sum-to-n (n)
@@ -269,13 +290,13 @@ describe("Lisp Syntax to Bytecode Tests", () => {
                               acc
                               (helper (+ i 1) (+ acc i))))))
             (helper 1 0)))
-            
+
         (sum-to-n 10)
       `;
       expect(runCode(tailRecursionCode)).toBe(55); // 1+2+3+4+5+6+7+8+9+10 = 55
     });
   });
-  
+
   describe("Advanced function calls", () => {
     it("should support anonymous function invocation", () => {
       const anonymousCode = `
@@ -283,14 +304,14 @@ describe("Lisp Syntax to Bytecode Tests", () => {
       `;
       expect(runCode(anonymousCode)).toBe(11); // 3 + (4*2) = 11
     });
-    
+
     it("should support nested function definition and call", () => {
       const nestedFunctionCode = `
         (let ((outer 10))
           (defun create-fn ()
             (let ((inner 5))
               (lambda (x) (+ outer inner x))))
-              
+
           (let ((my-fn (create-fn)))
             (my-fn 7)))
       `;

@@ -471,8 +471,8 @@ export class Compiler {
     // Safety check for undefined or null expressions
     if (!expr || expr.expression === undefined) {
       // Push null constant for undefined expressions
-      const nullConstIndex = this.addConstant(null);
-      this.emit(OpCode.PUSH_CONSTANT, nullConstIndex);
+      //const nullConstIndex = this.addConstant(null);
+      //this.emit(OpCode.PUSH_CONSTANT, nullConstIndex);
       return;
     }
 

@@ -105,7 +105,7 @@ describe("Lisp Syntax to Bytecode Tests", () => {
       expect(runCode(anonymousCode)).toBe(11); // 3 + (4*2) = 11
     });
 
-    it.skip("should support nested function definition and call", () => {
+    it("should support nested function definition and call", () => {
       const nestedFunctionCode = `
         (let ((outer 10))
           (defun create-fn ()
@@ -141,16 +141,16 @@ describe("Lisp Syntax to Bytecode Tests", () => {
         (defun compose (f g)
           (lambda (x) (f (g x))))
 
-        (defun double (x) (* x 2))
-        (defun square (x) (* x x))
+        (defun double (y) (* y 2))
+        (defun square (z) (* z z))
 
         (let ((double-then-square (compose square double)))
           (double-then-square 3))
       `;
-      expect(runCode(compositionCode, true)).toBe(36); // (3*2)^2 = 6^2 = 36
+      expect(runCode(compositionCode)).toBe(36); // (3*2)^2 = 6^2 = 36
     });
 
-    it.skip("should support currying", () => {
+    it("should support currying", () => {
       const curryingCode = `
         (defun curry-add (x)
           (lambda (y) (+ x y)))
@@ -161,7 +161,7 @@ describe("Lisp Syntax to Bytecode Tests", () => {
       expect(runCode(curryingCode)).toBe(15); // 7 + 8 = 15
     });
 
-    it.skip("should support recursion with accumulators", () => {
+    it("should support recursion with accumulators", () => {
       const tailRecursionCode = `
         (defun sum-to-n (n)
           (let ((helper (lambda (i acc)
@@ -173,6 +173,43 @@ describe("Lisp Syntax to Bytecode Tests", () => {
         (sum-to-n 10)
       `;
       expect(runCode(tailRecursionCode)).toBe(55); // 1+2+3+4+5+6+7+8+9+10 = 55
+    });
+  });
+
+  describe("Objects", () => {
+    it("should support creating objects", () => {
+      const curryingCode = `
+        (set x {alec 5})
+      `;
+      expect(runCode(curryingCode)).toEqual({ alec: 5 }); // 7 + 8 = 15
+    });
+  });
+
+  describe("Objects", () => {
+    it("should support creating objects", () => {
+      const curryingCode = `
+        (set x {alec 5})
+      `;
+      expect(runCode(curryingCode)).toEqual({ alec: 5 }); // 7 + 8 = 15
+    });
+
+    it("should support object property access", () => {
+      expect(
+        runCode(
+          `(set point { x 5 y 10 })
+          (get point "x")`,
+        ),
+      ).toBe(5);
+    });
+
+    it("should support object spread", () => {
+      expect(
+        runCode(
+          `(set p1 { x 1 y 2 })
+         (set p2 { ... p1 z 3 })
+(get p2 "z")`,
+        ),
+      ).toBe(3);
     });
   });
 });
