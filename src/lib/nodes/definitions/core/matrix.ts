@@ -1,6 +1,7 @@
 import { ObjectNode, Message, MessageObject, NodeFunction } from "../../types";
 import { publish } from "@/lib/messaging/queue";
 import { doc } from "./doc";
+import { getRootPatch } from "../../traverse";
 
 doc("matrix", {
   inletNames: ["operation"],
@@ -23,6 +24,7 @@ export class Matrix {
   }
 
   update() {
+    console.log("update called", this.objectNode);
     publish("statechanged", {
       node: this.objectNode,
       state: this.getJSON(),
@@ -50,6 +52,13 @@ export class Matrix {
     _node.send(_node.outlets[0], _node.buffer);
     if (_node.onNewValue) {
       _node.onNewValue(this.counter++);
+    }
+  }
+
+  execute() {
+    const evaluation = this.objectNode.patch.vm?.evaluateNode(this.objectNode.id, "bang");
+    if (evaluation) {
+      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
     }
   }
 }
@@ -342,6 +351,9 @@ export const matrix = (_node: ObjectNode) => {
     (_node.custom as Matrix).buffer = _node.buffer;
     if (_node.onNewValue) {
       _node.onNewValue(counter++);
+    }
+    if (_node.attributes["scripting name"] !== "") {
+      (_node.custom as Matrix).update();
     }
     if (!skipReturn && _node.buffer) {
       if (idx !== undefined && _value !== undefined && colChange) {

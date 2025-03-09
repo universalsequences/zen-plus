@@ -8,6 +8,7 @@ import {
   type ObjectNode,
   type MessageNode,
   MessageType,
+  AttributeValue,
 } from "@/lib/nodes/types";
 import { MockObjectNode } from "../../../test/mocks/MockObjectNode";
 import MessageNodeImpl from "@/lib/nodes/MessageNode";
@@ -25,6 +26,8 @@ import {
   evaluate,
 } from "@/lib/nodes/vm/evaluate";
 import { isMessageNode } from "@/lib/nodes/vm/instructions";
+import { PresetManager } from "@/lib/nodes/definitions/core/preset";
+import { publish } from "@/lib/messaging/queue";
 
 export interface OnNewValue {
   nodeId: string;
@@ -59,6 +62,11 @@ export interface MutableValueChanged {
   value: Message;
 }
 
+export interface SyncWorkerState {
+  nodeId: string;
+  json: any; // TODO: custom needs strong typing for getJSON
+}
+
 export class VM {
   nodes: {
     [id: string]: Node;
@@ -77,29 +85,54 @@ export class VM {
 
   sendEvaluationToMainThread?: (evaluation: VMEvaluation) => void;
 
+  sendWorkerStateToMainThread?: (payload: SyncWorkerState[]) => void;
+
   constructor() {
     this.nodes = {};
     this.patch = new MockPatch(undefined);
+    this.patch.vm = this;
     this.nodeInstructions = {};
     this.onNewValue = [];
   }
 
-  setNodes(objects: SerializedObjectNode[], messages: SerializedMessageNode[]) {
-    const p = new MockPatch(undefined);
-    p.vm = this;
+  initializeObjectNode(o: SerializedObjectNode) {
+    const p = this.patch;
+    let o1 = (this.nodes[o.id] as ObjectNode) || new MockObjectNode(p);
+    o1.onNewValue = (value) => this.onNewValue.push({ nodeId: o1.id, value: value });
+    o1.onNewValues = {
+      1: (value) => this.onNewValues.push({ nodeId: o1.id, value: value }),
+    };
+    o1.onNewSharedBuffer = (value) => {
+      this.newSharedBuffers.push({ nodeId: o1.id, sharedBuffer: value });
+    };
+    o1.fromJSON(o);
+    this.nodes[o1.id] = o1;
+  }
 
+  syncWorkerStateWithMainThread() {
+    // need to fetch all nodes with a "custom" -> getJSON() and send over in one large payload
+    let payload: SyncWorkerState[] = [];
+    for (const id in this.nodes) {
+      const node = this.nodes[id];
+      if (node instanceof MockObjectNode) {
+        if (node.custom) {
+          const json = node.custom.getJSON();
+          payload.push({
+            nodeId: id,
+            json,
+          });
+        }
+      }
+    }
+
+    this.sendWorkerStateToMainThread?.(payload);
+  }
+
+  setNodes(objects: SerializedObjectNode[], messages: SerializedMessageNode[]) {
+    const p = this.patch;
     for (const o of objects) {
-      if (this.nodes[o.id]) continue;
-      let o1 = (this.nodes[o.id] as ObjectNode) || new MockObjectNode(p);
-      o1.onNewValue = (value) => this.onNewValue.push({ nodeId: o1.id, value: value });
-      o1.onNewValues = {
-        1: (value) => this.onNewValues.push({ nodeId: o1.id, value: value }),
-      };
-      o1.onNewSharedBuffer = (value) => {
-        this.newSharedBuffers.push({ nodeId: o1.id, sharedBuffer: value });
-      };
-      o1.fromJSON(o);
-      this.nodes[o1.id] = o1;
+      if (this.nodes[o.id]) continue; // skip if it already exists (note: should we actually skip?)
+      this.initializeObjectNode(o);
     }
     for (const m of messages) {
       let m1 = (this.nodes[m.id] as MessageNode) || new MessageNodeImpl(p, m.messageType);
@@ -112,8 +145,37 @@ export class VM {
     };
   }
 
+  setAttributeValue(nodeId: string, key: string, value: AttributeValue) {
+    console.log("setAttributeValue vm", nodeId, key, value);
+    const node = this.nodes[nodeId];
+    if (!node) return;
+    node.setAttribute(key, value);
+  }
+
+  setPresetNodes(nodeId: string, nodeIds: string[]) {
+    const node = this.nodes[nodeId];
+    console.log("vm set preset nodes", nodeId, nodeIds, node);
+    if (node) {
+      const presetManager = (node as ObjectNode).custom;
+      if (presetManager instanceof PresetManager) {
+        console.log("found preset manager...");
+        presetManager.presetNodes = new Set(nodeIds);
+        console.log("setting preset nodes...");
+        const allNodes: Node[] = [];
+        for (const id of nodeIds) {
+          const _node = this.nodes[id];
+          if (_node) {
+            allNodes.push(_node);
+          }
+        }
+        presetManager.hydrateSerializedPresets(allNodes);
+      }
+    }
+  }
+
   // TODO - call this whenever an object updates from main thread
   updateObject(nodeId: string, serializedNode: SerializedObjectNode) {
+    console.log("update object=", nodeId, serializedNode);
     const node = this.nodes[nodeId] as ObjectNode;
     if (node) {
       const args = node.arguments;
@@ -124,6 +186,8 @@ export class VM {
           node.inlets[i + 1].lastMessage = args[i];
         }
       }
+    } else {
+      this.initializeObjectNode(serializedNode);
     }
   }
 
@@ -148,6 +212,14 @@ export class VM {
   }
 
   evaluateNode(nodeId: string, message: Message): VMEvaluation {
+    console.log("evaluate node", nodeId, message, this.nodes[nodeId]);
+    if ((this.nodes[nodeId] as MessageNode)?.messageType === MessageType.Number) {
+      console.log("message type matched so sending state changed...");
+      publish("statechanged", {
+        node: this.nodes[nodeId],
+        state: message,
+      });
+    }
     const instructions = this.nodeInstructions[nodeId];
     if (!instructions) {
       throw new Error("no instructions found");

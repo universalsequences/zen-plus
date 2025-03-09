@@ -395,6 +395,8 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
       this.presentationPosition = json.presentationPosition;
     }
 
+    this.id = json.id;
+
     if (json.subpatch) {
       this.parse(
         json.text.includes("zen") && json.text.includes("@type") ? json.text : "zen",
@@ -417,7 +419,6 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
       }
     }
 
-    this.id = json.id;
     if (this.name === "zequencer.core") {
       this.steps = json.steps;
     }

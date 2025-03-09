@@ -182,8 +182,8 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Calculate cell dimensions
-    const cellWidth = size_x;
-    const cellHeight = size_y;
+    const cellWidth = Math.max(0.01, size_x);
+    const cellHeight = Math.max(0.01, size_y);
     const margin = 2;
 
     // Determine which cells to render based on show mode
@@ -420,7 +420,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
       // Scale the movement to a change in value (negative movement = lower value)
       const valueRange = (max as number) - (min as number);
-      const sensitivity = 1.0; // Same sensitivity for both modes
+      const sensitivity = objectNode.attributes.round ? 1.0 : 1.5; // Same sensitivity for both modes
 
       // Calculate value change exactly the same way for both modes
       const valueChange = (verticalMovement / editInfo.cellHeight) * valueRange * sensitivity;

@@ -6,6 +6,8 @@ import { addDoc, doc, getDoc, updateDoc, collection } from "firebase/firestore";
 import jsonpatch, { Operation } from "fast-json-patch";
 import { uploadCompressedData } from "./compress";
 import { compress } from "./compress";
+import { getRootPatch } from "../nodes/traverse";
+import { sleep } from "@/utils/sleep";
 
 export const storePatch = async (
   name: string,
@@ -15,6 +17,15 @@ export const storePatch = async (
   screenshot?: string,
   isFork?: boolean,
 ) => {
+  const root = getRootPatch(patch);
+  if (patch.syncWorkerStateWithMainThread) {
+    patch.syncWorkerStateWithMainThread();
+    while (patch.syncingWorkerState) {
+      console.log("syncing worker state...");
+      await sleep(100);
+    }
+  }
+
   let json: SerializedPatch | Operation[] = patch.getJSON();
 
   let originalCompressed = await compress(json);

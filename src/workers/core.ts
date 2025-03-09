@@ -1,6 +1,11 @@
-import type { Message, SerializedMessageNode, SerializedObjectNode } from "@/lib/nodes/types";
+import type {
+  AttributeValue,
+  Message,
+  SerializedMessageNode,
+  SerializedObjectNode,
+} from "@/lib/nodes/types";
 import type { SerializedInstruction } from "@/lib/nodes/vm/types";
-import { VM, VMEvaluation } from "./vm/VM";
+import { SyncWorkerState, VM, VMEvaluation } from "./vm/VM";
 import { publish } from "@/lib/messaging/queue";
 import { RingBuffer, MessageType, BufferDirection } from "@/lib/workers/RingBuffer";
 import { SharedMemoryManager, MemoryOffsets } from "@/lib/workers/SharedMemoryManager";
@@ -65,6 +70,14 @@ export interface UpdateNodeBody {
   };
 }
 
+export interface SetAttributeValueBody {
+  type: "setAttributeValue";
+  body: {
+    nodeId: string;
+    key: string;
+    value: AttributeValue;
+  };
+}
 export interface UpdateMessageBody {
   type: "updateMessage";
   body: {
@@ -73,8 +86,20 @@ export interface UpdateMessageBody {
   };
 }
 
+export interface SetPresetNodesBody {
+  type: "setPresetNodes";
+  body: {
+    nodeId: string;
+    nodeIds: string[];
+  };
+}
+
 export interface LoadBangBody {
   type: "loadbang";
+}
+
+export interface SyncWorkerStateWithMainThreadBody {
+  type: "syncWorkerStateWithMainThread";
 }
 
 export type MessageBody =
@@ -85,6 +110,9 @@ export type MessageBody =
   | UpdateMessageBody
   | LoadBangBody
   | PublishBody
+  | SetPresetNodesBody
+  | SetAttributeValueBody
+  | SyncWorkerStateWithMainThreadBody
   | AttrUIBody;
 
 const vm = new VM();
@@ -205,6 +233,13 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
 };
 
 vm.sendEvaluationToMainThread = sendEvaluationToMainThread;
+
+vm.sendWorkerStateToMainThread = (payload: SyncWorkerState[]) => {
+  self.postMessage({
+    type: "syncWorkerStateWithMainThread",
+    body: payload,
+  });
+};
 
 // Process a message received from the ring buffer
 // This is optimized for fast hot path messages (especially EVALUATE_NODE)
@@ -386,6 +421,12 @@ self.onmessage = async (e: MessageEvent) => {
   } else if (data.type === "evaluateNode") {
     const vmEvaluation = vm.evaluateNode(data.body.nodeId, data.body.message);
     sendEvaluationToMainThread(vmEvaluation);
+  } else if (data.type === "setPresetNodes") {
+    vm.setPresetNodes(data.body.nodeId, data.body.nodeIds);
+  } else if (data.type === "syncWorkerStateWithMainThread") {
+    vm.syncWorkerStateWithMainThread();
+  } else if (data.type === "setAttributeValue") {
+    vm.setAttributeValue(data.body.nodeId, data.body.key, data.body.value);
   } else if (data.type === "updateObject") {
     const { nodeId, json } = data.body;
     vm.updateObject(nodeId, json);

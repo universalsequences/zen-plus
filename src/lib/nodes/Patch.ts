@@ -1,4 +1,3 @@
-console.log("patch called");
 import {
   type IOConnection,
   type Patch,
@@ -537,14 +536,17 @@ export class PatchImpl implements Patch {
     }
 
     // now hydrate all presets
-    const nodes = this.getAllNodes();
-    const presets = nodes.filter((x) => x.name === "preset");
+    const objects = this.getAllNodes();
+    const messages = this.getAllMessageNodes();
+    const nodes = [...objects, ...messages];
+    const presets = objects.filter((x) => x.name === "preset");
     for (const preset of presets) {
       const custom = preset.custom as PresetManager;
       if (custom) {
         custom.hydrateSerializedPresets(nodes);
       }
     }
+
     return _connections;
   }
 

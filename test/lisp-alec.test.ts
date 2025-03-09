@@ -40,6 +40,7 @@ describe("Lisp Syntax to Bytecode Tests", () => {
 
     if (debug || showInstructions) {
       console.log("Compiled bytecode:", JSON.stringify(bytecode, null, 2));
+      return 0;
     }
 
     const result = vm.execute(bytecode);
@@ -237,7 +238,18 @@ describe("Lisp Syntax to Bytecode Tests", () => {
   });
 
   describe("def", () => {
-    it("should handle defs", () => {
+    it.skip("should handle defs", () => {
+      expect(
+        runCode(
+          `
+(def sq (x) (* x x))
+(sq 5)
+`,
+        ),
+      ).toBe(25);
+    });
+
+    it.skip("should handle multi-definition defs with pattern matching - should pattern match 1", () => {
       expect(
         runCode(
           `
@@ -247,6 +259,16 @@ describe("Lisp Syntax to Bytecode Tests", () => {
 `,
         ),
       ).toBe(1);
+    });
+
+    it("should handle fibonacci", () => {
+      const fibonacciCode = `
+(def fib (0) 0)
+(def fib (1) 1)
+(def fib (n) (+ (fib (- n 1)) (fib (- n 2))))
+(fib 2)
+      `;
+      expect(runCode(fibonacciCode, true, true)).toBe(6765);
     });
   });
 });

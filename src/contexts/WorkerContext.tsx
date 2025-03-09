@@ -4,7 +4,13 @@ import {
   MainThreadInstruction,
   OptimizedMainThreadInstruction,
 } from "@/lib/nodes/vm/evaluate";
-import { MutableValueChanged, OnNewSharedBuffer, OnNewValue, OnNewValues } from "@/workers/vm/VM";
+import {
+  MutableValueChanged,
+  OnNewSharedBuffer,
+  OnNewValue,
+  OnNewValues,
+  SyncWorkerState,
+} from "@/workers/vm/VM";
 import { EvaluateNodeBody, MessageBody } from "@/workers/core";
 import React, { createContext, useContext, useRef, useCallback, useEffect } from "react";
 import { Matrix } from "@/lib/nodes/definitions/core/matrix";
@@ -12,6 +18,7 @@ import { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 import { CompoundOperator, Statement } from "@/lib/nodes/definitions/zen/types";
 import { RingBuffer, MessageType, BufferDirection } from "@/lib/workers/RingBuffer";
 import { SharedMemoryManager, MemoryOffsets } from "@/lib/workers/SharedMemoryManager";
+import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
 
 interface IWorkerContext {
   getPerformanceMetrics: () => {
@@ -248,7 +255,10 @@ class UpdateBatcher {
       const node = this.objects[nodeId];
       if (!node) continue;
 
-      const isUint8 = node.attributes.type === "uint8" || node.attributes.type === "boolean";
+      const isUint8 =
+        (node as ObjectNode).name === "preset" ||
+        node.attributes.type === "uint8" ||
+        node.attributes.type === "boolean";
       node.buffer = isUint8
         ? this.bufferCache.getUint8View(sharedBuffer)
         : this.bufferCache.getFloat32View(sharedBuffer);
@@ -361,6 +371,18 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       }
     };
 
+    const handleWorkerStateSync = (syncs: SyncWorkerState[]) => {
+      console.log("received worker state sync");
+      for (const { nodeId, json } of syncs) {
+        const node = objectsRef.current[nodeId];
+        if (node instanceof ObjectNodeImpl) {
+          console.log("actually setting from json here");
+          node.custom?.fromJSON(json, true);
+        }
+      }
+      patch.syncingWorkerState = false;
+    };
+
     worker.onmessage = (event: MessageEvent) => {
       const { type, body } = event.data;
 
@@ -368,6 +390,10 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       if (type === "ringBufferDataAvailable") {
         processRingBufferData();
         return;
+      }
+
+      if (type === "syncWorkerStateWithMainThread") {
+        handleWorkerStateSync(body as SyncWorkerState[]);
       }
 
       if (event.data.type === "batchedUpdates") {
@@ -555,7 +581,11 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       return;
     }
 
-    if (body.type === "setCompilation") {
+    if (
+      body.type === "setCompilation" ||
+      body.type === "setPresetNodes" ||
+      body.type === "setAttributeValue"
+    ) {
       workerRef.current?.postMessage(body);
       return;
     }
@@ -644,6 +674,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     const objMap = objectsRef.current;
     const msgMap = messagesRef.current;
 
+    console.log("registering nodes=", objects);
     for (const obj of objects) {
       objMap[obj.id] = obj;
     }
@@ -652,9 +683,17 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     }
   }, []);
 
+  const syncWorkerStateWithMainThread = () => {
+    patch.syncingWorkerState = true;
+    workerRef.current?.postMessage({
+      type: "syncWorkerStateWithMainThread",
+    });
+  };
+
   useEffect(() => {
     patch.sendWorkerMessage = sendWorkerMessage;
     patch.registerNodes = registerNodes;
+    patch.syncWorkerStateWithMainThread = syncWorkerStateWithMainThread;
   }, [patch, sendWorkerMessage, registerNodes]);
 
   // Function to get current performance metrics

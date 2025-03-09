@@ -21,6 +21,7 @@ export class Compiler {
   private instructions: Instruction[] = [];
   private patterns: Pattern[] = [];
   private patternFunctions: Set<string> = new Set();
+  private currentPatternObj: any = null;
 
   // Find or add a constant value to the constant pool
   private addConstant(value: any): number {
@@ -174,9 +175,83 @@ export class Compiler {
 
     // Register this as a pattern function
     this.patternFunctions.add(fnName);
+    
+    // Check if pattern has a literal number value
+    if (pattern.expression && 
+        Array.isArray(pattern.expression) && 
+        pattern.expression.length > 0 && 
+        pattern.expression[0].expression && 
+        typeof pattern.expression[0].expression === 'number') {
+      // It's a specific pattern like (1) - store the number for direct matching
+      const numberValue = pattern.expression[0].expression;
+      console.log(`Pattern with direct number value: ${numberValue}`);
+      
+      // Modify the pattern object to include this number value
+      const patternObj: any = {
+        params: [pattern.expression],
+        body: 0,
+        predicates: [],
+        directMatch: numberValue
+      };
+      
+      // Save this patternObj for the compilation step
+      this.currentPatternObj = patternObj;
+    }
 
-    // First, create a simple function that takes the pattern arguments
-    // Create a function definition that will handle the pattern matching
+    // First, create a function that takes the pattern arguments
+    
+    // Extract parameter names from the pattern
+    let paramNames: string[] = [];
+    
+    if (pattern.expression && 
+        Array.isArray(pattern.expression) && 
+        pattern.expression.length > 0 && 
+        pattern.expression[0].expression && 
+        typeof pattern.expression[0].expression === "object" && 
+        (pattern.expression[0].expression as any).type === "Symbol") {
+      // For simple patterns like (x), extract the parameter name
+      paramNames = [(pattern.expression[0].expression as any).value];
+    }
+    
+    // Temporarily save the current compilation context
+    const savedInstructions = this.instructions;
+    const savedConstants = this.constants; 
+    const savedSymbols = this.symbolNames;
+    const savedPatterns = this.patterns;
+    
+    // Start a fresh compilation for this function
+    this.instructions = [];
+    this.constants = [];
+    this.symbolNames = [];
+    this.patterns = [];
+    
+    // Compile the function body
+    this.compileExpression(body);
+    this.emit(OpCode.RETURN);
+    
+    // Create the bytecode for this pattern's function
+    const patternFunction: BytecodeFunction = {
+      instructions: this.instructions,
+      constants: this.constants,
+      symbolNames: this.symbolNames,
+      arity: paramNames.length || 1,
+      variadic: false,
+      patterns: this.patterns,
+      paramNames: paramNames.length > 0 ? paramNames : ["obj"],
+    };
+    
+    // Store this bytecode in the currentPatternObj
+    if (this.currentPatternObj) {
+      this.currentPatternObj.functionImpl = patternFunction;
+    }
+    
+    // Restore the original compilation context
+    this.instructions = savedInstructions;
+    this.constants = savedConstants;
+    this.symbolNames = savedSymbols;
+    this.patterns = savedPatterns;
+    
+    // We'll still create a generic function just so lookups work
     const funcDef: FunctionDefinition = {
       type: "function",
       params: [
@@ -217,23 +292,76 @@ export class Compiler {
         patternObj.params[0].properties[key] = value.expression;
       }
 
-      // Store the pattern in the environment
+      // Check if patterns already exist
+      this.emit(OpCode.LOAD, `${fnName}_patterns`);
+      this.emit(OpCode.DUPLICATE);
+      
+      // Jump if patterns array already exists
+      const jumpIfPatterns = this.emit(OpCode.JUMP_IF_TRUE, null);
+      
+      // If we're here, no patterns array exists yet, so create one
+      this.emit(OpCode.POP); // Remove null/undefined value
+      
+      // Create new patterns array with just this pattern
+      const patternConst = this.addConstant(patternObj);
+      this.emit(OpCode.PUSH_CONSTANT, patternConst);
       const patternsArray = this.addConstant([patternObj]);
       this.emit(OpCode.PUSH_CONSTANT, patternsArray);
       this.emit(OpCode.STORE, `${fnName}_patterns`);
+      
+      // Jump past the pattern append code
+      const skipAppend = this.emit(OpCode.JUMP, null);
+      
+      // Handle appending to existing patterns
+      this.patchJump(jumpIfPatterns);
+      
+      // At this point we have the existing patterns array on the stack
+      const newPatternConst = this.addConstant(patternObj);
+      this.emit(OpCode.PUSH_CONSTANT, newPatternConst);
+      this.emit(OpCode.APPEND_PATTERN);
+      this.emit(OpCode.STORE, `${fnName}_patterns`);
+      
+      this.patchJump(skipAppend);
     } else {
-      // For non-object patterns, just create a simple pattern
-      const patternObj: any = {
+      // For non-object patterns, create a pattern with function implementation
+      this.currentPatternObj = {
         params: [pattern.expression],
         body: 0,
         predicates: [],
       };
+      
+      // The function implementation will be added before the pattern is stored
 
-      // Store the pattern in the environment
-      const patternsArray = this.addConstant([patternObj]);
-
+      // Check if patterns already exist
+      this.emit(OpCode.LOAD, `${fnName}_patterns`);
+      this.emit(OpCode.DUPLICATE);
+      
+      // Jump if patterns array already exists
+      const jumpIfPatterns = this.emit(OpCode.JUMP_IF_TRUE, null);
+      
+      // If we're here, no patterns array exists yet, so create one
+      this.emit(OpCode.POP); // Remove null/undefined value
+      
+      // Create new patterns array with just this pattern
+      console.log("creating new simple patterns array=", this.currentPatternObj);
+      const patternsArray = this.addConstant([this.currentPatternObj]);
       this.emit(OpCode.PUSH_CONSTANT, patternsArray);
       this.emit(OpCode.STORE, `${fnName}_patterns`);
+      
+      // Jump past the pattern append code
+      const skipAppend = this.emit(OpCode.JUMP, null);
+      
+      // Handle appending to existing patterns
+      this.patchJump(jumpIfPatterns);
+      
+      // At this point we have the existing patterns array on the stack
+      console.log("appending to simple patterns array=", this.currentPatternObj);
+      const newPatternConst = this.addConstant(this.currentPatternObj);
+      this.emit(OpCode.PUSH_CONSTANT, newPatternConst);
+      this.emit(OpCode.APPEND_PATTERN);
+      this.emit(OpCode.STORE, `${fnName}_patterns`);
+      
+      this.patchJump(skipAppend);
     }
   }
 
@@ -526,6 +654,7 @@ export class Compiler {
     this.instructions = [];
     this.patterns = [];
     this.patternFunctions = new Set(); // Reset pattern functions for each compile
+    this.currentPatternObj = null; // Reset current pattern
 
     // Compile each expression in the program
     for (let i = 0; i < ast.length; i++) {

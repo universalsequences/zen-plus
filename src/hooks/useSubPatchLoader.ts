@@ -8,7 +8,6 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
   const { registerConnection } = usePatch();
   const loadSubPatch = useCallback(
     async (serializedSubPatch: SerializedPatch, name: string) => {
-      console.log("loadSubPatch called", objectNode, serializedSubPatch, name);
       if (serializedSubPatch) {
         if (serializedSubPatch.attributes) {
           if (serializedSubPatch.attributes["type"]) {
@@ -200,7 +199,9 @@ export const useSubPatchLoader = (objectNode: ObjectNode) => {
           //if ((objectNode.subpatch as SubPatch).isInsideSlot) {
           (objectNode.subpatch as SubPatch).recompileGraph();
           //}
-          (objectNode.subpatch as Patch).initialLoadCompile(false);
+          (objectNode.subpatch as Patch).initialLoadCompile(false).then(() => {
+            (objectNode.subpatch as Patch).setupPostCompile(false, true);
+          });
         }
       }
     },

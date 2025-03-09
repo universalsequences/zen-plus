@@ -22,9 +22,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Backspace") {
-        for (const index of selectedPresets) {
-          mgmt.presets[index] = {};
-        }
+        objectNode.receive(objectNode.inlets[0], ["delete", ...selectedPresets]);
         setSelectedPresets([]);
       }
     },
@@ -55,15 +53,18 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     }
   }, []);
 
-  useValue();
+  const { value } = useValue();
 
   useEffect(() => {
-    setCurrent(mgmt.currentPreset);
-  }, [mgmt.currentPreset]);
+    if (value !== undefined) {
+      setCurrent(value as number);
+    }
+  }, [value]);
 
   const switchToPreset = useCallback(
     (i: number) => {
-      mgmt.switchToPreset(i);
+      objectNode.receive(objectNode.inlets[0], i);
+      //mgmt.switchToPreset(i);
       setCurrent(i);
     },
     [setCurrent, mgmt],
@@ -83,11 +84,11 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             "w-3 h-3 m-0.5 cursor-pointer transition-colors " +
             (selectedPresets.includes(i)
               ? "bg-red-500"
-              : current === i
+              : mgmt.buffer?.[i] === 2
                 ? "bg-zinc-100 "
-                : Object.keys(mgmt.presets[i]).length === 0
-                  ? "bg-zinc-900"
-                  : "bg-zinc-400")
+                : mgmt.buffer?.[i]
+                  ? "bg-zinc-700"
+                  : "bg-zinc-900")
           }
         ></div>
       ))}

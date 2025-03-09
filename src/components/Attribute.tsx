@@ -47,6 +47,14 @@ const Attribute = (props: Props) => {
   const updateValue = useCallback(
     (val: string | number | boolean | number[] | string[]) => {
       node.setAttribute(attribute, val);
+      node.patch.sendWorkerMessage?.({
+        type: "setAttributeValue",
+        body: {
+          nodeId: node.id,
+          key: attribute,
+          value: val,
+        },
+      });
       node.attributes = { ...node.attributes };
       updateAttributes(node.id, node.attributes);
       setValue(val);

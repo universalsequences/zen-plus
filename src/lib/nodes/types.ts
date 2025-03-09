@@ -266,8 +266,9 @@ export type ObjectNode = Positioned &
 
 export interface SerializableCustom {
   getJSON: () => any;
-  fromJSON: (x: any) => void;
+  fromJSON: (x: any, y?: boolean) => void;
   value: Message;
+  execute: () => void;
 }
 
 export type MessageNode = Positioned &
@@ -359,6 +360,8 @@ export type Patch = Identifiable & {
   registerNodes?: (objects: ObjectNode[], messages: MessageNode[]) => void;
   vm?: VM;
   slotsNode?: ObjectNode;
+  syncWorkerStateWithMainThread?: () => void;
+  syncingWorkerState?: boolean;
 };
 
 export type SubPatch = Patch & {

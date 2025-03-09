@@ -17,6 +17,7 @@ import { Instruction, InstructionType, SerializedInstruction } from "./types";
 import { getInboundConnections, getOutboundConnections } from "./traversal";
 import { NodeInstructions } from "@/workers/core";
 import { Statement } from "../definitions/zen/types";
+import { PresetManager } from "../definitions/core/preset";
 
 export const topologicalSearchFromNode3 = (
   node: Node,
@@ -81,6 +82,10 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
 };
 
 const isSourceNode = (node: Node) => {
+  if ((node as ObjectNode).name === "preset") {
+    return true;
+  }
+
   if (node.skipCompilation) {
     return false;
   }
@@ -174,7 +179,8 @@ export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
 
   const ogObjects: ObjectNode[] = [];
   const ogMessages: MessageNode[] = [];
-  for (const sourceNode of getSourceNodesForCompilation(patch)) {
+  const sourceNodes = getSourceNodesForCompilation(patch);
+  for (const sourceNode of sourceNodes) {
     compileSourceNode(sourceNode);
     if (sourceNode.instructions) {
       const serializedInstructions = sourceNode.instructions.map(serializeInstruction);
@@ -227,6 +233,13 @@ export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
       patch.sendWorkerMessage?.({
         type: "loadbang",
       });
+
+      const presets = sourceNodes.filter((x) => (x as ObjectNode).name === "preset");
+      for (const preset of presets) {
+        if ((preset as ObjectNode).custom as PresetManager) {
+          ((preset as ObjectNode).custom as PresetManager).notifyVM();
+        }
+      }
     }, 200);
   }
   if (patch.registerNodes) {

@@ -1,6 +1,10 @@
 import { doc } from "./doc";
 import { subscribe } from "@/lib/messaging/queue";
 import { Node, ObjectNode, Message, Patch, SubPatch, MessageNode } from "../../types";
+import { compileVM } from "../../vm/forwardpass";
+import { MockObjectNode } from "../../../../../test/mocks/MockObjectNode";
+import { getRootPatch } from "../../traverse";
+import ObjectNodeImpl from "../../ObjectNode";
 
 doc("preset", {
   numberOfInlets: 1,
@@ -33,6 +37,10 @@ export class PresetManager {
   currentPreset: number;
   value: Message;
   switching = false;
+  presetNodes?: Set<string>;
+  sharedBuffer?: SharedArrayBuffer;
+  buffer?: Uint8Array;
+  hydrated = true;
 
   constructor(object: ObjectNode) {
     this.objectNode = object;
@@ -46,6 +54,44 @@ export class PresetManager {
 
     // use message passing
     this.listen();
+    this.notifyVM();
+  }
+
+  notifyVM() {
+    // register object in WorkerContext.ts (i.e. the main-thread)
+
+    getRootPatch(this.objectNode.patch)?.registerNodes?.([this.objectNode], []);
+
+    // register object in Worker itself, by sending a serialized version of itself there
+    this.objectNode.updateWorkerState();
+
+    setTimeout(() => {
+      const objectNodes = this.objectNode.patch.getAllNodes();
+      const messageNodes = this.objectNode.patch.getAllMessageNodes();
+      const nodes = [...objectNodes, ...messageNodes];
+      const nodeIds = nodes.map((x) => x.id);
+      const nodeId = this.objectNode.id;
+      this.objectNode.patch.sendWorkerMessage?.({
+        type: "setPresetNodes",
+        body: {
+          nodeId,
+          nodeIds,
+        },
+      });
+    }, 100);
+
+    // this occurs in the worker thread
+    if (this.objectNode.onNewSharedBuffer) {
+      // create the SharedArrayBuffer that will act as glue to UI
+      const bytesPerElement = Uint8Array.BYTES_PER_ELEMENT;
+
+      const size = 64;
+      if (!this.sharedBuffer) {
+        this.sharedBuffer = new SharedArrayBuffer(bytesPerElement * size);
+        this.buffer = new Uint8Array(this.sharedBuffer);
+      }
+      this.objectNode.onNewSharedBuffer(this.sharedBuffer);
+    }
   }
 
   newPreset() {
@@ -55,6 +101,12 @@ export class PresetManager {
   }
 
   switchToPreset(presetNumber: number) {
+    const oldPreset = this.currentPreset;
+    if (oldPreset !== undefined && this.buffer) {
+      const hadPresets = Object.keys(this.presets[oldPreset]).length > 0;
+      this.buffer[oldPreset] = hadPresets ? 1 : 0;
+      this.buffer[presetNumber] = 2;
+    }
     this.switching = true;
     let old = this.presets[this.currentPreset];
     let preset = this.presets[presetNumber];
@@ -70,18 +122,30 @@ export class PresetManager {
       for (let id in preset) {
         let { node, state } = preset[id];
 
-        if ((node as ObjectNode).custom) {
+        const objectNode = node as ObjectNode;
+        if (objectNode.custom) {
           if (
             (node as MessageNode | ObjectNode).attributes["scripting name"] !== "" ||
             (node as ObjectNode).name === "attrui"
           ) {
             // only nodes with scripting name or attrui
-            (node as ObjectNode).custom!.fromJSON(state);
+            // TODO
+            objectNode.custom.fromJSON(state);
+            objectNode.custom.execute?.();
           }
         } else {
           // todo -- handle other nodes other than number
-          node.receive(node.inlets[1], state);
-          node.receive(node.inlets[0], "bang");
+          if (node.patch.vm) {
+            const evaluation = node.patch.vm.evaluateNode(node.id, state);
+            evaluation.replaceMessages.push({
+              messageId: node.id,
+              message: state,
+            });
+            node.patch.vm.sendEvaluationToMainThread?.(evaluation);
+          } else {
+            node.receive(node.inlets[1], state);
+            node.receive(node.inlets[0], "bang");
+          }
         }
       }
     }
@@ -104,10 +168,12 @@ export class PresetManager {
 
       // ensure that the preset is "above" the object emitting the message
       // in the patch hierarchy
-      let stateChangePatch = _stateChange.node.patch;
-      let presetPatch = this.objectNode.patch;
-      if (isPatchBelow(presetPatch, stateChangePatch)) {
+      let nodeId = _stateChange.node.id;
+      if (this.presetNodes?.has(nodeId)) {
         this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
+        if (this.buffer && this.buffer[this.currentPreset] !== 2) {
+          this.buffer[this.currentPreset] = 1;
+        }
       }
     });
   }
@@ -121,20 +187,28 @@ export class PresetManager {
       }
       p.push(_p);
     }
-    return {
-      presets: p,
+    const json = {
+      presets: !this.hydrated ? this.serializedPresets || p : p,
       currentPreset: this.currentPreset,
     };
+    return json;
   }
 
-  fromJSON(x: any) {
+  fromJSON(x: any, force?: boolean) {
     if (x.presets) {
       this.serializedPresets = x.presets;
     }
     if (x.currentPreset) {
       this.currentPreset = x.currentPreset;
     }
-    console.log("preset from json", x, this);
+
+    this.hydrated = false;
+    if (this.objectNode instanceof ObjectNodeImpl && force) {
+      const objects = this.objectNode.patch.getAllNodes();
+      const messages = this.objectNode.patch.getAllMessageNodes();
+      const allNodes = [...objects, ...messages];
+      this.hydrateSerializedPresets(allNodes);
+    }
   }
 
   hydrateSerializedPresets(allNodes: Node[]) {
@@ -143,18 +217,34 @@ export class PresetManager {
         let preset = this.serializedPresets[i];
         for (let id in preset) {
           let { state } = preset[id];
-          let presetPatch = this.objectNode.patch;
-          let node = allNodes.find((x) => isPatchBelow(presetPatch, x.patch) && x.id === id);
+          let node = allNodes.find((x) => x.id === id);
           if (node) {
             this.presets[i][id] = {
               node,
               state,
             };
+
+            if (this.buffer) {
+              this.buffer[i] = 1;
+            } else {
+            }
+          } else {
           }
         }
       }
     }
+    this.hydrated = true;
+    this.objectNode.updateWorkerState();
   }
+
+  deletePreset(presetNumber: number) {
+    this.presets[presetNumber] = {};
+    if (this.buffer) {
+      this.buffer[presetNumber] = 0;
+    }
+  }
+
+  execute() {}
 }
 
 export const preset = (object: ObjectNode) => {
@@ -163,39 +253,19 @@ export const preset = (object: ObjectNode) => {
     object.custom = new PresetManager(object);
   }
   return (x: Message) => {
-    if (typeof x === "number" && object.custom) {
-      const mgmt = object.custom as PresetManager;
-      mgmt.switchToPreset(Math.round(x as number));
-      if (object.onNewValue) {
-        object.onNewValue(mgmt.currentPreset);
+    const mgmt = object.custom as PresetManager;
+    if (mgmt) {
+      if (typeof x === "number") {
+        mgmt.switchToPreset(Math.round(x as number));
+        if (object.onNewValue) {
+          object.onNewValue(mgmt.currentPreset);
+        }
+      } else if (Array.isArray(x) && x[0] === "delete") {
+        for (let i = 1; i < x.length; i++) {
+          mgmt.deletePreset(i);
+        }
       }
     }
     return [];
   };
-};
-
-const cache: { [x: string]: boolean } = {};
-/**
- * returns true if b is a descendent of a (or in the same patch)
- * */
-const isPatchBelow = (a: Patch, b: Patch): boolean => {
-  const key = `${a.id}.${b.id}`;
-  if (cache[key]) {
-    return cache[key];
-  }
-  if (b === a) {
-    cache[key] = true;
-    return true;
-  }
-
-  while ((b as SubPatch).parentPatch) {
-    if (b === a) {
-      cache[key] = true;
-      return true;
-    }
-    b = (b as SubPatch).parentPatch;
-  }
-
-  cache[key] = false;
-  return false;
 };

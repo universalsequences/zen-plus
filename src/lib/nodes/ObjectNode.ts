@@ -34,6 +34,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { compileVM } from "./vm/forwardpass";
 import { getRootPatch } from "./traverse";
+import { PresetManager } from "./definitions/core/preset";
 
 interface Constants {
   [x: string]: number | boolean;
@@ -1168,6 +1169,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
     if (json.custom !== undefined && this.custom) {
       this.custom.fromJSON(json.custom);
+
+      if (this.custom instanceof PresetManager) {
+        (this.custom as PresetManager).notifyVM();
+      }
     }
 
     if (json.slots) {

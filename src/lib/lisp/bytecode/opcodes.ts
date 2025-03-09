@@ -43,6 +43,8 @@ export enum OpCode {
   GT = 28,
   GTE = 29,
   EQ = 30,
+  DUPLICATE = 31, // Duplicate the top value of the stack
+  APPEND_PATTERN = 32, // Append a pattern to a patterns array
 }
 
 // Type for a compiled bytecode instruction
