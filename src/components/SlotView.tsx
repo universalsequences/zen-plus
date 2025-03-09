@@ -16,9 +16,9 @@ import { useStorage } from "@/contexts/StorageContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import type { ObjectNode, SubPatch } from "@/lib/nodes/types";
-import { duplicateObject } from "@/lib/nodes/utils/duplicateObject";
-import { FileIcon, Pencil2Icon, CardStackPlusIcon, ArrowLeftIcon } from "@radix-ui/react-icons";
+import { FileIcon, Pencil2Icon, ArrowLeftIcon } from "@radix-ui/react-icons";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { usePosition } from "@/contexts/PositionContext";
 import { setupSkeletonPatch } from "@/lib/utils";
 import { PatchDocComponent } from "./org/PatchDocComponent";
@@ -173,8 +173,9 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   */
 
   return (
-    <ContextMenu.Root onOpenChange={setIsMenuOpen}>
-      <ContextMenu.Content
+    <Tooltip.Provider delayDuration={300}>
+      <ContextMenu.Root onOpenChange={setIsMenuOpen}>
+        <ContextMenu.Content
         onMouseDown={(e: any) => e.stopPropagation()}
         style={{ zIndex: 10000000000000 }}
         color="indigo"
@@ -227,31 +228,57 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
         {/* Action buttons - always visible */}
         <div className="flex mb-2">
-          <FileIcon
-            onClick={() => {
-              const subpatch = objectNode.subpatch as SubPatch;
-              subpatch.clearPatch();
-              setupSkeletonPatch(subpatch, 2);
-              subpatch.recompileGraph();
-              setName("zen");
-            }}
-            className="w-4 h-4 ml-auto cursor-pointer"
-          />
-          <Pencil2Icon
-            onClick={() => {
-              const subpatch = objectNode.patch as SubPatch;
-              subpatch.presentationMode = false;
-              subpatch.lockedMode = false;
-              expandPatch(objectNode);
-            }}
-            className="w-4 h-4 ml-4 cursor-pointer"
-          />
-          <CardStackPlusIcon
-            onClick={() => {
-              duplicateObject({ objectNode, newObjectNode, updatePosition });
-            }}
-            className="w-4 h-4 ml-4 mr-3 cursor-pointer"
-          />
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <FileIcon
+                onClick={() => {
+                  const subpatch = objectNode.subpatch as SubPatch;
+                  subpatch.clearPatch();
+                  setupSkeletonPatch(subpatch, 2);
+                  subpatch.recompileGraph();
+                  setName("zen");
+                }}
+                className="w-4 h-4 ml-auto cursor-pointer"
+              />
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content 
+                side="top" 
+                className="bg-white px-2 py-1 text-black text-xs rounded-lg shadow-md"
+                style={{ zIndex: 10000000000001 }}
+                sideOffset={5}
+              >
+                Clear patch and add empty skeleton
+                <Tooltip.Arrow className="fill-white" />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+          
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <Pencil2Icon
+                onClick={() => {
+                  const subpatch = objectNode.patch as SubPatch;
+                  subpatch.presentationMode = false;
+                  subpatch.lockedMode = false;
+                  expandPatch(objectNode);
+                }}
+                className="w-4 h-4 ml-4 cursor-pointer"
+              />
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content 
+                side="top" 
+                className="bg-white px-2 py-1 text-black text-xs rounded-lg shadow-md"
+                style={{ zIndex: 10000000000001 }}
+                sideOffset={5}
+              >
+                Edit subpatch
+                <Tooltip.Arrow className="fill-white" />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+          
         </div>
 
         {/* Content area - either expanded view or patch list */}
@@ -343,6 +370,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         </div>
       </ContextMenu.Trigger>
     </ContextMenu.Root>
+    </Tooltip.Provider>
   );
 };
 
