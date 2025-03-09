@@ -315,7 +315,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   useEffect(() => {
     needsRedraw.current = true;
     drawMatrix();
-  }, [objectNode.buffer, drawMatrix]);
+  }, [objectNode.buffer, drawMatrix, valueUpdate]);
 
   useEffect(() => {
     needsRedraw.current = true;
@@ -381,34 +381,91 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const getCellFromMouseEvent = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      // Ensure the container reference exists
       if (!containerRef.current) return null;
 
+      // Get mouse coordinates relative to the canvas
       const rect = containerRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const cellWidth = size_x + 4;
-      const cellHeight = size_y + 4;
-      let col = Math.floor(x / cellWidth);
-      let row = Math.floor(y / cellHeight);
-      const rowOffset = row * cellHeight;
-      const relY = y - rowOffset;
-      const relativePosition = 1 - relY / cellHeight;
-      col += pageStart as number;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Define cell dimensions and margins
+      const margin = 2;
+      const cellWidth = size_x;
+      const cellHeight = size_y;
+      const totalCellWidth = cellWidth + 2 * margin;
+      const totalCellHeight = cellHeight + 2 * margin;
+
+      let colIdx, rowIdx;
+
       if (show === "row") {
-        row = rowToShow as number;
+        // Handle "row" mode where only one row is displayed
+        rowIdx = 0; // Only one row is shown at y = margin
+        const cellY = margin;
+        // Check if mouseY is within the row's vertical bounds
+        if (mouseY < cellY || mouseY >= cellY + cellHeight) {
+          return null;
+        }
+        // Calculate column index
+        colIdx = Math.floor((mouseX - margin) / totalCellWidth);
+        if (colIdx < 0 || colIdx >= cols) {
+          return null;
+        }
+        const cellX = colIdx * totalCellWidth + margin;
+        // Ensure mouseX is within the cell, not the margin
+        if (mouseX < cellX || mouseX >= cellX + cellWidth) {
+          return null;
+        }
+      } else {
+        // Handle regular matrix mode
+        colIdx = Math.floor((mouseX - margin) / totalCellWidth);
+        rowIdx = Math.floor((mouseY - margin) / totalCellHeight);
+        // Check if indices are within bounds
+        if (colIdx < 0 || colIdx >= cols || rowIdx < 0 || rowIdx >= rows) {
+          return null;
+        }
+        const cellX = colIdx * totalCellWidth + margin;
+        const cellY = rowIdx * totalCellHeight + margin;
+        // Ensure mouse is within the cell, not the margin
+        if (
+          mouseX < cellX ||
+          mouseX >= cellX + cellWidth ||
+          mouseY < cellY ||
+          mouseY >= cellY + cellHeight
+        ) {
+          return null;
+        }
       }
-      if (
-        col < 0 ||
-        col >= (columns as number) ||
-        row < 0 ||
-        row >= (rows as number) ||
-        col >= (pageStart as number) + (pageSize as number)
-      ) {
-        return null;
+
+      // Calculate the exact position of the cell
+      const cellX = colIdx * totalCellWidth + margin;
+      const cellY = show === "row" ? margin : rowIdx * totalCellHeight + margin;
+
+      // Handle circular cells when cornerRadius is "full"
+      if (cornerRadius === "full") {
+        const centerX = cellX + cellWidth / 2;
+        const centerY = cellY + cellHeight / 2;
+        const radius = Math.min(cellWidth, cellHeight) / 2;
+        const distance = Math.sqrt((mouseX - centerX) ** 2 + (mouseY - centerY) ** 2);
+        if (distance > radius) {
+          return null; // Mouse is outside the circular cell
+        }
       }
+
+      // Map colIdx to actual column considering pageStart
+      const col = colIdx + (pageStart as number);
+      // Set row based on mode
+      const row = show === "row" ? (rowToShow as number) : rowIdx;
+
+      // Calculate additional return values
+      const rowOffset = show === "row" ? 0 : rowIdx * totalCellHeight;
+      const relY = mouseY - cellY;
+      const relativePosition = 1 - relY / cellHeight;
+
+      // Return cell information
       return { row, col, rowOffset, cellHeight, relativePosition };
     },
-    [size_x, size_y, columns, rows, pageSize, pageStart, show, rowToShow],
+    [size_x, size_y, columns, rows, pageSize, pageStart, show, rowToShow, cornerRadius],
   );
 
   const handleMouseDown = useCallback(
@@ -454,13 +511,13 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         editing.current = {
           x: col,
           y: row,
-          value: initialValue,
+          value: initialValue as number,
           startY,
           rowOffset,
           cellHeight,
           relativePosition,
-          lastSetValue: initialValue,
-          preciseValue: preciseValue,
+          lastSetValue: initialValue as number,
+          preciseValue: preciseValue as number,
           lastMouseY: mouseY,
         };
 

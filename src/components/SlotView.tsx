@@ -36,25 +36,51 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { updatePosition } = usePosition();
 
   const [searchText, setSearchText] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [name, setName] = useState(_name);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { loadSubPatch } = useSubPatchLoader(objectNode);
 
   const [subpatches, setSubPatches] = useState(
     [...onchainSubPatches].sort((a, b) => b.createdAt.seconds - a.createdAt.seconds),
   );
+  
+  // Initialize with all unique tags
+  const [availableTags, setAvailableTags] = useState<string[]>(
+    Array.from(new Set(onchainSubPatches.flatMap(p => p.tags || []))).sort()
+  );
 
   useEffect(() => {
     let _sorted = [...onchainSubPatches].sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-    setSubPatches(
-      _sorted.filter(
-        (x) =>
-          searchText === "" ||
-          x.tags?.some((x) => x.toLowerCase().includes(searchText.toLowerCase())) ||
-          (x.moduleType && x.moduleType.includes(searchText.toLowerCase())) ||
-          x.name.toLowerCase().includes(searchText.toLowerCase()),
-      ),
-    );
-  }, [searchText, setSubPatches, onchainSubPatches]);
+    
+    // Filter by selected tags AND search text
+    const filteredSubpatches = _sorted.filter((x) => {
+      // First check selected tags (if any)
+      const passesTagFilter = selectedTags.length === 0 || 
+        selectedTags.every(tag => x.tags?.includes(tag));
+      
+      // Then check search text
+      const passesSearchFilter = 
+        searchText === "" ||
+        x.tags?.some((tag) => tag.toLowerCase().includes(searchText.toLowerCase())) ||
+        (x.moduleType && x.moduleType.toLowerCase().includes(searchText.toLowerCase())) ||
+        x.name.toLowerCase().includes(searchText.toLowerCase());
+        
+      return passesTagFilter && passesSearchFilter;
+    });
+    
+    setSubPatches(filteredSubpatches);
+    
+    // Update available tags based on current filtered results
+    const newAvailableTags = Array.from(
+      new Set(
+        filteredSubpatches.flatMap(p => p.tags || [])
+          .filter(tag => !selectedTags.includes(tag))
+      )
+    ).sort();
+    setAvailableTags(newAvailableTags);
+    
+  }, [searchText, selectedTags, setSubPatches, onchainSubPatches]);
 
   const load = useCallback(
     async (x: File) => {
@@ -98,16 +124,44 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     );
   }, [subpatches, load]);
 
+  // Add global style for open state
+  // Remove previous style injection approach
+
   return (
-    <ContextMenu.Root>
+    <ContextMenu.Root onOpenChange={setIsMenuOpen}>
       <ContextMenu.Content
         onMouseDown={(e: any) => e.stopPropagation()}
         style={{ zIndex: 10000000000000 }}
         color="indigo"
         className="object-context rounded-lg p-2 text-xsflex flex-col overflow-hidden text-sm w-96"
       >
-        <div className="text-zinc-300 pb-2  flex flex-col">
+        <div className="text-zinc-300 pb-2 flex flex-col">
           <SearchBox searchText={searchText} setSearchText={setSearchText} />
+        </div>
+        {/* Tag explorer */}
+        <div className="flex flex-wrap gap-2 mb-2 px-1">
+          {/* Selected tags */}
+          {selectedTags.map(tag => (
+            <div 
+              key={tag}
+              onClick={() => setSelectedTags(selectedTags.filter(t => t !== tag))}
+              className="px-2 py-0.5 text-xs rounded-md cursor-pointer border border-zinc-600 bg-zinc-700 text-white flex items-center"
+            >
+              <span>{tag}</span>
+              <span className="ml-1 font-bold">×</span>
+            </div>
+          ))}
+          
+          {/* Available tags */}
+          {availableTags.map(tag => (
+            <div 
+              key={tag}
+              onClick={() => setSelectedTags([...selectedTags, tag])}
+              className="px-2 py-0.5 text-xs rounded-md cursor-pointer border border-zinc-600 hover:bg-zinc-700 text-zinc-300"
+            >
+              {tag}
+            </div>
+          ))}
         </div>
         <div className="flex mb-2">
           <FileIcon
@@ -140,11 +194,16 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       </ContextMenu.Content>
       <ContextMenu.Trigger
         className={
-          "w-full flex h-full slot-view overflow-hidden " + objectNode.attributes.moduleType
+          "w-full flex h-full slot-view overflow-hidden " + 
+          objectNode.attributes.moduleType + 
+          (patchWindows.includes(objectNode.subpatch) || patches.includes(objectNode.subpatch) 
+            ? " border border-white" 
+            : "") +
+          (isMenuOpen ? " bg-white text-black" : "")
         }
       >
         <div>
-          <div className="mr-2 ml-auto my-auto text-zinc-300 flex">
+          <div className={`mr-2 ml-auto my-auto flex ${isMenuOpen ? 'text-black' : 'text-zinc-300'}`}>
             <div>{name}</div>
             <div
               onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
