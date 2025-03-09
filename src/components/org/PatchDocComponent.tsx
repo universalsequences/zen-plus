@@ -11,6 +11,7 @@ interface Props {
   doc?: PatchDoc | File;
   docId?: string;
   isFlexRow?: boolean;
+  hidePublic?: boolean;
 }
 
 export const PatchDocComponent = (props: Props) => {
@@ -119,7 +120,9 @@ export const PatchDocComponent = (props: Props) => {
           </div>
         )}
       </div>
-      <PublicCheckbox initialValue={doc.isPublic || false} onStateChange={onPublicChange} />
+      {!props.hidePublic && (
+        <PublicCheckbox initialValue={doc.isPublic || false} onStateChange={onPublicChange} />
+      )}
     </div>
   );
 };
