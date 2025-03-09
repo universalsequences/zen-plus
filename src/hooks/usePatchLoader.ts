@@ -43,6 +43,9 @@ export const usePatchLoader = (patch: Patch) => {
           setLockedMode(true);
         }
       }
+      if (serialized.lockedMode) {
+        setLockedMode(serialized.lockedMode);
+      }
     },
     [patch],
   );

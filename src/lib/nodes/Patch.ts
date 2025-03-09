@@ -385,6 +385,7 @@ export class PatchImpl implements Patch {
       presentationMode: this.presentationMode,
       doc: this.doc,
       docId: this.docId,
+      lockedMode: this.lockedMode,
     };
     const parentNode = (this as Patch as SubPatch).parentNode;
     if (parentNode) {
@@ -405,6 +406,7 @@ export class PatchImpl implements Patch {
   fromJSON(x: SerializedPatch, isPreset?: boolean): Connections {
     this.finishedInitialCompile = false;
     this.skipRecompile = true;
+    if (x.lockedMode) this.lockedMode = x.lockedMode;
     this.name = x.name;
     this.doc = x.doc;
     this.docId = x.docId;

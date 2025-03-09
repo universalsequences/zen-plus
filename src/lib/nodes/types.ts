@@ -416,6 +416,7 @@ export type SerializedPatch = Identifiable & {
   docId?: string;
   doc?: PatchDoc;
   patchType?: OperatorContextType;
+  lockedMode?: boolean;
 };
 
 export type SerializedMessageNode = Identifiable & {

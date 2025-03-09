@@ -13,7 +13,7 @@ interface Props {
 const Attribute = (props: Props) => {
   let { node, attribute } = props;
   let [value, setValue] = useState(node.attributes[attribute]);
-  let { updateAttributes, attributesIndex } = useSelection();
+  let { updateAttributes, attributesIndex, selectedNodes } = useSelection();
   let isString = useRef(isNaN(parseFloat(value as string)) && typeof value !== "boolean");
 
   const onChange = useCallback(
@@ -46,20 +46,59 @@ const Attribute = (props: Props) => {
 
   const updateValue = useCallback(
     (val: string | number | boolean | number[] | string[]) => {
-      node.setAttribute(attribute, val);
-      node.patch.sendWorkerMessage?.({
-        type: "setAttributeValue",
-        body: {
-          nodeId: node.id,
-          key: attribute,
-          value: val,
-        },
-      });
-      node.attributes = { ...node.attributes };
-      updateAttributes(node.id, node.attributes);
+      // Check if multiple nodes are selected
+      if (selectedNodes.length > 1) {
+        // Filter nodes that contain the same attribute
+        const nodesWithAttribute = selectedNodes.filter(
+          (n) => n.attributes[attribute] !== undefined
+        );
+        
+        // If multiple nodes have this attribute, update them all
+        if (nodesWithAttribute.length > 1) {
+          for (const selectedNode of nodesWithAttribute) {
+            selectedNode.setAttribute(attribute, val);
+            selectedNode.patch.sendWorkerMessage?.({
+              type: "setAttributeValue",
+              body: {
+                nodeId: selectedNode.id,
+                key: attribute,
+                value: val,
+              },
+            });
+            selectedNode.attributes = { ...selectedNode.attributes };
+            updateAttributes(selectedNode.id, selectedNode.attributes);
+          }
+        } else {
+          // Just update the current node if it's the only one with this attribute
+          node.setAttribute(attribute, val);
+          node.patch.sendWorkerMessage?.({
+            type: "setAttributeValue",
+            body: {
+              nodeId: node.id,
+              key: attribute,
+              value: val,
+            },
+          });
+          node.attributes = { ...node.attributes };
+          updateAttributes(node.id, node.attributes);
+        }
+      } else {
+        // Single node update
+        node.setAttribute(attribute, val);
+        node.patch.sendWorkerMessage?.({
+          type: "setAttributeValue",
+          body: {
+            nodeId: node.id,
+            key: attribute,
+            value: val,
+          },
+        });
+        node.attributes = { ...node.attributes };
+        updateAttributes(node.id, node.attributes);
+      }
       setValue(val);
     },
-    [setValue, node, attribute, updateAttributes],
+    [setValue, node, attribute, updateAttributes, selectedNodes],
   );
 
   const onChangeOption = useCallback(
