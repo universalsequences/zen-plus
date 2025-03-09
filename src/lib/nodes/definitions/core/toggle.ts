@@ -10,6 +10,7 @@ doc("toggle", {
 });
 
 export const toggle = (node: ObjectNode) => {
+  node.needsUX = true;
   node.isResizable = true;
   if (!node.size) {
     node.size = {
@@ -35,6 +36,7 @@ export const toggle = (node: ObjectNode) => {
     node.custom.value = 1;
   }
   return (message: Message) => {
+    console.log("received toggle input", message);
     if (node.custom) {
       if (typeof message === "number") {
         node.custom.value = message ? 1 : 0;

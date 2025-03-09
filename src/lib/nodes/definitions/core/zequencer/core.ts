@@ -22,6 +22,7 @@ doc("zequencer.core", {
 });
 
 export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNode) => {
+  console.log("ZEQ=", node);
   node.branching = true;
   if (!node.custom) {
     node.custom = new MutableValue(node, 0, false);

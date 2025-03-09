@@ -89,6 +89,7 @@ export class PresetManager {
       if (!this.sharedBuffer) {
         this.sharedBuffer = new SharedArrayBuffer(bytesPerElement * size);
         this.buffer = new Uint8Array(this.sharedBuffer);
+        this.buffer[this.currentPreset] = 2;
       }
       this.objectNode.onNewSharedBuffer(this.sharedBuffer);
     }
@@ -131,17 +132,28 @@ export class PresetManager {
             // only nodes with scripting name or attrui
             // TODO
             objectNode.custom.fromJSON(state);
-            objectNode.custom.execute?.();
+
+            try {
+              objectNode.custom.execute?.(state);
+            } catch (e) {
+              // ignore error;
+            }
           }
         } else {
           // todo -- handle other nodes other than number
           if (node.patch.vm) {
-            const evaluation = node.patch.vm.evaluateNode(node.id, state);
-            evaluation.replaceMessages.push({
-              messageId: node.id,
-              message: state,
-            });
-            node.patch.vm.sendEvaluationToMainThread?.(evaluation);
+            try {
+              const evaluation = node.patch.vm.evaluateNode(node.id, state);
+              if (evaluation) {
+                evaluation.replaceMessages.push({
+                  messageId: node.id,
+                  message: state,
+                });
+                node.patch.vm.sendEvaluationToMainThread?.(evaluation);
+              }
+            } catch (e) {
+              // ignore error (if no instructions are found)
+            }
           } else {
             node.receive(node.inlets[1], state);
             node.receive(node.inlets[0], "bang");
@@ -200,6 +212,10 @@ export class PresetManager {
     }
     if (x.currentPreset) {
       this.currentPreset = x.currentPreset;
+      if (this.buffer) {
+        this.buffer[0] = 0;
+        this.buffer[this.currentPreset] = 2;
+      }
     }
 
     this.hydrated = false;
@@ -224,7 +240,7 @@ export class PresetManager {
               state,
             };
 
-            if (this.buffer) {
+            if (this.buffer && this.buffer[i] !== 2) {
               this.buffer[i] = 1;
             } else {
             }

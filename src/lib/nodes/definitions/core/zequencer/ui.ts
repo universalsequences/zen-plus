@@ -8,6 +8,7 @@ doc("zequencer.ui", {
 });
 
 export const zequencer_ui = (node: ObjectNode) => {
+  node.needsUX = true;
   if (!node.attributes.name) {
     // serves as link to zequencer.core
     node.attributes.name = "";

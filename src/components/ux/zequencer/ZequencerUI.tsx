@@ -169,6 +169,8 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     setParameter(schema?.[0]?.name);
   }, [schema]);
 
+  console.log("stepsSchema=", node);
+
   const [mouseStartY, setMouseStartY] = useState<number | null>(null);
 
   return (
@@ -177,8 +179,11 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
         <div className="flex flex-col gap-1 h-full">
           {showParameters && schema && parameter && (
             <CirklonParameters
-                    color={attributes.stepOnColor as string}
-              schema={schema} setParameter={setParameter} parameter={parameter} />
+              color={attributes.stepOnColor as string}
+              schema={schema}
+              setParameter={setParameter}
+              parameter={parameter}
+            />
           )}
           {node &&
             rows.map((steps, rowIndex) => (

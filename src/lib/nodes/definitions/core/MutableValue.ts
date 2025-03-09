@@ -1,7 +1,8 @@
-import type { ObjectNode, Message } from "@/lib/nodes/types";
+import type { ObjectNode, Message, SerializableCustom } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
+import { VMEvaluation } from "@/workers/vm/VM";
 
-export class MutableValue {
+export class MutableValue implements SerializableCustom {
   objectNode: ObjectNode;
   _value: Message;
   index?: number;
@@ -42,12 +43,45 @@ export class MutableValue {
       this.objectNode.arguments[this.index] = x;
       this.objectNode.receive(this.objectNode.inlets[0], x);
     }
+
     if (this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);
     }
+    this.updateMainThread();
   }
 
   getJSON() {
     return this.value;
+  }
+
+  execute(x?: number) {
+    const evaluation = this.objectNode.patch.vm?.evaluateNode(
+      this.objectNode.id,
+      x === undefined ? "bang" : x,
+    );
+    if (evaluation) {
+      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
+    }
+  }
+
+  updateMainThread() {
+    const evaluation: VMEvaluation = {
+      instructionsEvaluated: [],
+      replaceMessages: [],
+      objectsEvaluated: [],
+      mainThreadInstructions: [],
+      optimizedMainThreadInstructions: [],
+      onNewValue: [],
+      onNewSharedBuffer: [],
+      mutableValueChanged: [
+        {
+          nodeId: this.objectNode.id,
+          value: this.value,
+        },
+      ],
+      onNewValues: [],
+      attributeUpdates: [],
+    };
+    this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
   }
 }

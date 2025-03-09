@@ -4,8 +4,10 @@ import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
 import { useSelection } from "@/contexts/SelectionContext";
+import { useLocked } from "@/contexts/LockedContext";
 
 const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
+  const { lockedMode } = useLocked();
   let ref = useRef<HTMLDivElement>(null);
   const { sizeIndex } = usePosition();
   let { width, height } = sizeIndex[objectNode.id] || { width: 100, height: 100 };
@@ -23,7 +25,9 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     (e: KeyboardEvent) => {
       if (e.key === "Backspace") {
         objectNode.receive(objectNode.inlets[0], ["delete", ...selectedPresets]);
-        setSelectedPresets([]);
+        setTimeout(() => {
+          setSelectedPresets([]);
+        }, 200);
       }
     },
     [mgmt, selectedPresets],
@@ -37,14 +41,18 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [selectedPresets]);
-  const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, index: number) => {
-    if (e.metaKey) {
-      isMouseDown.current = true;
-      setSelectedPresets((prev) => [...prev, index]);
-    } else {
-      switchToPreset(index);
-    }
-  }, []);
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>, index: number) => {
+      if (!lockedMode) return;
+      if (e.metaKey) {
+        isMouseDown.current = true;
+        setSelectedPresets((prev) => [...prev, index]);
+      } else {
+        switchToPreset(index);
+      }
+    },
+    [lockedMode],
+  );
 
   const onMouseOver = useCallback((e: React.MouseEvent<HTMLDivElement>, i: number) => {
     if (isMouseDown.current) {
@@ -62,12 +70,11 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   }, [value]);
 
   const switchToPreset = useCallback(
-    (i: number) => {
-      objectNode.receive(objectNode.inlets[0], i);
-      //mgmt.switchToPreset(i);
-      setCurrent(i);
+    (presetNumber: number) => {
+      objectNode.receive(objectNode.inlets[0], presetNumber);
+      setCurrent(presetNumber);
     },
-    [setCurrent, mgmt],
+    [setCurrent, mgmt, lockedMode],
   );
 
   return (

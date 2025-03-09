@@ -11,6 +11,8 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
   const [value, setValue] = useState(objectNode.custom?.value as number);
   const { lockedMode } = useLocked();
 
+  console.log("useValue toggle=", v, objectNode.custom?.value);
+
   const size = objectNode.size || { width: 80, height: 80 };
 
   useEffect(() => {

@@ -268,7 +268,7 @@ export interface SerializableCustom {
   getJSON: () => any;
   fromJSON: (x: any, y?: boolean) => void;
   value: Message;
-  execute: () => void;
+  execute: (x?: number) => void;
 }
 
 export type MessageNode = Positioned &

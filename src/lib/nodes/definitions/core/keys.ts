@@ -13,7 +13,7 @@ export const keydown: NodeFunction = (node: ObjectNode, key: Lazy) => {
   node.needsLoad = true;
   node.needsMainThread = true;
   node.skipCompilation = true;
-  window.addEventListener("keydown", (e: KeyboardEvent) => {
+  window?.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
       return; // Ignore the event if it's from an input field or text box
     }

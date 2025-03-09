@@ -249,7 +249,7 @@ const processRingBufferMessage = (message: { type: MessageType; nodeId: string; 
       // Hot path - optimize for speed
       const vmEvaluation = vm.evaluateNode(message.nodeId, message.message);
       // Send directly via ring buffer if possible to reduce latency
-      sendEvaluationToMainThread(vmEvaluation);
+      if (vmEvaluation) sendEvaluationToMainThread(vmEvaluation);
       break;
     case MessageType.UPDATE_OBJECT:
       vm.updateObject(message.nodeId, message.message);
@@ -420,7 +420,7 @@ self.onmessage = async (e: MessageEvent) => {
     vm.setNodeInstructions(data.body.nodeInstructions);
   } else if (data.type === "evaluateNode") {
     const vmEvaluation = vm.evaluateNode(data.body.nodeId, data.body.message);
-    sendEvaluationToMainThread(vmEvaluation);
+    if (vmEvaluation) sendEvaluationToMainThread(vmEvaluation);
   } else if (data.type === "setPresetNodes") {
     vm.setPresetNodes(data.body.nodeId, data.body.nodeIds);
   } else if (data.type === "syncWorkerStateWithMainThread") {

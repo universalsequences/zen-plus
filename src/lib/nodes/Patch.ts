@@ -637,7 +637,7 @@ export class PatchImpl implements Patch {
       compileVM(this, false);
     }
     this.sendWorkerMessage?.({ type: "loadbang" });
-    loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));
+    //loadBangs.forEach((x) => x.receive(x.inlets[0], "bang"));
   }
 
   resolveMissedConnections() {

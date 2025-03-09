@@ -237,7 +237,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         e.preventDefault();
         segmentSelectedCable(selectedConnection);
       }
-      if (e.key === "Backspace") {
+      if (e.key === "Backspace" && !lockedMode) {
         if (selectedSteps && selectedSteps.length > 0) {
           return;
         }

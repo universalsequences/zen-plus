@@ -146,7 +146,6 @@ export class VM {
   }
 
   setAttributeValue(nodeId: string, key: string, value: AttributeValue) {
-    console.log("setAttributeValue vm", nodeId, key, value);
     const node = this.nodes[nodeId];
     if (!node) return;
     node.setAttribute(key, value);
@@ -154,13 +153,10 @@ export class VM {
 
   setPresetNodes(nodeId: string, nodeIds: string[]) {
     const node = this.nodes[nodeId];
-    console.log("vm set preset nodes", nodeId, nodeIds, node);
     if (node) {
       const presetManager = (node as ObjectNode).custom;
       if (presetManager instanceof PresetManager) {
-        console.log("found preset manager...");
         presetManager.presetNodes = new Set(nodeIds);
-        console.log("setting preset nodes...");
         const allNodes: Node[] = [];
         for (const id of nodeIds) {
           const _node = this.nodes[id];
@@ -175,7 +171,6 @@ export class VM {
 
   // TODO - call this whenever an object updates from main thread
   updateObject(nodeId: string, serializedNode: SerializedObjectNode) {
-    console.log("update object=", nodeId, serializedNode);
     const node = this.nodes[nodeId] as ObjectNode;
     if (node) {
       const args = node.arguments;
@@ -211,10 +206,8 @@ export class VM {
     }
   }
 
-  evaluateNode(nodeId: string, message: Message): VMEvaluation {
-    console.log("evaluate node", nodeId, message, this.nodes[nodeId]);
+  evaluateNode(nodeId: string, message: Message): VMEvaluation | null {
     if ((this.nodes[nodeId] as MessageNode)?.messageType === MessageType.Number) {
-      console.log("message type matched so sending state changed...");
       publish("statechanged", {
         node: this.nodes[nodeId],
         state: message,
@@ -222,7 +215,7 @@ export class VM {
     }
     const instructions = this.nodeInstructions[nodeId];
     if (!instructions) {
-      throw new Error("no instructions found");
+      return null;
     }
 
     // Evaluate instructions
@@ -287,6 +280,9 @@ export class VM {
           continue;
         }
         const ret = this.evaluateNode(nodeId, "bang");
+        if (!ret) {
+          return;
+        }
         vmEvaluation.instructionsEvaluated.push(...ret.instructionsEvaluated);
         vmEvaluation.replaceMessages.push(...ret.replaceMessages);
         vmEvaluation.objectsEvaluated?.push(...(ret.objectsEvaluated || []));

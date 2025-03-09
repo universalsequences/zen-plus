@@ -101,17 +101,11 @@ const PatchInner: React.FC<{
 
   useEffect(() => {
     selectedNodesRef.current = selectedNodes;
-    let node = selectedNodes[0];
-    //if (node) {
-    //    let backwards = traverseBackwards(node);
-    //}
   }, [selectedNodes]);
 
   useEffect(() => {
     if (lockedMode) {
       setDraggingNode(null);
-      console.log("inner set selected nodes...");
-      //setSelectedNodes([]);
     }
   }, [lockedMode, setSelectedNodes, setDraggingNode]);
 

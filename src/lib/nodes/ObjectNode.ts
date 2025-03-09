@@ -216,7 +216,11 @@ export class BaseNode implements Node {
       connection.splitter.disconnect();
       const sourceNode = (this as any as ObjectNode).audioNode;
       if (sourceNode) {
-        sourceNode.disconnect(connection.splitter);
+        try {
+          sourceNode.disconnect(connection.splitter);
+        } catch (e) {
+          console.error(e);
+        }
       }
       connection.splitter = undefined;
     }
@@ -443,7 +447,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   }
 
   updateWorkerState() {
-    if (isCompiledType(this.operatorContextType)) return;
+    if (this.skipCompilation || isCompiledType(this.operatorContextType)) return;
     if (getRootPatch(this.patch).finishedInitialCompile) {
       this.patch.sendWorkerMessage?.({
         type: "updateObject",

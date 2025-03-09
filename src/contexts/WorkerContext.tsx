@@ -674,7 +674,6 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     const objMap = objectsRef.current;
     const msgMap = messagesRef.current;
 
-    console.log("registering nodes=", objects);
     for (const obj of objects) {
       objMap[obj.id] = obj;
     }
