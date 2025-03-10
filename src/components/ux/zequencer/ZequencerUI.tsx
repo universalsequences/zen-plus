@@ -32,6 +32,10 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
   const selectedStepsRef = useRef(selectedSteps);
 
+  if (node?.custom?.value) {
+    node.steps = node.custom.value as GenericStepData[];
+  }
+
   useEffect(() => {
     return () => setSelectedSteps(null);
   }, []);
@@ -89,9 +93,10 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   }, [onMouseUp]);
 
   const rows: GenericStepData[][] = [];
-  if (node?.steps) {
-    for (let i = 0; i < node.steps.length; i += 16) {
-      rows.push(node.steps.slice(i, i + 16));
+  const steps = node?.steps;
+  if (steps) {
+    for (let i = 0; i < steps.length; i += 16) {
+      rows.push(steps.slice(i, i + 16));
     }
   }
 
@@ -165,11 +170,10 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const schema = node?.stepsSchema as StepDataSchema;
   const [parameter, setParameter] = useState(schema?.[0]?.name);
   const showParameters = objectNode.attributes.parameters;
+
   useEffect(() => {
     setParameter(schema?.[0]?.name);
   }, [schema]);
-
-  console.log("stepsSchema=", node);
 
   const [mouseStartY, setMouseStartY] = useState<number | null>(null);
 

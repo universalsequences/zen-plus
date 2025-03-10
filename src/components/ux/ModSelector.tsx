@@ -55,6 +55,7 @@ export const ModSelector: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   let [selectedOption, setSelectedOption] = useState<string | null>(null);
   const onChangeOption = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
+      console.log("selected option =", e.target.value);
       setSelectedOption(e.target.value);
       if (e.target.value === "none") {
         objectNode.receive(objectNode.inlets[0], "clear");

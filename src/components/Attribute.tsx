@@ -50,9 +50,9 @@ const Attribute = (props: Props) => {
       if (selectedNodes.length > 1) {
         // Filter nodes that contain the same attribute
         const nodesWithAttribute = selectedNodes.filter(
-          (n) => n.attributes[attribute] !== undefined
+          (n) => n.attributes[attribute] !== undefined,
         );
-        
+
         // If multiple nodes have this attribute, update them all
         if (nodesWithAttribute.length > 1) {
           for (const selectedNode of nodesWithAttribute) {

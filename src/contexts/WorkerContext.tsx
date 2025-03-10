@@ -7,6 +7,7 @@ import {
 import {
   MutableValueChanged,
   OnNewSharedBuffer,
+  OnNewStepSchema,
   OnNewValue,
   OnNewValues,
   SyncWorkerState,
@@ -144,12 +145,25 @@ class UpdateBatcher {
             case "onNewSharedBuffer":
               this.handleSharedBuffer(updateArray as OnNewSharedBuffer[]);
               break;
+            case "onNewStepSchema":
+              this.handleStepSchema(updateArray as OnNewStepSchema[]);
+              break;
           }
           break;
       }
     }
 
     pendingUpdates.clear();
+  }
+
+  handleStepSchema(schemas: OnNewStepSchema[]) {
+    for (const { nodeId, schema } of schemas) {
+      const node = this.objects[nodeId];
+      console.log("handling sctep schema", node, schema);
+      if (node) {
+        node.stepsSchema = schema;
+      }
+    }
   }
 
   private handleAttributeUpdates(attributeUpdates: AttributeUpdate[]) {
@@ -419,6 +433,9 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         }
         if (updates.onNewSharedBuffer) {
           batcherRef.current?.queueUpdate?.("onNewSharedBuffer", updates.onNewSharedBuffer);
+        }
+        if (updates.onNewStepSchema) {
+          batcherRef.current?.queueUpdate?.("onNewStepSchema", updates.onNewStepSchema);
         }
         if (updates.onNewValue) {
           batcherRef.current?.queueUpdate?.("onNewValue", updates.onNewValue);

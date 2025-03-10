@@ -130,6 +130,7 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
     onNewSharedBuffer,
     mainThreadInstructions,
     onNewValues,
+    onNewStepSchema,
     attributeUpdates,
   } = data;
 
@@ -218,6 +219,7 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
       onNewValue: onNewValue.length > 0 ? onNewValue : undefined,
       onNewValues: onNewValues.length > 0 ? onNewValues : undefined,
       mutableValueChanged: mutableValueChanged.length > 0 ? mutableValueChanged : undefined,
+      onNewStepSchema,
     };
 
     // Only send if there are actually updates

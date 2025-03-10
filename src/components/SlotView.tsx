@@ -108,15 +108,18 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     setExpandedFile(null);
   }, []);
 
+  const [loading, setLoading] = useState(false);
   // Load the currently expanded file into the subpatch
   const loadExpandedFile = useCallback(async () => {
     if (!expandedFile) return;
 
+    setLoading(true);
     const serializedSubPatch = await fetchSubPatchForDoc(expandedFile.id);
     if (serializedSubPatch) {
       await loadSubPatch(serializedSubPatch, expandedFile.name);
       setName(expandedFile.name);
       setExpandedFile(null); // Close expanded view after loading
+      setLoading(false);
     }
   }, [expandedFile, fetchSubPatchForDoc, loadSubPatch]);
 
@@ -405,7 +408,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                   onClick={loadExpandedFile}
                   className="ml-auto px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-xs"
                 >
-                  Load
+                  {loading ? "Loading... " : "Load"}
                 </button>
               </div>
 
@@ -426,7 +429,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             "w-full flex h-full slot-view overflow-hidden " +
             objectNode.attributes.moduleType +
             (patchWindows.includes(objectNode.subpatch) || patches.includes(objectNode.subpatch)
-              ? " border border-white"
+              ? " "
               : "") +
             (isMenuOpen ? " bg-white text-black" : "")
           }

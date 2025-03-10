@@ -22,8 +22,8 @@ doc("zequencer.core", {
 });
 
 export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNode) => {
-  console.log("ZEQ=", node);
   node.branching = true;
+  node.needsUX = true;
   if (!node.custom) {
     node.custom = new MutableValue(node, 0, false);
   }
@@ -42,6 +42,10 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
       node.steps = setupSchema(node.stepsSchema, node.steps || [], length as number);
       node.stepsSchema = schema;
       updateUI();
+
+      if (node.onNewStepSchema && node.stepsSchema) {
+        node.onNewStepSchema(node.stepsSchema);
+      }
     }
   };
 
@@ -62,12 +66,8 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     if (node.onNewValues && node.steps) {
       const xyz = [lastStepNumber, node.steps];
       for (const id in node.onNewValues) {
-        node.onNewValues[id](xyz);
+        node.onNewValues[id]([lastStepNumber]);
       }
-    }
-
-    if (node.custom && node.steps) {
-      node.custom.value = node.steps.map((x) => ({ ...x })) as Message[];
     }
   };
 
@@ -117,6 +117,9 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
       node.steps = setupSchema(schema, node.steps || [], node.attributes.length as number);
       node.stepsSchema = schema;
       updateUI();
+      if (node.onNewStepSchema && node.stepsSchema) {
+        node.onNewStepSchema(node.stepsSchema);
+      }
       return [];
     }
 
@@ -154,6 +157,13 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
         node.stepsSchema = operationResult.schema;
         node.attributes.length = node.steps.length;
         updateUI();
+
+        if (node.custom && node.steps) {
+          node.custom.value = node.steps.map((x) => ({ ...x })) as Message[];
+          (node.custom as MutableValue).updateMainThread([
+            { nodeId: node.id, value: [lastStepNumber] },
+          ]);
+        }
 
         return [];
       }

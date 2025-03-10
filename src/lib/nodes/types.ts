@@ -192,6 +192,7 @@ export type Node = Identifiable &
     receive: (inlet: IOlet, x: Message, fromNode?: Node) => void;
     onNewValue?: (value: Message) => void;
     onNewValues?: { [x: string]: (value: Message) => void };
+    onNewStepSchema?: (x: StepDataSchema) => void;
     instructions?: Instruction[]; // compiled instructions
     debugInstructions?: Instruction[];
     debugInstructionIndex?: number;

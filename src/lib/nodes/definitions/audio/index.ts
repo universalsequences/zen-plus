@@ -38,9 +38,9 @@ export const speakers = (node: ObjectNode) => {
     node.audioNode = undefined;
   }
 
-  if (!node.audioNode) {
+  if (!node.audioNode && node.patch.audioContext) {
     // need to create an audio node that connects to speakers
-    const ctxt = node.patch.audioContext!;
+    const ctxt = node.patch.audioContext;
 
     const channelCount = (node.attributes.channels || 1) as number;
     const splitter = ctxt.createChannelMerger(channelCount);

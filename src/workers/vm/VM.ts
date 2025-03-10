@@ -28,10 +28,16 @@ import {
 import { isMessageNode } from "@/lib/nodes/vm/instructions";
 import { PresetManager } from "@/lib/nodes/definitions/core/preset";
 import { publish } from "@/lib/messaging/queue";
+import { StepDataSchema } from "@/lib/nodes/definitions/core/zequencer/types";
 
 export interface OnNewValue {
   nodeId: string;
   value: Message;
+}
+
+export interface OnNewStepSchema {
+  nodeId: string;
+  schema: StepDataSchema;
 }
 
 export interface OnNewValues {
@@ -55,6 +61,7 @@ export interface VMEvaluation {
   mutableValueChanged: MutableValueChanged[];
   onNewValues: OnNewValues[];
   attributeUpdates: AttributeUpdate[];
+  onNewStepSchema: OnNewStepSchema[];
 }
 
 export interface MutableValueChanged {
@@ -77,6 +84,7 @@ export class VM {
   };
   onNewValue: OnNewValue[] = [];
   onNewValues: OnNewValues[] = [];
+  onNewStepSchema: OnNewStepSchema[] = [];
   newSharedBuffers: OnNewSharedBuffer[] = [];
   mutableValueChanged: MutableValueChanged[] = [];
 
@@ -105,12 +113,16 @@ export class VM {
     o1.onNewSharedBuffer = (value) => {
       this.newSharedBuffers.push({ nodeId: o1.id, sharedBuffer: value });
     };
+    o1.onNewStepSchema = (schema) => {
+      this.onNewStepSchema.push({ nodeId: o1.id, schema });
+    };
     o1.fromJSON(o);
     this.nodes[o1.id] = o1;
   }
 
   syncWorkerStateWithMainThread() {
     // need to fetch all nodes with a "custom" -> getJSON() and send over in one large payload
+    console.log("sync worker state...");
     let payload: SyncWorkerState[] = [];
     for (const id in this.nodes) {
       const node = this.nodes[id];
@@ -125,6 +137,7 @@ export class VM {
       }
     }
 
+    console.log("payloads to send=", payload);
     this.sendWorkerStateToMainThread?.(payload);
   }
 
@@ -230,6 +243,7 @@ export class VM {
       onNewValues: this.onNewValues,
       onNewSharedBuffer: this.newSharedBuffers,
       mutableValueChanged: this.mutableValueChanged,
+      onNewStepSchema: this.onNewStepSchema,
     };
 
     return vmEvaluation;
@@ -240,6 +254,7 @@ export class VM {
     this.onNewValues.length = 0;
     this.newSharedBuffers.length = 0;
     this.mutableValueChanged.length = 0;
+    this.onNewStepSchema.length = 0;
   }
 
   alreadyLoaded: { [x: string]: boolean } = {};
@@ -259,6 +274,7 @@ export class VM {
       mutableValueChanged: [],
       onNewValues: [],
       attributeUpdates: [],
+      onNewStepSchema: [],
     };
 
     for (const nodeId in this.nodeInstructions) {
@@ -293,6 +309,7 @@ export class VM {
         vmEvaluation.mutableValueChanged.push(...ret.mutableValueChanged);
         vmEvaluation.onNewValues.push(...ret.onNewValues);
         vmEvaluation.attributeUpdates.push(...ret.attributeUpdates);
+        vmEvaluation.onNewStepSchema.push(...ret.onNewStepSchema);
       }
     }
 
