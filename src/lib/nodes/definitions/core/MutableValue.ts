@@ -1,6 +1,7 @@
 import type { ObjectNode, Message, SerializableCustom } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
 import { OnNewValues, VMEvaluation } from "@/workers/vm/VM";
+import { OperatorContextType } from "../../context";
 
 export class MutableValue implements SerializableCustom {
   objectNode: ObjectNode;
@@ -45,6 +46,10 @@ export class MutableValue implements SerializableCustom {
 
     if (this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);
+    }
+
+    if (this.objectNode.operatorContextType === OperatorContextType.AUDIO) {
+      this.objectNode.receive(this.objectNode.inlets[0], this.value);
     }
     this.updateMainThread();
   }

@@ -24,7 +24,6 @@ export class Matrix {
   }
 
   update() {
-    console.log("update called", this.objectNode);
     publish("statechanged", {
       node: this.objectNode,
       state: this.getJSON(),
@@ -39,19 +38,21 @@ export class Matrix {
 
   fromJSON(x: any) {
     const _type = this.objectNode.attributes.type;
-    const { buffer } = createMatrixBuffer(
-      this.objectNode,
-      x.buffer.length,
-      _type as MatrixType,
-      x.buffer || this.objectNode.buffer,
-    );
-    this.buffer = buffer as Float32Array;
+    if (this.objectNode.patch.vm) {
+      const { buffer } = createMatrixBuffer(
+        this.objectNode,
+        x.buffer.length,
+        _type as MatrixType,
+        x.buffer || this.objectNode.buffer,
+      );
+      this.buffer = buffer as Float32Array;
 
-    const _node = this.objectNode;
-    _node.buffer = this.buffer;
-    _node.send(_node.outlets[0], _node.buffer);
-    if (_node.onNewValue) {
-      _node.onNewValue(this.counter++);
+      const _node = this.objectNode;
+      _node.buffer = this.buffer;
+      _node.send(_node.outlets[0], _node.buffer);
+      if (_node.onNewValue) {
+        _node.onNewValue(this.counter++);
+      }
     }
   }
 

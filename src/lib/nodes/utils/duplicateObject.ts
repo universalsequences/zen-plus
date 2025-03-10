@@ -1,5 +1,5 @@
 console.log("duplicate obj");
-import type { Coordinate, ObjectNode } from "../types";
+import type { Coordinate, ObjectNode, Patch, SubPatch } from "../types";
 import ObjectNodeImpl from "../ObjectNode";
 import { OperatorContextType } from "../context";
 
@@ -37,6 +37,15 @@ export const duplicateObject = ({ objectNode, newObjectNode, updatePosition }: D
       ...json.attributes,
     };
     copied.size = json.size;
+
+    if (copied.subpatch) {
+      //if ((objectNode.subpatch as SubPatch).isInsideSlot) {
+      (copied.subpatch as SubPatch).recompileGraph();
+      //}
+      (copied.subpatch as Patch).initialLoadCompile(false).then(() => {
+        (copied.subpatch as Patch).setupPostCompile(false, true);
+      });
+    }
   } else {
     console.log("duplicate occuring");
     let size = objectNode.size;

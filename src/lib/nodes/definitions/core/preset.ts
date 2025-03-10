@@ -207,10 +207,11 @@ export class PresetManager {
   }
 
   fromJSON(x: any, force?: boolean) {
+    console.log("preset from json called", x, force);
     if (x.presets) {
       this.serializedPresets = x.presets;
     }
-    if (x.currentPreset) {
+    if (x.currentPreset !== undefined) {
       this.currentPreset = x.currentPreset;
       if (this.buffer) {
         this.buffer[0] = 0;

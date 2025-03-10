@@ -1,6 +1,7 @@
 import {
   type IOConnection,
   type Patch,
+  type Node,
   type SubPatch,
   PatchType,
   type SerializedPatch,
@@ -516,7 +517,15 @@ export class PatchImpl implements Patch {
     const _connections: Connections = { ...connections };
     let num = 1;
     if (isPreset) {
-      for (const node of [...this.objectNodes, ...this.messageNodes]) {
+      const slotNodes: Node[] = [];
+      for (const node of this.objectNodes) {
+        if (node.slots) {
+          for (const slot of node.slots) {
+            slotNodes.push(slot);
+          }
+        }
+      }
+      for (const node of [...this.objectNodes, ...this.messageNodes, ...slotNodes]) {
         const oldId = node.id;
         const newId = plusUUID(num.toString(36), currentId);
         registerUUID(newId);

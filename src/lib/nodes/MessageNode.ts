@@ -72,7 +72,6 @@ export default class MessageNodeImpl extends MockBaseNode implements MessageNode
   }
 
   receive(inlet: IOlet, message: Message, fromNode?: Node) {
-    console.log("receive called", message, this);
     if (this.instructions) {
       if (inlet.name === REPLACE) {
         this.message = message;
