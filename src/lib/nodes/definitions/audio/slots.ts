@@ -25,7 +25,7 @@ export const slots = (node: ObjectNode) => {
   node.newAttribute("size", (node.attributes.size as number) || 6);
   node.attributeCallbacks.size = (size) => {
     updateSlots(node, size as number);
-    reconnect(node);
+    reconnectSlotsNode(node);
   };
 
   initializeSlots(node);
@@ -77,10 +77,13 @@ const updateSlots = (node: ObjectNode, newSize: number) => {
   }
 };
 
-const reconnect = (node: ObjectNode) => {
+export const reconnectSlotsNode = (node: ObjectNode) => {
+  console.log("reconnect");
   if (!node.slots) return;
 
+  console.log("disconnecting");
   disconnectAllSlots(node);
+  console.log("connecting");
   connectSlots(node);
   setupOutputs(node);
 };
@@ -101,6 +104,7 @@ const connectSlots = (node: ObjectNode) => {
   for (let i = 0; i < node.slots!.length - 1; i++) {
     const current = node.slots![i];
     const next = node.slots![i + 1];
+    console.log("connecting slot pair", current, next);
     connectSlotPair(current, next);
   }
 
@@ -146,12 +150,13 @@ const setupOutputs = (node: ObjectNode) => {
 };
 
 const handleMessage = (node: ObjectNode, message: Message) => {
+  console.log("slots handle message=", message);
   if (message === "bang") {
     compileSlots(node);
     return [];
   }
   if (message === "reconnect" && node.slots) {
-    reconnect(node);
+    reconnectSlotsNode(node);
   } else if (node.slots?.[0]) {
     node.slots[0].receive(node.slots[0].inlets[0], message);
   }

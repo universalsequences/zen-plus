@@ -40,8 +40,8 @@ export const modselector = (node: ObjectNode) => {
     if (connectedSource) {
       connectedSource.source.disconnect(connectedSource.connection, false, false);
       connectedSource = undefined;
-    } else if (node.saveData) {
-      const { source, outlet } = node.saveData as MessageObject;
+    } else if (node.custom?.value) {
+      const { source, outlet } = node.custom?.value as MessageObject;
       const root = getRootPatch(node.patch);
       const allNodes = root
         .getAllNodes()
@@ -68,7 +68,6 @@ export const modselector = (node: ObjectNode) => {
   };
 
   const useSource = (source: ObjectNode, outletNumber: number) => {
-    console.log("use source=", source, outletNumber);
     if (connectedSource) {
       disconnect();
     }
@@ -78,10 +77,12 @@ export const modselector = (node: ObjectNode) => {
       return;
     }
 
-    node.saveData = {
-      source: source.id,
-      outlet: outletNumber,
-    };
+    if (node.custom) {
+      node.custom.value = {
+        source: source.id,
+        outlet: outletNumber,
+      };
+    }
     if (source.audioNode) {
       const dest = (node.patch as Subpatch).parentNode;
       if (dest) {
@@ -103,8 +104,8 @@ export const modselector = (node: ObjectNode) => {
 
   return (message: Message) => {
     if (message === "bang") {
-      if (node.saveData) {
-        const { source, outlet } = node.saveData as MessageObject;
+      if (node.custom?.value) {
+        const { source, outlet } = node.custom.value as MessageObject;
         const root = getRootPatch(node.patch);
         const allNodes = root
           .getAllNodes()
@@ -127,11 +128,8 @@ export const modselector = (node: ObjectNode) => {
 
     const { id, outlet } = message as MessageObject;
 
-    console.log("doing", id, outlet);
-
     if (cache[id as string]) {
       const sourceNode = cache[id as string];
-      console.log("got cache", sourceNode);
       useSource(sourceNode, outlet as number);
       return [];
     }

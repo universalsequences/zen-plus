@@ -80,10 +80,10 @@ export const umenu = (node: ObjectNode) => {
           return [];
         }
       }
-      message = node.storedMessage;
+      message = custom.value;
     }
     node.storedMessage = message;
-    node.saveData = message;
+    node.saveData = undefined;
     const options = Array.isArray(node.attributes["options"])
       ? (node.attributes.options as number[])
       : typeof node.attributes.options === "number"

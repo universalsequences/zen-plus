@@ -25,6 +25,8 @@ import { setupSkeletonPatch } from "@/lib/utils";
 import { PatchDocComponent } from "./org/PatchDocComponent";
 import { useAuth } from "@/contexts/AuthContext";
 import { storePatch } from "@/lib/saving/storePatch";
+import { reconnectSlotsNode } from "@/lib/nodes/definitions/audio/slots";
+import { recompileGraph } from "@/lib/nodes/compilation/recompileGraph";
 
 export const SLOT_VIEW_WIDTH = 180;
 export const SLOT_VIEW_HEIGHT = 20;
@@ -144,12 +146,12 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             onClick={() => expandFile(x)}
             className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer text-xs flex"
           >
-            <div className="">{x.name.slice(0, 20)}</div>
+            <div className="">{x.name.slice(0, 14)}</div>
             <div className="ml-auto flex">
-              {x.moduleType && x.moduleType !== "other" && (
+              {/*x.moduleType && x.moduleType !== "other" && (
                 <div className="text-zinc-200">{x.moduleType}</div>
-              )}
-              <div className="ml-3 flex">
+              )*/}
+              <div style={{ maxWidth: 150 }} className="ml-3 flex">
                 {x.tags?.map((tag) => (
                   <span key={tag} className="underline mx-1">
                     {tag}
@@ -242,7 +244,10 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                     const subpatch = objectNode.subpatch as SubPatch;
                     subpatch.clearPatch();
                     setupSkeletonPatch(subpatch, 2);
-                    subpatch.recompileGraph();
+                    recompileGraph(subpatch);
+                    setTimeout(() => {
+                      if (subpatch.slotsNode) reconnectSlotsNode(subpatch.slotsNode);
+                    }, 500);
                     setName("zen");
                   }}
                   className="w-4 h-4 ml-auto cursor-pointer"

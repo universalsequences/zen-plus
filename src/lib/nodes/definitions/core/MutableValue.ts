@@ -23,6 +23,7 @@ export class MutableValue implements SerializableCustom {
       node: this.objectNode,
       state: x,
     });
+
     this._value = x;
     if (this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);

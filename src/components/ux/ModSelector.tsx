@@ -42,12 +42,12 @@ export const ModSelector: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const { value } = useValue();
 
   useEffect(() => {
-    if (value || objectNode.saveData) {
-      const { source, outlet } = (value || objectNode.saveData) as MessageObject;
+    if (value || objectNode.custom?.value) {
+      const { source, outlet } = (value || objectNode.custom?.value) as MessageObject;
       const key = `${source},${outlet}`;
       setSelectedOption(key);
     }
-  }, [value, objectNode.saveData]);
+  }, [value, objectNode.custom?.value]);
   const { lockedMode } = useLocked();
   usePosition();
   const { width, height } = objectNode.size || { width: 72, height: 18 };

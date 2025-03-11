@@ -62,6 +62,8 @@ export class XYControl {
   fromJSON(x: any) {
     this.points = x.points;
   }
+
+  execute() {}
 }
 
 doc("xy.control", {
@@ -71,6 +73,8 @@ doc("xy.control", {
 });
 
 export const xy_control = (node: ObjectNode) => {
+  node.skipCompilation = true;
+  node.needsMainThread = true;
   node.isResizable = true;
   if (!node.size) {
     node.size = { width: 200, height: 200 };

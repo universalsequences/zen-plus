@@ -16,9 +16,9 @@ const UMenu: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   useEffect(() => {
     if (message !== null) {
-      setSelectedOption(message as string);
+      setSelectedOption(objectNode.custom?.value as string);
     }
-  }, [message]);
+  }, [objectNode.custom?.value]);
 
   let options = Array.isArray(objectNode.attributes["options"])
     ? (objectNode.attributes["options"] as number[])

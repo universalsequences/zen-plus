@@ -370,7 +370,7 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
 
     if (json.saveData) {
       this.storedMessage = json.saveData;
-      this.saveData = json.saveData;
+      //this.saveData = json.saveData;
     }
 
     if (json.size) {

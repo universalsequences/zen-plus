@@ -1093,10 +1093,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       this.steps = json.steps;
     }
 
-    if (json.saveData) {
-      this.storedMessage = json.saveData;
-      this.saveData = json.saveData;
-    }
+    //if (json.saveData) {
+    //  this.storedMessage = json.saveData;
+    //this.saveData = json.saveData;
+    //}
 
     if (json.size) {
       this.size = json.size;
