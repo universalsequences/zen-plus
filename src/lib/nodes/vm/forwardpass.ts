@@ -31,7 +31,11 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
     }
 
     const connections = getOutboundConnections(current, new Set()).reverse();
+
     for (const conn of connections) {
+      if (visitedConnections.has(conn)) {
+        continue;
+      }
       const { destination, destinationInlet } = conn;
       const inletNumber = destination.inlets.indexOf(destinationInlet);
       const isMessage = isMessageNode(destination);
@@ -143,11 +147,11 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
 export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
   const patch = isSubPatch ? _patch : getRootPatch(_patch);
   const nodeInstructions: NodeInstructions[] = [];
-  const allObjects: SerializedObjectNode[] = [];
-  const allMessages: SerializedMessageNode[] = [];
+  const allSerializedObjects: SerializedObjectNode[] = [];
+  const allSerializedMessages: SerializedMessageNode[] = [];
 
-  const ogObjects: ObjectNode[] = [];
-  const ogMessages: MessageNode[] = [];
+  const allObjects: ObjectNode[] = [];
+  const allMessages: MessageNode[] = [];
   const sourceNodes = getSourceNodesForCompilation(patch);
 
   for (const sourceNode of sourceNodes) {
@@ -166,21 +170,22 @@ export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
         messages.push(sourceNode as MessageNode);
       }
       const serializedMessages = messages.map((x) => (x as MessageNode).getJSON());
-      ogObjects.push(...objects);
-      ogMessages.push(...messages);
+
+      allObjects.push(...objects);
+      allMessages.push(...messages);
 
       for (const o of serializedObjects) {
-        if (!allObjects.includes(o)) {
-          allObjects.push(o);
+        if (!allSerializedObjects.includes(o)) {
+          allSerializedObjects.push(o);
         }
       }
 
       for (const m of serializedMessages) {
-        if (!allMessages.includes(m)) {
+        if (!allSerializedMessages.includes(m)) {
           if ((m.message as Statement)?.node) {
             m.message = "";
           }
-          allMessages.push(m);
+          allSerializedMessages.push(m);
         }
       }
       nodeInstructions.push({
@@ -193,8 +198,8 @@ export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
     patch.sendWorkerMessage({
       type: "setCompilation",
       body: {
-        objects: allObjects,
-        messages: allMessages,
+        objects: allSerializedObjects,
+        messages: allSerializedMessages,
         nodeInstructions,
       },
     });
@@ -214,6 +219,6 @@ export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
     }, 200);
   }
   if (patch.registerNodes) {
-    patch.registerNodes(ogObjects, ogMessages);
+    patch.registerNodes(allObjects, allMessages);
   }
 };

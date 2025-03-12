@@ -19,7 +19,8 @@ const compileConnection = (connection: IOConnection): Instruction[] => {
   const inletNumber = destination.inlets.indexOf(destinationInlet);
   const inbound = getInboundConnections(sourceOutlet);
   if (!inbound[0]) {
-    console.log("no inbound on source outlet=", sourceOutlet);
+    //console.log("no inbound on source outlet=", sourceOutlet);
+    return [];
   }
   const outletNumber = inbound[0].source.outlets.indexOf(inbound[0].sourceOutlet);
 

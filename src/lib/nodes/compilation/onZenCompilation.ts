@@ -4,6 +4,7 @@ import { ZenGraph, initMemory } from "@/lib/zen";
 import { PatchImpl } from "../Patch";
 import { getRootPatch } from "../traverse";
 import { mapReceive } from "./recompileGraph";
+import { bangModSelectors } from "../definitions/core/modselector";
 
 export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: ZenGraph) => {
   patch.audioNode = ret.workletNode;
@@ -47,6 +48,7 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
   };
 
   patch.disconnectGraph();
+
   const merger = patch.audioContext?.createChannelMerger(zenGraph.numberOfInputs);
   if (parentNode) {
     parentNode.merger = merger;
@@ -95,6 +97,8 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
   if (parentNode) {
     handlePublishers(parentNode);
   }
+
+  bangModSelectors(patch);
 
   /*
           patch.zenCode = printAndMinify(statement);

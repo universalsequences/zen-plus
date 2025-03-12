@@ -7,6 +7,7 @@ import type {
   Message,
   MessageObject,
   ObjectNode,
+  Patch,
 } from "../../types";
 import { MutableValue } from "./MutableValue";
 import { doc } from "./doc";
@@ -113,6 +114,7 @@ export const modselector = (node: ObjectNode) => {
 
         const sourceNode = allNodes.find((x) => x.id === (source as string));
         if (sourceNode) {
+          console.log("from bang=", sourceNode, outlet);
           useSource(sourceNode, outlet as number);
           return [];
         }
@@ -151,3 +153,14 @@ interface ConnectedSource {
   outlet: IOlet;
   connection: IOConnection;
 }
+
+/**
+ * Utility for updating the mod selectors, ensuring they are connected to latest sources
+ * */
+export const bangModSelectors = (patch: Patch) => {
+  const rootPatch = getRootPatch(patch);
+  const modselectors = rootPatch.getAllNodes().filter((x) => x.name === "modselector");
+  for (const modselector of modselectors) {
+    modselector.receive(modselector.inlets[0], "bang");
+  }
+};

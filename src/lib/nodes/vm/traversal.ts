@@ -1,3 +1,4 @@
+import { getRootPatch } from "../traverse";
 import { IOConnection, ObjectNode, SubPatch, Node, IOlet } from "../types";
 
 export const getOutboundConnections = (
@@ -5,6 +6,27 @@ export const getOutboundConnections = (
   visitedConnections: Set<IOConnection>,
 ): IOConnection[] => {
   return n.outlets.flatMap((x) => getOutboundConnectionsFromOutlet(x, visitedConnections));
+};
+
+const isSubscribe = (object: ObjectNode) => {
+  return false;
+  const { name } = object;
+  return name === "subscribe" || name === "r";
+};
+const isStaticSubscribe = (object: ObjectNode) => {
+  return false;
+  return isSubscribe(object) && object.inlets[1].connections.length === 0;
+};
+
+const isSendNode = (object: ObjectNode) => {
+  return false;
+  const { name } = object;
+  return name === "send" || name === "s";
+};
+
+const isStaticPublish = (object: ObjectNode) => {
+  return false;
+  return isSendNode(object) && object.inlets[1].connections.length === 0;
 };
 
 export const getOutboundConnectionsFromOutlet = (
@@ -19,14 +41,23 @@ export const getOutboundConnectionsFromOutlet = (
   const regularConnections: IOConnection[] = [];
   const outConnections: IOConnection[] = [];
   const slotConnections: IOConnection[] = [];
+  const publishConnections: IOConnection[] = [];
+
   for (const c of connections) {
-    const name = (c.destination as ObjectNode).name;
+    const dest = c.destination as ObjectNode;
+    const { name } = dest;
     if ((c.destination as ObjectNode).subpatch) {
       subpatchConnections.push(c);
     } else if (name === "out" || name === "patchmessage") {
       outConnections.push(c);
     } else if (name === "slots~") {
       slotConnections.push(c);
+    } else if (isStaticPublish(dest)) {
+      // we have "static"
+      publishConnections.push(c);
+      if (dest.arguments[0] === "bpm") {
+        regularConnections.push(c);
+      }
     } else {
       regularConnections.push(c);
     }
@@ -54,6 +85,7 @@ export const getOutboundConnectionsFromOutlet = (
       handleInput(input);
     }
   }
+
   for (const connection of subpatchConnections) {
     const { destination, destinationInlet } = connection;
     const inletNumber = destination.inlets.indexOf(destinationInlet) + 1;
@@ -63,6 +95,22 @@ export const getOutboundConnectionsFromOutlet = (
       (x) => x.name === "in" && x.arguments[0] === inletNumber,
     );
     handleInput(input);
+  }
+
+  for (const connection of publishConnections) {
+    const publishNode = connection.destination as ObjectNode;
+    const patch =
+      publishNode.attributes.scope === "subtree"
+        ? publishNode.patch
+        : getRootPatch(publishNode.patch);
+
+    const key = publishNode.arguments[0];
+    const subscribeNodes = patch
+      .getAllNodes()
+      .filter((x) => isSubscribe(x) && x.arguments[0] === key);
+    for (const subscribeNode of subscribeNodes) {
+      regularConnections.push(...getOutboundConnections(subscribeNode, visitedConnections));
+    }
   }
 
   for (const connection of outConnections) {
@@ -133,11 +181,15 @@ export const getInboundConnections = (inlet: IOlet): IOConnection[] => {
   const subpatchConnections: IOConnection[] = [];
   const regularConnections: IOConnection[] = [];
   const inConnections: IOConnection[] = [];
+  const subscribeConnections: IOConnection[] = [];
+
   for (const c of connections) {
     if ((c.source as ObjectNode).subpatch) {
       subpatchConnections.push(c);
     } else if ((c.source as ObjectNode).name === "in") {
       inConnections.push(c);
+    } else if (isStaticSubscribe(c.source as ObjectNode)) {
+      subscribeConnections.push(c);
     } else {
       regularConnections.push(c);
     }
@@ -199,6 +251,26 @@ export const getInboundConnections = (inlet: IOlet): IOConnection[] => {
       if (inlet) {
         const c = getInboundConnections(inlet);
         resolvedSubpatchConnections.push(...c);
+      }
+    }
+  }
+
+  for (const connection of subscribeConnections) {
+    const subscribeNode = connection.source as ObjectNode;
+    const patch = getRootPatch(subscribeNode.patch);
+    const key = subscribeNode.arguments[0];
+    const sendNodes = patch.getAllNodes().filter((x) => isSendNode(x) && x.arguments[0] === key);
+    for (const sendNode of sendNodes) {
+      if (sendNode.attributes.scope === "subtree") {
+        // ensure we're below this one
+        if (!sendNode.patch.getAllNodes().includes(subscribeNode)) {
+          // we gotta skip this send
+          continue;
+        }
+      }
+
+      for (const inlet of sendNode.inlets) {
+        regularConnections.push(...getInboundConnections(inlet));
       }
     }
   }

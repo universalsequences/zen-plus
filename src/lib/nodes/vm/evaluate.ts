@@ -270,6 +270,16 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
         instruction.node.debugBranching = peekBranching();
       }
     }
+
+    /*
+    console.log(
+      "instructions evaluated",
+      emittedInstructions.length,
+      emittedInstructions[0]?.node?.text,
+      emittedInstructions,
+      _initialMessage,
+    );
+    */
     return {
       mainThreadInstructions,
       objectsEvaluated,

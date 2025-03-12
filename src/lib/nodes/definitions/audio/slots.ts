@@ -1,6 +1,7 @@
 import { SLOT_VIEW_HEIGHT, SLOT_VIEW_WIDTH } from "@/constants/slots";
 import {
   ConnectionType,
+  Patch,
   type Message,
   type ObjectNode,
   type SerializedObjectNode,
@@ -9,6 +10,7 @@ import { doc } from "./doc";
 import { sleep } from "@/utils/sleep";
 import { OperatorContextType } from "../../context";
 import { getRootPatch } from "../../traverse";
+import { bangModSelectors } from "../core/modselector";
 
 doc("slots~", {
   description: "connect subpatches in series",
@@ -78,12 +80,9 @@ const updateSlots = (node: ObjectNode, newSize: number) => {
 };
 
 export const reconnectSlotsNode = (node: ObjectNode) => {
-  console.log("reconnect");
   if (!node.slots) return;
 
-  console.log("disconnecting");
   disconnectAllSlots(node);
-  console.log("connecting");
   connectSlots(node);
   setupOutputs(node);
 };
@@ -104,7 +103,6 @@ const connectSlots = (node: ObjectNode) => {
   for (let i = 0; i < node.slots!.length - 1; i++) {
     const current = node.slots![i];
     const next = node.slots![i + 1];
-    console.log("connecting slot pair", current, next);
     connectSlotPair(current, next);
   }
 
@@ -150,7 +148,6 @@ const setupOutputs = (node: ObjectNode) => {
 };
 
 const handleMessage = (node: ObjectNode, message: Message) => {
-  console.log("slots handle message=", message);
   if (message === "bang") {
     compileSlots(node);
     return [];
@@ -224,11 +221,7 @@ const compileSlots = async (node: ObjectNode) => {
     slot.subpatch?.setupPostCompile(true, false);
   }
 
-  const rootPatch = getRootPatch(node.patch);
-  const modselectors = rootPatch.getAllNodes().filter((x) => x.name === "modselector");
-  for (const modselector of modselectors) {
-    modselector.receive(modselector.inlets[0], "bang");
-  }
+  bangModSelectors(node.patch);
 
   node.receive(node.inlets[0], "reconnect");
   reconnectOutlets(node);
