@@ -55,7 +55,7 @@ export const getOutboundConnectionsFromOutlet = (
     } else if (isStaticPublish(dest)) {
       // we have "static"
       publishConnections.push(c);
-      if (dest.arguments[0] === "bpm") {
+      if (dest.arguments[0] === "bpm" || dest.arguments[0] === "isReset") {
         regularConnections.push(c);
       }
     } else {

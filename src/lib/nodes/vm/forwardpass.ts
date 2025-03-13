@@ -146,6 +146,7 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
 
 export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
   const patch = isSubPatch ? _patch : getRootPatch(_patch);
+  patch.clearGetAllNodesCache();
   const nodeInstructions: NodeInstructions[] = [];
   const allSerializedObjects: SerializedObjectNode[] = [];
   const allSerializedMessages: SerializedMessageNode[] = [];

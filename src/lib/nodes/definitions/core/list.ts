@@ -27,6 +27,7 @@ doc("pak", {
 });
 
 export const pak = (node: ObjectNode, ...args: Lazy[]) => {
+  node.branching = true;
   return (message: Message): Message[] => {
     if (message === "clear") {
       console.log("clearing all inlets");

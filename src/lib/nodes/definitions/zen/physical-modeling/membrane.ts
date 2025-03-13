@@ -70,7 +70,6 @@ export const modeling_component = (
     };
 
     web = createSpiderWeb(node.attributes.depth as number, node.attributes.radius as number);
-    console.log(web);
 
     // todo: all data needs to be stored in the node so that it persists
     // and can be saved...

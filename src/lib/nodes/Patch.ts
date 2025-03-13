@@ -174,26 +174,43 @@ export class PatchImpl implements Patch {
 
   setupSkeletonPatch() {}
 
+  getAllNodesCache: ObjectNode[] | null = null;
+
+  clearGetAllNodesCache() {
+    this.getAllNodesCache = null;
+    const patchNodes = this.getAllNodes(new Set(), false).filter((x) => x.subpatch);
+    for (const node of patchNodes) {
+      if (node.subpatch) {
+        node.subpatch.getAllNodesCache = null;
+      }
+    }
+  }
+
   /**
+   *
    * Gets all object nodes within a patch (including sub-patches)
    * @return {ObjectNode[]} list of objectNodes
    */
-  getAllNodes(visited = new Set<Patch>()): ObjectNode[] {
+  getAllNodes(visited = new Set<Patch>(), useCache: boolean = true): ObjectNode[] {
+    //if (this.getAllNodesCache && useCache) {
+    //  return this.getAllNodesCache;
+    //}
     if (visited.has(this as Patch)) {
       return [];
     }
     visited.add(this);
     const nodes = [...this.objectNodes];
     const subpatches = nodes.filter((x) => x.subpatch).map((x) => x.subpatch) as Patch[];
-    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes(visited))];
+    const xyz = [...nodes, ...subpatches.flatMap((x: Patch) => x.getAllNodes(visited, useCache))];
     const slots = nodes.filter((x) => x.name === "slots~");
     for (const slotNode of slots) {
       if (slotNode.slots) {
         for (const slot of slotNode.slots) {
-          xyz.push(...(slot.subpatch?.getAllNodes(visited) || []));
+          xyz.push(...(slot.subpatch?.getAllNodes(visited, useCache) || []));
         }
       }
     }
+    this.getAllNodesCache = xyz;
     return xyz;
   }
 

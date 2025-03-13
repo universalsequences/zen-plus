@@ -53,6 +53,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   node.inlets[node.inlets.length - 1].lastMessage = env as Message;
   node.hasDynamicInlets = true;
   node.isResizable = true;
+  node.branching = true;
 
   if (node.attributes["font-size"] === 9) {
     node.attributes["font-size"] = 11;
@@ -76,7 +77,7 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
         delete env[key];
       }
       Object.assign(env, lastEnv);
-      return empty as Message[];
+      return []; // empty as Message[];
       // return [];
     }
 
@@ -103,13 +104,14 @@ export const lisp_node: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
         const parsed = node.script === lastText ? lastParsed : parse(node.script);
         lastParsed = parsed;
         lastText = node.script;
-        env.$1 = msg;
+        env["$1"] = msg;
         for (let i = 0; i < args.length; i++) {
           if (args[i]() !== undefined) {
             const value = args[i]();
             env[`$${i + 2}`] = ArrayBuffer.isView(value) ? value : value;
           }
         }
+
         const ret = evaluate(parsed, env);
         out[0] = ret as Message;
         out[1] = env as Message;
