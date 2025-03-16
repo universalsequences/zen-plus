@@ -32,6 +32,7 @@ import { Toggle } from "./Toggle";
 import { ZequencerUI } from "./zequencer/ZequencerUI";
 import { ModSelector } from "./ModSelector";
 import { Panel } from "./Panel";
+import { InstructionsPerformance } from "./InstructionsPerformance";
 
 export type NodeProps =
   | {
@@ -78,6 +79,7 @@ export const index: ComponentIndex = {
   "zequencer.info": ZequencerInfo,
   modselector: ModSelector,
   panel: Panel,
+  "instructions.performance": InstructionsPerformance,
 };
 
 export const optionalIndex: ComponentIndex = {

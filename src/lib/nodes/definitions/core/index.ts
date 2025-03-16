@@ -47,6 +47,7 @@ import { zfetch } from "./fetch";
 import { slotsout } from "../audio/slots/utils";
 import { modselector } from "./modselector";
 import { panel } from "./panel";
+import { instructionsPerformance } from "./instructions.performance";
 
 export const api: API = {
   js: js_scripting,
@@ -109,4 +110,5 @@ export const api: API = {
   "<": lt,
   modselector,
   panel,
+  "instructions.performance": instructionsPerformance,
 };
