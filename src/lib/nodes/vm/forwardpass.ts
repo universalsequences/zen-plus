@@ -60,6 +60,12 @@ const isSourceNode = (node: Node) => {
     return true;
   }
 
+  /*
+  if ((node as ObjectNode).subpatch && (node as ObjectNode).audioNode) {
+    return true;
+  }
+  */
+
   if (node.skipCompilation) {
     return false;
   }
@@ -140,6 +146,8 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
   }
 
   const sourceNodes: Node[] = allNodes.filter((x) => isSourceNode(x));
+
+  console.log("source nodes=", sourceNodes);
 
   return sourceNodes;
 };

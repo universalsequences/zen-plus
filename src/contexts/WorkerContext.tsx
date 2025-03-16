@@ -593,17 +593,22 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     };
   }, []);
 
-  const sendWorkerMessage = useCallback((body: MessageBody) => {
+  const sendWorkerMessage = useCallback((body: MessageBody, transferables?: Transferable[]) => {
     if (((body as EvaluateNodeBody).body?.message as Statement)?.node) {
       return;
     }
 
     if (
       body.type === "setCompilation" ||
+      body.type === "shareMessagePort" ||
       body.type === "setPresetNodes" ||
       body.type === "setAttributeValue"
     ) {
-      workerRef.current?.postMessage(body);
+      if (transferables) {
+        workerRef.current?.postMessage(body, transferables);
+      } else {
+        workerRef.current?.postMessage(body);
+      }
       return;
     }
 
@@ -685,6 +690,15 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
     // Fallback to postMessage for larger messages or if ring buffer is full
     workerRef.current?.postMessage(body);
+  }, []);
+
+  useEffect(() => {
+    setInterval(() => {
+      workerRef.current?.postMessage({
+        type: "currenttime",
+        time: patch?.audioContext?.currentTime,
+      });
+    }, 10);
   }, []);
 
   const registerNodes = useCallback((objects: ObjectNode[], messages: MessageNode[]) => {

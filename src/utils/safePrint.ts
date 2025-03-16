@@ -35,9 +35,13 @@ export const safeStringify = (message: Message, depth = 0) => {
     });
   }
 
-  return typeof message === "string" || typeof message === "number"
-    ? message.toString()
-    : Array.isArray(message)
-      ? printLispExpression(message)
-      : safePrint(message as Message, depth);
+  return typeof message === "boolean"
+    ? message
+      ? "true"
+      : "false"
+    : typeof message === "string" || typeof message === "number"
+      ? message.toString()
+      : Array.isArray(message)
+        ? printLispExpression(message)
+        : safePrint(message as Message, depth);
 };

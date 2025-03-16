@@ -13,6 +13,7 @@ export interface ZenWorklet {
   code: string;
   wasm?: string;
   workletNode: AudioWorkletNode;
+  messageChannel: MessageChannel;
 }
 
 export type LazyZenWorklet = ZenWorklet | (() => AudioWorkletNode);
@@ -28,6 +29,8 @@ export const createWorklet = (
     const workletCode = code;
     const workletBase64 = btoa(workletCode);
     const url = `data:application/javascript;base64,${workletBase64}`;
+
+    const messageChannel = new MessageChannel();
 
     const onCompilation = (): AudioWorkletNode => {
       const workletNode = new AudioWorkletNode(ctxt, name, {
@@ -71,6 +74,10 @@ export const createWorklet = (
         workletNode.port.postMessage({ type: "ready" });
       }
 
+      workletNode.port.postMessage({ type: "message-port", port: messageChannel.port1 }, [
+        messageChannel.port1,
+      ]);
+
       // once complete send message saying "ready"
 
       graph.context.addWorklet(workletNode);
@@ -79,6 +86,7 @@ export const createWorklet = (
           code: workletCode,
           workletNode,
           wasm,
+          messageChannel,
         });
       }
       return workletNode;

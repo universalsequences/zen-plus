@@ -359,12 +359,13 @@ export type Patch = Identifiable & {
   isExamplePatch?: boolean;
   workletCode?: string;
   newSubPatch: (p: Patch, n: ObjectNode) => SubPatch;
-  sendWorkerMessage?: (body: MessageBody) => void;
+  sendWorkerMessage?: (body: MessageBody, transferrables?: Transferable[]) => void;
   registerNodes?: (objects: ObjectNode[], messages: MessageNode[]) => void;
   vm?: VM;
   slotsNode?: ObjectNode;
   syncWorkerStateWithMainThread?: () => void;
   syncingWorkerState?: boolean;
+  messageChannel?: MessageChannel;
 };
 
 export type SubPatch = Patch & {

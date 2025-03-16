@@ -33,13 +33,16 @@ const Attributes: React.FC<{ node: ObjectNode | MessageNode }> = ({ node }) => {
       : undefined;
 
   const updateText = (n: ObjectNode) => {
-    if (n.text.includes("lisp")) {
+    if (n.text.includes("lisp") || n.text.startsWith("js")) {
       n.text =
-        "lisp " +
+        n.name +
+        " " +
         new Array(n.inlets.length - 2)
           .fill(0)
           .map((x) => "0")
           .join(" ");
+
+      n.updateWorkerState();
     }
     setInlets(n.inlets.length);
   };

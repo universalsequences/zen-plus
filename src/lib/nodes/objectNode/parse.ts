@@ -33,7 +33,9 @@ export const parse = (
   patchPreset?: SerializedPatch,
 ): boolean => {
   let text = _text;
-  const context = getOperatorContext(contextType);
+  const context = patchPreset
+    ? getOperatorContext(OperatorContextType.ZEN)
+    : getOperatorContext(contextType);
   objectNode.lastSentMessage = undefined;
   objectNode.operatorContextType = contextType;
   const originalText = text;

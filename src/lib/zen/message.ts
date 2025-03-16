@@ -22,7 +22,7 @@ new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.vari
       } else {
         code += `
 if (this.messageCounter % this.messageRate === 0) {
-//this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
+this.messagePort.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
 }
 `;
       }
@@ -65,13 +65,13 @@ export const condMessage = (name: string, subType: Arg, value: Arg, condition: A
             : "currentTime + j/44100.0";
         code += `
 if (${_condition.variable}) {
-new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, ${timer});
+//new_message(@beginMessage${name}@endMessage, ${_subType.variable}, ${_value.variable}, ${timer});
 }
 `;
       } else {
         code += `
 if (${_condition.variable}) {
-this.port.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
+this.messagePort.postMessage({type: @beginMessage${name}@endMessage, subType: ${_subType.variable}, body: ${_value.variable}});
 }
 `;
       }

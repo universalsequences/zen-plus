@@ -10,6 +10,7 @@ import { useTiles } from "./useTiles";
 import { getUpdatedSize } from "@/lib/utils";
 import { ObjectNode, SubPatch, Orientation } from "@/lib/nodes/types";
 import ObjectNodeImpl from "@/lib/nodes/ObjectNode";
+import { isMessageNode, isObjectNode } from "@/lib/nodes/vm/instructions";
 
 /**
  * Props for the usePatchMouse hook
@@ -298,20 +299,24 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
 
         // Handle width-only resize
         if (orientation === Orientation.X) {
-          const x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
-          const width = x - position.x;
-          node.size.width = width;
-          updateSize(node.id, { ...node.size });
+          if (isObjectNode(node)) {
+            const x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
+            const width = x - position.x;
+            node.size.width = width;
+            updateSize(node.id, { ...node.size });
+          }
         }
         // Handle height-only resize
         else if (orientation === Orientation.Y) {
-          const y = scrollRef.current.scrollTop + client.y;
-          const height = y - position.y;
-          node.size.height = height;
-          updateSize(node.id, { ...node.size });
+          if (isObjectNode(node)) {
+            const y = scrollRef.current.scrollTop + client.y;
+            const height = y - position.y;
+            node.size.height = height;
+            updateSize(node.id, { ...node.size });
 
-          if ((node as ObjectNode).updateSize) {
-            (node as ObjectNode).updateSize({ ...node.size });
+            if ((node as ObjectNode).updateSize) {
+              (node as ObjectNode).updateSize({ ...node.size });
+            }
           }
         }
         // Handle width and height resize
@@ -321,21 +326,31 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
           const width = x - position.x;
           const height = y - position.y;
 
-          node.size.width = width;
-          node.size.height = height;
-          updateSize(node.id, { ...node.size });
+          if (isObjectNode(node)) {
+            node.size.width = width;
+            if (
+              node instanceof ObjectNodeImpl &&
+              (node.name === "zen" || (node as ObjectNode).isResizable)
+            ) {
+              node.size.height = height;
+            }
+            updateSize(node.id, { ...node.size });
 
-          if ((node as ObjectNode).updateSize) {
-            (node as ObjectNode).updateSize({ ...node.size });
+            if ((node as ObjectNode).updateSize) {
+              (node as ObjectNode).updateSize({ ...node.size });
+            }
           }
 
           // Resize all selected nodes to the same dimensions
           for (const selectedNode of selectedNodes) {
+            if (isMessageNode(selectedNode)) continue;
             if ((selectedNode as ObjectNode).size) {
               const objNode = selectedNode as ObjectNode;
               if (objNode.size) {
                 objNode.size.width = width;
-                objNode.size.height = height;
+                if (objNode.name === "zen" || objNode.isResizable) {
+                  objNode.size.height = height;
+                }
                 updateSize(objNode.id, { ...objNode.size });
 
                 if (objNode.updateSize) {

@@ -236,6 +236,7 @@ export const createMatrixBuffer = (
 
 export const matrix = (_node: ObjectNode) => {
   _node.needsUX = true;
+  _node.branching = true;
   let { columns, rows } = setupMatrixAttributes(_node);
   /**
    * format for messages is [rowIndex, columnIndex, value]

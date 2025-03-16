@@ -27,6 +27,7 @@ const PatchExplorer: React.FC<{
           mockPatch = node.subpatch as SubPatch;
         }
       }
+      console.log("calling mockPatch from json...", file);
       mockPatch.fromJSON(x, true);
       if (x.id === "1") {
         basePatch.initialLoadCompile(true);

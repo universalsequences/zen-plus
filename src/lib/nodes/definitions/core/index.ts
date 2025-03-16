@@ -13,6 +13,7 @@ import { dict, dict_get, dictpack } from "./json";
 import { toggle } from "./toggle";
 import { print } from "./print";
 import { zequencer_index } from "./zequencer/index";
+import { js_scripting } from "./js";
 import {
   or,
   eq,
@@ -48,6 +49,7 @@ import { modselector } from "./modselector";
 import { panel } from "./panel";
 
 export const api: API = {
+  js: js_scripting,
   slotsout,
   waveform,
   wasmviewer,

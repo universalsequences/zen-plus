@@ -346,7 +346,7 @@ const Lisp: React.FC<{ objectNode: ObjectNode; fullscreen: boolean }> = ({
             }}
           >
             <SyntaxHighlighter
-              language="lisp"
+              language={objectNode.name === "lisp" ? "lisp" : "javascript"}
               style={nightOwl}
               customStyle={{
                 margin: 0,

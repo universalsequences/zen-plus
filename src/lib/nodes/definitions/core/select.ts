@@ -11,6 +11,7 @@ doc("select", {
 });
 
 export const select = (node: ObjectNode, ...types: Lazy[]) => {
+  node.branching = true;
   let outputs = new Array(types.length + 1).fill(undefined);
   return (message: Message) => {
     let matched = false;
@@ -84,6 +85,7 @@ doc("filterselect", {
 });
 
 export const filterselect = (node: ObjectNode, ...messages: Lazy[]) => {
+  node.branching = true;
   return (index: Message) => {
     if (typeof index === "number") {
       if (messages[index] && messages[index]()) {

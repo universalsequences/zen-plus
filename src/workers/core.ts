@@ -102,6 +102,12 @@ export interface SyncWorkerStateWithMainThreadBody {
   type: "syncWorkerStateWithMainThread";
 }
 
+export interface ShareMessagePortBody {
+  type: "shareMessagePort";
+  port: MessagePort;
+  nodeId: string;
+}
+
 export type MessageBody =
   | PublishOptimizedBody
   | SetCompilationBody
@@ -112,6 +118,7 @@ export type MessageBody =
   | PublishBody
   | SetPresetNodesBody
   | SetAttributeValueBody
+  | ShareMessagePortBody
   | SyncWorkerStateWithMainThreadBody
   | AttrUIBody;
 
@@ -352,9 +359,34 @@ const processRingBufferData = () => {
   }
 };
 
+const handleSharedMessagePort = (nodeId: string, port: MessagePort) => {
+  console.log("handle shared message port=", nodeId);
+  port.onmessage = (e: MessageEvent) => {
+    const type = e.data.type;
+    const subType = e.data.subType;
+    const value = e.data.body;
+    publish(type, [subType, value]);
+
+    /*
+    vm.evaluateNode(nodeId, {
+      type: e.data.type,
+      subType: e.data.subType,
+      data: e.data.body,
+    });
+    */
+  };
+};
+
 self.onmessage = async (e: MessageEvent) => {
   const data = e.data;
 
+  if (data.type === "shareMessagePort") {
+    handleSharedMessagePort(data.nodeId, data.port);
+    return;
+  }
+  if (data.type === "currenttime") {
+    vm.currenttime = data.time;
+  }
   // Handle signal that data is available in the ring buffer
   if (data.type === "ringBufferDataAvailable") {
     processRingBufferData();

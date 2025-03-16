@@ -38,10 +38,8 @@ export const createWorkletCode = (name: string, graph: ZenGraph): CodeOutput => 
 class ${name}Processor extends AudioWorkletProcessor {
 
   async loadWASM(wasmBuffer) {
-//this.port.postMessage({type: "load wasm called",body: "yo"});
 try {
     const wasmModule = await WebAssembly.compile(wasmBuffer);
-//this.port.postMessage({type: "compile completed",body: "yo"});
     const importObject = {
     env: {
       memory: new WebAssembly.Memory({ initial: 256, maximum: 256 })
@@ -51,12 +49,9 @@ try {
   }
    };
 
-   //this.port.postMessage({type: "initing wasm",body: "yo"});
     const wasmInstance = await WebAssembly.instantiate(wasmModule, importObject);
     this.wasmModule = wasmInstance;
     this.elapsed = 0;
-    //this.port.postMessage({type: "init succesfful for wasm",body: "yo"});
-
     const BLOCK_SIZE = 128;
     this.inputPtr = wasmInstance.exports.my_malloc(BLOCK_SIZE * 4 * ${graph.numberOfInputs});
     this.input = new Float32Array(wasmInstance.exports.memory.buffer, this.inputPtr, BLOCK_SIZE * ${graph.numberOfInputs});
@@ -69,11 +64,12 @@ this.port.postMessage({type: "error-compiling", data: "yo"});
 }
   }
 
-  constructor() {
+  constructor(options) {
     super();
     this.ready = false;
     this.counter=0;
     this.messageCounter = 0;
+    this.messagePort = this.port;
     this.messageRate = 32;
     this.disposed = false;
     this.id = "${name}";
@@ -90,9 +86,6 @@ this.port.postMessage({type: "error-compiling", data: "yo"});
 
     this.createSineTable();
 
-    //this.port.postMessage({type: "ack",body: "yo"});
-
-
     this.port.onmessage = (e) => {
        if (e.data.type === "memory-set") {
          let {idx, value} = e.data.body;
@@ -101,7 +94,9 @@ this.port.postMessage({type: "error-compiling", data: "yo"});
          } else {
             this.memory[idx] = value;
          }
-       } else if (e.data.type === "load-wasm") {
+       } else if (e.data.type === "message-port") {
+         this.messagePort =  e.data.port;
+       }else if (e.data.type === "load-wasm") {
           this.loadWASM(e.data.body);
        } else if (e.data.type === "schedule-set") {
          let {idx, value, time} = e.data.body;

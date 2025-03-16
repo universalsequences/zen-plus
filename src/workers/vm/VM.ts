@@ -94,6 +94,7 @@ export class VM {
   sendEvaluationToMainThread?: (evaluation: VMEvaluation) => void;
 
   sendWorkerStateToMainThread?: (payload: SyncWorkerState[]) => void;
+  currenttime = 0;
 
   constructor() {
     this.nodes = {};

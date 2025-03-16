@@ -49,12 +49,7 @@ export const PatchesExplorer = ({ text }: Props) => {
       const serializedSubPatch = await fetchSubPatchForDoc(selectedPatch.id);
       if (serializedSubPatch) {
         const objectNode = new ObjectNodeImpl(ret.selectedPatch);
-        objectNode.parse(
-          selectedPatch.name,
-          getSubPatchType(serializedSubPatch),
-          true,
-          serializedSubPatch,
-        );
+        objectNode.parse("zen", getSubPatchType(serializedSubPatch), true, serializedSubPatch);
         objectNode.position = { x: 100, y: 100 };
         ret.selectedPatch.objectNodes.push(objectNode);
         ret.setCounter(Math.random());

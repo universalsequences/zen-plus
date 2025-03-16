@@ -39,7 +39,7 @@ const Cables = () => {
     if (draggingNode) {
       _selectedNodes.push(draggingNode.node);
     }
-    let zIndex = lockedMode ? 0 : 1000000;
+    let zIndex = lockedMode ? 1 : 1000000;
     let full = !presentationMode ? [...objectNodes, ...messageNodes] : [];
     let selected = full.filter((x) => selectedConnection && selectedConnection.source === x);
     let notSelected = full.filter((x) => !selectedConnection || selectedConnection.source !== x);
@@ -57,7 +57,7 @@ const Cables = () => {
                 }
               : { zIndex }
           }
-          className="absolute z-0 w-full h-full pointer-events-none"
+          className="absolute w-full h-full pointer-events-none"
         >
           {notSelected.map((node, i) => (
             <ObjectCables
@@ -80,16 +80,6 @@ const Cables = () => {
           <AlignmentHelper />
           {!presentationMode && <Dragging />}
         </svg>
-        {/*
-            <svg
-                style={size ? { width: size.width + 'px', height: size.height + 'px', minWidth: size.width + 'px', minHeight: size.height + 'px' } : {}}
-                className="absolute z-0 w-full h-full z-1 pointer-events-none">
-                {[...objectNodes.filter(x => !_selectedNodes.includes(x)), ...messageNodes.filter(x => !_selectedNodes.includes(x))].map((node, i) =>
-                    <ObjectCables
-                        setDraggingSegmentation={setDraggingSegmentation}
-                        deleteConnection={deleteConnection} setDraggingCable={setDraggingCable} key={i} node={node} />)}
-            </svg>
-             */}
       </>
     );
   }, [
@@ -342,7 +332,7 @@ const Edge: React.FC<{
     return (
       <>
         <g
-          style={isSelected ? { zIndex: 10000000 } : { zIndex: 0 }}
+          style={isSelected ? { zIndex: 10000000 } : { zIndex: 1 }}
           className={(hover ? " hover " : "") + "edge-group"}
         >
           {created && <style dangerouslySetInnerHTML={{ __html: keyframes }} />}

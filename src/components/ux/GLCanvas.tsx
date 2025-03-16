@@ -23,6 +23,7 @@ const GLCanvas: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     const graph: RenderJob = (message as RenderJob) || objectNode.renderJob;
     return (
       <Shader
+        objectNode={objectNode}
         fps={objectNode.attributes["fps"] as number}
         width={objectNode.size?.width || 300}
         height={objectNode.size?.height || 300}

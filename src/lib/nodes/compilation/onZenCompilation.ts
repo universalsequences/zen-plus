@@ -29,15 +29,6 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
     }
 
     // Send messages using the optimized format for better performance
-    patch.sendWorkerMessage?.({
-      type: "publish-optimized",
-      body: {
-        type: e.data.type,
-        subType: e.data.subType,
-        value: e.data.body,
-      },
-    });
-
     /*
     parentNode.send(parentNode.outlets[0], {
       type: e.data.type,
@@ -46,6 +37,16 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
     });
     */
   };
+
+  const root = getRootPatch(patch);
+  root.sendWorkerMessage?.(
+    {
+      type: "shareMessagePort",
+      port: ret.messageChannel.port2,
+      nodeId: parentNode?.id,
+    },
+    [ret.messageChannel.port2],
+  );
 
   patch.disconnectGraph();
 

@@ -73,6 +73,7 @@ export const index: ComponentIndex = {
   color: Color,
   "live.meter~": LiveMeter,
   lisp: Lisp as React.ComponentType<NodeProps>,
+  js: Lisp as React.ComponentType<NodeProps>,
   buttonoptions: ButtonOptions,
   "zequencer.info": ZequencerInfo,
   modselector: ModSelector,

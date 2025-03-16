@@ -524,7 +524,9 @@ const InnerObjectNodeComponent: React.FC<InnerObjectNodeComponentProps> = ({
           </ContextMenu.Item>
 
           {/* Fullscreen toggle for supported node types */}
-          {(objectNode.name === "wasmviewer" || objectNode.name === "lisp") && (
+          {(objectNode.name === "wasmviewer" ||
+            objectNode.name === "js" ||
+            objectNode.name === "lisp") && (
             <ContextMenu.Item
               onClick={() => setFullscreen(!fullscreen)}
               className="text-white hover:bg-white hover:text-black px-2 py-1 outline-none cursor-pointer"

@@ -89,6 +89,7 @@ export class PatchImpl implements Patch {
   finishedInitialCompile: boolean;
   sendWorkerMessage?: ((body: MessageBody) => void) | undefined;
   silentGain?: GainNode;
+  messageChannel?: MessageChannel;
 
   constructor(audioContext: AudioContext, isZen = false, isSubPatch = false) {
     this.isZen = isZen;
