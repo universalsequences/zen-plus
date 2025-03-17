@@ -159,7 +159,6 @@ class UpdateBatcher {
   handleStepSchema(schemas: OnNewStepSchema[]) {
     for (const { nodeId, schema } of schemas) {
       const node = this.objects[nodeId];
-      console.log("handling sctep schema", node, schema);
       if (node) {
         node.stepsSchema = schema;
       }
@@ -367,6 +366,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
     // Function to process data from the ring buffer
     const processRingBufferData = () => {
+      const id = Math.random();
       try {
         if (ringBufferRef.current?.canRead()) {
           const message = ringBufferRef.current.read();
@@ -379,6 +379,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
               setTimeout(processRingBufferData, 0); // Use microtask to avoid stack overflow
             }
           }
+        } else {
         }
       } catch (error) {
         console.error("Error processing ring buffer data:", error);
@@ -693,12 +694,14 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
   }, []);
 
   useEffect(() => {
+    /*
     setInterval(() => {
       workerRef.current?.postMessage({
         type: "currenttime",
         time: patch?.audioContext?.currentTime,
       });
     }, 10);
+    */
   }, []);
 
   const registerNodes = useCallback((objects: ObjectNode[], messages: MessageNode[]) => {

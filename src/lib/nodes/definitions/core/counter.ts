@@ -89,6 +89,7 @@ export const counter = (node: ObjectNode) => {
       updateValue(msg, false);
       // Reset the carry flag when setting a specific value.
       hasCarried = false;
+      return [];
     } else if (msg === "inc") {
       // Manual increment.
       carryFlag = updateValue(current + inc);

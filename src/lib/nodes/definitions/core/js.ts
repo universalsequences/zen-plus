@@ -38,7 +38,6 @@ export const js_scripting = (node: ObjectNode, ..._args: Lazy[]) => {
     if (!func) {
       return [];
     }
-    console.log("msg=", msg);
     if (msg === "clear") {
       for (const key in env) {
         delete env[key];

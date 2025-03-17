@@ -168,6 +168,7 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
         if (!success) {
           sentOptimizedViaRingBuffer = false;
           break;
+        } else {
         }
       } else {
         sentOptimizedViaRingBuffer = false;
@@ -407,7 +408,10 @@ self.onmessage = async (e: MessageEvent) => {
 
         // Set up signal callback to notify main thread when data is available
         ringBuffer.setSignalCallback(() => {
-          self.postMessage({ type: "ringBufferDataAvailable" });
+          // set timeout ensures data is actually available (idk why this is actually needed)
+          setTimeout(() => {
+            self.postMessage({ type: "ringBufferDataAvailable" });
+          }, 1);
         });
 
         // Initialize shared memory manager
