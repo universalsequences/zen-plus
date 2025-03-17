@@ -561,7 +561,11 @@ const InnerObjectNodeComponent: React.FC<InnerObjectNodeComponentProps> = ({
             ) : isCustomSubPatchView ? (
               <CustomSubPatchView objectNode={objectNode} />
             ) : CustomComponent ? (
-              <CustomComponent fullscreen={fullscreen} objectNode={objectNode} />
+              <CustomComponent
+                setFullScreen={setFullscreen}
+                fullscreen={fullscreen}
+                objectNode={objectNode}
+              />
             ) : editing ? (
               <NodeEditView
                 text={text}

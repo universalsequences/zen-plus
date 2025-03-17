@@ -234,26 +234,26 @@ export const createMatrixBuffer = (
   }
 };
 
-export const matrix = (_node: ObjectNode) => {
-  _node.needsUX = true;
-  _node.branching = true;
-  let { columns, rows } = setupMatrixAttributes(_node);
+export const matrix = (node: ObjectNode) => {
+  node.needsUX = true;
+  node.branching = true;
+  let { columns, rows } = setupMatrixAttributes(node);
   /**
    * format for messages is [rowIndex, columnIndex, value]
    * a message like [0, 2, 1] -> will replace the 0th row 2nd column w/ 1
    */
   let counter = 0;
   return (message: Message) => {
-    if (!_node.buffer) {
+    if (!node.buffer) {
       return [];
     }
     if (message === "bang") {
-      return [_node.buffer];
+      return [node.buffer];
     }
 
     if (message === "clear") {
-      for (let i = 0; i < _node.buffer.length; i++) {
-        _node.buffer[i] = 0;
+      for (let i = 0; i < node.buffer.length; i++) {
+        node.buffer[i] = 0;
       }
     }
 
@@ -262,17 +262,20 @@ export const matrix = (_node: ObjectNode) => {
     if (isOperation(message, "select")) {
       const tokens = (message as string).split(" ");
       const selected = Number.parseInt(tokens[1]);
-      _node.saveData = selected;
+      console.log("select", selected, node);
+      if (node.patch.vm) {
+        node.patch.vm?.updateUX?.(node.id, selected);
+      }
       skipReturn = true;
     }
 
     if (isOperation(message, "get")) {
       const tokens = (message as string).split(" ");
       const num = Number.parseInt(tokens[1]);
-      if (_node.buffer[num] === undefined) {
+      if (node.buffer[num] === undefined) {
         return [];
       }
-      return [undefined, undefined, _node.buffer[num]];
+      return [undefined, undefined, node.buffer[num]];
     }
 
     if (isOperation(message, "column")) {
@@ -281,7 +284,7 @@ export const matrix = (_node: ObjectNode) => {
       const list = [];
       for (let i = 0; i < rows; i++) {
         const idx = i * columns + col;
-        list.push(_node.buffer[idx]);
+        list.push(node.buffer[idx]);
       }
       return [undefined, undefined, list];
     }
@@ -291,16 +294,16 @@ export const matrix = (_node: ObjectNode) => {
       const [_op, field, idx, val] = tokens;
       const _idx = Number.parseInt(idx);
       const _value = Number.parseFloat(val);
-      if (typeof _node.buffer[_idx] === "object") {
-        (_node.buffer[_idx] as MessageObject)[field] = _value;
+      if (typeof node.buffer[_idx] === "object") {
+        (node.buffer[_idx] as MessageObject)[field] = _value;
 
-        (_node.buffer[_idx] as MessageObject) = {
-          ...(_node.buffer[_idx] as MessageObject),
+        (node.buffer[_idx] as MessageObject) = {
+          ...(node.buffer[_idx] as MessageObject),
         };
       }
 
-      if (_node.onNewValue) {
-        _node.onNewValue(counter++);
+      if (node.onNewValue) {
+        node.onNewValue(counter++);
       }
       return [];
     }
@@ -309,12 +312,12 @@ export const matrix = (_node: ObjectNode) => {
     let _value = undefined;
     let colChange = undefined;
 
-    if (Array.isArray(message) && _node.buffer) {
+    if (Array.isArray(message) && node.buffer) {
       if (message.length > 3) {
         // replacing the full buffer
-        for (let idx = 0; idx < _node.buffer.length; idx++) {
+        for (let idx = 0; idx < node.buffer.length; idx++) {
           if (message[idx] !== undefined) {
-            _node.buffer[idx] = message[idx] as number;
+            node.buffer[idx] = message[idx] as number;
           }
         }
       } else {
@@ -329,39 +332,39 @@ export const matrix = (_node: ObjectNode) => {
           _value = value as number;
         }
 
-        if (_node.attributes.type === "object") {
-          const selectedField = _node.attributes.selectedField as string;
-          const buffer = _node.buffer as MessageObject[];
+        if (node.attributes.type === "object") {
+          const selectedField = node.attributes.selectedField as string;
+          const buffer = node.buffer as MessageObject[];
           buffer[idx] = { ...buffer[idx] };
           if (value !== undefined) {
             buffer[idx][selectedField] = value;
           }
         } else {
           if (value !== undefined) {
-            _node.buffer[idx] = value;
+            node.buffer[idx] = value;
           }
         }
 
         colChange = [];
         for (let _row = 0; _row < rows; _row++) {
           const idx = _row * (columns as number) + column;
-          colChange.push(_node.buffer[idx]);
+          colChange.push(node.buffer[idx]);
         }
       }
     }
 
-    (_node.custom as Matrix).buffer = _node.buffer;
-    if (_node.onNewValue) {
-      _node.onNewValue(counter++);
+    (node.custom as Matrix).buffer = node.buffer;
+    if (node.onNewValue) {
+      node.onNewValue(counter++);
     }
-    if (_node.attributes["scripting name"] !== "") {
-      (_node.custom as Matrix).update();
+    if (node.attributes["scripting name"] !== "") {
+      (node.custom as Matrix).update();
     }
-    if (!skipReturn && _node.buffer) {
+    if (!skipReturn && node.buffer) {
       if (idx !== undefined && _value !== undefined && colChange) {
-        return [_node.buffer, [idx, _value, colChange]];
+        return [node.buffer, [idx, _value, colChange]];
       }
-      return [_node.buffer];
+      return [node.buffer];
     }
 
     return [];

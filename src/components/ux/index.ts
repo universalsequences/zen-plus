@@ -41,6 +41,7 @@ export type NodeProps =
   | {
       objectNode: ObjectNode;
       fullscreen: boolean;
+      setFullScreen: (x: boolean) => void;
     };
 
 type ComponentIndex = {

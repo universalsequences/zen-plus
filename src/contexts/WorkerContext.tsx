@@ -3,6 +3,7 @@ import {
   AttributeUpdate,
   MainThreadInstruction,
   OptimizedMainThreadInstruction,
+  UpdateUX,
 } from "@/lib/nodes/vm/evaluate";
 import {
   MutableValueChanged,
@@ -122,6 +123,10 @@ class UpdateBatcher {
             case "attributeUpdates":
               this.handleAttributeUpdates(updateArray as AttributeUpdate[]);
               break;
+            case "updateUX":
+              console.log("flushing updateUX");
+              this.handleUpdateUX(updateArray as UpdateUX[]);
+              break;
             case "mutableValueChanged":
               this.handleMutableValueChanged(updateArray as MutableValueChanged[]);
               break;
@@ -154,6 +159,16 @@ class UpdateBatcher {
     }
 
     pendingUpdates.clear();
+  }
+
+  handleUpdateUX(update: UpdateUX[]) {
+    for (const { nodeId, message } of update) {
+      const node = this.objects[nodeId];
+      if (node) {
+        node.saveData = message;
+        node.onNewValue?.(Math.random());
+      }
+    }
   }
 
   handleStepSchema(schemas: OnNewStepSchema[]) {
@@ -401,6 +416,8 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     worker.onmessage = (event: MessageEvent) => {
       const { type, body } = event.data;
 
+      console.log("received message=", type, body);
+
       // Handle signal that data is available in the ring buffer
       if (type === "ringBufferDataAvailable") {
         processRingBufferData();
@@ -450,6 +467,8 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       } else if (type === "ringBufferReady") {
         // Worker has acknowledged the ring buffer is ready
         checkInitialMessages();
+      } else if (event.data.type === MessageType.UPDATE_UX) {
+        batcherRef.current?.queueUpdate("updateUX", [event.data.body]);
       } else {
         batcherRef.current?.queueUpdate(type, Array.isArray(body) ? body : [body]);
       }
@@ -548,6 +567,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
           break;
         case MessageType.ATTRIBUTE_UPDATE:
           batcherRef.current?.queueUpdate("attributeUpdates", [message.message]);
+          break;
           break;
       }
     };

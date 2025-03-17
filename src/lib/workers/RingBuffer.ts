@@ -20,6 +20,7 @@ export enum MessageType {
   NEW_VALUE = 104,
   REPLACE_MESSAGE = 105,
   ATTRIBUTE_UPDATE = 106,
+  UPDATE_UX = 107,
 }
 
 // Buffer directions

@@ -56,6 +56,9 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
   const { lockedMode } = useLocked();
 
+  useEffect(() => {
+    console.log("select matrix cell idx=", objectNode.saveData);
+  }, [objectNode.saveData]);
   const size = objectNode.size || { width: 100, height: 100 };
   const { width, height } = size;
 

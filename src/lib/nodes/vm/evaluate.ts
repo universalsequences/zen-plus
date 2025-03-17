@@ -34,6 +34,11 @@ export interface AttributeUpdate {
   message: AttributeValue;
 }
 
+export interface UpdateUX {
+  nodeId: string;
+  message: Message;
+}
+
 const matchesDataType = (
   dataTypes: OptimizedDataType[],
   message: Message,

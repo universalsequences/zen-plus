@@ -94,6 +94,8 @@ export class VM {
   sendEvaluationToMainThread?: (evaluation: VMEvaluation) => void;
 
   sendWorkerStateToMainThread?: (payload: SyncWorkerState[]) => void;
+
+  updateUX?: (nodeId: string, message: Message) => void;
   currenttime = 0;
 
   constructor() {
