@@ -262,7 +262,6 @@ export const matrix = (node: ObjectNode) => {
     if (isOperation(message, "select")) {
       const tokens = (message as string).split(" ");
       const selected = Number.parseInt(tokens[1]);
-      console.log("select", selected, node);
       if (node.patch.vm) {
         node.patch.vm?.updateUX?.(node.id, selected);
       }

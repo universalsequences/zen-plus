@@ -71,6 +71,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
     let register: (Message | undefined)[] = new Array(16)
       .fill(initialMessage)
       .map(() => initialMessage);
+
     const branchingStack: Branching[] = [];
 
     const peekBranching = () => {
@@ -111,15 +112,13 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
     //let instructionCounter = 0;
     for (let instruction = getNext(); instruction !== undefined; instruction = getNext()) {
       /*
-      if (instruction.node?.attributes["scripting name"] === "quantize-script") {
-        console.log(
-          "executing script %s",
-          emittedInstructions.length,
-          instruction,
-          [...instructions],
-          [...register],
-        );
-      }
+      console.log(
+        "executing script %s",
+        emittedInstructions.length,
+        instruction,
+        [...instructions],
+        [...register],
+      );
       */
       emittedInstructions.push(instruction);
       switch (instruction.type) {
@@ -186,10 +185,6 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
                 ? initialMessage
                 : objectNode.inlets[0].lastMessage;
 
-          if (initialMessage !== undefined) {
-            // consumed initial message
-            initialMessage = undefined;
-          }
           if (objectNode.fn && inputMessage !== undefined) {
             if (objectNode.skipCompilation) {
               const { optimizedDataType } = objectNode.inlets[0];
@@ -282,6 +277,10 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           break;
       }
 
+      if (initialMessage !== undefined) {
+        // consumed initial message
+        initialMessage = undefined;
+      }
       if (instruction.node) {
         instruction.node.debugBranching = peekBranching();
       }

@@ -115,16 +115,13 @@ export class Component {
     return (context: Context) => {
       let initializedConnection = this.connections.find((x) => x.component.cachedContext);
       if (this.cachedContext) {
-        console.log("BRO CACHE=", context, this.cachedContext);
         context = this.cachedContext;
       } else if (initializedConnection && initializedConnection.component.cachedContext) {
         context = initializedConnection.component.cachedContext;
-        console.log("using cachied context =", context);
       } else {
         this.cachedContext = context.useContext(false, true);
         this.cachedContext.forceScalar = true;
         context = this.cachedContext;
-        console.log("caching context =", this.cachedContext);
       }
       return input(context);
     };

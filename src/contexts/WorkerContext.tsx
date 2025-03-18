@@ -124,7 +124,6 @@ class UpdateBatcher {
               this.handleAttributeUpdates(updateArray as AttributeUpdate[]);
               break;
             case "updateUX":
-              console.log("flushing updateUX");
               this.handleUpdateUX(updateArray as UpdateUX[]);
               break;
             case "mutableValueChanged":
@@ -415,8 +414,6 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
     worker.onmessage = (event: MessageEvent) => {
       const { type, body } = event.data;
-
-      console.log("received message=", type, body);
 
       // Handle signal that data is available in the ring buffer
       if (type === "ringBufferDataAvailable") {

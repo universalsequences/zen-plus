@@ -8,6 +8,7 @@ doc("dict", {
   numberOfOutlets: 1,
   numberOfInlets: (x) => x,
   description: "creates a json object out of keys values",
+  isHot: false,
 });
 
 export const dict: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {

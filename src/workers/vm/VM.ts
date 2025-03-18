@@ -140,7 +140,6 @@ export class VM {
       }
     }
 
-    console.log("payloads to send=", payload);
     this.sendWorkerStateToMainThread?.(payload);
   }
 
@@ -189,12 +188,15 @@ export class VM {
   updateObject(nodeId: string, serializedNode: SerializedObjectNode) {
     const node = this.nodes[nodeId] as ObjectNode;
     if (node) {
-      const args = node.arguments;
+      const args = [...node.arguments];
       node.fromJSON(serializedNode);
-      for (let i = 0; i < args.length; i++) {
-        if (i + 1 < node.inlets.length) {
-          node.arguments[i] = args[i];
-          node.inlets[i + 1].lastMessage = args[i];
+      if (node.text.split(" ").length === 1 || node.name === "lisp" || node.name === "js") {
+        // if node text itself has args
+        for (let i = 0; i < args.length; i++) {
+          if (i + 1 < node.inlets.length) {
+            node.arguments[i] = args[i];
+            node.inlets[i + 1].lastMessage = args[i];
+          }
         }
       }
     } else {

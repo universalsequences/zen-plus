@@ -56,9 +56,19 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
   const { lockedMode } = useLocked();
 
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
+
   useEffect(() => {
-    console.log("select matrix cell idx=", objectNode.saveData);
-  }, [objectNode.saveData]);
+    if (objectNode.saveData !== undefined && objectNode.saveData !== null) {
+      const cellIdx = Number(objectNode.saveData);
+      if (!isNaN(cellIdx) && cellIdx >= 0) {
+        const row = Math.floor(cellIdx / (columns as number));
+        const col = cellIdx % (columns as number);
+        setSelectedCell({ row, col });
+        needsRedraw.current = true;
+      }
+    }
+  }, [objectNode.saveData, columns]);
   const size = objectNode.size || { width: 100, height: 100 };
   const { width, height } = size;
 
@@ -169,10 +179,12 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               ? objectNode.buffer[idx] || 0
               : 0;
 
-        const normalizedValue = (value - (min as number)) / ((max as number) - (min as number));
+        const normalizedValue =
+          ((value as number) - (min as number)) / ((max as number) - (min as number));
         const isDisabled = disabledColumnsArray.includes(actualCol);
         const isHovered = hoverCell?.row === actualRow && hoverCell?.col === actualCol;
         const isActive = activeCell?.row === actualRow && activeCell?.col === actualCol;
+        const isSelected = selectedCell?.row === actualRow && selectedCell?.col === actualCol;
 
         ctx.beginPath();
         if (cornerRadius === "full") {
@@ -211,9 +223,18 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         }
         ctx.fill();
 
-        ctx.strokeStyle = isActive ? "rgba(255, 255, 255, 0.8)" : "rgba(40, 40, 40, 0.8)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        if (isSelected) {
+          // Draw a highlighted border for the selected cell
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 255, 255, 1)"; // Gold color
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.strokeStyle = isActive ? "rgba(255, 255, 255, 0.8)" : "rgba(40, 40, 40, 0.8)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
 
         const ux = objectNode.attributes["ux"] as string;
         const isLine = ux === "line";
@@ -300,6 +321,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     disabledColumnsArray,
     hoverCell,
     activeCell,
+    selectedCell,
     pageSize,
     pageStart,
     show,
@@ -323,7 +345,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   useEffect(() => {
     needsRedraw.current = true;
     drawMatrix();
-  }, [hoverCell, activeCell, drawMatrix]);
+  }, [hoverCell, activeCell, selectedCell, drawMatrix]);
 
   const onMouseUp = useCallback(() => {
     editing.current = null;

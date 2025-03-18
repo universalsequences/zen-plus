@@ -245,7 +245,6 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
 vm.sendEvaluationToMainThread = sendEvaluationToMainThread;
 
 vm.updateUX = (nodeId: string, message: Message) => {
-  console.log("posting message=", nodeId, message);
   self.postMessage({
     type: MessageType.UPDATE_UX,
     body: {
