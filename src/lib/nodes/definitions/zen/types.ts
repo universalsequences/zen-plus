@@ -53,6 +53,7 @@ export interface CompoundOperator {
   historyInput?: Statement;
   modelComponent?: LazyComponent;
   modelComponents?: LazyComponent[];
+  metallicComponent?: LazyMetallicComponent;
   uniform?: Uniform;
 }
 

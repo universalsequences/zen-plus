@@ -7,6 +7,7 @@ import { createSpiderWeb, SpiderWeb } from "@/lib/zen/physical-modeling/web-make
 import { Component } from "@/lib/zen/physical-modeling/Component";
 import { Statement, CompoundOperator } from "../types";
 import { LazyMaterial } from "./types";
+import { modeling_metallic } from "./modeling_metallic";
 
 /**
  * membrane module:
@@ -185,4 +186,5 @@ export interface LazyComponent {
 export const membraneAPI: API = {
   "modeling.component": modeling_component,
   "modeling.synth": modeling_synth,
+  "modeling.metallic": modeling_metallic,
 };
