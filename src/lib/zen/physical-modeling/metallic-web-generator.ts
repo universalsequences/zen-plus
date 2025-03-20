@@ -404,10 +404,10 @@ function lerp(a: number, b: number, t: number): number {
 
 export const createGongWeb = (size: number): MetallicWeb => {
   return createMetallicWeb({
-    numLevels: Math.floor(size / 8),
-    radius: 8,
+    numLevels: 8, //Math.floor(size / 8),
+    radius: 6,
     instrumentType: "gong",
-    centerStiffness: 0.3,
+    centerStiffness: 0.8,
     edgeStiffness: 0.2,
   });
 };

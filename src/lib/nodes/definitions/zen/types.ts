@@ -13,6 +13,7 @@ import { Component } from "../../../zen/physical-modeling/Component";
 import { SpiderWeb } from "../../../zen/physical-modeling/web-maker";
 import { PhysicalModel } from "./physical-modeling/types";
 import { LazyComponent } from "./physical-modeling/membrane";
+import { LazyMetallicComponent } from "./physical-modeling/modeling_metallic";
 
 export interface DataParams {
   size: number;

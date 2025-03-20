@@ -14,17 +14,18 @@ export interface LazyMetallicMaterial extends LazyMaterial {
   hfDamping: Statement;
 }
 
-export interface LazyComponent {
+export interface LazyMetallicComponent {
   web: MetallicWeb;
   material: LazyMetallicMaterial;
-  component: MetallicComponent | undefined; // once the 1st stage compiler evalualates, it will set this field
+  component?: MetallicComponent; // once the 1st stage compiler evalualates, it will set this field
 }
 
 doc("modeling.metallic", {
   description: "physical model for metallic sounds",
-  numberOfInlets: 11,
+  numberOfInlets: 12,
   numberOfOutlets: 1,
   inletNames: [
+    "trigger",
     "x",
     "y",
     "pitch",
@@ -53,8 +54,7 @@ export const modeling_metallic = (
   modeCoupling: Lazy,
   hfDampening: Lazy,
 ) => {
-  _node.needsLoad = true;
-  return (_message: Message) => {
+  return (trigger: Message) => {
     const material: LazyMetallicMaterial = {
       x: x() as Statement,
       y: y() as Statement,
@@ -70,7 +70,8 @@ export const modeling_metallic = (
       hfDamping: hfDampening() as Statement,
     };
 
-    const web = createGongWeb(64);
+    const web = createGongWeb(16);
+    console.log("gong web=", web);
 
     const statement: Statement = [
       {
@@ -78,9 +79,13 @@ export const modeling_metallic = (
         metallicComponent: {
           web,
           material,
-        },
+          component: undefined,
+        } as LazyMetallicComponent,
       },
+      trigger as Statement,
     ];
+    statement.node = _node;
+    console.log("metallic statement=", statement);
     return [statement] as Message[];
   };
 };

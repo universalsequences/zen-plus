@@ -15,6 +15,10 @@ import {
 import { FunctionEditor } from "@/lib/nodes/definitions/core/function";
 import { traverseBackwards } from "@/lib/nodes/traverse";
 import { Component } from "../../../zen/physical-modeling/Component";
+import {
+  MetallicComponent,
+  MetallicMaterial,
+} from "../../../zen/physical-modeling/MetallicComponent";
 import { condMessage, message } from "../../../zen/message";
 import { zdf } from "../../../zen/filters/zdf";
 import { svf } from "../../../zen/filters/svf";
@@ -27,6 +31,7 @@ import { PhysicalModel } from "./physical-modeling/types";
 import { createSpiderWeb, SpiderWeb } from "../../../zen/physical-modeling/web-maker";
 import { Material } from "../../../zen/physical-modeling/spider-web";
 import { click, Clicker } from "../../../zen/click";
+import { LazyMetallicComponent } from "./physical-modeling/modeling_metallic";
 import { Range, variable, rawSumLoop } from "../../../zen/loop";
 import {
   invocation,
@@ -782,6 +787,152 @@ export const _compileStatement = (
             ),
             modelComponent.component.gen(compiledArgs[0] as UGen),
           );
+        }
+      }
+    } else if (name === "modeling.metallic") {
+      let { metallicComponent } = compoundOperator as { metallicComponent: LazyMetallicComponent };
+      if (metallicComponent) {
+        let { web, material } = metallicComponent;
+
+        // Check if we've already created the component
+        if (!metallicComponent.component) {
+          // Compile all the required fields for MetallicMaterial
+          let pitch = _compileStatement(
+            material.pitch as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let couplingCoefficient = _compileStatement(
+            material.couplingCoefficient as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let release = _compileStatement(
+            material.release as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let noise = _compileStatement(
+            material.noise as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let x = _compileStatement(
+            material.x as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let y = _compileStatement(
+            material.y as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          // Metal-specific parameters
+          let stiffness = _compileStatement(
+            material.stiffness as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let brightness = _compileStatement(
+            material.brightness as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let nonlinearity = _compileStatement(
+            material.nonlinearity as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let inharmonicity = _compileStatement(
+            material.inharmonicity as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let modeCoupling = _compileStatement(
+            material.modeCoupling as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          let hfDamping = _compileStatement(
+            material.hfDamping as Statement,
+            compiled,
+            depth + 1,
+            newList,
+            _api,
+            _simpleFunctions,
+          );
+
+          // Create the complete metallic material with all parameters
+          let _material = {
+            pitch,
+            release,
+            noise,
+            couplingCoefficient,
+            x,
+            y,
+            stiffness,
+            brightness,
+            nonlinearity,
+            inharmonicity,
+            modeCoupling,
+            hfDamping,
+          };
+
+          // Create the MetallicComponent instance with the compiled parameters
+          metallicComponent.component = new MetallicComponent(
+            _material as MetallicMaterial,
+            web,
+            true, // isEntryPoint = true
+          );
+        }
+
+        // Generate output using the metallic component
+        if (metallicComponent.component) {
+          output = metallicComponent.component.gen(compiledArgs[0] as UGen);
         }
       }
     } else if (name === "modeling.play") {
