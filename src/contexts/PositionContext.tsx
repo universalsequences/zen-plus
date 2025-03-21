@@ -198,11 +198,13 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
       if (!draggingCable) {
         return;
       }
-      // find nearest
+      // Find nearest across all nodes and inlets
       let nearestDist: number = 1000000;
       let nearestNode: ObjectNode | MessageNode | null = null;
       let nearestInlet: number = 0;
+
       for (let node of [...patch.objectNodes, ...patch.messageNodes]) {
+        // Skip if node is the source or destination of the cable being dragged
         if (
           draggingCable.destNode
             ? draggingCable.destNode === node
@@ -210,6 +212,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         ) {
           continue;
         }
+
         let position = node.position;
         let size = sizeIndexRef.current[node.id] || { width: 30, height: 10 };
 
@@ -220,11 +223,15 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         }
         let width = size.width;
 
+        // Check each inlet/outlet of this node
         let iolets = draggingCable.destNode ? node.outlets : node.inlets;
         for (let i = 0; i < iolets.length; i++) {
+          // Skip hidden iolets
           if (iolets[i].hidden) {
             continue;
           }
+
+          // Skip iolets that already have connections to the same source/dest
           if (
             iolets[i].connections.filter((x) =>
               draggingCable.destNode
@@ -234,10 +241,23 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
           ) {
             continue;
           }
-          let offX = (i * width) / iolets.length;
-          let distance = Math.sqrt(
-            Math.pow(position.x + offX - x, 2) + Math.pow(position.y - y, 2),
-          );
+
+          // Calculate inlet/outlet position and distance to mouse
+          // For nodes with multiple inlets/outlets, distribute them evenly across the width
+          // Use proper spacing including margins to make selection more intuitive
+          let margin = width * 0.1; // 10% margin on each side
+          let usableWidth = width - 2 * margin;
+          let spacing = usableWidth / (iolets.length > 1 ? iolets.length - 1 : 1);
+
+          // If only one inlet, center it
+          let ioletX =
+            iolets.length === 1 ? position.x + width / 2 : position.x + margin + i * spacing;
+
+          let ioletY = position.y;
+
+          let distance = Math.sqrt(Math.pow(ioletX - x, 2) + Math.pow(ioletY - y, 2));
+
+          // Update nearest if this is closer than what we've found so far
           if (distance < 100 && distance < nearestDist) {
             nearestDist = distance;
             nearestNode = node;
@@ -245,6 +265,8 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
           }
         }
       }
+
+      // Set the nearest inlet we found, or null if none was close enough
       if (nearestNode) {
         setNearestInlet({
           node: nearestNode,

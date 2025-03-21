@@ -17,9 +17,8 @@ const _sortContexts = (
 ): OperatorContext[] => {
   // stay within the operator context
   let contextA = contexts.filter((x) => x.type === type);
-  if (filter) {
-    return contextA;
-  }
+  // We want to show all results, even if the node already has a set type
+  // Just never filter, instead prioritize the matching type
   let contextB = contexts.filter((x) => x.type !== type);
   return [...contextA, ...contextB];
 };
@@ -31,19 +30,23 @@ let dist = (a: ObjectNode, b: ObjectNode): number => {
 };
 
 const sortContexts = (contexts: OperatorContext[], node: ObjectNode): OperatorContext[] => {
-  if (
-    node.text &&
-    node.operatorContextType &&
-    node.operatorContextType !== OperatorContextType.NUMBER
-  ) {
-    return _sortContexts(contexts, node.operatorContextType, true);
-  }
-
+  // First priority: Check if the patch has a specific type to prioritize
   let subpatch = node.patch as SubPatch;
   if (subpatch.patchType !== undefined && subpatch.patchType !== OperatorContextType.ZEN) {
     return _sortContexts(contexts, subpatch.patchType);
   }
 
+  // Second priority: Use the node's own type if available
+  if (
+    node.text &&
+    node.operatorContextType &&
+    node.operatorContextType !== OperatorContextType.NUMBER
+  ) {
+    // No longer filter, just prioritize by the node's type
+    return _sortContexts(contexts, node.operatorContextType);
+  }
+
+  // Third priority: Use the type of the nearest node in the patch
   let nodes = node.patch.objectNodes
     .filter((x) => x.operatorContextType !== OperatorContextType.NUMBER)
     .filter((x) => x !== node)
@@ -52,7 +55,8 @@ const sortContexts = (contexts: OperatorContext[], node: ObjectNode): OperatorCo
   if (nodes[0]) {
     return _sortContexts(contexts, nodes[0].operatorContextType);
   }
-  // otherwise try to get nearest nodes within the graph
+  
+  // If nothing else applies, return all contexts without prioritization
   return contexts;
 };
 
