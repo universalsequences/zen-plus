@@ -48,6 +48,7 @@ import { slotsout } from "../audio/slots/utils";
 import { modselector } from "./modselector";
 import { panel } from "./panel";
 import { instructionsPerformance } from "./instructions.performance";
+import { tab } from "./ui/tab";
 
 export const api: API = {
   js: js_scripting,
@@ -110,5 +111,6 @@ export const api: API = {
   "<": lt,
   modselector,
   panel,
+  tab,
   "instructions.performance": instructionsPerformance,
 };
