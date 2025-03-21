@@ -106,8 +106,8 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
 
   const onKeyDown = useCallback(
     (e: any) => {
+      // Don't handle keyboard input if user is typing in an input or textarea
       if (
-        !e.metaKey &&
         e.target &&
         ((e.target as HTMLElement).tagName.toLowerCase() === "input" ||
           (e.target as HTMLElement).tagName.toLowerCase() === "textarea")
@@ -122,6 +122,42 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       if (e.key === "x" && e.ctrlKey) {
         setCommand(true);
         return;
+      }
+
+      // Move selected nodes with arrow keys (new feature)
+      if (selectedNodes.length > 0 && !lockedMode && !e.metaKey) {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          const moveDistance = e.shiftKey ? 10 : 1; // Move faster with shift key
+          let updates = {};
+          
+          // Create a batch of position updates
+          selectedNodes.forEach(node => {
+            if (!node.position) return;
+            
+            let newX = node.position.x;
+            let newY = node.position.y;
+            
+            if (e.key === "ArrowUp") newY -= moveDistance;
+            if (e.key === "ArrowDown") newY += moveDistance;
+            if (e.key === "ArrowLeft") newX -= moveDistance;
+            if (e.key === "ArrowRight") newX += moveDistance;
+            
+            // Also update the node's internal position to keep things in sync
+            node.position = { x: newX, y: newY };
+            
+            // Add to the batch update
+            updates[node.id] = { x: newX, y: newY };
+          });
+          
+          e.preventDefault();
+          
+          // Apply all position updates (some nodes might share coordinates)
+          for (const [id, position] of Object.entries(updates)) {
+            updatePosition(id, position as Coordinate);
+          }
+          
+          return;
+        }
       }
 
       if (e.key === "M") {
@@ -268,7 +304,6 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       selectedSteps,
       setPatches,
       selectedPatch,
-      selectedPatch,
       patch,
       setLockedMode,
       lockedMode,
@@ -276,6 +311,10 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       setSelectedConnection,
       deleteNodes,
       deleteConnection,
+      updatePosition,
+      presentationMode,
+      setPresentationMode,
+      setPreparePresentationMode,
     ],
   );
 };
