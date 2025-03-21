@@ -602,6 +602,8 @@ doc("canvas", {
 });
 
 export const gl_canvas = (objectNode: ObjectNode, vertexGraph: Lazy, indices: Lazy) => {
+  objectNode.isResizable = true;
+
   if (!objectNode.attributes["draw type"]) {
     objectNode.attributes["draw type"] = "TRIANGLE_STIP";
   }

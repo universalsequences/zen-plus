@@ -402,13 +402,25 @@ function lerp(a: number, b: number, t: number): number {
  * Convenience functions for creating specific metallic instruments
  */
 
-export const createGongWeb = (size: number): MetallicWeb => {
+export const createGongWeb2 = (size: number): MetallicWeb => {
   return createMetallicWeb({
     numLevels: 8, //Math.floor(size / 8),
     radius: 6,
     instrumentType: "gong",
     centerStiffness: 0.8,
     edgeStiffness: 0.2,
+  });
+};
+
+export const createGongWeb = (size: number): MetallicWeb => {
+  return createMetallicWeb({
+    numLevels: 8,
+    radius: 6,
+    instrumentType: "gong",
+    centerStiffness: 0.8,
+    edgeStiffness: 0.2,
+    centerDamping: 0.6, // Increased from 0.4
+    edgeDamping: 0.8, // Increased from 0.6
   });
 };
 

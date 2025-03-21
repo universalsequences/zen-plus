@@ -57,7 +57,7 @@ const AutoCompletes: React.FC<{
         backgroundColor: "#59575721",
         width: numberCase ? 250 : 400,
       }}
-      className={`absolute ${numberCase ? "h-10 -bottom-10 p-2" : "h-48 -bottom-48"} left-0  overflow-x-hidden overflow-y-scroll bg-zinc-500 text-white border-zinc-400`}
+      className={`absolute ${numberCase ? "h-10 -bottom-10 p-2" : "h-48 -bottom-[196px]"} left-0  overflow-x-hidden overflow-y-scroll bg-zinc-500 text-white border-zinc-400`}
     >
       {isNumber(text) && groupTypes.length === 0 && (
         <div className="italic">hit enter to create a constant number</div>
@@ -74,10 +74,10 @@ const AutoCompletes: React.FC<{
                 selectOption(option);
                 setAutoCompletes([]);
               }}
-              className={
-                (selected === getIndex(idx, index) ? "bg-white text-black " : "") +
-                " flex px-2 py-1 w-full"
-              }
+              style={{
+                backgroundColor: selected === getIndex(idx, index) ? "#9fa3a426" : undefined,
+              }}
+              className={(selected === getIndex(idx, index) ? "" : "") + " flex px-2 py-1 w-full"}
             >
               <div className="w-10">
                 <div
@@ -93,7 +93,10 @@ const AutoCompletes: React.FC<{
                   : option.definition.name}
               </div>
               <div
-                style={{ maxWidth: 250 }}
+                style={{
+                  color: selected === getIndex(idx, index) ? "white" : undefined,
+                  maxWidth: 250,
+                }}
                 className={
                   (selected === getIndex(idx, index) ? "text-zinc-700 " : "text-zinc-400 ") +
                   "ml-auto break-words whitespace-pre-wrap table"

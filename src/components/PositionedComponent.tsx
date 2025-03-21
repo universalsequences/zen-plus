@@ -412,7 +412,10 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       nodeStyle.width = nodeSize.width;
       nodeStyle.height = nodeSize.height;
       allowSize = true;
-    } else if (nodeSize && (objectNode as ObjectNode).name === "zen") {
+    } else if (
+      nodeSize &&
+      ((objectNode as ObjectNode).name === "zen" || (objectNode as ObjectNode).isResizable)
+    ) {
       allowSize = true;
       nodeStyle.width = nodeSize.width;
       nodeStyle.height = nodeSize.height;

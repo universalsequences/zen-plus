@@ -114,7 +114,7 @@ const PatchDropdown = React.memo((props: Props) => {
   const { logout, user } = useAuth();
 
   return (
-    <div className="my-auto w-6 h-6 flex">
+    <div className="my-auto w-6 h-8 flex">
       {/*compressed && name && <WriteOnchain isSubPatch={isSubPatch} setTokenId={setTokenId} previousTokenId={isSubPatch ? 0 : patch.previousTokenId} compressed={compressed} name={name} />*/}
       <Dialog.Root open={option !== null}>
         <DropdownMenu.Root open={open}>

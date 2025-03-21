@@ -58,7 +58,7 @@ export const RecorderToolbar = ({ patch }: Props) => {
     <div className="flex items-center">
       <div
         onClick={toggleRecording}
-        className={`ml-3 w-4 h-4 rounded-full ${recording ? "bg-red-500" : ""} border-zinc-100 border-1 border cursor-pointer`}
+        className={`ml-3 w-4 h-4 rounded-full ${recording ? "bg-red-500" : ""} border-zinc-100 border-2 border cursor-pointer`}
       ></div>
       <div className="w-8">
         {recording ? (

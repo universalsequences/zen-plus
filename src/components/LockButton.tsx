@@ -17,9 +17,9 @@ const LockButton = () => {
         patch.lockedMode = !lockedMode;
         setLockedMode(!lockedMode);
       }}
-      className="cursor-pointer mr-3 mt-1"
+      className="cursor-pointer mr-3 my-auto"
     >
-      {lockedMode ? <LockClosedIcon className="w-4 h-4" /> : <LockOpen2Icon className="w-4 h-4" />}
+      {lockedMode ? <LockClosedIcon className="w-5 h-5" /> : <LockOpen2Icon className="w-5 h-5" />}
     </div>
   );
 };

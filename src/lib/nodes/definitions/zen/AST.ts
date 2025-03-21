@@ -924,9 +924,9 @@ export const _compileStatement = (
 
           // Create the MetallicComponent instance with the compiled parameters
           metallicComponent.component = new MetallicComponent(
-            _material as MetallicMaterial,
-            web,
-            true, // isEntryPoint = true
+            20,
+            _material.pitch as Arg,
+            _material.release as Arg,
           );
         }
 

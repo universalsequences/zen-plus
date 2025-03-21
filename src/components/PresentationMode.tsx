@@ -22,11 +22,11 @@ const PresentationMode = () => {
       }}
       className={
         (presentationMode ? "bg-white" : "") +
-        " cursor-pointer p-0.5 rounded-full h-4 w-4 flex my-auto"
+        " cursor-pointer p-0.5 rounded-full h-6 w-6 flex my-auto"
       }
     >
       <DesktopIcon
-        className={(presentationMode ? "invert w-3 h-3" : "w-3 h-3") + " m-auto transition-all"}
+        className={(presentationMode ? "invert w-5 h-5" : "w-5 h-5") + " m-auto transition-all"}
       />
     </div>
   );

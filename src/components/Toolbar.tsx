@@ -182,7 +182,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
         >
           <PatchDropdown patch={patch}>
-            <GlobeIcon className="w-4 h-4 my-auto mr-3 cursor-pointer" />
+            <GlobeIcon className="w-4 h-8 my-auto mr-3 cursor-pointer" />
           </PatchDropdown>
           <div
             style={{ minWidth: "100px" }}
@@ -212,7 +212,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
       >
         <PatchDropdown patch={patch}>
-          <GlobeIcon className="w-4 h-4 my-auto mr-3 cursor-pointer" />
+          <GlobeIcon className="w-4 h-8 my-auto mr-3 cursor-pointer" />
         </PatchDropdown>
         <div className="flex relative pr-8 my-auto">
           {breadcrumbs}
