@@ -102,20 +102,6 @@ const PatchTile: React.FC<{
     }
   }
 
-  // console.log("tile container maxWidth=%s maxHeight=%s", _maxWidth, _maxHeight, tile);
-
-  if (tile.patch && tile.parent) {
-    /*
-        let _direction = tile.parent ? tile.parent.splitDirection : null;
-        return (<PatchWrapper
-            fileToOpen={fileToOpen}
-            setFileToOpen={setFileToOpen}
-            //key={i + (_tile.patch ? _tile.patch.id : '')}
-            maxWidth={_direction === "horizontal" ? size : 100} maxHeight={_direction === "vertical" ? size : 100} index={0} patch={tile.patch} />
-        );
-        */
-  }
-
   let remainder = tile.children[0] && tile.children[0].patch;
   let children =
     tile.children.length === 0 && tile.patch
@@ -123,33 +109,9 @@ const PatchTile: React.FC<{
       : [
           ...(remainder ? [mem] : []),
           ...tile.children.slice(remainder ? 1 : 0).map((tile: Tile, i: number) => {
-            //if (remainder) {
-            //    i += 1;
-            //}
-
-            let _tile: Tile = tile; //Tile | null = tile.children.length === 0 && tile.patch ?
-            // tile : tile.children[0].patch ? tile.children[0] : null;
+            let _tile: Tile = tile;
 
             if (_tile && _tile.patch && false) {
-              /*
-            let _direction = _tile.parent ? _tile.parent.splitDirection : null;
-            let cl = _direction === "vertical" ? "mx-2" : "my-2";
-            let size = _tile.parent ? _tile.parent.size : 0;
-            if (_tile.parent) {
-                if (_tile.parent.children[1] === _tile) {
-                    size = 100 - size;
-                }
-            } else {
-                size = 100;
-            }
-            return (
-                <PatchWrapper
-                    fileToOpen={fileToOpen}
-                    setFileToOpen={setFileToOpen}
-                    key={i + (_tile.patch ? _tile.patch.id : '')}
-                    maxWidth={_direction === "horizontal" ? size : 100} maxHeight={_direction === "vertical" ? size : 100} index={0} patch={_tile.patch} />
-            );
-            */
             } else {
               return (
                 <PatchTile
@@ -162,31 +124,6 @@ const PatchTile: React.FC<{
             }
           }),
         ];
-  /*
-    let keyframe = ``;
-    let depth = tile.getDepth() + '____';
-    if (tile.splitDirection === "horizontal") {
-        keyframe = `@keyframes horizontal-slide-${depth} {
-0% { max-width: 100%};
-100% { max-width: ${_maxWidth}% }
-}
-`;
-    } else {
-        _maxWidth = 100
-    }
-    if (tile.splitDirection === "vertical") {
-        keyframe = `@keyframes vertical-slide-${depth} {
-0% { max-height: 100%};
-100% { max-height: ${_maxHeight}% }
-}
-`;
-    } else {
-        _maxHeight = 100;
-    }
-
-    let animation = `${tile.splitDirection}-slide-${depth} 0.5s ease`;
-    */
-
   return (
     <>
       <div

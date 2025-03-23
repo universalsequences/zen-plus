@@ -164,8 +164,8 @@ doc("tab", {
   numberOfOutlets: 2,
   inletNames: ["index"],
   outletNames: ["selected tab", "selected index"],
-  description: "Create a tabbed interface to organize objects in presentation mode",
-  isResizable: true,
+  description:
+    "Create a tabbed interface to organize objects in presentation mode. Objects are shown/hidden based on tab selection.\n\nEach tab is defined in the 'options' attribute as a comma-separated list. Objects to be shown in each tab are defined in the 'tab0', 'tab1', etc. attributes as comma-separated lists of scripting names.\n\nYou can customize the appearance with these attributes:\n- accent-color: color of the selected tab indicator (default: #2ad4bf)\n- base-color: background color (default: #27272a)\n- active-color: selected tab background color (default: #3f3f46)",
 });
 
 export const tab = (node: ObjectNode) => {
@@ -181,6 +181,19 @@ export const tab = (node: ObjectNode) => {
   // Initialize options attribute
   if (!node.attributes["options"]) {
     node.attributes["options"] = "Tab 1,Tab 2";
+  }
+
+  // Initialize color attributes with defaults
+  if (!node.attributes.hasOwnProperty("accent-color")) {
+    node.attributes["accent-color"] = "#2ad4bf"; // Default teal accent color
+  }
+
+  if (!node.attributes.hasOwnProperty("base-color")) {
+    node.attributes["base-color"] = "#27272a"; // Dark background color
+  }
+
+  if (!node.attributes.hasOwnProperty("active-color")) {
+    node.attributes["active-color"] = "#3f3f46"; // Selected tab background color
   }
 
   // Initialize TabData as custom data

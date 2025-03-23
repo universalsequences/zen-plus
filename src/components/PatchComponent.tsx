@@ -44,6 +44,7 @@ const PatchComponent: React.FC<{
   messageNodes?: MessageNode[];
   index: number;
   isCustomView?: boolean;
+  children?: React.ReactNode;
 }> = ({
   isWindow,
   visibleObjectNodes,
@@ -54,6 +55,7 @@ const PatchComponent: React.FC<{
   fileToOpen,
   setFileToOpen,
   tileRef,
+  children,
 }) => {
   useThemeContext();
 
@@ -293,8 +295,7 @@ const PatchComponent: React.FC<{
           zoomRef={zoomRef}
           zoomableRef={zoomableRef}
         />
-
-        {!isCustomView && !isWindow && <Toolbar patch={patch} />}
+        {!isWindow && children}
       </div>
     );
   }, [

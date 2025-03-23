@@ -7,6 +7,7 @@ import { MessageProvider } from "@/contexts/MessageContext";
 import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from "@/lib/nodes/types";
 import { usePatches } from "@/contexts/PatchesContext";
 import { PatchImpl } from "@/lib/nodes/Patch";
+import Toolbar from "./Toolbar";
 
 const PatchWrapper: React.FC<{
   isWindow?: boolean;
@@ -30,7 +31,9 @@ const PatchWrapper: React.FC<{
             index={index}
             setFileToOpen={setFileToOpen}
             fileToOpen={fileToOpen}
-          />
+          >
+            <Toolbar patch={patch} />
+          </PatchComponent>
         </PositionProvider>
       </LockedProvider>
     </PatchProvider>
