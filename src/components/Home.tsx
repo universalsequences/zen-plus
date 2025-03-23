@@ -43,6 +43,7 @@ import { WindowsProvider } from "@/contexts/WindowsContext";
 import { GlossaryDefinition } from "./docs/GlossaryDefinition";
 import { GlossaryProvider } from "@/contexts/GlossaryContext";
 import { useAudioContext } from "@/contexts/AudioContextContext";
+import GlobalKeyBindingsProvider from "./GlobalKeyBindingsProvider";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia],
@@ -145,17 +146,19 @@ export default function App(props: Props) {
         <MessageProvider>
           <SelectionProvider>
             <PatchesProvider basePatch={basePatch}>
-              <WindowsProvider>
-                <WorkerProvider patch={basePatch}>
-                  <TilesProvider>
-                    <StepsProvider>
-                      <main className="flex min-h-screen flex-col h-full w-full text-white">
-                        <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
-                      </main>
-                    </StepsProvider>
-                  </TilesProvider>
-                </WorkerProvider>
-              </WindowsProvider>
+              <GlobalKeyBindingsProvider>
+                <WindowsProvider>
+                  <WorkerProvider patch={basePatch}>
+                    <TilesProvider>
+                      <StepsProvider>
+                        <main className="flex min-h-screen flex-col h-full w-full text-white">
+                          <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
+                        </main>
+                      </StepsProvider>
+                    </TilesProvider>
+                  </WorkerProvider>
+                </WindowsProvider>
+              </GlobalKeyBindingsProvider>
             </PatchesProvider>
           </SelectionProvider>
         </MessageProvider>

@@ -854,3 +854,30 @@ div:active {
         background-color: #5a5959;
     }
 }
+
+/* Buffer List View styles */
+.buffer-list {
+    overflow-y: auto;
+    
+    .buffer-item {
+        transition: background-color 0.2s ease;
+        
+        &:hover {
+            background-color: #393939;
+        }
+    }
+    
+    .buffer-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .buffer-description {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+    }
+}

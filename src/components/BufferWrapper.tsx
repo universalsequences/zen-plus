@@ -5,6 +5,7 @@ import { LockedProvider } from "@/contexts/LockedContext";
 import { PatchProvider } from "@/contexts/PatchContext";
 import { Buffer, BufferType } from "@/lib/tiling/types";
 import Toolbar from "./Toolbar";
+import PatchComponent from "./PatchComponent";
 
 /**
  * BufferWrapper is a component that provides context providers for buffers
@@ -24,24 +25,23 @@ const BufferWrapper: React.FC<{
   if (buffer.type === BufferType.Patch && !buffer.patch) {
     return <div className="text-white p-4">Error: No patch in buffer</div>;
   }
-  
+
   // For now, wrap PatchProvider around BufferComponent for Patch type
   return buffer.type === BufferType.Patch && buffer.patch ? (
     <PatchProvider patch={buffer.patch}>
       <LockedProvider patch={buffer.patch}>
         <PositionProvider patch={buffer.patch}>
-          <BufferComponent
+          <PatchComponent
             isWindow={isWindow}
             tileRef={tileRef}
             maxWidth={maxWidth}
             maxHeight={maxHeight}
             index={index}
-            buffer={buffer}
             fileToOpen={fileToOpen}
             setFileToOpen={setFileToOpen}
           >
             <Toolbar patch={buffer.patch} />
-          </BufferComponent>
+          </PatchComponent>
         </PositionProvider>
       </LockedProvider>
     </PatchProvider>

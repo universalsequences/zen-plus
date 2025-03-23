@@ -13,6 +13,7 @@ import { usePatchMouse } from "@/hooks/usePatchMouse";
 import { useZoom } from "@/hooks/useZoom";
 import { useKeyBindings } from "@/hooks/useKeyBindings";
 import { useStorage } from "@/contexts/StorageContext";
+import BufferListView from "./BufferListView";
 
 /**
  * BufferComponent represents a generic container for any buffer type in a tile
@@ -54,64 +55,20 @@ const BufferComponent: React.FC<{
     setPatchDragging,
     changeTileForPatch,
     setSelectedPatch,
+    setWorkingBuffers,
   } = usePatches();
 
   // UI state hooks
   const [draggingOver, setDraggingOver] = useState(false);
   const { gridTemplate } = useTilesContext();
-  const { lockedMode } = useLocked();
   const { loadSubPatches } = useStorage();
-  const { selection, updateAttributes, setSelection, setSelectedNodes, setSelectedConnection } =
-    useSelection();
-
-  useEffect(() => {
-    loadSubPatches();
-  }, []);
-  const { nearestInlet, draggingCable, presentationMode } = usePosition();
 
   // Extract patch for Patch buffer type (for backward compatibility)
   const patch = buffer.type === BufferType.Patch ? buffer.patch : null;
 
-  // Set presentation mode based on view type
-  const effectivePresentationMode = isCustomView ? true : presentationMode;
-
   // Refs for zoom and scroll
   const scrollRef = useRef<HTMLDivElement>(null);
   const { zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
-
-  // Initialize key bindings for patch type buffers
-  useKeyBindings(scrollRef, patch);
-
-  // Set up mouse handlers for patch interactions
-  const {
-    onClick: onPatchClick,
-    onMouseUp,
-    onSelectionMove,
-    onMouseDown,
-  } = usePatchMouse({
-    isCustomView,
-  });
-
-  // Set up initialization for patch
-  useEffect(() => {
-    if (patch) {
-      patch.updateAttributes = updateAttributes;
-
-      // Update the selected patch when the buffer is of type patch
-      if (selectedBuffer === buffer) {
-        setSelectedPatch(patch);
-      }
-    }
-  }, [patch, updateAttributes, selectedBuffer, buffer, setSelectedPatch]);
-
-  // Handle dropping patches for rearrangement
-  const onDrop = useCallback(() => {
-    setDraggingOver(false);
-    if (patchDragging && patch) {
-      changeTileForPatch(patch, patchDragging);
-      setPatchDragging(undefined);
-    }
-  }, [patch, patchDragging, changeTileForPatch, setPatchDragging]);
 
   // Handler for clicks in the buffer area
   const handleClick = useCallback(
@@ -119,28 +76,13 @@ const BufferComponent: React.FC<{
       // Select this buffer
       setSelectedBuffer(buffer);
 
-      // For Patch type buffers, also handle patch-specific clicks
-      if (buffer.type === BufferType.Patch && patch) {
-        setSelectedPatch(patch);
-        onPatchClick(e);
-      } else if (selection && selection.x1 === selection.x2) {
-        // Clear selection when clicking on empty space
-        setSelectedNodes([]);
-        setSelectedConnection(null);
-        setSelection(null);
-      }
+      // Update working buffers when selecting a buffer
+      setWorkingBuffers((prev) => {
+        // Add this buffer to the front of the list if not already there
+        return [buffer, ...prev.filter((b) => b.id !== buffer.id)].slice(0, 10);
+      });
     },
-    [
-      buffer,
-      setSelectedBuffer,
-      patch,
-      setSelectedPatch,
-      onPatchClick,
-      selection,
-      setSelectedNodes,
-      setSelectedConnection,
-      setSelection,
-    ],
+    [buffer, setSelectedBuffer, patch, setSelectedPatch, setWorkingBuffers],
   );
 
   // Render the buffer with calculated dimensions and styling
@@ -230,8 +172,6 @@ const BufferComponent: React.FC<{
       !isCustomView && buffer === selectedBuffer ? "selected-buffer" : "",
       isCustomView ? "" : "border border-zinc-100",
       "flex flex-col relative w-full",
-      effectivePresentationMode ? "presentation" : "",
-      lockedMode ? "locked" : "",
       isCustomView ? "custom-view" : "tile",
     ]
       .filter(Boolean)
@@ -243,18 +183,11 @@ const BufferComponent: React.FC<{
         onDragOver={() => patchDragging && setDraggingOver(true)}
         onDragLeave={() => setDraggingOver(false)}
         onClick={handleClick}
-        onMouseUp={buffer.type === BufferType.Patch ? onMouseUp : undefined}
-        onMouseMove={buffer.type === BufferType.Patch ? onSelectionMove : undefined}
-        onMouseDown={buffer.type === BufferType.Patch ? onMouseDown : undefined}
-        onDrop={onDrop}
         className={classList}
       >
-        {!isCustomView && <PatchResizer isCustomView={false} />}
-
-        {/* Render content based on buffer type */}
         {buffer.type === BufferType.Patch && buffer.patch && (
           <PatchInner
-            isSelected={selectedBuffer === buffer}
+            isSelected={buffer === selectedBuffer}
             index={index}
             isCustomView={isCustomView}
             patch={buffer.patch}
@@ -271,7 +204,7 @@ const BufferComponent: React.FC<{
           <div className="p-4 text-white">Directory Browser (Not yet implemented)</div>
         )}
         {buffer.type === BufferType.BufferList && (
-          <div className="p-4 text-white">Buffer List (Not yet implemented)</div>
+          <BufferListView buffer={buffer} />
         )}
 
         {!isWindow && children}
@@ -287,19 +220,10 @@ const BufferComponent: React.FC<{
     index,
     isCustomView,
     rootTile,
-    lockedMode,
-    effectivePresentationMode,
     draggingOver,
     handleClick,
-    onMouseUp,
-    onSelectionMove,
-    onMouseDown,
-    onDrop,
-    draggingCable,
-    nearestInlet,
     zoomRef,
     zoomableRef,
-    selection,
     fileToOpen,
     setFileToOpen,
   ]);

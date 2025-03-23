@@ -113,6 +113,8 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         setCommand(true);
         return;
       }
+      
+      // Buffer commands are now handled by useGlobalKeyBindings
 
       // Move selected nodes with arrow keys (new feature)
       if (selectedNodes.length > 0 && !lockedMode && !e.metaKey) {
