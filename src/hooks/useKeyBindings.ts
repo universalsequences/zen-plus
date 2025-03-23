@@ -10,7 +10,7 @@ import { useSelection } from "@/contexts/SelectionContext";
 import { useWindows } from "@/contexts/WindowsContext";
 import { useStepsContext } from "@/contexts/StepsContext";
 
-export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement | null>) => {
+export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement | null>, targetPatch?: any) => {
   let { setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
   const { lockedMode, setLockedMode } = useLocked();
   let {
@@ -42,43 +42,19 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
   const counter1 = useRef(0);
 
   const [command, setCommand] = useState(false);
-
-  const segmentSelectedCable = useCallback((cable: IOConnection) => {
-    if (sizeIndexRef.current[cable.source.id]) {
-      segmentCable(cable, getSegmentation(cable, sizeIndexRef.current));
-    }
-  }, []);
-
+  
   const currentMousePosition = useRef<Coordinate | null>(null);
-  useEffect(() => {
-    window.addEventListener("mousemove", onMouseMove);
-    return () => window.removeEventListener("mousemove", onMouseMove);
-  }, []);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     currentMousePosition.current = { x: e.clientX, y: e.clientY };
   }, []);
 
   useEffect(() => {
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    selectedConnection,
-    patches,
-    setSelectedPatch,
-    selectedPatch,
-    setCommand,
-    command,
-    setPatches,
-    lockedMode,
-    setLockedMode,
-    setSelectedConnection,
-    selectedNodes,
-    deleteNodes,
-    selectedSteps,
-  ]);
-
-  const getXY = (): Coordinate | null => {
+    window.addEventListener("mousemove", onMouseMove);
+    return () => window.removeEventListener("mousemove", onMouseMove);
+  }, [onMouseMove]);
+  
+  const getXY = useCallback((): Coordinate | null => {
     if (!scrollRef.current || !currentMousePosition.current) return null;
 
     let pos = currentMousePosition.current;
@@ -88,10 +64,20 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     let x = scrollRef.current.scrollLeft + client.x;
     let y = scrollRef.current.scrollTop + client.y;
     return { x, y };
-  };
+  }, [scrollRef]);
+  
+  const segmentSelectedCable = useCallback((cable: IOConnection) => {
+    if (sizeIndexRef.current[cable.source.id]) {
+      segmentCable(cable, getSegmentation(cable, sizeIndexRef.current));
+    }
+  }, [segmentCable, sizeIndexRef]);
+  
   const createMessageNode = useCallback((isNumberBox: boolean, isParameter?: boolean) => {
+    // Use targetPatch if provided, otherwise fall back to context patch
+    const currentPatch = targetPatch || patch;
+    
     let messageNode = new MessageNodeImpl(
-      patch,
+      currentPatch,
       isNumberBox ? MessageType.Number : MessageType.Message,
     );
     let position = getXY();
@@ -102,8 +88,9 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       newMessageNode(messageNode, position);
       updatePosition(messageNode.id, position);
     }
-  }, []);
+  }, [targetPatch, patch, newMessageNode, updatePosition, getXY]);
 
+  // Define onKeyDown first, then we'll use it in the effect
   const onKeyDown = useCallback(
     (e: any) => {
       // Don't handle keyboard input if user is typing in an input or textarea
@@ -115,7 +102,10 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         return;
       }
 
-      if (selectedPatch !== patch) {
+      // If a targetPatch was provided, use it instead of the context patch
+      const currentPatch = targetPatch || patch;
+      
+      if (selectedPatch !== currentPatch) {
         return;
       }
 
@@ -217,9 +207,6 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
           liftPatchTile(selectedPatch);
           setPatchWindows([]);
         }
-        //if (selectedPatch) {
-        //    setPatches([selectedPatch]);
-        // }
       }
 
       if (e.key === "k" && command) {
@@ -227,9 +214,6 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         if (selectedPatch) {
           closePatch(selectedPatch);
         }
-        //if (selectedPatch) {
-        //    setPatches([selectedPatch]);
-        // }
       }
 
       if (e.key === "2" && command) {
@@ -305,6 +289,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       setPatches,
       selectedPatch,
       patch,
+      targetPatch,
       setLockedMode,
       lockedMode,
       deletePositions,
@@ -315,6 +300,25 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       presentationMode,
       setPresentationMode,
       setPreparePresentationMode,
-    ],
+      segmentSelectedCable,
+      createMessageNode,
+      expandPatch,
+      liftPatchTile,
+      setPatchWindows,
+      patchWindows,
+      splitTile,
+      switchTileDirection,
+      goToParentTile,
+      goToPreviousPatch,
+      resizeTile
+    ]
   );
+
+  // Now add the event listener
+  useEffect(() => {
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onKeyDown]);
+
+  return { createMessageNode, segmentSelectedCable };
 };

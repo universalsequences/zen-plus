@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from "react";
 import { SubPatch, Patch, IOConnection, ObjectNode } from "@/lib/nodes/types";
-import { Tile } from "@/lib/tiling/types";
+import { type Buffer, type Tile, BufferType } from "@/lib/tiling/types";
 import { TileNode } from "@/lib/tiling/TileNode";
 
 export type Connections = {
@@ -16,8 +16,10 @@ interface IPatchesContext {
   setAudioWorklet: (x: AudioWorkletNode | null) => void;
   liftPatchTile: (x: Patch) => void;
   selectedPatch: Patch | null;
+  selectedBuffer: Buffer | null;
   closePatch: (x: Patch) => void;
   setSelectedPatch: (x: Patch | null) => void;
+  setSelectedBuffer: (x: Buffer | null) => void;
   basePatch: Patch;
   patches: Patch[];
   expandPatch: (node: ObjectNode, replace?: boolean) => void;
@@ -60,6 +62,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   const [audioWorklet, setAudioWorklet] = useState<AudioWorkletNode | null>(null);
   const [gridTemplate, setGridTemplate] = useState("1fr 1fr");
   const [selectedPatch, setSelectedPatch] = useState<Patch | null>(null);
+  const [selectedBuffer, setSelectedBuffer] = useState<Buffer | null>(null);
   const [zenCode, setZenCode] = useState<string | null>(null);
   const [visualsCode, setVisualsCode] = useState<string | null>(null);
   const [gridLayout, setGridLayout] = useState<GridLayout[]>([{ gridArea: "1/1/1/1" }]);
@@ -71,9 +74,23 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   useEffect(() => {
     if (patches.length === 1) {
       let patch = patches[0];
-      let _rootTile = new TileNode(patch, null);
+
+      // Create a buffer for the patch
+      const buffer = {
+        id: patch.id,
+        type: BufferType.Patch,
+        patch: patch,
+        name: patch.name || "Untitled Patch",
+      };
+
+      // Create a new TileNode with the Buffer
+      let _rootTile = new TileNode(buffer, null);
       rootTileRef.current = _rootTile;
       setRootTile(_rootTile);
+
+      // Set both selectedPatch and selectedBuffer for the initial patch
+      setSelectedPatch(patch);
+      setSelectedBuffer(buffer);
     } else {
       resetRoot();
     }
@@ -81,7 +98,19 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   const resetRoot = useCallback(() => {
     if (rootTileRef.current) {
-      let _rootTile = new TileNode(rootTileRef.current.patch, null);
+      // When resetting, make sure to maintain the buffer if it exists
+      const buffer =
+        rootTileRef.current.buffer ||
+        (rootTileRef.current.patch
+          ? {
+              id: rootTileRef.current.patch.id,
+              type: BufferType.Patch,
+              patch: rootTileRef.current.patch,
+              name: rootTileRef.current.patch.name || "Untitled Patch",
+            }
+          : null);
+
+      let _rootTile = new TileNode(buffer, null);
       _rootTile.children = rootTileRef.current.children;
       _rootTile.splitDirection = rootTileRef.current.splitDirection;
       _rootTile.id = rootTileRef.current.id;
@@ -94,13 +123,27 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   let flag = useRef(true);
 
+  // Declare the liftPatchTile function as a ref to avoid circular dependencies
+  const liftPatchTileRef = useRef<(patch: Patch) => void>();
+
   const goToPreviousPatch = useCallback(() => {
     let popped = patchHistory.current.pop();
 
     if (popped && selectedPatch && rootTile) {
       let existingTile = rootTile.findPatch(selectedPatch);
       if (existingTile) {
+        // Create a buffer for the popped patch
+        const poppedBuffer = {
+          id: popped.id,
+          type: BufferType.Patch,
+          patch: popped,
+          name: popped.name || "Untitled Patch",
+        };
+
+        // Update both buffer and patch for backward compatibility
+        existingTile.buffer = poppedBuffer;
         existingTile.patch = popped;
+
         let indexOf = patches.indexOf(selectedPatch);
         if (indexOf > -1) {
           patches[indexOf] = popped;
@@ -115,42 +158,79 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           existingTile.parent.children = [existingTile.parent.children[0]];
         }
 
+        // Update both selectedPatch and selectedBuffer
         setSelectedPatch(popped);
+        setSelectedBuffer(poppedBuffer);
+
         resetRoot();
 
         patchesRef.current = Array.from(new Set(_patches));
         setPatches(Array.from(new Set(_patches)));
-        liftPatchTile(popped);
+
+        // Use the ref to call liftPatchTile
+        if (liftPatchTileRef.current) {
+          liftPatchTileRef.current(popped);
+        }
       }
     }
-  }, [setRootTile, patches, setPatches, rootTile]);
+  }, [setRootTile, patches, setPatches, rootTile, setSelectedPatch, setSelectedBuffer, resetRoot]);
 
   const goToParentTile = useCallback(() => {
     if (selectedPatch && rootTile && (selectedPatch as SubPatch).parentPatch) {
       let existingTile = rootTile.findPatch(selectedPatch);
       if (existingTile) {
-        existingTile.patch = (selectedPatch as SubPatch).parentPatch;
+        const parentPatch = (selectedPatch as SubPatch).parentPatch;
+
+        // Create a buffer for the parent patch
+        const parentBuffer = {
+          id: parentPatch.id,
+          type: BufferType.Patch,
+          patch: parentPatch,
+          name: parentPatch.name || "Untitled Patch",
+        };
+
+        // Update both buffer and patch for backward compatibility
+        existingTile.buffer = parentBuffer;
+        existingTile.patch = parentPatch;
+
+        // Check if we need to consolidate children
         if (
           existingTile.parent &&
           existingTile.parent.children.length === 2 &&
-          existingTile.parent.children[0].patch === existingTile.parent.children[1].patch
+          (existingTile.parent.children[0].patch === existingTile.parent.children[1].patch ||
+            (existingTile.parent.children[0].buffer?.patch ===
+              existingTile.parent.children[1].buffer?.patch &&
+              existingTile.parent.children[0].buffer?.patch !== undefined))
         ) {
           existingTile.parent.children = [existingTile.parent.children[0]];
           existingTile.parent.size = 100;
         }
+
         let indexOf = patches.indexOf(selectedPatch);
         if (indexOf > -1) {
-          patches[indexOf] = existingTile.patch;
+          patches[indexOf] = parentPatch;
         }
 
-        setSelectedPatch((selectedPatch as SubPatch).parentPatch);
+        // Update both selectedPatch and selectedBuffer
+        setSelectedPatch(parentPatch);
+        setSelectedBuffer(parentBuffer);
+
         resetRoot();
         patchesRef.current = Array.from(new Set(patches));
         setPatches(Array.from(new Set(patches)));
         patchHistory.current.push(selectedPatch);
       }
     }
-  }, [setRootTile, patches, setPatches, rootTile]);
+  }, [
+    setRootTile,
+    patches,
+    setPatches,
+    rootTile,
+    selectedPatch,
+    setSelectedPatch,
+    setSelectedBuffer,
+    resetRoot,
+  ]);
 
   const patchHistory = useRef<Patch[]>([]);
 
@@ -201,9 +281,19 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   const expandPatch = useCallback(
     (objectNode: ObjectNode, replace?: boolean) => {
-      if (!rootTileRef.current) {
+      if (!rootTileRef.current || !objectNode.subpatch) {
         return;
       }
+
+      // Create a buffer for the subpatch
+      const subpatchBuffer = {
+        id: objectNode.subpatch.id,
+        type: BufferType.Patch,
+        patch: objectNode.subpatch,
+        name: objectNode.subpatch.name || "Untitled Patch",
+      };
+
+      // Check if this buffer/patch already exists in a tile
       let includes = rootTileRef.current.findPatch(objectNode.subpatch as Patch);
       if (objectNode.subpatch && !includes) {
         objectNode.subpatch.justExpanded = true;
@@ -216,13 +306,17 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           allTiles.sort((a: Tile, b: Tile) => a.getDepth() - b.getDepth());
           let existingTile = rootTile.findPatch(objectNode.subpatch);
           if (existingTile) {
+            // Update both selectedPatch and selectedBuffer
             setSelectedPatch(objectNode.subpatch);
+            setSelectedBuffer(existingTile.buffer);
             return;
           }
 
           if (replace) {
             let tile = rootTile.findPatch(objectNode.patch);
             if (tile) {
+              // Update both buffer and patch (for backward compatibility)
+              tile.buffer = subpatchBuffer;
               tile.patch = objectNode.subpatch;
             }
           } else {
@@ -246,8 +340,9 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
                   ? "horizontal"
                   : "vertical"
                 : "horizontal";
-              //let dir: "vertical" | "horizontal" = !flag.current ? "vertical" : "horizontal";
-              tile.split(dir, objectNode.subpatch);
+
+              // Use the buffer for the split
+              tile.split(dir, subpatchBuffer);
             }
           }
         }
@@ -265,12 +360,15 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           patchesRef.current = [...patches, objectNode.subpatch];
           setPatches([...patches, objectNode.subpatch]);
         }
+
+        // Update both selectedPatch and selectedBuffer
         if (objectNode.subpatch) {
           setSelectedPatch(objectNode.subpatch);
+          setSelectedBuffer(subpatchBuffer);
         }
       }
     },
-    [setPatches, patches, setSelectedPatch, setGridLayout, rootTile],
+    [setPatches, patches, setSelectedPatch, setSelectedBuffer, setGridLayout, rootTile],
   );
 
   const closePatch = useCallback(
@@ -283,25 +381,60 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             if (patches.length === 1) {
               return;
             }
-            rootTile.children = tile.parent.children.filter((x) => x.patch !== patch);
-            // tile.parent.children = tile.parent.children.filter(x => x.patch !== patch);
+            // Use both buffer and patch checks for filtering
+            rootTile.children = tile.parent.children.filter(
+              (x) => x.patch !== patch && (!x.buffer || x.buffer.patch !== patch),
+            );
           } else if (tile.children.length === 0) {
-            tile.parent.children = tile.parent.children.filter((x) => x.patch !== patch);
+            // Use both buffer and patch checks for filtering
+            tile.parent.children = tile.parent.children.filter(
+              (x) => x.patch !== patch && (!x.buffer || x.buffer.patch !== patch),
+            );
+
             if (tile.parent.parent === null) {
               tile.parent = tile.parent.children[0];
-              tile.parent.patch = tile.parent.children[0].patch;
+
+              // Set both buffer and patch for backward compatibility
+              if (tile.parent.buffer) {
+                tile.parent.patch = tile.parent.buffer.patch;
+              } else if (tile.parent.patch) {
+                tile.parent.buffer = {
+                  id: tile.parent.patch.id,
+                  type: BufferType.Patch,
+                  patch: tile.parent.patch,
+                  name: tile.parent.patch.name || "Untitled Patch",
+                };
+              }
+
               tile.parent.children = [];
             }
           } else {
-            let child = tile.parent.children.find((x) => x.patch !== patch);
+            // Find child that doesn't have the patch we're closing
+            let child = tile.parent.children.find(
+              (x) => x.patch !== patch && (!x.buffer || x.buffer.patch !== patch),
+            );
+
             if (child) {
-              tile.parent.patch = child.patch;
+              // Set both buffer and patch for backward compatibility
+              if (child.buffer) {
+                tile.parent.buffer = child.buffer;
+                tile.parent.patch = child.buffer.patch;
+              } else if (child.patch) {
+                tile.parent.buffer = {
+                  id: child.patch.id,
+                  type: BufferType.Patch,
+                  patch: child.patch,
+                  name: child.patch.name || "Untitled Patch",
+                };
+                tile.parent.patch = child.patch;
+              }
+
               tile.parent.children = child.children;
             }
           }
-        } else {
         }
       }
+
       let _p = patchesRef.current.filter((x) => x !== patch);
       if (_p.length === 0) {
         _p = [(patch as any).parentPatch];
@@ -310,9 +443,37 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       resetRoot();
 
       setPatches(_p);
-      setSelectedPatch(_p[0]);
+
+      // Update both selectedPatch and selectedBuffer
+      const newPatch = _p[0];
+      setSelectedPatch(newPatch);
+
+      // Find the buffer for the new patch
+      if (rootTile) {
+        const newTile = rootTile.findPatch(newPatch);
+        if (newTile && newTile.buffer) {
+          setSelectedBuffer(newTile.buffer);
+        } else {
+          // Create a new buffer if needed
+          const newBuffer = {
+            id: newPatch.id,
+            type: BufferType.Patch,
+            patch: newPatch,
+            name: newPatch.name || "Untitled Patch",
+          };
+          setSelectedBuffer(newBuffer);
+        }
+      }
     },
-    [setPatches, patches, setSelectedPatch, setGridLayout, rootTile, setRootTile],
+    [
+      setPatches,
+      patches,
+      setSelectedPatch,
+      setSelectedBuffer,
+      setGridLayout,
+      rootTile,
+      setRootTile,
+    ],
   );
 
   let patchesRef = useRef<Patch[]>([]);
@@ -330,9 +491,24 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       if (rootTileRef.current) {
         let tile = rootTileRef.current.findPatch(a);
         if (tile) {
+          // Create a new buffer for the new patch
+          const newBuffer = {
+            id: b.id,
+            type: BufferType.Patch,
+            patch: b,
+            name: b.name || "Untitled Patch",
+          };
+
+          // Update both buffer and patch (for backward compatibility)
+          tile.buffer = newBuffer;
           tile.patch = b;
+
           resetRoot();
+
+          // Update both selectedPatch and selectedBuffer
           setSelectedPatch(b);
+          setSelectedBuffer(newBuffer);
+
           let index = patches.indexOf(a);
           let _patches = [...patches];
           _patches[index] = b;
@@ -342,7 +518,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         }
       }
     },
-    [setRootTile, setPatches, patches],
+    [setRootTile, setPatches, patches, setSelectedPatch, setSelectedBuffer, closePatch, resetRoot],
   );
 
   const splitTile = useCallback(() => {
@@ -355,32 +531,28 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             parentPatch = (parentPatch as SubPatch).parentPatch;
           }
           if (parentPatch && !patches.includes(parentPatch)) {
+            // Create a buffer for the parent patch
+            const parentBuffer = {
+              id: parentPatch.id,
+              type: BufferType.Patch,
+              patch: parentPatch,
+              name: parentPatch.name || "Untitled Patch",
+            };
+
             let parentTile = tile.parent;
             tile.split(
               parentTile && parentTile.splitDirection === "horizontal" ? "vertical" : "horizontal",
-              parentPatch,
+              parentBuffer,
             );
 
             patchesRef.current = [...patches, parentPatch];
             setPatches([...patches, parentPatch]);
             resetRoot();
-          } else {
           }
         }
       }
-      /*
-            if (tile && tile.parent) {
-                tile.parent.patch = patch;
-                let childToKill = tile.parent.children.find(x => x.patch !== patch);
-                tile.parent.children = [];
-                if (childToKill) {
-                    setPatches(patches.filter(x => childToKill && x !== childToKill.patch));
-                }
-                resetRoot();
-            }
-            */
     }
-  }, [rootTile, selectedPatch]);
+  }, [rootTile, selectedPatch, patches, setPatches, resetRoot]);
 
   useEffect(() => {
     basePatch.setZenCode = setZenCode;
@@ -401,29 +573,65 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       if (rootTileRef.current) {
         let tile = rootTileRef.current.findPatch(patch);
         if (tile && tile.parent) {
+          // Create a buffer for the patch
+          const patchBuffer = {
+            id: patch.id,
+            type: BufferType.Patch,
+            patch: patch,
+            name: patch.name || "Untitled Patch",
+          };
+
+          // Set both buffer and patch for backward compatibility
+          tile.parent.buffer = patchBuffer;
           tile.parent.patch = patch;
-          let childToKill = tile.parent.children.find((x) => x.patch !== patch);
+
+          // Find child to remove
+          let childToKill = tile.parent.children.find(
+            (x) => x.patch !== patch && (!x.buffer || x.buffer.patch !== patch),
+          );
+
+          // Clear children
           tile.parent.children = [];
+
           if (tile.parent.parent === null) {
             patchesRef.current = [patch];
             setPatches([patch]);
           } else {
             if (childToKill) {
-              let newPatches = patches.filter((x) => childToKill && x !== childToKill.patch);
-              patchesRef.current = [...newPatches];
-              setPatches(newPatches);
+              // Filter out patches from the killed child
+              const childPatch = childToKill.buffer?.patch || childToKill.patch;
+              if (childPatch) {
+                let newPatches = patches.filter((x) => x !== childPatch);
+                patchesRef.current = [...newPatches];
+                setPatches(newPatches);
+              }
             }
           }
           resetRoot();
-        } else {
         }
+
         setTimeout(() => {
+          // Update both selectedPatch and selectedBuffer
           setSelectedPatch(patch);
+
+          // Find or create the buffer for this patch
+          const patchBuffer = {
+            id: patch.id,
+            type: BufferType.Patch,
+            patch: patch,
+            name: patch.name || "Untitled Patch",
+          };
+          setSelectedBuffer(patchBuffer);
         }, 200);
       }
     },
-    [setRootTile, patches, setPatches, setSelectedPatch],
+    [setRootTile, patches, setPatches, setSelectedPatch, setSelectedBuffer, resetRoot],
   );
+
+  // Update the ref to point to the actual function
+  useEffect(() => {
+    liftPatchTileRef.current = liftPatchTile;
+  }, [liftPatchTile]);
 
   return (
     <PatchesContext.Provider
@@ -434,6 +642,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         zenCode,
         selectedPatch,
         setSelectedPatch,
+        selectedBuffer,
+        setSelectedBuffer,
         gridTemplate,
         setGridTemplate,
         audioWorklet,

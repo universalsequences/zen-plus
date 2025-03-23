@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useNodeOperations } from "@/hooks/useEncapsulation";
 import { usePatchOrganizer } from "@/hooks/usePatchOrganizer";
 import { useZoom } from "@/hooks/useZoom";
+import { usePatchLoader } from "@/hooks/usePatchLoader";
 import LockButton from "./LockButton";
 import { useMessage } from "@/contexts/MessageContext";
 import { traverseBackwards } from "@/lib/nodes/traverse";
@@ -38,13 +39,39 @@ interface Selection {
 
 const PatchInner: React.FC<{
   isSelected: boolean;
-  zoomRef: React.MutableRefObject<number>;
-  zoomableRef: React.MutableRefObject<HTMLDivElement | null>;
+  zoomRef?: React.MutableRefObject<number>;
+  zoomableRef?: React.MutableRefObject<HTMLDivElement | null>;
   visibleObjectNodes?: ObjectNode[];
   messageNodes?: MessageNode[];
   index: number;
   isCustomView?: boolean;
-}> = React.memo(({ isSelected, zoomRef, zoomableRef, visibleObjectNodes, index, isCustomView }) => {
+  patch?: any; // Optional patch prop to support direct patch passing
+  fileToOpen?: any | null;
+  setFileToOpen?: (x: any | null) => void;
+}> = React.memo(({ 
+  isSelected, 
+  zoomRef, 
+  zoomableRef, 
+  visibleObjectNodes, 
+  index, 
+  isCustomView, 
+  patch: propPatch,
+  fileToOpen,
+  setFileToOpen
+}) => {
+  // Create refs if they weren't provided
+  const defaultZoomRef = useRef(1);
+  const defaultZoomableRef = useRef<HTMLDivElement | null>(null);
+  
+  // Use provided refs or defaults
+  const actualZoomRef = zoomRef || defaultZoomRef;
+  const actualZoomableRef = zoomableRef || defaultZoomableRef;
+  useEffect(() => {
+    // If we've been provided a zoom ref from a parent, copy our value to it
+    if (zoomRef && zoomRef.current !== actualZoomRef.current) {
+      zoomRef.current = actualZoomRef.current;
+    }
+  }, [zoomRef, actualZoomRef]);
   useThemeContext();
 
   const { organize } = usePatchOrganizer();
@@ -77,9 +104,40 @@ const PatchInner: React.FC<{
   if (isCustomView) {
     presentationMode = true;
   }
+  
+  // Ensure scrollRef.current matches actualZoomableRef.current's parent
+  useEffect(() => {
+    if (actualZoomableRef.current && actualZoomableRef.current.parentElement) {
+      scrollRef.current = actualZoomableRef.current.parentElement;
+    }
+  }, [actualZoomableRef, scrollRef]);
 
-  const { segmentCables, updateConnections, patch, objectNodes, messageNodes, newObjectNode } =
-    usePatch();
+  // If propPatch is provided, use it instead of the context patch
+  const patchContext = usePatch();
+  const {
+    segmentCables,
+    updateConnections,
+    patch: contextPatch,
+    objectNodes: contextObjectNodes,
+    messageNodes: contextMessageNodes,
+    newObjectNode
+  } = patchContext;
+  
+  // Use propPatch if provided, otherwise use the context patch
+  const patch = propPatch || contextPatch;
+  const objectNodes = propPatch ? propPatch.objectNodes : contextObjectNodes;
+  const messageNodes = propPatch ? propPatch.messageNodes : contextMessageNodes;
+  
+  // Use the usePatchLoader hook
+  const loadPatch = usePatchLoader ? usePatchLoader(patch) : null;
+  
+  // Load patch from file if needed
+  useEffect(() => {
+    if (fileToOpen && !(patch as SubPatch).parentPatch && loadPatch && setFileToOpen) {
+      loadPatch(fileToOpen);
+      setFileToOpen(null);
+    }
+  }, [fileToOpen, patch, loadPatch, setFileToOpen]);
 
   useEffect(() => {
     patch.onNewMessage = onNewMessage;
@@ -88,6 +146,7 @@ const PatchInner: React.FC<{
   // useKeyBindings(scrollRef);
 
   const lastClick = useRef(0);
+  const zoomableId = useRef(`zoomable-area-${patch?.id || Math.random().toString(36).substring(7)}`);
 
   const draggingNodeRef = useRef<DraggingNode | null>(null);
   const resizingNodeRef = useRef<ResizingNode | null>(null);
@@ -138,7 +197,7 @@ const PatchInner: React.FC<{
     presentation,
   } = useNodeOperations({
     isCustomView,
-    zoomRef,
+    zoomRef: actualZoomRef,
     scrollRef,
   });
 
@@ -157,7 +216,8 @@ const PatchInner: React.FC<{
             console.log("Dragging = false");
             setPreDragging(false);
           }}
-          ref={zoomableRef}
+          ref={actualZoomableRef}
+          id={zoomableId.current}
           draggable={preDragging}
           className=" flex flex-1 select-none z-1 "
         >
@@ -175,11 +235,11 @@ const PatchInner: React.FC<{
           )}
           {objectNodes
             .filter((x) => {
-              if (!preDragging || !zoomableRef.current) {
+              if (!preDragging || !actualZoomableRef.current) {
                 return true;
               }
               let width = x.size ? x.size.width : 100;
-              return x.position.x + width < zoomableRef.current.offsetWidth;
+              return x.position.x + width < actualZoomableRef.current.offsetWidth;
             })
             .filter((x) => (presentationMode ? x.attributes["Include in Presentation"] : true))
             .map((objectNode, index) =>
@@ -191,10 +251,10 @@ const PatchInner: React.FC<{
             )}
           {messageNodes
             .filter((x) => {
-              if (!preDragging || !zoomableRef.current) {
+              if (!preDragging || !actualZoomableRef.current) {
                 return true;
               }
-              return x.position.x < zoomableRef.current.offsetWidth;
+              return x.position.x < actualZoomableRef.current.offsetWidth;
             })
             .filter((x) => (presentationMode ? x.attributes["Include in Presentation"] : true))
             .map((messageNode, index) => (
@@ -298,6 +358,8 @@ const PatchInner: React.FC<{
     lockedMode,
     presentationMode,
     preDragging,
+    fileToOpen,
+    setFileToOpen,
   ]);
 
   return out;

@@ -1,14 +1,16 @@
 "use client";
-import PatchComponent from "@/components/PatchComponent";
+import BufferComponent from "@/components/BufferComponent";
 import { PositionProvider } from "@/contexts/PositionContext";
 import { LockedProvider } from "@/contexts/LockedContext";
 import { PatchProvider } from "@/contexts/PatchContext";
-import { MessageProvider } from "@/contexts/MessageContext";
-import { Patch, IOlet, MessageNode, IOConnection, ObjectNode, Coordinate } from "@/lib/nodes/types";
-import { usePatches } from "@/contexts/PatchesContext";
-import { PatchImpl } from "@/lib/nodes/Patch";
+import { Patch } from "@/lib/nodes/types";
+import { Buffer, BufferType } from "@/lib/tiling/types";
 import Toolbar from "./Toolbar";
 
+/**
+ * Legacy PatchWrapper component that wraps a patch in context providers
+ * For backward compatibility, this creates a buffer object and passes it to BufferComponent
+ */
 const PatchWrapper: React.FC<{
   isWindow?: boolean;
   tileRef: React.RefObject<HTMLDivElement | null>;
@@ -19,24 +21,32 @@ const PatchWrapper: React.FC<{
   patch: Patch;
   index: number;
 }> = ({ patch, index, maxWidth, maxHeight, fileToOpen, setFileToOpen, tileRef, isWindow }) => {
+  // Create a buffer object from the patch
+  const buffer: Buffer = {
+    id: patch.id,
+    type: BufferType.Patch,
+    patch: patch,
+    name: patch.name || 'Untitled Patch'
+  };
+  
   return (
     <PatchProvider patch={patch}>
       <LockedProvider patch={patch}>
         <PositionProvider patch={patch}>
-          <PatchComponent
+          <BufferComponent
+            isWindow={isWindow}
             tileRef={tileRef}
             maxWidth={maxWidth}
-            isWindow={isWindow}
             maxHeight={maxHeight}
             index={index}
-            setFileToOpen={setFileToOpen}
-            fileToOpen={fileToOpen}
+            buffer={buffer}
           >
             <Toolbar patch={patch} />
-          </PatchComponent>
+          </BufferComponent>
         </PositionProvider>
       </LockedProvider>
     </PatchProvider>
   );
 };
+
 export default PatchWrapper;

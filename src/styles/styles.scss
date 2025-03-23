@@ -407,8 +407,9 @@ svg {
     }
 }
 
-.tile.selected-patch {
+.tile.selected-patch, .tile.selected-buffer {
     //border-color: #cbffef !important;
+    border-color: #0032ffb8 !important;
 }
 
 .tile {
@@ -741,7 +742,8 @@ div:active {
     background-color: black;
 }
 
-.patch-window.selected-patch {
+.patch-window.selected-patch, .patch-window.selected-buffer {
+    border-color: #0032ffb8 !important;
 }
 .patch-window {
     box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px !important;
