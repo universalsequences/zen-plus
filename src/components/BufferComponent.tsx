@@ -14,6 +14,7 @@ import { useZoom } from "@/hooks/useZoom";
 import { useKeyBindings } from "@/hooks/useKeyBindings";
 import { useStorage } from "@/contexts/StorageContext";
 import BufferListView from "./BufferListView";
+import DiredView from "./DiredView";
 
 /**
  * BufferComponent represents a generic container for any buffer type in a tile
@@ -74,6 +75,7 @@ const BufferComponent: React.FC<{
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       // Select this buffer
+      console.log("selecting buffer");
       setSelectedBuffer(buffer);
 
       // Update working buffers when selecting a buffer
@@ -200,12 +202,8 @@ const BufferComponent: React.FC<{
         {buffer.type === BufferType.Object && (
           <div className="p-4 text-white">Object Buffer (Not yet implemented)</div>
         )}
-        {buffer.type === BufferType.Dired && (
-          <div className="p-4 text-white">Directory Browser (Not yet implemented)</div>
-        )}
-        {buffer.type === BufferType.BufferList && (
-          <BufferListView buffer={buffer} />
-        )}
+        {buffer.type === BufferType.Dired && <DiredView buffer={buffer} />}
+        {buffer.type === BufferType.BufferList && <BufferListView buffer={buffer} />}
 
         {!isWindow && children}
       </div>

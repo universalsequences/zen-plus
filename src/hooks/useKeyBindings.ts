@@ -10,7 +10,10 @@ import { useSelection } from "@/contexts/SelectionContext";
 import { useWindows } from "@/contexts/WindowsContext";
 import { useStepsContext } from "@/contexts/StepsContext";
 
-export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement | null>, targetPatch?: any) => {
+export const useKeyBindings = (
+  scrollRef: React.MutableRefObject<HTMLDivElement | null>,
+  targetPatch?: any,
+) => {
   let { setSelectedConnection, selectedNodes, selectedConnection } = useSelection();
   const { lockedMode, setLockedMode } = useLocked();
   let {
@@ -42,7 +45,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
   const counter1 = useRef(0);
 
   const [command, setCommand] = useState(false);
-  
+
   const currentMousePosition = useRef<Coordinate | null>(null);
 
   const onMouseMove = useCallback((e: MouseEvent) => {
@@ -53,7 +56,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     window.addEventListener("mousemove", onMouseMove);
     return () => window.removeEventListener("mousemove", onMouseMove);
   }, [onMouseMove]);
-  
+
   const getXY = useCallback((): Coordinate | null => {
     if (!scrollRef.current || !currentMousePosition.current) return null;
 
@@ -65,30 +68,36 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
     let y = scrollRef.current.scrollTop + client.y;
     return { x, y };
   }, [scrollRef]);
-  
-  const segmentSelectedCable = useCallback((cable: IOConnection) => {
-    if (sizeIndexRef.current[cable.source.id]) {
-      segmentCable(cable, getSegmentation(cable, sizeIndexRef.current));
-    }
-  }, [segmentCable, sizeIndexRef]);
-  
-  const createMessageNode = useCallback((isNumberBox: boolean, isParameter?: boolean) => {
-    // Use targetPatch if provided, otherwise fall back to context patch
-    const currentPatch = targetPatch || patch;
-    
-    let messageNode = new MessageNodeImpl(
-      currentPatch,
-      isNumberBox ? MessageType.Number : MessageType.Message,
-    );
-    let position = getXY();
-    if (isParameter) {
-      messageNode.attributes["is parameter"] = true;
-    }
-    if (position) {
-      newMessageNode(messageNode, position);
-      updatePosition(messageNode.id, position);
-    }
-  }, [targetPatch, patch, newMessageNode, updatePosition, getXY]);
+
+  const segmentSelectedCable = useCallback(
+    (cable: IOConnection) => {
+      if (sizeIndexRef.current[cable.source.id]) {
+        segmentCable(cable, getSegmentation(cable, sizeIndexRef.current));
+      }
+    },
+    [segmentCable, sizeIndexRef],
+  );
+
+  const createMessageNode = useCallback(
+    (isNumberBox: boolean, isParameter?: boolean) => {
+      // Use targetPatch if provided, otherwise fall back to context patch
+      const currentPatch = targetPatch || patch;
+
+      let messageNode = new MessageNodeImpl(
+        currentPatch,
+        isNumberBox ? MessageType.Number : MessageType.Message,
+      );
+      let position = getXY();
+      if (isParameter) {
+        messageNode.attributes["is parameter"] = true;
+      }
+      if (position) {
+        newMessageNode(messageNode, position);
+        updatePosition(messageNode.id, position);
+      }
+    },
+    [targetPatch, patch, newMessageNode, updatePosition, getXY],
+  );
 
   // Define onKeyDown first, then we'll use it in the effect
   const onKeyDown = useCallback(
@@ -104,7 +113,7 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
 
       // If a targetPatch was provided, use it instead of the context patch
       const currentPatch = targetPatch || patch;
-      
+
       if (selectedPatch !== currentPatch) {
         return;
       }
@@ -113,41 +122,47 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
         setCommand(true);
         return;
       }
-      
+
       // Buffer commands are now handled by useGlobalKeyBindings
 
       // Move selected nodes with arrow keys (new feature)
       if (selectedNodes.length > 0 && !lockedMode && !e.metaKey) {
-        if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight"
+        ) {
+          console.log("doing moving...");
           const moveDistance = e.shiftKey ? 10 : 1; // Move faster with shift key
           let updates = {};
-          
+
           // Create a batch of position updates
-          selectedNodes.forEach(node => {
+          selectedNodes.forEach((node) => {
             if (!node.position) return;
-            
+
             let newX = node.position.x;
             let newY = node.position.y;
-            
+
             if (e.key === "ArrowUp") newY -= moveDistance;
             if (e.key === "ArrowDown") newY += moveDistance;
             if (e.key === "ArrowLeft") newX -= moveDistance;
             if (e.key === "ArrowRight") newX += moveDistance;
-            
+
             // Also update the node's internal position to keep things in sync
             node.position = { x: newX, y: newY };
-            
+
             // Add to the batch update
             updates[node.id] = { x: newX, y: newY };
           });
-          
+
           e.preventDefault();
-          
+
           // Apply all position updates (some nodes might share coordinates)
           for (const [id, position] of Object.entries(updates)) {
             updatePosition(id, position as Coordinate);
           }
-          
+
           return;
         }
       }
@@ -312,8 +327,8 @@ export const useKeyBindings = (scrollRef: React.MutableRefObject<HTMLDivElement 
       switchTileDirection,
       goToParentTile,
       goToPreviousPatch,
-      resizeTile
-    ]
+      resizeTile,
+    ],
   );
 
   // Now add the event listener

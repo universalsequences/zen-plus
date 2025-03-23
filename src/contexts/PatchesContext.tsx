@@ -33,7 +33,7 @@ interface IPatchesContext {
   changeTileForPatch: (a: Patch, b: Patch) => void;
   createDiredBuffer: () => void;
   createBufferListBuffer: () => void;
-  switchToBuffer: (buffer: Buffer) => void;
+  switchToBuffer: (buffer: Buffer, newTile?: boolean) => void;
   killCurrentBuffer: () => void;
   goToPreviousPatch: () => void;
   switchTileDirection: () => void;
@@ -46,6 +46,7 @@ interface IPatchesContext {
   setPatchNames: React.Dispatch<React.SetStateAction<{ [x: string]: string }>>;
   workingBuffers: Buffer[];
   setWorkingBuffers: React.Dispatch<React.SetStateAction<Buffer[]>>;
+  renamePatch: (patch: Patch, newName: string) => void;
 }
 
 interface Props {
@@ -403,127 +404,133 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   );
 
   // Generic function to close a tile
-  const closeTile = useCallback((tile: Tile) => {
-    console.log("Closing tile:", tile.id);
-    if (!rootTileRef.current || !tile) {
-      return;
-    }
-    
-    // Buffer to update workingBuffers if needed
-    let bufferToRemove: Buffer | null = null;
-    if (tile.buffer) {
-      bufferToRemove = tile.buffer;
-    }
-    
-    // Root level handling
-    if (tile.parent === null) {
-      console.log("Cannot close root tile");
-      return; // Cannot close root tile
-    }
-    
-    // Handle case where tile is the only child
-    if (tile.parent.children.length <= 1) {
-      console.log("Tile is the only child of its parent");
-      // Cannot remove the only child - must have a parent with multiple children
-      return;
-    }
-    
-    console.log("Tile has siblings so we can close it");
-    // Find the sibling tile
-    const siblingTile = tile.parent.children.find(child => child !== tile);
-    
-    if (siblingTile) {
-      console.log("Found sibling tile:", siblingTile.id);
-      // Make the parent adopt the sibling's content
-      if (siblingTile.buffer) {
-        tile.parent.buffer = siblingTile.buffer;
-        if (siblingTile.buffer.type === BufferType.Patch && siblingTile.buffer.patch) {
-          tile.parent.patch = siblingTile.buffer.patch;
-        } else {
-          tile.parent.patch = null;
-        }
-      } else if (siblingTile.patch) {
-        tile.parent.patch = siblingTile.patch;
-        tile.parent.buffer = {
-          id: siblingTile.patch.id,
-          type: BufferType.Patch,
-          patch: siblingTile.patch,
-          name: siblingTile.patch.name || "Untitled Patch",
-        };
+  const closeTile = useCallback(
+    (tile: Tile) => {
+      console.log("Closing tile:", tile.id);
+      if (!rootTileRef.current || !tile) {
+        return;
       }
-      
-      // Parent adopts the children of the sibling
-      tile.parent.children = siblingTile.children;
-      
-      // If the sibling has no children, clear the parent's children
-      if (siblingTile.children.length === 0) {
-        tile.parent.children = [];
+
+      // Buffer to update workingBuffers if needed
+      let bufferToRemove: Buffer | null = null;
+      if (tile.buffer) {
+        bufferToRemove = tile.buffer;
       }
-      
-      // If we're closing the selected buffer/tile, select the parent
-      if (selectedBuffer && bufferToRemove && selectedBuffer.id === bufferToRemove.id) {
-        if (tile.parent.buffer) {
-          setSelectedBuffer(tile.parent.buffer);
-        }
-        if (tile.parent.patch) {
-          setSelectedPatch(tile.parent.patch);
-        }
+
+      // Root level handling
+      if (tile.parent === null) {
+        console.log("Cannot close root tile");
+        return; // Cannot close root tile
       }
-      
-      // Update working buffers if needed
-      if (bufferToRemove) {
-        // Only remove from working buffers if it's not used elsewhere
-        const tilesWithBuffer = getAllTilesWithBuffer(bufferToRemove.id);
-        if (tilesWithBuffer.length <= 1) { // Only this tile has it
+
+      // Handle case where tile is the only child
+      if (tile.parent.children.length <= 1) {
+        console.log("Tile is the only child of its parent");
+        // Cannot remove the only child - must have a parent with multiple children
+        return;
+      }
+
+      console.log("Tile has siblings so we can close it");
+      // Find the sibling tile
+      const siblingTile = tile.parent.children.find((child) => child !== tile);
+
+      if (siblingTile) {
+        console.log("Found sibling tile:", siblingTile.id);
+        // Make the parent adopt the sibling's content
+        if (siblingTile.buffer) {
+          tile.parent.buffer = siblingTile.buffer;
+          if (siblingTile.buffer.type === BufferType.Patch && siblingTile.buffer.patch) {
+            tile.parent.patch = siblingTile.buffer.patch;
+          } else {
+            tile.parent.patch = null;
+          }
+        } else if (siblingTile.patch) {
+          tile.parent.patch = siblingTile.patch;
+          tile.parent.buffer = {
+            id: siblingTile.patch.id,
+            type: BufferType.Patch,
+            patch: siblingTile.patch,
+            name: siblingTile.patch.name || "Untitled Patch",
+          };
+        }
+
+        // Parent adopts the children of the sibling
+        tile.parent.children = siblingTile.children;
+
+        // If the sibling has no children, clear the parent's children
+        if (siblingTile.children.length === 0) {
+          tile.parent.children = [];
+        }
+
+        // If we're closing the selected buffer/tile, select the parent
+        if (selectedBuffer && bufferToRemove && selectedBuffer.id === bufferToRemove.id) {
+          if (tile.parent.buffer) {
+            setSelectedBuffer(tile.parent.buffer);
+          }
+          if (tile.parent.patch) {
+            setSelectedPatch(tile.parent.patch);
+          }
+        }
+
+        // Update working buffers if needed
+        if (bufferToRemove) {
+          // Only remove from working buffers if it's not used elsewhere
+          const tilesWithBuffer = getAllTilesWithBuffer(bufferToRemove.id);
+          if (tilesWithBuffer.length <= 1) {
+            // Only this tile has it
+            /*
           setWorkingBuffers(prevBuffers => {
             return prevBuffers.filter(b => b.id !== bufferToRemove!.id);
           });
-        }
-      }
-      
-      // Update patches list if needed
-      if (tile.patch) {
-        const patchToRemove = tile.patch;
-        let stillInUse = false;
-        
-        // Check if this patch is still used in any other tile
-        if (rootTileRef.current) {
-          const tilesWithPatch = findTilesWithPatch(patchToRemove);
-          stillInUse = tilesWithPatch.length > 1; // > 1 because current tile is included
-        }
-        
-        if (!stillInUse) {
-          let _p = patchesRef.current.filter(x => x !== patchToRemove);
-          if (_p.length === 0 && (patchToRemove as any).parentPatch) {
-            _p = [(patchToRemove as any).parentPatch];
+          */
           }
-          patchesRef.current = _p;
-          setPatches(_p);
         }
+
+        // Update patches list if needed
+        if (tile.patch) {
+          const patchToRemove = tile.patch;
+          let stillInUse = false;
+
+          // Check if this patch is still used in any other tile
+          if (rootTileRef.current) {
+            const tilesWithPatch = findTilesWithPatch(patchToRemove);
+            stillInUse = tilesWithPatch.length > 1; // > 1 because current tile is included
+          }
+
+          if (!stillInUse) {
+            let _p = patchesRef.current.filter((x) => x !== patchToRemove);
+            if (_p.length === 0 && (patchToRemove as any).parentPatch) {
+              _p = [(patchToRemove as any).parentPatch];
+            }
+            patchesRef.current = _p;
+            setPatches(_p);
+          }
+        }
+
+        resetRoot();
       }
-      
-      resetRoot();
-    }
-  }, [selectedBuffer, setSelectedBuffer, setSelectedPatch, setWorkingBuffers, resetRoot, setPatches]);
-  
+    },
+    [selectedBuffer, setSelectedBuffer, setSelectedPatch, setWorkingBuffers, resetRoot, setPatches],
+  );
+
   // Function to find all tiles that have a specific patch
   const findTilesWithPatch = useCallback((patch: Patch): Tile[] => {
     if (!rootTileRef.current) {
       return [];
     }
-    
+
     const result: Tile[] = [];
-    
+
     const searchTiles = (tile: Tile) => {
-      if (tile.patch === patch || (tile.buffer?.patch === patch)) {
+      if (tile.patch === patch || tile.buffer?.patch === patch) {
         result.push(tile);
       }
-      
+
       for (const child of tile.children) {
         searchTiles(child);
       }
     };
-    
+
     searchTiles(rootTileRef.current);
     return result;
   }, []);
@@ -570,14 +577,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         }
       }
     },
-    [
-      setPatches,
-      setSelectedPatch,
-      setSelectedBuffer,
-      rootTile,
-      resetRoot,
-      closeTile,
-    ],
+    [setPatches, setSelectedPatch, setSelectedBuffer, rootTile, resetRoot, closeTile],
   );
 
   let patchesRef = useRef<Patch[]>([]);
@@ -612,11 +612,14 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           // Update both selectedPatch and selectedBuffer
           setSelectedPatch(b);
           setSelectedBuffer(newBuffer);
-          
+
           // Add to working buffers list
-          setWorkingBuffers(prevBuffers => {
+          setWorkingBuffers((prevBuffers) => {
             // Add the new buffer at the start of the array
-            const updatedBuffers = [newBuffer, ...prevBuffers.filter(buff => buff.id !== newBuffer.id)];
+            const updatedBuffers = [
+              newBuffer,
+              ...prevBuffers.filter((buff) => buff.id !== newBuffer.id),
+            ];
             // Limit to most recent 10 buffers if needed
             return updatedBuffers.slice(0, 10);
           });
@@ -630,7 +633,16 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         }
       }
     },
-    [setRootTile, setPatches, patches, setSelectedPatch, setSelectedBuffer, setWorkingBuffers, closePatch, resetRoot],
+    [
+      setRootTile,
+      setPatches,
+      patches,
+      setSelectedPatch,
+      setSelectedBuffer,
+      setWorkingBuffers,
+      closePatch,
+      resetRoot,
+    ],
   );
 
   const splitTile = useCallback(() => {
@@ -659,15 +671,18 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
             patchesRef.current = [...patches, parentPatch];
             setPatches([...patches, parentPatch]);
-            
+
             // Add to working buffers list
-            setWorkingBuffers(prevBuffers => {
+            setWorkingBuffers((prevBuffers) => {
               // Add the new buffer at the start of the array
-              const updatedBuffers = [parentBuffer, ...prevBuffers.filter(buff => buff.id !== parentBuffer.id)];
+              const updatedBuffers = [
+                parentBuffer,
+                ...prevBuffers.filter((buff) => buff.id !== parentBuffer.id),
+              ];
               // Limit to most recent 10 buffers if needed
               return updatedBuffers.slice(0, 10);
             });
-            
+
             resetRoot();
           }
         }
@@ -743,18 +758,29 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
             name: patch.name || "Untitled Patch",
           };
           setSelectedBuffer(patchBuffer);
-          
+
           // Add to working buffers list
-          setWorkingBuffers(prevBuffers => {
+          setWorkingBuffers((prevBuffers) => {
             // Add the new buffer at the start of the array
-            const updatedBuffers = [patchBuffer, ...prevBuffers.filter(buff => buff.id !== patchBuffer.id)];
+            const updatedBuffers = [
+              patchBuffer,
+              ...prevBuffers.filter((buff) => buff.id !== patchBuffer.id),
+            ];
             // Limit to most recent 10 buffers if needed
             return updatedBuffers.slice(0, 10);
           });
         }, 200);
       }
     },
-    [setRootTile, patches, setPatches, setSelectedPatch, setSelectedBuffer, setWorkingBuffers, resetRoot],
+    [
+      setRootTile,
+      patches,
+      setPatches,
+      setSelectedPatch,
+      setSelectedBuffer,
+      setWorkingBuffers,
+      resetRoot,
+    ],
   );
 
   // Update the ref to point to the actual function
@@ -763,49 +789,120 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   }, [liftPatchTile]);
 
   // Function to create a new Dired buffer in the currently selected tile
+  // or reuse an existing one for the same patch
   const createDiredBuffer = useCallback(() => {
-    if (!rootTileRef.current || !selectedBuffer) {
+    if (!rootTileRef.current) {
       return;
     }
 
-    // Create a new Dired buffer
-    const diredBuffer: Buffer = {
-      id: uuid(),
-      type: BufferType.Dired,
-      name: "Directory Browser",
-    };
+    // Determine which patch to use for the Dired view
+    // Use selectedPatch if available, otherwise use basePatch
+    const patchToUse = selectedPatch || basePatch;
 
-    // Find the tile with the currently selected buffer
-    const tile =
-      rootTileRef.current.findBuffer(selectedBuffer.id) ||
-      (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null);
+    // First check if we already have a Dired buffer for this patch
+    const existingDiredBuffer = workingBuffers.find(
+      (b) => b.type === BufferType.Dired && b.patch && b.patch.id === patchToUse.id,
+    );
 
-    if (tile) {
-      // Replace the current buffer with the new Dired buffer
-      tile.buffer = diredBuffer;
-
-      // Clear patch reference for buffer types other than Patch
-      if (diredBuffer.type !== BufferType.Patch) {
-        tile.patch = null;
+    // If we found an existing Dired buffer for this patch, use it
+    if (existingDiredBuffer) {
+      // Find the currently selected tile
+      let selectedTile: Tile | null = null;
+      if (selectedBuffer) {
+        selectedTile =
+          rootTileRef.current.findBuffer(selectedBuffer.id) ||
+          (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null);
       }
 
-      // Set the new buffer as selected
-      setSelectedBuffer(diredBuffer);
+      // Fallback to root tile if no selected tile found
+      if (!selectedTile) {
+        selectedTile = rootTileRef.current;
+      }
 
-      // Add to or update working buffers list
+      // Replace the current buffer with the existing Dired buffer
+      selectedTile.buffer = existingDiredBuffer;
+
+      // Clear patch reference for buffer types other than Patch
+      if (existingDiredBuffer.type !== BufferType.Patch) {
+        selectedTile.patch = null;
+      }
+
+      // Set the buffer as selected
+      setSelectedBuffer(existingDiredBuffer);
+
+      // Move to front of working buffers
       setWorkingBuffers((prevBuffers) => {
-        // Add the new buffer at the start of the array
-        const updatedBuffers = [diredBuffer, ...prevBuffers.filter((b) => b.id !== diredBuffer.id)];
-        // Limit to most recent 10 buffers if needed
-        return updatedBuffers.slice(0, 10);
+        return [
+          existingDiredBuffer,
+          ...prevBuffers.filter((b) => b.id !== existingDiredBuffer.id),
+        ].slice(0, 10);
       });
 
       resetRoot();
+      return;
     }
-  }, [rootTile, selectedBuffer, selectedPatch, setSelectedBuffer, resetRoot]);
+
+    // Create a new Dired buffer with reference to the patch
+    const diredBuffer: Buffer = {
+      id: uuid(),
+      type: BufferType.Dired,
+      name: patchToUse.name ? `Directory: ${patchToUse.name}` : "Directory Browser",
+      patch: patchToUse, // Set the patch reference
+    };
+
+    // Find the currently selected tile (the one with the currently selected buffer)
+    let selectedTile: Tile | null = null;
+
+    if (selectedBuffer) {
+      // First, try to find by buffer ID (most accurate)
+      selectedTile = rootTileRef.current.findBuffer(selectedBuffer.id);
+
+      if (!selectedTile && selectedPatch) {
+        // If not found by buffer, try finding by patch
+        selectedTile = rootTileRef.current.findPatch(selectedPatch);
+      }
+    }
+
+    // Fallback to root tile if no selected tile found
+    if (!selectedTile) {
+      selectedTile = rootTileRef.current;
+    }
+
+    console.log("Selected tile for Dired:", selectedTile.id);
+
+    // Replace the current buffer with the new Dired buffer
+    selectedTile.buffer = diredBuffer;
+
+    // Clear patch reference for buffer types other than Patch
+    if (diredBuffer.type !== BufferType.Patch) {
+      selectedTile.patch = null;
+    }
+
+    // Set the new buffer as selected
+    setSelectedBuffer(diredBuffer);
+
+    // Add to or update working buffers list
+    setWorkingBuffers((prevBuffers) => {
+      // Add the new buffer at the start of the array
+      const updatedBuffers = [diredBuffer, ...prevBuffers.filter((b) => b.id !== diredBuffer.id)];
+      // Limit to most recent 10 buffers if needed
+      return updatedBuffers.slice(0, 10);
+    });
+
+    resetRoot();
+  }, [
+    rootTile,
+    selectedBuffer,
+    selectedPatch,
+    basePatch,
+    setSelectedBuffer,
+    setWorkingBuffers,
+    resetRoot,
+    workingBuffers,
+  ]);
 
   // Forward declare the switchToBuffer function
-  let switchToBufferFn: (buffer: Buffer) => void;
+  let switchToBufferFn: (buffer: Buffer, newTile?: boolean) => void;
 
   // Function to toggle or create a BufferList buffer in the currently selected tile
   const createBufferListBuffer = useCallback(() => {
@@ -839,41 +936,65 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       name: "Buffer List",
     };
 
-    // Find the tile with the currently selected buffer
-    const tile =
-      rootTileRef.current.findBuffer(selectedBuffer.id) ||
-      (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null);
+    // Find the currently selected tile (the one with the currently selected buffer)
+    let selectedTile: Tile | null = null;
 
-    if (tile) {
-      // Replace the current buffer with the new BufferList buffer
-      tile.buffer = bufferListBuffer;
+    if (selectedBuffer) {
+      // First, try to find by buffer ID (most accurate)
+      console.log("current selecred buffer=", { ...selectedBuffer });
+      selectedTile = rootTileRef.current.findBuffer(selectedBuffer.id);
 
-      // Clear patch reference for buffer types other than Patch
-      if (bufferListBuffer.type !== BufferType.Patch) {
-        tile.patch = null;
+      console.log("selectred tile to create buffer list=", selectedTile);
+
+      if (!selectedTile && selectedPatch) {
+        // If not found by buffer, try finding by patch
+        selectedTile = rootTileRef.current.findPatch(selectedPatch);
       }
-
-      // Set the new buffer as selected
-      setSelectedBuffer(bufferListBuffer);
-
-      // Add to or update working buffers list
-      setWorkingBuffers((prevBuffers) => {
-        // Add the new buffer at the start of the array
-        const updatedBuffers = [
-          bufferListBuffer,
-          ...prevBuffers.filter((b) => b.id !== bufferListBuffer.id),
-        ];
-        // Limit to most recent 10 buffers if needed
-        return updatedBuffers.slice(0, 10);
-      });
-
-      resetRoot();
     }
-  }, [rootTile, selectedBuffer, selectedPatch, setSelectedBuffer, resetRoot, workingBuffers]);
+
+    // Fallback to root tile if no selected tile found
+    if (!selectedTile) {
+      selectedTile = rootTileRef.current;
+    }
+
+    console.log("Selected tile for Buffer List:", selectedTile.id);
+
+    // Replace the current buffer with the new BufferList buffer
+    selectedTile.buffer = bufferListBuffer;
+
+    // Clear patch reference for buffer types other than Patch
+    if (bufferListBuffer.type !== BufferType.Patch) {
+      selectedTile.patch = null;
+    }
+
+    // Set the new buffer as selected
+    setSelectedBuffer(bufferListBuffer);
+
+    // Add to or update working buffers list
+    setWorkingBuffers((prevBuffers) => {
+      // Add the new buffer at the start of the array
+      const updatedBuffers = [
+        bufferListBuffer,
+        ...prevBuffers.filter((b) => b.id !== bufferListBuffer.id),
+      ];
+      // Limit to most recent 10 buffers if needed
+      return updatedBuffers.slice(0, 10);
+    });
+
+    resetRoot();
+  }, [
+    rootTile,
+    selectedBuffer,
+    selectedPatch,
+    setSelectedBuffer,
+    setWorkingBuffers,
+    resetRoot,
+    workingBuffers,
+  ]);
 
   // Function to switch to a different buffer in the currently selected tile
   const switchToBuffer = useCallback(
-    (buffer: Buffer) => {
+    (buffer: Buffer, newTile?: boolean) => {
       if (!rootTileRef.current || !selectedBuffer) {
         return;
       }
@@ -884,8 +1005,12 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null);
 
       if (tile) {
-        // Replace the current buffer with the specified buffer
-        tile.buffer = buffer;
+        if (newTile) {
+          tile.split("horizontal", buffer);
+        } else {
+          // Replace the current buffer with the specified buffer
+          tile.buffer = buffer;
+        }
 
         // Update patch reference for backward compatibility if it's a Patch buffer
         if (buffer.type === BufferType.Patch && buffer.patch) {
@@ -972,7 +1097,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       console.log("No unique buffer found, trying to close tile");
       // No unique buffer found, try to close the tile
       closeTile(currentTile);
-      
+
       // Make sure the buffer is removed from working buffers if it's not used elsewhere
       const tilesWithBuffer = getAllTilesWithBuffer(selectedBuffer.id);
       if (tilesWithBuffer.length <= 1) {
@@ -1004,6 +1129,48 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     searchTiles(rootTileRef.current);
     return result;
   }, []);
+
+  // Function to rename a patch and update relevant buffers
+  const renamePatch = useCallback(
+    (patch: Patch, newName: string) => {
+      if (!patch) return;
+
+      // Update the patch name
+      patch.name = newName;
+
+      // Update any buffers that reference this patch
+      setWorkingBuffers((prevBuffers) => {
+        return prevBuffers.map((b) => {
+          if (b.patch && b.patch.id === patch.id) {
+            if (b.type === BufferType.Dired) {
+              // Update Dired buffer name to reflect the patch
+              return {
+                ...b,
+                name: `Directory: ${newName}`,
+              };
+            } else if (b.type === BufferType.Patch) {
+              // Update Patch buffer name
+              return {
+                ...b,
+                name: newName,
+              };
+            }
+          }
+          return b;
+        });
+      });
+
+      // Force a refresh of the UI
+      setCounter((c) => c + 1);
+
+      // Update patchNames map if being used
+      setPatchNames((prev) => ({
+        ...prev,
+        [patch.id]: newName,
+      }));
+    },
+    [setWorkingBuffers, setCounter, setPatchNames],
+  );
 
   return (
     <PatchesContext.Provider
@@ -1046,6 +1213,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         setCounter,
         workingBuffers,
         setWorkingBuffers,
+        renamePatch,
       }}
     >
       {children}

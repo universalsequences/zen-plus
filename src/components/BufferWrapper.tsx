@@ -34,6 +34,7 @@ const BufferWrapper: React.FC<{
           <PatchComponent
             isWindow={isWindow}
             tileRef={tileRef}
+            buffer={buffer}
             maxWidth={maxWidth}
             maxHeight={maxHeight}
             index={index}

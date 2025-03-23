@@ -6,11 +6,8 @@ import { usePatches } from "@/contexts/PatchesContext";
  * These commands don't require any patch-specific context
  */
 export const useGlobalKeyBindings = () => {
-  const {
-    createDiredBuffer,
-    createBufferListBuffer,
-    killCurrentBuffer,
-  } = usePatches();
+  const { createDiredBuffer, createBufferListBuffer, killCurrentBuffer, selectedBuffer } =
+    usePatches();
 
   // Handle keydown events globally
   const onKeyDown = useCallback(
@@ -29,20 +26,20 @@ export const useGlobalKeyBindings = () => {
         createDiredBuffer();
         return;
       }
-      
+
       // Toggle BufferList buffer when 'b' is pressed
       if (e.key === "b" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         createBufferListBuffer();
         return;
       }
-      
+
       // Kill current buffer and switch to previous when 'k' is pressed
       if (e.key === "k" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         killCurrentBuffer();
         return;
       }
     },
-    [createDiredBuffer, createBufferListBuffer, killCurrentBuffer]
+    [createDiredBuffer, createBufferListBuffer, killCurrentBuffer, selectedBuffer],
   );
 
   // Set up the global event listener

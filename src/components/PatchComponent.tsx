@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useStorage } from "@/contexts/StorageContext";
 import { usePatchLoader } from "@/hooks/usePatchLoader";
+import { Buffer } from "@/lib/tiling/types";
 import { useLocked } from "@/contexts/LockedContext";
 import { useTilesContext } from "@/contexts/TilesContext";
 import PatchInner from "./PatchInner";
@@ -45,6 +46,7 @@ const PatchComponent: React.FC<{
   index: number;
   isCustomView?: boolean;
   children?: React.ReactNode;
+  buffer: Buffer;
 }> = ({
   isWindow,
   visibleObjectNodes,
@@ -55,6 +57,7 @@ const PatchComponent: React.FC<{
   fileToOpen,
   setFileToOpen,
   tileRef,
+  buffer,
   children,
 }) => {
   useThemeContext();
@@ -67,6 +70,8 @@ const PatchComponent: React.FC<{
     rootTile,
     selectedPatch,
     setSelectedPatch,
+    setSelectedBuffer,
+    setWorkingBuffers,
   } = usePatches();
   const { updateConnections, patch } = usePatch();
   const loadPatch = usePatchLoader(patch);
@@ -92,6 +97,20 @@ const PatchComponent: React.FC<{
     nearestInlet,
     setNearestInlet,
   } = usePosition();
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      setSelectedBuffer(buffer);
+      // Update working buffers when selecting a buffer
+      setWorkingBuffers((prev) => {
+        // Add this buffer to the front of the list if not already there
+        return [buffer, ...prev.filter((b) => b.id !== buffer.id)].slice(0, 10);
+      });
+
+      onClick(e);
+    },
+    [buffer],
+  );
 
   // Zoom functionality
   const { zoomableRef, zoomRef } = useZoom(scrollRef, isCustomView);
@@ -120,10 +139,11 @@ const PatchComponent: React.FC<{
     if (!isCustomView) {
       if (!isSelectedRef.current) {
         setSelectedPatch(patch);
+        setSelectedBuffer(buffer);
       }
       patch.onNewMessage = onNewMessage;
     }
-  }, [onNewMessage, patch, setSelectedPatch, isCustomView]);
+  }, [onNewMessage, patch, buffer, setSelectedPatch, isCustomView]);
 
   // Set up attribute update handler
   useEffect(() => {
@@ -278,7 +298,7 @@ const PatchComponent: React.FC<{
         style={style}
         onDragOver={() => patchDragging && setDraggingOver(true)}
         onDragLeave={() => setDraggingOver(false)}
-        onClick={onClick}
+        onClick={handleClick}
         onMouseUp={isCustomView ? undefined : onMouseUp}
         onMouseMove={onSelectionMove}
         onDrop={onDrop}
