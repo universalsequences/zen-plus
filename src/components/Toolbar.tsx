@@ -10,6 +10,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import type { Node, Patch, SubPatch } from "@/lib/nodes/types";
 import { useSelection } from "@/contexts/SelectionContext";
 import { SelectedNodeInfo } from "./SelectedNodeInfo";
+import { BufferType } from "@/lib/tiling/types";
 
 enum Option {
   Save,
@@ -24,6 +25,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     patchDragging,
     setPatchDragging,
     changeTileForPatch,
+    selectedBuffer,
     zenCode,
     selectedPatch,
     closePatch,
@@ -32,7 +34,8 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     patchNames,
     setPatchNames,
   } = usePatches();
-  const { assist } = usePatch();
+
+  const { buffer, assist } = usePatch();
   let breadcrumbs: any[] = [];
   let _patch: Patch = patch;
   let [editing, setEditing] = useState(false);
@@ -66,7 +69,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
   const patchRef = useRef<Patch>(patch);
 
-  const isSelected = patch === selectedPatch;
+  const isSelected = patch === selectedBuffer?.patch && selectedBuffer.type === BufferType.Patch;
 
   useEffect(() => {
     patchRef.current = patch;

@@ -57,6 +57,10 @@ const Sidebar = () => {
     opacity: isSubPatch || selectedNodes.length > 0 ? 1 : 0.5,
   };
 
+  if (selectedNodes.length === 0) {
+    return <></>;
+  }
+
   return (
     <div
       style={{ zIndex: 10000000000 }}

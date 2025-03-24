@@ -17,6 +17,7 @@ import { OperatorContextType } from "@/lib/nodes/context";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "../hooks/usePatchSelector";
 import { isMessageNode, isObjectNode } from "@/lib/nodes/vm/instructions";
+import { usePatches } from "@/contexts/PatchesContext";
 
 /**
  * Props for PositionedComponent
@@ -55,7 +56,8 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
 }) => {
   // Context hooks
   const { selectPatch } = usePatchSelector();
-  const { patch } = usePatch();
+  const { patch, buffer } = usePatch();
+  const { setSelectedBuffer } = usePatches();
   const { setSelectedNodes, selectedNodes } = useSelection();
   const {
     nearestInlet,
@@ -248,6 +250,9 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
    */
   const onClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (buffer) {
+        setSelectedBuffer(buffer);
+      }
       // Skip for locked nodes
       if (node.locked) {
         return;
@@ -371,7 +376,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
     }
 
     // Add selected class
-    if (isSelected && position !== "relative") {
+    if (isSelected && position !== "relative" && !buffer) {
       className += " selected";
     }
 
@@ -457,13 +462,13 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
     }
 
     // Handle fullscreen mode
-    if (fullscreen) {
+    if (fullscreen || buffer) {
       nodeStyle.width = "100%";
-      nodeStyle.height = "100vh";
+      nodeStyle.height = buffer ? "100%" : "100vh";
       nodeStyle.left = 0;
       nodeStyle.top = 0;
       nodeStyle.zIndex = 10000000000000;
-      className = "fixed top-0 left-0";
+      if (!buffer) className = "fixed top-0 left-0";
     }
 
     // Handle relative positioning
@@ -481,7 +486,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
         className={className}
       >
         {/* Selection controls and resize handles */}
-        {isSelected && (
+        {!buffer && isSelected && (
           <ResizeHandles
             node={node}
             allowSize={allowSize}
@@ -491,7 +496,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
         )}
 
         {/* Input IOlets */}
-        {!isResizing && !fullscreen && !isCustomView && position !== "relative" && (
+        {!isResizing && !buffer && !fullscreen && !isCustomView && position !== "relative" && (
           <IOletsComponent
             text={text}
             isOutlet={false}

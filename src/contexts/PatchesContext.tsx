@@ -47,6 +47,7 @@ interface IPatchesContext {
   workingBuffers: Buffer[];
   setWorkingBuffers: React.Dispatch<React.SetStateAction<Buffer[]>>;
   renamePatch: (patch: Patch, newName: string) => void;
+  getAllTilesWithBuffer: (x: string) => Tile[];
 }
 
 interface Props {
@@ -127,10 +128,10 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       _rootTile.children = rootTileRef.current.children;
       _rootTile.splitDirection = rootTileRef.current.splitDirection;
       _rootTile.id = rootTileRef.current.id;
-      setRootTile(_rootTile);
       rootTileRef.current = _rootTile;
+      setRootTile(_rootTile);
     }
-  }, [setRootTile]);
+  }, []);
 
   let rootTileRef = useRef<Tile | null>(rootTile);
 
@@ -406,7 +407,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   // Generic function to close a tile
   const closeTile = useCallback(
     (tile: Tile) => {
-      console.log("Closing tile:", tile.id);
       if (!rootTileRef.current || !tile) {
         return;
       }
@@ -419,23 +419,19 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
       // Root level handling
       if (tile.parent === null) {
-        console.log("Cannot close root tile");
         return; // Cannot close root tile
       }
 
       // Handle case where tile is the only child
       if (tile.parent.children.length <= 1) {
-        console.log("Tile is the only child of its parent");
         // Cannot remove the only child - must have a parent with multiple children
         return;
       }
 
-      console.log("Tile has siblings so we can close it");
       // Find the sibling tile
       const siblingTile = tile.parent.children.find((child) => child !== tile);
 
       if (siblingTile) {
-        console.log("Found sibling tile:", siblingTile.id);
         // Make the parent adopt the sibling's content
         if (siblingTile.buffer) {
           tile.parent.buffer = siblingTile.buffer;
@@ -543,7 +539,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         if (tile) {
           closeTile(tile);
         } else {
-          console.log("Patch not found in any tile");
         }
       }
 
@@ -868,8 +863,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       selectedTile = rootTileRef.current;
     }
 
-    console.log("Selected tile for Dired:", selectedTile.id);
-
     // Replace the current buffer with the new Dired buffer
     selectedTile.buffer = diredBuffer;
 
@@ -906,6 +899,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   // Function to toggle or create a BufferList buffer in the currently selected tile
   const createBufferListBuffer = useCallback(() => {
+    const selectedBuffer = selectedBufferRef.current;
     if (!rootTileRef.current || !selectedBuffer) {
       return;
     }
@@ -941,10 +935,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
     if (selectedBuffer) {
       // First, try to find by buffer ID (most accurate)
-      console.log("current selecred buffer=", { ...selectedBuffer });
       selectedTile = rootTileRef.current.findBuffer(selectedBuffer.id);
-
-      console.log("selectred tile to create buffer list=", selectedTile);
 
       if (!selectedTile && selectedPatch) {
         // If not found by buffer, try finding by patch
@@ -956,8 +947,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     if (!selectedTile) {
       selectedTile = rootTileRef.current;
     }
-
-    console.log("Selected tile for Buffer List:", selectedTile.id);
 
     // Replace the current buffer with the new BufferList buffer
     selectedTile.buffer = bufferListBuffer;
@@ -992,9 +981,15 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     workingBuffers,
   ]);
 
+  const selectedBufferRef = useRef<Buffer | null>(null);
+  useEffect(() => {
+    selectedBufferRef.current = selectedBuffer;
+  }, [selectedBuffer]);
+
   // Function to switch to a different buffer in the currently selected tile
   const switchToBuffer = useCallback(
     (buffer: Buffer, newTile?: boolean) => {
+      const selectedBuffer = selectedBufferRef.current;
       if (!rootTileRef.current || !selectedBuffer) {
         return;
       }
@@ -1006,22 +1001,28 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
       if (tile) {
         if (newTile) {
-          tile.split("horizontal", buffer);
+          let parentTile = tile.parent;
+          tile.split(
+            parentTile && parentTile.splitDirection === "horizontal" ? "vertical" : "horizontal",
+            buffer,
+          );
         } else {
           // Replace the current buffer with the specified buffer
           tile.buffer = buffer;
         }
 
         // Update patch reference for backward compatibility if it's a Patch buffer
-        if (buffer.type === BufferType.Patch && buffer.patch) {
+        if (buffer.type === BufferType.Patch && buffer.patch && !newTile) {
           tile.patch = buffer.patch;
           setSelectedPatch(buffer.patch);
         } else {
           tile.patch = null;
         }
 
-        // Set the specified buffer as selected
-        setSelectedBuffer(buffer);
+        if (!newTile) {
+          // Set the specified buffer as selected
+          setSelectedBuffer(buffer);
+        }
 
         // Update working buffers list to move this buffer to the front
         setWorkingBuffers((prevBuffers) => {
@@ -1087,11 +1088,15 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     if (uniqueNextBuffer) {
       console.log("Found unique buffer to switch to:", uniqueNextBuffer.id);
       // Update working buffers list to remove the killed buffer
-      setWorkingBuffers((prevBuffers) => {
-        return prevBuffers.filter((b) => b.id !== selectedBuffer.id);
-      });
+      //setWorkingBuffers((prevBuffers) => {
+      //  return prevBuffers.filter((b) => b.id !== selectedBuffer.id);
+      //});
 
       // Switch to the unique buffer
+
+      setWorkingBuffers((prevBuffers) => {
+        return [...prevBuffers.filter((b) => b.id !== selectedBuffer.id), selectedBuffer];
+      });
       switchToBufferFn(uniqueNextBuffer);
     } else {
       console.log("No unique buffer found, trying to close tile");
@@ -1102,7 +1107,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       const tilesWithBuffer = getAllTilesWithBuffer(selectedBuffer.id);
       if (tilesWithBuffer.length <= 1) {
         setWorkingBuffers((prevBuffers) => {
-          return prevBuffers.filter((b) => b.id !== selectedBuffer.id);
+          return [...prevBuffers.filter((b) => b.id !== selectedBuffer.id), selectedBuffer];
         });
       }
     }

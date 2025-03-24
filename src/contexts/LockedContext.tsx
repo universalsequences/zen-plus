@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, useRef, useCallback, useEffect } from "react";
 import { useMessage } from "./MessageContext";
 import type { Message, Node, Patch } from "@/lib/nodes/types";
+import { usePatch } from "./PatchContext";
 
 interface ILockedContext {
   lockedMode: boolean;
@@ -21,6 +22,7 @@ export const useLocked = (): ILockedContext => {
 };
 
 export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
+  const { buffer } = usePatch();
   const [lockedMode, setLockedMode] = useState<boolean>(
     patch.lockedMode === true
       ? true
@@ -56,7 +58,7 @@ export const LockedProvider: React.FC<Props> = ({ patch, children }) => {
   return (
     <LockedContext.Provider
       value={{
-        lockedMode,
+        lockedMode: buffer ? true : lockedMode,
         setLockedMode,
       }}
     >

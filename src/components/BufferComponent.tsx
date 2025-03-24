@@ -1,20 +1,22 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { type Buffer, BufferType } from "@/lib/tiling/types";
-import { useLocked } from "@/contexts/LockedContext";
+import { useLocked, LockedProvider } from "@/contexts/LockedContext";
 import { useTilesContext } from "@/contexts/TilesContext";
 import { PatchResizer } from "./PatchResizer";
 import PatchInner from "./PatchInner";
 import { useThemeContext } from "@radix-ui/themes";
 import { Patch } from "@/lib/nodes/types";
 import { useSelection } from "@/contexts/SelectionContext";
-import { usePosition } from "@/contexts/PositionContext";
+import { usePosition, PositionProvider } from "@/contexts/PositionContext";
 import { usePatchMouse } from "@/hooks/usePatchMouse";
 import { useZoom } from "@/hooks/useZoom";
 import { useKeyBindings } from "@/hooks/useKeyBindings";
 import { useStorage } from "@/contexts/StorageContext";
+import { PatchProvider } from "@/contexts/PatchContext";
 import BufferListView from "./BufferListView";
 import DiredView from "./DiredView";
+import ObjectNodeWrapper from "./ObjectNodeWrapper";
 
 /**
  * BufferComponent represents a generic container for any buffer type in a tile
@@ -175,6 +177,7 @@ const BufferComponent: React.FC<{
       isCustomView ? "" : "border border-zinc-100",
       "flex flex-col relative w-full",
       isCustomView ? "custom-view" : "tile",
+      "bg-zinc-950",
     ]
       .filter(Boolean)
       .join(" ");
@@ -199,8 +202,16 @@ const BufferComponent: React.FC<{
             setFileToOpen={setFileToOpen}
           />
         )}
-        {buffer.type === BufferType.Object && (
-          <div className="p-4 text-white">Object Buffer (Not yet implemented)</div>
+        {buffer.type === BufferType.Object && buffer.objectNode && buffer.patch && (
+          <PatchProvider buffer={buffer} patch={buffer.patch}>
+            <LockedProvider patch={buffer.patch}>
+              <PositionProvider patch={buffer.patch}>
+                <div className="p-4 h-full w-full flex-grow flex-1 relative locked presentation">
+                  <ObjectNodeWrapper objectNode={buffer.objectNode} />
+                </div>
+              </PositionProvider>
+            </LockedProvider>
+          </PatchProvider>
         )}
         {buffer.type === BufferType.Dired && <DiredView buffer={buffer} />}
         {buffer.type === BufferType.BufferList && <BufferListView buffer={buffer} />}

@@ -93,7 +93,7 @@ const PatchWindow: React.FC<{ patch: Patch }> = ({ patch }) => {
         //top: coord.y,
         zIndex: selectedPatch === patch ? 100000000000000 : 1000000000,
       }}
-      className={`${selectedPatch === patch ? " selected-window " : ""} rounded-xl flex-shrink-0 absolutexy relative flex flex-col patch-window bg-black select-none shadow-lg border border-zinc-600`}
+      className={`${selectedPatch === patch ? " selected-window " : ""} rounded-xl locked presentation flex-shrink-0 absolutexy relative flex flex-col patch-window bg-black select-none shadow-lg border border-zinc-600`}
       ref={ref}
     >
       <div

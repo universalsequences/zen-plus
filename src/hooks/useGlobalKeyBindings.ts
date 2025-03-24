@@ -21,20 +21,25 @@ export const useGlobalKeyBindings = () => {
         return;
       }
 
+      if (!e.metaKey) return;
+
       // Create a Dired (directory browser) buffer when 'd' is pressed
-      if (e.key === "d" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if (e.key === "d") {
+        e.preventDefault();
         createDiredBuffer();
         return;
       }
 
       // Toggle BufferList buffer when 'b' is pressed
-      if (e.key === "b" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if (e.key === "b") {
+        e.preventDefault();
         createBufferListBuffer();
         return;
       }
 
       // Kill current buffer and switch to previous when 'k' is pressed
-      if (e.key === "k" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      if (e.key === "k") {
+        e.preventDefault();
         killCurrentBuffer();
         return;
       }

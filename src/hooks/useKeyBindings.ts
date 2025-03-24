@@ -9,6 +9,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useWindows } from "@/contexts/WindowsContext";
 import { useStepsContext } from "@/contexts/StepsContext";
+import { BufferType, type Buffer } from "@/lib/tiling/types";
 
 export const useKeyBindings = (
   scrollRef: React.MutableRefObject<HTMLDivElement | null>,
@@ -39,6 +40,7 @@ export const useKeyBindings = (
     setPatches,
     selectedPatch,
     setSelectedPatch,
+    switchToBuffer,
   } = usePatches();
 
   const { selectedSteps } = useStepsContext();
@@ -133,9 +135,8 @@ export const useKeyBindings = (
           e.key === "ArrowLeft" ||
           e.key === "ArrowRight"
         ) {
-          console.log("doing moving...");
           const moveDistance = e.shiftKey ? 10 : 1; // Move faster with shift key
-          let updates = {};
+          let updates: { [x: string]: Coordinate } = {};
 
           // Create a batch of position updates
           selectedNodes.forEach((node) => {
@@ -190,7 +191,7 @@ export const useKeyBindings = (
         // create a number box object
       }
 
-      if (e.key === "e" && e.metaKey) {
+      if (e.key === "e" && e.metaKey && selectedPatch) {
         if (!patchWindows.includes(selectedPatch)) {
           selectedPatch.lockedMode = !lockedMode;
           setLockedMode(!lockedMode);
@@ -288,9 +289,19 @@ export const useKeyBindings = (
         }
       }
 
-      if (e.key === "o" && command && selectedPatch) {
-        let i = patches.indexOf(selectedPatch);
-        setSelectedPatch(patches[(i + 1) % patches.length]);
+      if (selectedNodes?.length === 1 && e.key === "o" && e.metaKey) {
+        e.preventDefault();
+        const objectNode = selectedNodes[0] as ObjectNode;
+        // For regular objects, create an Object buffer
+        const objectBuffer: Buffer = {
+          id: objectNode.id,
+          type: BufferType.Object,
+          objectNode: objectNode,
+          name: objectNode.text || "Object View",
+          patch: objectNode.patch, // Reference the object's patch for context
+        };
+
+        switchToBuffer(objectBuffer, false);
       }
 
       setCommand(false);

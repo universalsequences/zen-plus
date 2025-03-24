@@ -75,10 +75,7 @@ const PatchDropdown = React.memo((props: Props) => {
 
   const onKeyDown = useCallback(
     (e: any) => {
-      if (e.key === "o" && e.metaKey) {
-        e.preventDefault();
-        setOption(Option.Load);
-      } else if (e.key === "s" && e.metaKey) {
+      if (e.key === "s" && e.metaKey) {
         e.preventDefault();
         setOption(Option.Save);
       } else if (e.key === "Enter" && option === Option.Save) {

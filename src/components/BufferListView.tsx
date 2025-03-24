@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef, KeyboardEvent } from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { Buffer, BufferType, Tile } from "@/lib/tiling/types";
+import { BoxModelIcon, CircleIcon, CubeIcon } from "@radix-ui/react-icons";
 
 interface BufferListViewProps {
   buffer: Buffer;
@@ -136,21 +137,21 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     (e: React.KeyboardEvent) => {
       // Only process keyboard navigation if this is the selected buffer
       if (selectedBuffer?.id !== buffer.id) return;
-      
+
       // If we're currently editing a name, handle special keys
       if (editingIndex !== null) {
-        if (e.key === 'Enter') {
+        if (e.key === "Enter") {
           e.preventDefault();
           // Save the rename
           const selectedBuf = visibleBuffersRef.current[editingIndex];
           if (selectedBuf && selectedBuf.type === BufferType.Patch && selectedBuf.patch) {
             renamePatch(selectedBuf.patch, editingName.trim());
           }
-          
+
           // Exit rename mode
           setEditingIndex(null);
           setEditingName("");
-          
+
           // Restore focus to container
           setTimeout(() => {
             if (containerRef.current) {
@@ -158,12 +159,12 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
             }
           }, 10);
           return;
-        } else if (e.key === 'Escape') {
+        } else if (e.key === "Escape") {
           e.preventDefault();
           // Cancel rename
           setEditingIndex(null);
           setEditingName("");
-          
+
           // Restore focus to container
           setTimeout(() => {
             if (containerRef.current) {
@@ -199,7 +200,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
             if (selectedBuf.type === BufferType.Patch && selectedBuf.patch) {
               setEditingIndex(selectedIndex);
               setEditingName(selectedBuf.patch.name || selectedBuf.name || "");
-              
+
               // Focus the input on next render
               setTimeout(() => {
                 if (nameInputRef.current) {
@@ -250,13 +251,13 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       }
     },
     [
-      selectedIndex, 
-      handleBufferSelect, 
-      buffer.id, 
-      selectedBuffer, 
-      editingIndex, 
+      selectedIndex,
+      handleBufferSelect,
+      buffer.id,
+      selectedBuffer,
+      editingIndex,
       editingName,
-      renamePatch
+      renamePatch,
     ],
   );
 
@@ -275,11 +276,17 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       // Add global event listener for keyboard navigation
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
         if (selectedBuffer?.id !== buffer.id) return;
-        
+
         // Skip if we're editing
         if (editingIndex !== null) return;
 
-        if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === "R" || e.key === "r") {
+        if (
+          e.key === "ArrowDown" ||
+          e.key === "ArrowUp" ||
+          e.key === "Enter" ||
+          e.key === "R" ||
+          e.key === "r"
+        ) {
           // Ensure our container has focus
           const isBufferListActive = rootElement.contains(document.activeElement);
           if (isBufferListActive && document.activeElement !== rootElement) {
@@ -342,7 +349,11 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       if (b.type === BufferType.Dired && b.patch) {
         displayName = b.patch.name ? `Directory: ${b.patch.name}` : "Directory Browser";
       } else if (b.patch?.name) {
-        displayName = b.patch.name;
+        if (b.objectNode) {
+          displayName = b.objectNode?.text + " (" + b.patch.name + ")";
+        } else {
+          displayName = b.patch.name;
+        }
       }
 
       // Check if this item is selected (for keyboard navigation)
@@ -354,13 +365,18 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
           key={b.id}
           ref={(el) => setBufferItemRef(el, index)}
           className={`buffer-item px-2 py-1 text-xs my-1 cursor-pointer rounded transition-colors
-            ${displayed ? "border-l-2 border-blue-500" : ""} 
+            ${displayed ? "border-l-2 border-blue-500" : ""}
             ${isSelected ? "bg-zinc-800" : "hover:bg-zinc-800"}
             [&.active-click]:bg-blue-500`}
           onClick={() => handleBufferSelect(b)}
           data-index={index}
         >
-          <div className="flex justify-between items-center">
+          <div className="flex   flex">
+            {b.type === BufferType.Object ? (
+              <CubeIcon className="w-3 h-3 my-auto mr-5" />
+            ) : b.type === BufferType.Patch ? (
+              <BoxModelIcon className="w-3 h-3 my-auto mr-5" />
+            ) : null}
             {isEditing ? (
               <input
                 ref={nameInputRef}
@@ -371,25 +387,25 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
                 onKeyDown={(e) => {
                   // Prevent event bubbling for all keys
                   e.stopPropagation();
-                  
+
                   // Handle special keys
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     if (b.patch && editingName.trim()) {
                       renamePatch(b.patch, editingName.trim());
                     }
                     setEditingIndex(null);
                     setEditingName("");
-                    
+
                     // Restore focus
                     setTimeout(() => {
                       if (containerRef.current) {
                         containerRef.current.focus();
                       }
                     }, 10);
-                  } else if (e.key === 'Escape') {
+                  } else if (e.key === "Escape") {
                     setEditingIndex(null);
                     setEditingName("");
-                    
+
                     // Restore focus
                     setTimeout(() => {
                       if (containerRef.current) {
@@ -414,12 +430,11 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
                 }}
               />
             ) : (
-              <span className="buffer-name font-medium">{displayName}</span>
+              <span className="buffer-name text-xs">{displayName}</span>
             )}
-            <div className="flex items-center">
-              <span className="buffer-type text-sm text-zinc-400 mr-2">
-                {getBufferTypeLabel(b.type)}
-              </span>
+            {displayed && <CircleIcon className="ml-3 my-auto w-3 h-3" stroke="#00fffd" />}
+            <div className="flex items-center ml-auto text-xs">
+              <span className="buffer-type  text-zinc-400 mr-2">{getBufferTypeLabel(b.type)}</span>
               {isSelected && !isEditing && <span className="text-xs">⏎</span>}
             </div>
           </div>
@@ -431,7 +446,15 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         </div>
       );
     },
-    [buffer.id, isBufferDisplayed, handleBufferSelect, selectedIndex, setBufferItemRef, editingIndex, editingName],
+    [
+      buffer.id,
+      isBufferDisplayed,
+      handleBufferSelect,
+      selectedIndex,
+      setBufferItemRef,
+      editingIndex,
+      editingName,
+    ],
   );
 
   // Get visible buffers (excluding current buffer)
@@ -440,13 +463,11 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
   return (
     <div
       ref={containerRef}
-      className="buffer-list p-4 w-full h-full overflow-auto bg-zinc-950 text-white flex flex-col"
+      className="buffer-list w-full h-full overflow-auto bg-zinc-950 text-white flex flex-col"
       onKeyDown={handleKeyDown}
       tabIndex={0}
       style={{ ["--active-click-bg" as any]: "rgba(59, 130, 246, 0.5)" }}
     >
-      <h2 className="text-lg font-bold mb-3 flex-shrink-0">Buffer List</h2>
-
       <div className="buffer-items flex-grow overflow-y-auto">
         {visibleBuffers.length === 0 ? (
           <div className="empty-message text-zinc-400">No buffers available</div>

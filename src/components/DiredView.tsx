@@ -47,18 +47,33 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   }, [buffer.patch, selectedPatch]);
 
   // Function to handle clicking on an object node
-  const handleObjectNodeClick = useCallback((objectNode: ObjectNode) => {
-    if (objectNode.subpatch) {
-      // If the object has a subpatch, navigate to it within Dired
-      setCurrentPatch(objectNode.subpatch);
-    }
-  }, []);
+  const handleObjectNodeClick = useCallback(
+    (objectNode: ObjectNode, newTile: boolean) => {
+      if (objectNode.subpatch) {
+        // If the object has a subpatch, navigate to it within Dired
+        setCurrentPatch(objectNode.subpatch);
+      } else {
+        // For regular objects, create an Object buffer
+        const objectBuffer: Buffer = {
+          id: objectNode.id,
+          type: BufferType.Object,
+          objectNode: objectNode,
+          name: objectNode.text || "Object View",
+          patch: objectNode.patch, // Reference the object's patch for context
+        };
+
+        switchToBuffer(objectBuffer, newTile);
+      }
+    },
+    [switchToBuffer, setWorkingBuffers],
+  );
 
   // Function to handle clicking on parent patch (..)
   const handleParentClick = useCallback(() => {
     if (currentPatch && (currentPatch as SubPatch).parentPatch) {
       const parentPatch = (currentPatch as SubPatch).parentPatch;
 
+      buffer.patch = parentPatch;
       // Just navigate to the parent patch within Dired
       setCurrentPatch(parentPatch);
     }
@@ -121,7 +136,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       count += subpatches.length + regularObjects.length;
 
       entriesCountRef.current = count;
-      console.log("Updated entries count to:", count);
     }
   }, [currentPatch, subpatches, regularObjects]);
 
@@ -184,12 +198,8 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         return;
       }
 
-      console.log("Key pressed:", e.key);
-
       // Use the entriesCountRef instead of filtering the refs array
       const entriesCount = entriesCountRef.current;
-      console.log("Total entries (from ref):", entriesCount);
-      console.log("Current selected index:", selectedIndex);
 
       if (entriesCount === 0) return;
 
@@ -213,7 +223,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                 if (nameInputRef.current) {
                   nameInputRef.current.focus();
                   nameInputRef.current.select();
-                  console.log("focusing");
                 }
               }, 10);
             }
@@ -228,7 +237,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
               if (entryRefs.current[newIndex]) {
                 entryRefs.current[newIndex]?.scrollIntoView({ block: "nearest" });
               } else {
-                console.warn("Ref not found for index:", newIndex);
               }
             }, 10);
             return newIndex;
@@ -243,7 +251,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
               if (entryRefs.current[newIndex]) {
                 entryRefs.current[newIndex]?.scrollIntoView({ block: "nearest" });
               } else {
-                console.warn("Ref not found for index:", newIndex);
               }
             }, 10);
             return newIndex;
@@ -270,6 +277,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
               // It's a subpatch
               const node = subpatches[objectIndex];
               if (node.subpatch) {
+                buffer.patch = node.subpatch;
                 setCurrentPatch(node.subpatch);
                 setSelectedIndex(0);
               }
@@ -282,6 +290,9 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                 if (node.subpatch) {
                   setCurrentPatch(node.subpatch);
                   setSelectedIndex(0);
+                } else {
+                  // Create an Object buffer for the selected object
+                  handleObjectNodeClick(node, e.metaKey);
                 }
               }
             }
@@ -323,7 +334,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       const rootDiv = rootDivRef.current;
       if (rootDiv) {
         rootDiv.focus();
-        console.log("Root div focused yo");
       }
     }, 100);
   }, []);
@@ -355,7 +365,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
               // Use the same logic as the main handler
               if (selectedIndex === 0) {
                 // "." entry
-                handleCurrentClick();
+                handleCurrentClick(e.metaKey);
               } else if (selectedIndex === 1 && (currentPatch as SubPatch).parentPatch) {
                 // ".." entry
                 handleParentClick();
@@ -380,6 +390,9 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                     if (node.subpatch) {
                       setCurrentPatch(node.subpatch);
                       setSelectedIndex(0);
+                    } else {
+                      // Create an Object buffer for the selected object
+                      handleObjectNodeClick(node, e.metaKey);
                     }
                   }
                 }
@@ -410,6 +423,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
     regularObjects,
     handleCurrentClick,
     handleParentClick,
+    handleObjectNodeClick,
     setCurrentPatch,
   ]);
 
@@ -423,7 +437,12 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
 
   // Render a directory entry with appropriate styling
   const renderDirectoryEntry = useCallback(
-    (name: string, onClick: () => void, isSpecial = false, index: number) => {
+    (
+      name: string,
+      onClick: (e: boolean | React.MouseEvent<HTMLDivElement>) => void,
+      isSpecial = false,
+      index: number,
+    ) => {
       const isSelected = selectedIndex === index;
 
       // Log for debugging
@@ -431,9 +450,9 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       return (
         <div
           ref={(el) => setEntryRef(el, index)}
-          className={`directory-entry px-2 py-1 text-xs my-1 cursor-pointer rounded transition-colors ${
-            isSpecial ? "text-blue-400" : ""
-          } ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-blue-500`}
+          className={`directory-entry px-2 py-1 text-xs my-1 cursor-pointer transition-colors ${
+            isSpecial ? "text-zinc-400" : ""
+          } ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
           onClick={onClick}
           data-index={index}
         >
@@ -457,7 +476,8 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
 
     // Build path from current patch up through parents
     while (current) {
-      const name = current.name || "Untitled";
+      const name = current.name || (!(current as SubPatch).parentPatch ? "Root Patch" : "Untitled");
+
       parts.unshift(name);
 
       // Move to parent if exists
@@ -475,8 +495,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       let count = 1; // "." entry
       if ((currentPatch as SubPatch).parentPatch) count++; // ".." entry
       count += subpatches.length + regularObjects.length;
-
-      console.log("Creating entry refs array with count:", count);
 
       // Resize the refs array - initialize with nulls
       entryRefs.current = Array(count).fill(null);
@@ -499,7 +517,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   return (
     <div
       ref={rootDivRef}
-      className="dired-view p-4 w-full h-full overflow-y-auto bg-zinc-950 text-white flex flex-col focus:outline-none"
+      className="dired-view w-full h-full overflow-y-auto bg-zinc-950 text-white flex flex-col focus:outline-none"
       onKeyDown={handleKeyDown}
       tabIndex={0}
       onFocus={() => {
@@ -510,21 +528,18 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       }}
       style={{
         // Add some CSS for the active-click class
-        ["--active-click-bg" as any]: "rgba(59, 130, 246, 0.5)", // blue-500 with 50% opacity
+        ["--active-click-bg" as any]: "rgba(59, 130, 246, 0.5)", // zinc-500 with 50% opacity
       }}
     >
-      <div className="flex-shrink-0 mb-3">
-        <h2 className="text-lg font-bold">
-          {currentPatch?.name ? `Directory: ${currentPatch.name}` : "Directory Browser"}
-        </h2>
-        <div className="breadcrumb text-xs text-blue-400 mt-1 font-mono">
+      <div className="flex-shrink-0 ">
+        <div className="breadcrumb text-xs text-zinc-400 px-2 w-full py-1">
           {generateBreadcrumb()}
         </div>
       </div>
 
       <div
         ref={entriesContainerRef}
-        className="directory-entries flex-grow h-96 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="directory-entries flex-grow h-96 overflow-y-auto focus:outline-none "
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
@@ -550,17 +565,19 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                 <div
                   key={node.id}
                   ref={(el) => setEntryRef(el, currentIndex)}
-                  className={`object-entry px-2 py-1 my-1 cursor-pointer rounded text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-blue-500`}
-                  onClick={() => handleObjectNodeClick(node)}
+                  className={`object-entry px-2 py-1 my-1 cursor-pointer text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
+                  onClick={(e: React.MouseEvent<HTMLDivElement>) =>
+                    handleObjectNodeClick(node, e.metaKey)
+                  }
                   data-index={currentIndex}
                 >
                   <div className="flex items-center">
-                    <CubeIcon className="directory-icon mr-2 text-blue-400" />
+                    <BoxModelIcon className="directory-icon mr-2 text-zinc-400 w-3 h-3" />
                     {isEditing ? (
                       <input
                         onClick={(e) => e.stopPropagation()}
                         ref={nameInputRef}
-                        className="bg-zinc-800 text-white px-1 py-0.5 font-mono w-full focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="bg-zinc-800 text-white px-1 py-0.5 w-full focus:outline-none focus:ring-1 focus:ring-zinc-500"
                         value={editingName}
                         onMouseDown={(e) => e.stopPropagation()}
                         onChange={(e) => setEditingName(e.target.value)}
@@ -594,10 +611,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                             }, 10);
                           }
                         }}
-                        // Use mouseDown instead of click to prevent focus issues
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                        }}
                         // Only cancel on blur if we need to
                         onBlur={(e) => {
                           // Don't cancel immediately - this was causing issues
@@ -606,7 +619,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                           setTimeout(() => {
                             // Only cancel if focus moved outside our component
                             if (document.activeElement !== nameInputRef.current) {
-                              console.log("cancel", document.activeElement);
                               setEditingPatchIndex(null);
                               setEditingName("");
                             }
@@ -614,7 +626,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                         }}
                       />
                     ) : (
-                      <span className="object-name font-mono">{subpatchName}</span>
+                      <span className="object-name ">{subpatchName}</span>
                     )}
                     {isSelected && !isEditing && <span className="ml-auto text-xs">⏎</span>}
                   </div>
@@ -636,13 +648,15 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                 <div
                   key={node.id}
                   ref={(el) => setEntryRef(el, currentIndex)}
-                  className={`object-entry px-2 py-1 my-1 cursor-pointer rounded text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-blue-500`}
-                  onClick={() => handleObjectNodeClick(node)}
+                  className={`object-entry px-2 py-1 my-1 cursor-pointer text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
+                  onClick={(e: React.MouseEvent<HTMLDivElement>) =>
+                    handleObjectNodeClick(node, e.metaKey)
+                  }
                   data-index={currentIndex}
                 >
                   <div className="flex items-center">
-                    <BoxModelIcon className="directory-icon mr-2 text-gray-400" />
-                    <span className="object-name font-mono">{node.text}</span>
+                    <CubeIcon className="directory-icon mr-2 text-gray-400 w-3 h-3" />
+                    <span className="object-name ">{node.text}</span>
                     {isSelected && <span className="ml-auto text-xs">⏎</span>}
                   </div>
                 </div>
@@ -663,6 +677,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         <p>Click or press Enter on "." to exit and open the current patch</p>
         <p>Click or press Enter on ".." to navigate up to parent</p>
         <p>Click or press Enter on a subpatch to navigate into it</p>
+        <p>Click or press Enter on a regular object to open it as a buffer</p>
       </div>
     </div>
   );

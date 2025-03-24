@@ -136,7 +136,7 @@ const InnerObjectNodeComponent: React.FC<InnerObjectNodeComponentProps> = ({
 
   // Context hooks
   const { fetchSubPatchForDoc } = useStorage();
-  const { isCustomView, newObjectNode } = usePatch();
+  const { buffer, isCustomView, newObjectNode } = usePatch();
   const { expandPatch, patchNames } = usePatches();
   const { loadSubPatch } = useSubPatchLoader(objectNode);
   const { setAutoCompletes, autoCompletes } = useAutoComplete(text, objectNode, editing);
@@ -563,7 +563,7 @@ const InnerObjectNodeComponent: React.FC<InnerObjectNodeComponentProps> = ({
             ) : CustomComponent ? (
               <CustomComponent
                 setFullScreen={setFullscreen}
-                fullscreen={fullscreen}
+                fullscreen={buffer ? true : fullscreen}
                 objectNode={objectNode}
               />
             ) : editing ? (

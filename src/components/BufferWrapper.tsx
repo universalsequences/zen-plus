@@ -6,6 +6,7 @@ import { PatchProvider } from "@/contexts/PatchContext";
 import { Buffer, BufferType } from "@/lib/tiling/types";
 import Toolbar from "./Toolbar";
 import PatchComponent from "./PatchComponent";
+import { BufferToolbar } from "./toolbar/BufferToolbar";
 
 /**
  * BufferWrapper is a component that provides context providers for buffers
@@ -57,7 +58,9 @@ const BufferWrapper: React.FC<{
       buffer={buffer}
       fileToOpen={fileToOpen}
       setFileToOpen={setFileToOpen}
-    />
+    >
+      <BufferToolbar buffer={buffer} />
+    </BufferComponent>
   );
 };
 

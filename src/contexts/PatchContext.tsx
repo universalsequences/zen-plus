@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from "react";
 import { usePatches } from "@/contexts/PatchesContext";
+import type { Buffer } from "@/lib/tiling/types";
 import { OperatorContextType } from "@/lib/nodes/context";
 import Assistant from "@/lib/openai/assistant";
 import { useStorage } from "@/contexts/StorageContext";
@@ -51,12 +52,14 @@ interface PatcherContext {
   isCustomView: boolean;
   loadProjectPatch: (x: SerializedPatch) => void;
   assist: (prompt: string) => Promise<ObjectNode[]>;
+  buffer?: Buffer;
 }
 
 interface Props {
   children: React.ReactNode;
   patch: Patch;
   isCustomView?: boolean;
+  buffer?: Buffer;
 }
 
 const PatchContext = createContext<PatcherContext | undefined>(undefined);
@@ -490,6 +493,7 @@ export const PatchProvider: React.FC<Props> = ({ children, ...props }) => {
         deleteNodes,
         patch,
         objectNodes,
+        buffer: props.buffer,
         messageNodes,
         newMessageNode,
         newObjectNode,

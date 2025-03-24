@@ -1,15 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
+import { BufferType, type Buffer } from "@/lib/tiling/types";
 import { useLocked } from "@/contexts/LockedContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import type { ObjectNode } from "@/lib/nodes/types";
 import Editor, { useMonaco } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
+import { usePatches } from "@/contexts/PatchesContext";
+import { usePatch } from "@/contexts/PatchContext";
 
 const Lisp: React.FC<{
   objectNode: ObjectNode;
   fullscreen: boolean;
   setFullScreen: (x: boolean) => void;
 }> = ({ objectNode, setFullScreen, fullscreen }) => {
+  const {
+    createDiredBuffer,
+    setSelectedBuffer,
+    createBufferListBuffer,
+    killCurrentBuffer,
+    selectedBuffer,
+    switchToBuffer,
+  } = usePatches();
+  const { buffer } = usePatch();
   const monaco = useMonaco();
   // Contexts for locked mode and selection
   const { lockedMode: _lockedMode, setLockedMode } = useLocked();
@@ -52,9 +64,20 @@ const Lisp: React.FC<{
     if (monaco && editorRef.current) handleEditorDidMount(editorRef.current);
   }, [monaco]);
 
+  const monacoRef = useRef<any>();
+  useEffect(() => {
+    monacoRef.current = monaco;
+  }, [monaco]);
+
   // Editor initialization
-  const handleEditorDidMount = (editor: Monaco.editor.IStandaloneCodeEditor) => {
+  const handleEditorDidMount = async (editor: Monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
+
+    if (!monacoRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+
+    const monaco = monacoRef.current;
     if (!monaco) return;
     monaco.editor.setTheme("vs-dark");
     commandModeKeyRef.current = editor.createContextKey("commandMode", false);
@@ -74,10 +97,33 @@ const Lisp: React.FC<{
     });
 
     // Flash effect and message on Meta+Enter
-    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.Enter, () => {
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       setFlash(true);
       setTimeout(() => setFlash(false), 500);
       objectNode.receive(objectNode.inlets[0], objectNode.inlets[0].lastMessage || "bang");
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO, function () {
+      // For regular objects, create an Object buffer
+      const objectBuffer: Buffer = {
+        id: objectNode.id,
+        type: BufferType.Object,
+        objectNode: objectNode,
+        name: objectNode.text || "Object View",
+        patch: objectNode.patch, // Reference the object's patch for context
+      };
+
+      switchToBuffer(objectBuffer, false);
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD, function () {
+      createDiredBuffer();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, function () {
+      createBufferListBuffer();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, function () {
+      killCurrentBuffer();
     });
   };
 
@@ -88,7 +134,10 @@ const Lisp: React.FC<{
 
   return (
     <div
-      onClick={() => setSelectedNodes([objectNode])}
+      onClick={() => {
+        setSelectedNodes([objectNode]);
+        if (buffer) setSelectedBuffer(buffer);
+      }}
       style={{ width, height }}
       className={`bg-zinc-800 relative flex ${flash ? "flash" : ""} ${commandMode ? "command-mode" : ""}`}
     >
