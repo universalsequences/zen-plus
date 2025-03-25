@@ -225,54 +225,91 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   const showDotDot = (!isFiltering || dotDotMatches) && 
     (currentPatch ? !!(currentPatch as SubPatch).parentPatch : false);
 
-  // Find the index of the selected object in the combined array of subpatches and regularObjects
-  const findSelectedObjectIndex = useCallback((selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): number => {
+  // Find the selected object node from the selected index in the list
+  const findSelectedObjectNode = useCallback((selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): ObjectNode | null => {
     // Calculate how many special entries are before the list of objects
     const specialEntryCount = (hasCurrentDot ? 1 : 0) + (hasParentDotDot ? 1 : 0);
     
-    // If the selectedIndex is on a special entry, return -1 (no object selected)
+    // If the selectedIndex is on a special entry, return null (no object selected)
     if (selectedIdx < specialEntryCount) {
-      return -1;
+      return null;
     }
     
     // Calculate the adjusted index in the combined object array
     const adjustedIndex = selectedIdx - specialEntryCount;
     
-    // If the adjusted index is within subpatches, return that index
+    // If the adjusted index is within subpatches, return that object
     if (adjustedIndex < subpatches.length) {
-      return adjustedIndex;
+      return subpatches[adjustedIndex];
     }
     
-    // If the adjusted index is within regularObjects, return that index adjusted by subpatches length
+    // If the adjusted index is within regularObjects, return that object
     const regularObjectIndex = adjustedIndex - subpatches.length;
     if (regularObjectIndex < regularObjects.length) {
-      return subpatches.length + regularObjectIndex;
+      return regularObjects[regularObjectIndex];
     }
     
     // If we get here, nothing is selected
-    return -1;
-  }, [subpatches.length, regularObjects.length]);
+    return null;
+  }, [subpatches, regularObjects]);
+  
+  // Find the index of the selected object in the visibleObjects array
+  const findSelectedObjectIndex = useCallback((selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): number => {
+    const selectedNode = findSelectedObjectNode(selectedIdx, hasCurrentDot, hasParentDotDot);
+    if (!selectedNode) return -1;
+    
+    // Find this node in the combined array
+    const allVisibleObjects = [...subpatches, ...regularObjects];
+    return allVisibleObjects.findIndex(obj => obj.id === selectedNode.id);
+  }, [findSelectedObjectNode, subpatches, regularObjects]);
 
   // Handle selecting an object from the spatial view
   const handleSpatialObjectSelect = useCallback((objectIndex: number) => {
     if (!currentPatch) return; // Safety check
     
-    // Calculate how many special entries are before the list of objects
+    // Get the combined array of all visible objects
+    const allVisibleObjects = [...subpatches, ...regularObjects];
+    
+    // Check if the index is valid
+    if (objectIndex < 0 || objectIndex >= allVisibleObjects.length) return;
+    
+    // Get the object at this index
+    const selectedObject = allVisibleObjects[objectIndex];
+    
+    // Now find where this object is in our UI list
+    // First determine if it's a subpatch or regular object
+    const isSubpatch = subpatches.some(node => node.id === selectedObject.id);
+    
+    // Calculate special entries count
     const specialEntryCount = (showDot ? 1 : 0) + (showDotDot ? 1 : 0);
     
-    // Adjust the index to account for special entries
-    const adjustedIndex = objectIndex + specialEntryCount;
+    // Calculate the index in the list, accounting for special entries
+    let listIndex = specialEntryCount;
+    
+    if (isSubpatch) {
+      // It's a subpatch, find its index within subpatches
+      const subpatchIndex = subpatches.findIndex(node => node.id === selectedObject.id);
+      if (subpatchIndex >= 0) {
+        listIndex += subpatchIndex;
+      }
+    } else {
+      // It's a regular object, find its index within regularObjects
+      const regularIndex = regularObjects.findIndex(node => node.id === selectedObject.id);
+      if (regularIndex >= 0) {
+        listIndex += subpatches.length + regularIndex;
+      }
+    }
     
     // Set the selected index
-    setSelectedIndex(adjustedIndex);
+    setSelectedIndex(listIndex);
     
     // Scroll the selected item into view
     setTimeout(() => {
-      if (entryRefs.current[adjustedIndex]) {
-        entryRefs.current[adjustedIndex]?.scrollIntoView({ block: "nearest" });
+      if (entryRefs.current[listIndex]) {
+        entryRefs.current[listIndex]?.scrollIntoView({ block: "nearest" });
       }
     }, 10);
-  }, [showDot, showDotDot, setSelectedIndex, entryRefs, currentPatch]);
+  }, [showDot, showDotDot, setSelectedIndex, entryRefs, currentPatch, subpatches, regularObjects]);
 
   // Handle saving a rename
   const handleSaveRename = useCallback(
@@ -425,8 +462,8 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         )}
       </div>
 
-      <div className="bottom-section flex flex-row mt-4">
-        <div className="help-text text-xs text-zinc-500 flex-shrink-0 flex-1">
+      <div className="bottom-section flex flex-row items-start mt-4">
+        <div className="help-text text-xs text-zinc-500 flex-shrink-0">
           <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
           <p>Press R on a subpatch to rename it</p>
           <p>Type to filter objects by name</p>
@@ -437,10 +474,14 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         </div>
         
         {/* Spatial layout visualization */}
-        <div className="spatial-view-container flex-shrink-0 ml-4">
-          <div className="text-xs text-zinc-500 mb-1">Spatial Layout</div>
+        <div className="spatial-view-container flex-shrink-0 ml-4 mb-4">
           <SpatialLayoutView 
-            objects={[...subpatches, ...regularObjects]} 
+            objects={
+              // Only show filtered objects but use all objects for layout calculation
+              currentPatch ? [...currentPatch.objectNodes] : []
+            }
+            // Only the visible objects
+            visibleObjects={[...subpatches, ...regularObjects]}
             selectedIndex={findSelectedObjectIndex(selectedIndex, showDot, showDotDot)}
             width={200} 
             height={150}

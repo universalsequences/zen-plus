@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { ObjectNode } from '@/lib/nodes/types';
 
 interface SpatialLayoutViewProps {
-  objects: ObjectNode[];
+  objects: ObjectNode[];         // All objects (unfiltered) - used for calculating layout bounds
+  visibleObjects?: ObjectNode[]; // Only the objects that are visible (filtered) - what to display
   selectedIndex: number;
   width: number;
   height: number;
@@ -15,15 +16,37 @@ interface SpatialLayoutViewProps {
  */
 export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
   objects,
+  visibleObjects,
   selectedIndex,
   width,
   height,
   className = '',
   onSelectObject
 }) => {
-  // Calculate the bounding box of all objects to determine scaling
+  // If visibleObjects is not provided, use objects
+  const objectsToDisplay = visibleObjects || objects;
+  // Calculate the bounding box based on ALL objects (without filtering)
+  // to ensure stable positioning and sizing
   const { bounds, objectsWithNormalizedPositions } = useMemo(() => {
-    if (objects.length === 0) {
+    // Use a stable representation of the full layout
+    // This way we calculate bounds independently of which objects are currently filtered
+    
+    // First find all unique objects based on their positions
+    const uniquePositionedObjects = new Map();
+    
+    // Add all objects to the map to get a unique set of positions
+    objects.forEach((obj) => {
+      if (obj.position) {
+        // Use position as a key to avoid duplicates when filtering
+        const key = `${obj.position.x || 0},${obj.position.y || 0}`;
+        uniquePositionedObjects.set(key, obj);
+      }
+    });
+    
+    // Convert back to array for calculations
+    const allObjects = Array.from(uniquePositionedObjects.values());
+    
+    if (allObjects.length === 0) {
       return { 
         bounds: { minX: 0, minY: 0, maxX: 100, maxY: 100 },
         objectsWithNormalizedPositions: []
@@ -36,8 +59,8 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
     let maxX = -Infinity;
     let maxY = -Infinity;
     
-    // Find min/max coordinates
-    objects.forEach((obj) => {
+    // Find min/max coordinates from all collected objects
+    allObjects.forEach((obj) => {
       if (!obj.position) return;
       
       const x = obj.position.x ?? 0;
@@ -68,8 +91,8 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
     maxX += paddingX;
     maxY += paddingY;
     
-    // Create objects with normalized positions
-    const objectsWithNormalizedPositions = objects.map((obj, index) => {
+    // Create objects with normalized positions for the objects to display
+    const objectsWithNormalizedPositions = objectsToDisplay.map((obj, index) => {
       if (!obj.position) {
         return {
           id: obj.id,
@@ -102,7 +125,7 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
       bounds: { minX, minY, maxX, maxY },
       objectsWithNormalizedPositions
     };
-  }, [objects]);
+  }, [objects, objectsToDisplay]);
   
   // If there are no objects with positions, show a message
   if (objectsWithNormalizedPositions.length === 0 || 
@@ -130,7 +153,7 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
         return (
           <div 
             key={obj.id}
-            className={`absolute ${isSelected ? 'border-white' : 'border-gray-600'} border rounded cursor-pointer`}
+            className={`absolute ${isSelected ? 'border-white' : 'border-gray-600'} border cursor-pointer`}
             style={{
               left: `${obj.x * 100}%`,
               top: `${obj.y * 100}%`,
