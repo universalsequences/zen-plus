@@ -57,10 +57,10 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
   // Get command text for filtering
   const { commandText, setCommandText } = useBuffer();
   
-  // Filter buffers based on command text and current buffer
-  useEffect(() => {
-    // Filter out current buffer and apply search filter if there's command text
-    const filteredBuffers = workingBuffers.filter((b) => {
+  // Get visible buffers directly from workingBuffers to ensure we always have them
+  // This creates a new filtered array on each render instead of relying on the ref
+  const visibleBuffers = React.useMemo(() => {
+    return workingBuffers.filter(b => {
       // Always exclude the current buffer
       if (b.id === buffer.id) return false;
       
@@ -77,15 +77,19 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
              patchName.includes(searchTerm) || 
              objectText.includes(searchTerm);
     });
-    
-    visibleBuffersRef.current = filteredBuffers;
-    
+  }, [workingBuffers, buffer.id, commandText]);
+  
+  // Update refs and selection index when visible buffers change
+  useEffect(() => {
     // Reset selection when filtered list changes
     setSelectedIndex(0);
     
     // Reset refs array for the new list
-    bufferItemsRef.current = Array(filteredBuffers.length).fill(null);
-  }, [workingBuffers, buffer.id, commandText]);
+    bufferItemsRef.current = Array(visibleBuffers.length).fill(null);
+    
+    // Store the visible buffers in the ref for any code that relies on it
+    visibleBuffersRef.current = visibleBuffers;
+  }, [visibleBuffers]);
 
   // Function to handle buffer selection with special case handling
   const handleBufferSelect = useCallback(
@@ -176,7 +180,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         if (e.key === "Enter") {
           e.preventDefault();
           // Save the rename
-          const selectedBuf = visibleBuffersRef.current[editingIndex];
+          const selectedBuf = visibleBuffers[editingIndex];
           if (selectedBuf && selectedBuf.type === BufferType.Patch && selectedBuf.patch) {
             renamePatch(selectedBuf.patch, editingName.trim());
           }
@@ -219,7 +223,6 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         return;
       }
 
-      const visibleBuffers = visibleBuffersRef.current;
       if (visibleBuffers.length === 0) return;
 
       switch (e.key) {
@@ -291,23 +294,26 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       editingIndex,
       editingName,
       renamePatch,
+      visibleBuffers,
+      commandText,
+      setCommandText,
     ],
   );
 
-  // Set up global keyboard event handler
+  // Set up focus handling and global keyboard event handler
   useEffect(() => {
-    // Only add event listener if this is the selected buffer
-    if (selectedBuffer?.id !== buffer.id) return;
-
     const rootElement = containerRef.current;
     if (rootElement) {
-      // Focus the element to capture keyboard events
-      setTimeout(() => {
-        rootElement.focus();
-      }, 100);
+      // Focus the element to capture keyboard events, but only if this is the selected buffer
+      if (selectedBuffer?.id === buffer.id) {
+        setTimeout(() => {
+          rootElement.focus();
+        }, 100);
+      }
 
       // Add global event listener for keyboard navigation
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        // Only process keyboard events if this is the selected buffer
         if (selectedBuffer?.id !== buffer.id) return;
 
         // Handle ESC to clear filter
@@ -333,7 +339,6 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
             rootElement.focus();
             e.preventDefault();
 
-            const visibleBuffers = visibleBuffersRef.current;
             if (visibleBuffers.length === 0) return;
 
             if (e.key === "ArrowDown") {
@@ -364,7 +369,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         window.removeEventListener("keydown", handleGlobalKeyDown);
       };
     }
-  }, [buffer.id, selectedBuffer, selectedIndex, handleBufferSelect]);
+  }, [buffer.id, selectedBuffer, selectedIndex, handleBufferSelect, visibleBuffers, commandText, setCommandText]);
 
   // Function to set a ref for a buffer item element
   const setBufferItemRef = useCallback((el: HTMLDivElement | null, index: number) => {
@@ -494,17 +499,26 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       setBufferItemRef,
       editingIndex,
       editingName,
+      renamePatch,
+      visibleBuffers,
     ],
   );
 
-  // Get visible buffers from ref (already filtered by commandText and excluding current buffer)
-  const visibleBuffers = visibleBuffersRef.current;
+
+  // Handle click on container to ensure focus and proper selection
+  const handleContainerClick = useCallback(() => {
+    // Focus the container and set this buffer as selected
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, []);
 
   return (
     <div
       ref={containerRef}
       className="buffer-list w-full h-full overflow-auto bg-zinc-950 text-white flex flex-col"
       onKeyDown={handleKeyDown}
+      onClick={handleContainerClick}
       tabIndex={0}
       style={{ ["--active-click-bg" as any]: "rgba(59, 130, 246, 0.5)" }}
     >
