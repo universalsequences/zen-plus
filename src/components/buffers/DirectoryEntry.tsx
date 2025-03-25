@@ -148,7 +148,13 @@ export const ObjectEntry: React.FC<ObjectEntryProps> = ({
             }}
           />
         ) : (
-          <span className="object-name">{displayName}</span>
+          <div className="object-name-container">
+            <span className="object-name">{displayName}</span>
+            {/* Display scripting name if available */}
+            {node.attributes?.["scripting name"] && (
+              <span className="scripting-name ml-2 text-zinc-400 italic">[{node.attributes["scripting name"]}]</span>
+            )}
+          </div>
         )}
         {isSelected && !isEditing && <span className="ml-auto text-xs">⏎</span>}
       </div>

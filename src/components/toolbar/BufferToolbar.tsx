@@ -161,8 +161,11 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
 
   return (
     <div
-      style={{ backgroundColor: isSelected ? "#0032ffb8" : "" }}
-      className={`px-2 text-xs h-8 w-full flex ${isSelected ? "" : "bg-zinc-800"}`}
+      style={{
+        backdropFilter: "blur(8px)",
+        backgroundColor: isSelected ? "#0032ffb8" : "#373c4469",
+      }}
+      className={`px-2 text-xs h-8 w-full flex ${isSelected ? "" : ""}`}
     >
       <div className="my-auto mr-2">{name}</div>
       <div className="my-auto text-zinc-400">

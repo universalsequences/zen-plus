@@ -134,7 +134,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       entriesCountRef.current = count;
     }
   }, [currentPatch, subpatches, regularObjects, commandText]);
-  
+
   // Reset selection index when command text changes (filtering)
   useEffect(() => {
     setSelectedIndex(0);
@@ -222,58 +222,65 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
 
   // Should we show the special entries?
   const showDot = !isFiltering || dotMatches;
-  const showDotDot = (!isFiltering || dotDotMatches) && 
+  const showDotDot =
+    (!isFiltering || dotDotMatches) &&
     (currentPatch ? !!(currentPatch as SubPatch).parentPatch : false);
 
   // Find the selected object node from the selected index in the list
-  const findSelectedObjectNode = useCallback((selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): ObjectNode | null => {
-    // Calculate how many special entries are before the list of objects
-    const specialEntryCount = (hasCurrentDot ? 1 : 0) + (hasParentDotDot ? 1 : 0);
-    
-    // If the selectedIndex is on a special entry, return null (no object selected)
-    if (selectedIdx < specialEntryCount) {
+  const findSelectedObjectNode = useCallback(
+    (selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): ObjectNode | null => {
+      // Calculate how many special entries are before the list of objects
+      const specialEntryCount = (hasCurrentDot ? 1 : 0) + (hasParentDotDot ? 1 : 0);
+
+      // If the selectedIndex is on a special entry, return null (no object selected)
+      if (selectedIdx < specialEntryCount) {
+        return null;
+      }
+
+      // Calculate the adjusted index in the combined object array
+      const adjustedIndex = selectedIdx - specialEntryCount;
+
+      // If the adjusted index is within subpatches, return that object
+      if (adjustedIndex < subpatches.length) {
+        return subpatches[adjustedIndex];
+      }
+
+      // If the adjusted index is within regularObjects, return that object
+      const regularObjectIndex = adjustedIndex - subpatches.length;
+      if (regularObjectIndex < regularObjects.length) {
+        return regularObjects[regularObjectIndex];
+      }
+
+      // If we get here, nothing is selected
       return null;
-    }
-    
-    // Calculate the adjusted index in the combined object array
-    const adjustedIndex = selectedIdx - specialEntryCount;
-    
-    // If the adjusted index is within subpatches, return that object
-    if (adjustedIndex < subpatches.length) {
-      return subpatches[adjustedIndex];
-    }
-    
-    // If the adjusted index is within regularObjects, return that object
-    const regularObjectIndex = adjustedIndex - subpatches.length;
-    if (regularObjectIndex < regularObjects.length) {
-      return regularObjects[regularObjectIndex];
-    }
-    
-    // If we get here, nothing is selected
-    return null;
-  }, [subpatches, regularObjects]);
-  
+    },
+    [subpatches, regularObjects],
+  );
+
   // Find the index of the selected object in the visibleObjects array
-  const findSelectedObjectIndex = useCallback((selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): number => {
-    const selectedNode = findSelectedObjectNode(selectedIdx, hasCurrentDot, hasParentDotDot);
-    if (!selectedNode) return -1;
-    
-    // Find this node in the combined array
-    const allVisibleObjects = [...subpatches, ...regularObjects];
-    return allVisibleObjects.findIndex(obj => obj.id === selectedNode.id);
-  }, [findSelectedObjectNode, subpatches, regularObjects]);
-  
-  // State to track selected object position
-  const [selectedObjectPosition, setSelectedObjectPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  
+  const findSelectedObjectIndex = useCallback(
+    (selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): number => {
+      const selectedNode = findSelectedObjectNode(selectedIdx, hasCurrentDot, hasParentDotDot);
+      if (!selectedNode) return -1;
+
+      // Find this node in the combined array
+      const allVisibleObjects = [...subpatches, ...regularObjects];
+      return allVisibleObjects.findIndex((obj) => obj.id === selectedNode.id);
+    },
+    [findSelectedObjectNode, subpatches, regularObjects],
+  );
+
+  // Ref to track selected object position (use ref instead of state to prevent re-renders)
+  const selectedObjectPositionRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
   // Get the selected object details for display
   const selectedObjectDetails = useMemo(() => {
     const node = findSelectedObjectNode(selectedIndex, showDot, showDotDot);
     if (!node) return null;
-    
+
     // Get best display name for the object
     let displayName = "Object";
-    
+
     if (node.subpatch?.name) {
       // First priority: use the subpatch name if available
       displayName = node.subpatch.name;
@@ -281,68 +288,89 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       // Second priority: use the object text (typically "zen")
       displayName = node.text;
     }
-    
+
+    // Get scripting name if available
+    const scriptingName = node.attributes?.["scripting name"]
+      ? String(node.attributes["scripting name"])
+      : "";
+
     return {
       id: node.id,
       name: displayName,
       objectText: node.text || "Object", // Original object text like "zen"
+      scriptingName,
       isSubpatch: !!node.subpatch,
-      hasPosition: !!node.position
+      hasPosition: !!node.position,
     };
   }, [selectedIndex, showDot, showDotDot, findSelectedObjectNode]);
-  
+
   // Handler to receive position updates from the spatial view
-  const handleSelectedObjectPosition = useCallback((x: number, y: number, width: number, height: number) => {
-    setSelectedObjectPosition({ x, y, width, height });
-  }, []);
+  const handleSelectedObjectPosition = useCallback(
+    (x: number, y: number, width: number, height: number) => {
+      // Store the position in a ref instead of state to prevent re-renders
+      selectedObjectPositionRef.current = { x, y, width, height };
+
+      // Force update the SVG line by directly manipulating the DOM
+      // This avoids React re-renders while still updating the visual
+      const line = document.querySelector(".dired-connector");
+      if (line) {
+        line.setAttribute("x1", String(x + width));
+        line.setAttribute("y1", String(y + height / 2));
+      }
+    },
+    [],
+  );
 
   // Handle selecting an object from the spatial view
-  const handleSpatialObjectSelect = useCallback((objectIndex: number) => {
-    if (!currentPatch) return; // Safety check
-    
-    // Get the combined array of all visible objects
-    const allVisibleObjects = [...subpatches, ...regularObjects];
-    
-    // Check if the index is valid
-    if (objectIndex < 0 || objectIndex >= allVisibleObjects.length) return;
-    
-    // Get the object at this index
-    const selectedObject = allVisibleObjects[objectIndex];
-    
-    // Now find where this object is in our UI list
-    // First determine if it's a subpatch or regular object
-    const isSubpatch = subpatches.some(node => node.id === selectedObject.id);
-    
-    // Calculate special entries count
-    const specialEntryCount = (showDot ? 1 : 0) + (showDotDot ? 1 : 0);
-    
-    // Calculate the index in the list, accounting for special entries
-    let listIndex = specialEntryCount;
-    
-    if (isSubpatch) {
-      // It's a subpatch, find its index within subpatches
-      const subpatchIndex = subpatches.findIndex(node => node.id === selectedObject.id);
-      if (subpatchIndex >= 0) {
-        listIndex += subpatchIndex;
+  const handleSpatialObjectSelect = useCallback(
+    (objectIndex: number) => {
+      if (!currentPatch) return; // Safety check
+
+      // Get the combined array of all visible objects
+      const allVisibleObjects = [...subpatches, ...regularObjects];
+
+      // Check if the index is valid
+      if (objectIndex < 0 || objectIndex >= allVisibleObjects.length) return;
+
+      // Get the object at this index
+      const selectedObject = allVisibleObjects[objectIndex];
+
+      // Now find where this object is in our UI list
+      // First determine if it's a subpatch or regular object
+      const isSubpatch = subpatches.some((node) => node.id === selectedObject.id);
+
+      // Calculate special entries count
+      const specialEntryCount = (showDot ? 1 : 0) + (showDotDot ? 1 : 0);
+
+      // Calculate the index in the list, accounting for special entries
+      let listIndex = specialEntryCount;
+
+      if (isSubpatch) {
+        // It's a subpatch, find its index within subpatches
+        const subpatchIndex = subpatches.findIndex((node) => node.id === selectedObject.id);
+        if (subpatchIndex >= 0) {
+          listIndex += subpatchIndex;
+        }
+      } else {
+        // It's a regular object, find its index within regularObjects
+        const regularIndex = regularObjects.findIndex((node) => node.id === selectedObject.id);
+        if (regularIndex >= 0) {
+          listIndex += subpatches.length + regularIndex;
+        }
       }
-    } else {
-      // It's a regular object, find its index within regularObjects
-      const regularIndex = regularObjects.findIndex(node => node.id === selectedObject.id);
-      if (regularIndex >= 0) {
-        listIndex += subpatches.length + regularIndex;
-      }
-    }
-    
-    // Set the selected index
-    setSelectedIndex(listIndex);
-    
-    // Scroll the selected item into view
-    setTimeout(() => {
-      if (entryRefs.current[listIndex]) {
-        entryRefs.current[listIndex]?.scrollIntoView({ block: "nearest" });
-      }
-    }, 10);
-  }, [showDot, showDotDot, setSelectedIndex, entryRefs, currentPatch, subpatches, regularObjects]);
+
+      // Set the selected index
+      setSelectedIndex(listIndex);
+
+      // Scroll the selected item into view
+      setTimeout(() => {
+        if (entryRefs.current[listIndex]) {
+          entryRefs.current[listIndex]?.scrollIntoView({ block: "nearest" });
+        }
+      }, 10);
+    },
+    [showDot, showDotDot, setSelectedIndex, entryRefs, currentPatch, subpatches, regularObjects],
+  );
 
   // Handle saving a rename
   const handleSaveRename = useCallback(
@@ -383,7 +411,9 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         <div className="breadcrumb text-base text-zinc-400 px-2 w-full py-1">
           {generateBreadcrumb(currentPatch)} {">"}{" "}
           <span className="text-white">{buffer.patch?.name || "Patch"}</span>
-          {isFiltering && <span className="ml-2 text-blue-400">Filtering: {commandText}</span>}
+          {isFiltering && (
+            <span className="ml-2 text-teal-400 italic">Filtering: {commandText}</span>
+          )}
         </div>
       </div>
 
@@ -496,7 +526,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       </div>
 
       <div className="bottom-section flex flex-row items-start mt-4">
-        <div className="help-text text-xs text-zinc-500 flex-shrink-0">
+        {/*<div className="help-text text-xs text-zinc-500 flex-shrink-0">
           <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
           <p>Press R on a subpatch to rename it</p>
           <p>Type to filter objects by name</p>
@@ -504,14 +534,14 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
           <p>Click or press Enter on ".." to navigate up to parent</p>
           <p>Click or press Enter on a subpatch to navigate into it</p>
           <p>Click or press Enter on a regular object to open it as a buffer</p>
-        </div>
-        
+            </div>*/}
+
         {/* Spatial layout visualization with connector */}
-        <div className="spatial-view-container flex-shrink-0 ml-4 mb-4">
+        <div className="spatial-view-container flex-shrink-0 ml-2 mb-4">
           <div className="flex items-start">
             {/* Spatial view */}
             <div className="spatial-view relative">
-              <SpatialLayoutView 
+              <SpatialLayoutView
                 objects={
                   // Only show filtered objects but use all objects for layout calculation
                   currentPatch ? [...currentPatch.objectNodes] : []
@@ -519,46 +549,51 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                 // Only the visible objects
                 visibleObjects={[...subpatches, ...regularObjects]}
                 selectedIndex={findSelectedObjectIndex(selectedIndex, showDot, showDotDot)}
-                width={200} 
+                width={200}
                 height={150}
-                className="rounded border border-zinc-800" 
+                className="rounded border border-zinc-800"
                 onSelectObject={handleSpatialObjectSelect}
                 onSelectedObjectPosition={handleSelectedObjectPosition}
               />
-              
+
               {/* Connector and object name */}
               {selectedObjectDetails && (
                 <div className="connector-group absolute top-0 left-0 w-full h-full pointer-events-none">
                   {/* Line will be drawn with SVG */}
                   <svg className="absolute top-0 left-0 w-full h-full">
-                    <line 
-                      // Start from the center-right of the selected object
-                      x1={selectedObjectPosition.x + selectedObjectPosition.width}
-                      y1={selectedObjectPosition.y + selectedObjectPosition.height/2}
+                    <line
+                      // Start from the center-right of the selected object (initial position)
+                      x1="100"
+                      y1="75"
                       // End at the label
-                      x2={210} 
+                      x2={210}
                       y2="75"
-                      stroke="#6b7280" 
-                      strokeWidth="1" 
+                      stroke="#6b7280"
+                      strokeWidth="1"
                       strokeDasharray="3,2"
-                      className="connector-line"
+                      className="connector-line dired-connector"
                     />
                   </svg>
-                  
+
                   {/* Object name */}
-                  <div 
+                  <div
                     className="object-label absolute text-xs text-zinc-300"
-                    style={{ 
-                      left: '215px', 
-                      top: '75px', 
-                      transform: 'translateY(-50%)',
-                      whiteSpace: 'nowrap'
+                    style={{
+                      left: "215px",
+                      top: "75px",
+                      transform: "translateY(-50%)",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {selectedObjectDetails.name}
                     {selectedObjectDetails.isSubpatch && (
                       <span className="text-teal-400 ml-1">
                         ({selectedObjectDetails.objectText})
+                      </span>
+                    )}
+                    {selectedObjectDetails.scriptingName && (
+                      <span className="scripting-name ml-2 text-zinc-400 italic">
+                        [{selectedObjectDetails.scriptingName}]
                       </span>
                     )}
                   </div>

@@ -129,21 +129,45 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
     };
   }, [objects, objectsToDisplay]);
   
-  // Report the position of the selected object when it changes
+  // Use a ref to store the callback to avoid it triggering rerenders
+  const callbackRef = React.useRef(onSelectedObjectPosition);
+  
+  // Update the callback ref when it changes
   React.useEffect(() => {
-    if (selectedIndex >= 0 && selectedIndex < objectsWithNormalizedPositions.length && onSelectedObjectPosition) {
-      const selectedObj = objectsWithNormalizedPositions[selectedIndex];
-      if (selectedObj && selectedObj.isVisible) {
-        // Convert normalized position to pixels
-        onSelectedObjectPosition(
-          selectedObj.x * width,
-          selectedObj.y * height,
-          selectedObj.width * width,
-          selectedObj.height * height
-        );
-      }
+    callbackRef.current = onSelectedObjectPosition;
+  }, [onSelectedObjectPosition]);
+  
+  // Render effect to calculate and report position
+  // Using a dedicated rendering effect for position calculation
+  React.useLayoutEffect(() => {
+    // Skip if no objects or no selected index
+    if (
+      selectedIndex < 0 || 
+      selectedIndex >= objectsWithNormalizedPositions.length || 
+      !callbackRef.current
+    ) {
+      return;
     }
-  }, [selectedIndex, objectsWithNormalizedPositions, width, height, onSelectedObjectPosition]);
+    
+    const selectedObj = objectsWithNormalizedPositions[selectedIndex];
+    if (!selectedObj || !selectedObj.isVisible) {
+      return;
+    }
+    
+    // Calculate position once per render
+    const x = selectedObj.x * width;
+    const y = selectedObj.y * height;
+    const w = selectedObj.width * width;
+    const h = selectedObj.height * height;
+    
+    // Call the callback with the position
+    // Using setTimeout(0) to break the call stack and prevent re-render loops
+    setTimeout(() => {
+      if (callbackRef.current) {
+        callbackRef.current(x, y, w, h);
+      }
+    }, 0);
+  }, [selectedIndex, objectsWithNormalizedPositions, width, height]);
   
   // If there are no objects with positions, show a message
   if (objectsWithNormalizedPositions.length === 0 || 

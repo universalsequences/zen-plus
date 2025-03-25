@@ -177,7 +177,6 @@ const BufferComponent: React.FC<{
       isCustomView ? "" : "border border-zinc-100",
       "flex flex-col relative w-full",
       isCustomView ? "custom-view" : "tile",
-      "bg-zinc-950",
     ]
       .filter(Boolean)
       .join(" ");
