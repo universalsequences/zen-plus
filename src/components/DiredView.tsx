@@ -206,28 +206,30 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       switch (e.key) {
         case "R":
         case "r":
-          e.preventDefault();
-          // Handle rename for subpatches
-          let renameObjectIndex = selectedIndex - 1; // Subtract "." entry
-          if ((currentPatch as SubPatch).parentPatch) renameObjectIndex--; // Subtract ".." entry if present
+          if (e.metaKey) {
+            e.preventDefault();
+            // Handle rename for subpatches
+            let renameObjectIndex = selectedIndex - 1; // Subtract "." entry
+            if ((currentPatch as SubPatch).parentPatch) renameObjectIndex--; // Subtract ".." entry if present
 
-          // Only allow renaming subpatches
-          if (renameObjectIndex >= 0 && renameObjectIndex < subpatches.length) {
-            const node = subpatches[renameObjectIndex];
-            if (node.subpatch) {
-              setEditingPatchIndex(selectedIndex);
-              setEditingName(node.subpatch.name || node.text || "");
+            // Only allow renaming subpatches
+            if (renameObjectIndex >= 0 && renameObjectIndex < subpatches.length) {
+              const node = subpatches[renameObjectIndex];
+              if (node.subpatch) {
+                setEditingPatchIndex(selectedIndex);
+                setEditingName(node.subpatch.name || node.text || "");
 
-              // Focus the input on next render
-              setTimeout(() => {
-                if (nameInputRef.current) {
-                  nameInputRef.current.focus();
-                  nameInputRef.current.select();
-                }
-              }, 10);
+                // Focus the input on next render
+                setTimeout(() => {
+                  if (nameInputRef.current) {
+                    nameInputRef.current.focus();
+                    nameInputRef.current.select();
+                  }
+                }, 10);
+              }
             }
+            break;
           }
-          break;
         case "ArrowDown":
           e.preventDefault();
           setSelectedIndex((prev) => {

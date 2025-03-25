@@ -2,7 +2,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { Patch, SubPatch } from "@/lib/nodes/types";
 import { BufferType, type Buffer } from "@/lib/tiling/types";
 import { useBuffer } from "@/contexts/BufferContext";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
   const {
@@ -18,7 +18,7 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
     patchNames,
     setPatchNames,
   } = usePatches();
-  
+
   const { commandText, setCommandText } = useBuffer();
 
   const isSelected = buffer === selectedBuffer;
@@ -54,6 +54,111 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
     return parts.join(" > ");
   }, []);
 
+  // Only use command text if this buffer is selected
+  const showCommandInput = isSelected;
+
+  // For cursor blinking
+  const [cursorVisible, setCursorVisible] = useState(true);
+  const [cursorPosition, setCursorPosition] = useState(commandText.length);
+  const commandRef = useRef<HTMLDivElement>(null);
+
+  // Handle cursor blinking
+  useEffect(() => {
+    if (!isSelected) return;
+
+    const blinkInterval = setInterval(() => {
+      setCursorVisible((prev) => !prev);
+    }, 530);
+
+    return () => clearInterval(blinkInterval);
+  }, [isSelected]);
+
+  // Handle keyboard events for the custom input
+  useEffect(() => {
+    if (!isSelected) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        // Clear command on escape
+        setCommandText("");
+        setCursorPosition(0);
+        return;
+      }
+
+      if (e.key === "Enter") {
+        // Execute command
+        console.log("Command entered:", commandText);
+        setCommandText("");
+        setCursorPosition(0);
+        return;
+      }
+
+      if (e.key === "Backspace") {
+        if (cursorPosition > 0) {
+          // Remove character before cursor
+          const newText =
+            commandText.substring(0, cursorPosition - 1) + commandText.substring(cursorPosition);
+          setCommandText(newText);
+          setCursorPosition((prev) => Math.max(0, prev - 1));
+        }
+        return;
+      }
+
+      if (e.key === "Delete") {
+        if (cursorPosition < commandText.length) {
+          // Remove character at cursor
+          const newText =
+            commandText.substring(0, cursorPosition) + commandText.substring(cursorPosition + 1);
+          setCommandText(newText);
+        }
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        // Move cursor left
+        setCursorPosition((prev) => Math.max(0, prev - 1));
+        return;
+      }
+
+      if (e.key === "ArrowRight") {
+        // Move cursor right
+        setCursorPosition((prev) => Math.min(commandText.length, prev + 1));
+        return;
+      }
+
+      if (e.key === "Home") {
+        // Move cursor to start
+        setCursorPosition(0);
+        return;
+      }
+
+      if (e.key === "End") {
+        // Move cursor to end
+        setCursorPosition(commandText.length);
+        return;
+      }
+
+      // Only add printable characters
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Insert character at cursor position
+        const newText =
+          commandText.substring(0, cursorPosition) + e.key + commandText.substring(cursorPosition);
+        setCommandText(newText);
+        setCursorPosition((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSelected, commandText, cursorPosition, setCommandText]);
+
+  // When command text changes externally, move cursor to end
+  useEffect(() => {
+    if (isSelected) {
+      setCursorPosition(commandText.length);
+    }
+  }, [commandText, isSelected]);
+
   return (
     <div
       style={{ backgroundColor: isSelected ? "#0032ffb8" : "" }}
@@ -66,15 +171,30 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
       <div className="my-auto text-zinc-100 ml-1">
         {buffer.objectNode ? buffer.objectNode.patch.name : ""}
       </div>
-      {isSelected && (
-        <div className="ml-auto flex items-center">
-          <input
-            type="text"
-            value={commandText}
-            onChange={(e) => setCommandText(e.target.value)}
-            placeholder="Command..."
-            className="px-2 py-0.5 text-xs bg-zinc-700 rounded border border-zinc-600 text-white"
-          />
+      {showCommandInput && (
+        <div className="ml-2 flex items-center">
+          <div
+            ref={commandRef}
+            className="px-2 py-1 text-xs rounded text-white font-mono min-w-[160px] relative my-auto "
+          >
+            {commandText === "" ? (
+              ""
+            ) : (
+              <>
+                <span>{commandText.substring(0, cursorPosition)}</span>
+                {
+                  <span
+                    className="absolute bg-white w-[2px] h-[14px] animate-pulse"
+                    style={{
+                      left: `calc(${cursorPosition}ch + 0.5rem)`,
+                      top: "4px",
+                    }}
+                  />
+                }
+                <span>{commandText.substring(cursorPosition)}</span>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
