@@ -8,6 +8,7 @@ import { useDiredKeyboardNavigation } from "./useDiredKeyboardNavigation";
 import { DirectoryEntry, ObjectEntry } from "./DirectoryEntry";
 import { organizeObjects } from "./organizeObjects";
 import { generateBreadcrumb } from "./generateBreadcrumb";
+import { SpatialLayoutView } from "./SpatialLayoutView";
 
 interface DiredViewProps {
   buffer: Buffer;
@@ -212,6 +213,67 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
     }
   }, [currentPatch, subpatches, regularObjects, selectedIndex, commandText]);
 
+  // Check if we're filtering (has search text)
+  const isFiltering = commandText.length > 0;
+
+  // Check if special entries match the search
+  const dotMatches = ".".includes(commandText.toLowerCase());
+  const dotDotMatches = "..".includes(commandText.toLowerCase());
+
+  // Should we show the special entries?
+  const showDot = !isFiltering || dotMatches;
+  const showDotDot = (!isFiltering || dotDotMatches) && 
+    (currentPatch ? !!(currentPatch as SubPatch).parentPatch : false);
+
+  // Find the index of the selected object in the combined array of subpatches and regularObjects
+  const findSelectedObjectIndex = useCallback((selectedIdx: number, hasCurrentDot: boolean, hasParentDotDot: boolean): number => {
+    // Calculate how many special entries are before the list of objects
+    const specialEntryCount = (hasCurrentDot ? 1 : 0) + (hasParentDotDot ? 1 : 0);
+    
+    // If the selectedIndex is on a special entry, return -1 (no object selected)
+    if (selectedIdx < specialEntryCount) {
+      return -1;
+    }
+    
+    // Calculate the adjusted index in the combined object array
+    const adjustedIndex = selectedIdx - specialEntryCount;
+    
+    // If the adjusted index is within subpatches, return that index
+    if (adjustedIndex < subpatches.length) {
+      return adjustedIndex;
+    }
+    
+    // If the adjusted index is within regularObjects, return that index adjusted by subpatches length
+    const regularObjectIndex = adjustedIndex - subpatches.length;
+    if (regularObjectIndex < regularObjects.length) {
+      return subpatches.length + regularObjectIndex;
+    }
+    
+    // If we get here, nothing is selected
+    return -1;
+  }, [subpatches.length, regularObjects.length]);
+
+  // Handle selecting an object from the spatial view
+  const handleSpatialObjectSelect = useCallback((objectIndex: number) => {
+    if (!currentPatch) return; // Safety check
+    
+    // Calculate how many special entries are before the list of objects
+    const specialEntryCount = (showDot ? 1 : 0) + (showDotDot ? 1 : 0);
+    
+    // Adjust the index to account for special entries
+    const adjustedIndex = objectIndex + specialEntryCount;
+    
+    // Set the selected index
+    setSelectedIndex(adjustedIndex);
+    
+    // Scroll the selected item into view
+    setTimeout(() => {
+      if (entryRefs.current[adjustedIndex]) {
+        entryRefs.current[adjustedIndex]?.scrollIntoView({ block: "nearest" });
+      }
+    }, 10);
+  }, [showDot, showDotDot, setSelectedIndex, entryRefs, currentPatch]);
+
   // Handle saving a rename
   const handleSaveRename = useCallback(
     (node: ObjectNode, name: string) => {
@@ -226,17 +288,6 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   if (!currentPatch) {
     return <div className="p-4 text-white">No patch selected</div>;
   }
-
-  // Check if we're filtering (has search text)
-  const isFiltering = commandText.length > 0;
-
-  // Check if special entries match the search
-  const dotMatches = ".".includes(commandText.toLowerCase());
-  const dotDotMatches = "..".includes(commandText.toLowerCase());
-
-  // Should we show the special entries?
-  const showDot = !isFiltering || dotMatches;
-  const showDotDot = (!isFiltering || dotDotMatches) && (currentPatch as SubPatch).parentPatch;
 
   // Calculate entry indexes for keyboard navigation
   let entryIndex = 0;
@@ -374,14 +425,29 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         )}
       </div>
 
-      <div className="help-text mt-4 text-xs text-zinc-500 flex-shrink-0">
-        <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
-        <p>Press R on a subpatch to rename it</p>
-        <p>Type to filter objects by name</p>
-        <p>Click or press Enter on "." to exit and open the current patch</p>
-        <p>Click or press Enter on ".." to navigate up to parent</p>
-        <p>Click or press Enter on a subpatch to navigate into it</p>
-        <p>Click or press Enter on a regular object to open it as a buffer</p>
+      <div className="bottom-section flex flex-row mt-4">
+        <div className="help-text text-xs text-zinc-500 flex-shrink-0 flex-1">
+          <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
+          <p>Press R on a subpatch to rename it</p>
+          <p>Type to filter objects by name</p>
+          <p>Click or press Enter on "." to exit and open the current patch</p>
+          <p>Click or press Enter on ".." to navigate up to parent</p>
+          <p>Click or press Enter on a subpatch to navigate into it</p>
+          <p>Click or press Enter on a regular object to open it as a buffer</p>
+        </div>
+        
+        {/* Spatial layout visualization */}
+        <div className="spatial-view-container flex-shrink-0 ml-4">
+          <div className="text-xs text-zinc-500 mb-1">Spatial Layout</div>
+          <SpatialLayoutView 
+            objects={[...subpatches, ...regularObjects]} 
+            selectedIndex={findSelectedObjectIndex(selectedIndex, showDot, showDotDot)}
+            width={200} 
+            height={150}
+            className="rounded border border-zinc-800" 
+            onSelectObject={handleSpatialObjectSelect}
+          />
+        </div>
       </div>
     </div>
   );
