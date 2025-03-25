@@ -162,6 +162,14 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     (e: React.KeyboardEvent) => {
       // Only process keyboard navigation if this is the selected buffer
       if (selectedBuffer?.id !== buffer.id) return;
+      
+      // Special key handling for ESC to clear the command/filter
+      if (e.key === "Escape" && commandText) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCommandText("");
+        return;
+      }
 
       // If we're currently editing a name, handle special keys
       if (editingIndex !== null) {
@@ -302,6 +310,13 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
         if (selectedBuffer?.id !== buffer.id) return;
 
+        // Handle ESC to clear filter
+        if (e.key === "Escape" && commandText) {
+          e.preventDefault();
+          setCommandText("");
+          return;
+        }
+        
         // Skip if we're editing
         if (editingIndex !== null) return;
 
@@ -495,9 +510,20 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     >
       <div className="buffer-items flex-grow overflow-y-auto">
         {visibleBuffers.length === 0 ? (
-          <div className="empty-message text-zinc-400">No buffers available</div>
+          <div className="empty-message p-2 text-zinc-400">
+            {commandText ? 
+              `No buffers matching "${commandText}"` : 
+              "No buffers available"}
+          </div>
         ) : (
-          visibleBuffers.map((b, index) => renderBufferItem(b, index))
+          <>
+            {commandText && (
+              <div className="filter-info text-xs text-blue-400 p-2">
+                Filtering: {commandText}
+              </div>
+            )}
+            {visibleBuffers.map((b, index) => renderBufferItem(b, index))}
+          </>
         )}
       </div>
 

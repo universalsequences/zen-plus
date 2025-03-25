@@ -108,26 +108,26 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
 
   // Get command text to use for filtering
   const { commandText } = useBuffer();
-  
+
   // Organize objects: subpatches first, then regular objects, with filtering
   const organizeObjects = useCallback(() => {
     if (!currentPatch) return { subpatches: [], regularObjects: [] };
 
     const subpatches: ObjectNode[] = [];
     const regularObjects: ObjectNode[] = [];
-    
+
     const searchTerm = commandText.toLowerCase();
 
     currentPatch.objectNodes.forEach((node) => {
       // Filter based on command text if there is any
       const nodeText = (node.text || "").toLowerCase();
       const subpatchName = node.subpatch ? (node.subpatch.name || "").toLowerCase() : "";
-      
+
       // Skip if search term doesn't match
       if (searchTerm && !nodeText.includes(searchTerm) && !subpatchName.includes(searchTerm)) {
         return;
       }
-      
+
       if (node.subpatch) {
         subpatches.push(node);
       } else {
@@ -143,22 +143,42 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
     ? organizeObjects()
     : { subpatches: [], regularObjects: [] };
 
-  // Update the entry count whenever patch, subpatches, or regularObjects change
+  // Update the entry count whenever patch, subpatches, regularObjects, or filtering changes
   useEffect(() => {
     if (currentPatch) {
-      let count = 1; // "." entry
-      if ((currentPatch as SubPatch).parentPatch) count++; // ".." entry
+      let count = 0;
+
+      // Only count special entries if they should be shown based on filtering
+      const isFiltering = commandText.length > 0;
+      const dotMatches = ".".includes(commandText.toLowerCase());
+      const dotDotMatches = "..".includes(commandText.toLowerCase());
+
+      // Count "." entry if not filtering or it matches
+      if (!isFiltering || dotMatches) count++;
+
+      // Count ".." entry if not filtering or it matches and parent exists
+      if ((!isFiltering || dotDotMatches) && (currentPatch as SubPatch).parentPatch) count++;
+
+      // Count filtered objects
       count += subpatches.length + regularObjects.length;
 
       entriesCountRef.current = count;
     }
-  }, [currentPatch, subpatches, regularObjects]);
+  }, [currentPatch, subpatches, regularObjects, commandText]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       // Don't process keyboard events if this isn't the selected buffer
       if (selectedBuffer?.id !== buffer.id) return;
+
+      // Special key handling for ESC to clear the command/filter
+      if (e.key === "Escape" && commandText) {
+        e.preventDefault();
+        e.stopPropagation();
+        setCommandText("");
+        return;
+      }
 
       // If we're currently editing a name, handle special keys
       if (editingPatchIndex !== null) {
@@ -276,18 +296,47 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         case "Enter":
           e.preventDefault();
 
-          // Check what kind of entry we're on
-          if (selectedIndex === 0) {
+          // Get current filtering state
+          const isFiltering = commandText.length > 0;
+          const dotMatches = ".".includes(commandText.toLowerCase());
+          const dotDotMatches = "..".includes(commandText.toLowerCase());
+          const showDot = !isFiltering || dotMatches;
+          const showDotDot =
+            (!isFiltering || dotDotMatches) && (currentPatch as SubPatch).parentPatch;
+
+          // Create a map of what's visible to help with index mapping
+          const visibleMap = {
+            dot: showDot,
+            dotdot: showDotDot,
+            hasDot: showDot,
+            hasDotDot: showDotDot,
+            dotIndex: -1,
+            dotdotIndex: -1,
+            objectStartIndex: 0,
+          };
+
+          // Calculate indices based on what's visible
+          if (visibleMap.hasDot) {
+            visibleMap.dotIndex = 0;
+            visibleMap.objectStartIndex++;
+          }
+
+          if (visibleMap.hasDotDot) {
+            visibleMap.dotdotIndex = visibleMap.objectStartIndex;
+            visibleMap.objectStartIndex++;
+          }
+
+          // Check what kind of entry we're on based on visible elements
+          if (showDot && selectedIndex === visibleMap.dotIndex) {
             // "." entry - open current patch
             handleCurrentClick(e.metaKey);
-          } else if (selectedIndex === 1 && (currentPatch as SubPatch).parentPatch) {
+          } else if (showDotDot && selectedIndex === visibleMap.dotdotIndex) {
             // ".." entry - navigate to parent
             handleParentClick();
           } else {
             // Object node entry
-            // Calculate which object node this is
-            let objectIndex = selectedIndex - 1; // Subtract "." entry
-            if ((currentPatch as SubPatch).parentPatch) objectIndex--; // Subtract ".." entry if present
+            // Calculate which object node this is based on what's visible
+            let objectIndex = selectedIndex - visibleMap.objectStartIndex;
 
             // First check subpatches
             if (objectIndex < subpatches.length) {
@@ -379,28 +428,59 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
             } else if (e.key === "ArrowUp") {
               setSelectedIndex((prev) => Math.max(prev - 1, 0));
             } else if (e.key === "Enter") {
-              // Use the same logic as the main handler
-              if (selectedIndex === 0) {
-                // "." entry
+              // Get current filtering state for the global handler too
+              const isFiltering = commandText.length > 0;
+              const dotMatches = ".".includes(commandText.toLowerCase());
+              const dotDotMatches = "..".includes(commandText.toLowerCase());
+              const showDot = !isFiltering || dotMatches;
+              const showDotDot =
+                (!isFiltering || dotDotMatches) && (currentPatch as SubPatch).parentPatch;
+
+              // Create a map of what's visible to help with index mapping
+              const visibleMap = {
+                dot: showDot,
+                dotdot: showDotDot,
+                hasDot: showDot,
+                hasDotDot: showDotDot,
+                dotIndex: -1,
+                dotdotIndex: -1,
+                objectStartIndex: 0,
+              };
+
+              // Calculate indices based on what's visible
+              if (visibleMap.hasDot) {
+                visibleMap.dotIndex = 0;
+                visibleMap.objectStartIndex++;
+              }
+
+              if (visibleMap.hasDotDot) {
+                visibleMap.dotdotIndex = visibleMap.objectStartIndex;
+                visibleMap.objectStartIndex++;
+              }
+
+              // Check what kind of entry we're on based on visible elements
+              if (showDot && selectedIndex === visibleMap.dotIndex) {
+                // "." entry - open current patch
                 handleCurrentClick(e.metaKey);
-              } else if (selectedIndex === 1 && (currentPatch as SubPatch).parentPatch) {
-                // ".." entry
+              } else if (showDotDot && selectedIndex === visibleMap.dotdotIndex) {
+                // ".." entry - navigate to parent
                 handleParentClick();
                 setSelectedIndex(0);
               } else {
-                // Object node
-                let objectIndex = selectedIndex - 1;
-                if ((currentPatch as SubPatch).parentPatch) objectIndex--;
+                // Object node entry
+                // Calculate which object node this is based on what's visible
+                let objectIndex = selectedIndex - visibleMap.objectStartIndex;
 
+                // First check subpatches
                 if (objectIndex < subpatches.length) {
-                  // Subpatch
+                  // It's a subpatch
                   const node = subpatches[objectIndex];
                   if (node.subpatch) {
                     setCurrentPatch(node.subpatch);
                     setSelectedIndex(0);
                   }
                 } else {
-                  // Regular object
+                  // It's a regular object
                   objectIndex -= subpatches.length;
                   if (objectIndex < regularObjects.length) {
                     const node = regularObjects[objectIndex];
@@ -468,7 +548,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         <div
           ref={(el) => setEntryRef(el, index)}
           className={`directory-entry px-2 py-1 text-xs my-1 cursor-pointer transition-colors ${
-            isSpecial ? "text-zinc-400" : ""
+            isSpecial ? "text-zinc-100" : ""
           } ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
           onClick={onClick}
           data-index={index}
@@ -508,20 +588,34 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   // Reset entry refs array - moved before conditional return to ensure consistent hook calling
   useEffect(() => {
     if (currentPatch) {
-      // Calculate how many entries we'll have
-      let count = 1; // "." entry
-      if ((currentPatch as SubPatch).parentPatch) count++; // ".." entry
+      // Calculate how many entries we'll have, considering filtering
+      let count = 0;
+
+      // Only count special entries if they should be shown based on filtering
+      const isFiltering = commandText.length > 0;
+      const dotMatches = ".".includes(commandText.toLowerCase());
+      const dotDotMatches = "..".includes(commandText.toLowerCase());
+
+      // Count "." entry if not filtering or it matches
+      if (!isFiltering || dotMatches) count++;
+
+      // Count ".." entry if not filtering or it matches and parent exists
+      if ((!isFiltering || dotDotMatches) && (currentPatch as SubPatch).parentPatch) count++;
+
+      // Count filtered objects
       count += subpatches.length + regularObjects.length;
 
       // Resize the refs array - initialize with nulls
       entryRefs.current = Array(count).fill(null);
 
       // Make sure selectedIndex is valid for this number of entries
-      if (selectedIndex >= count) {
+      if (selectedIndex >= count && count > 0) {
         setSelectedIndex(0);
+      } else if (count === 0) {
+        setSelectedIndex(-1); // No valid selection when empty
       }
     }
-  }, [currentPatch, subpatches, regularObjects, selectedIndex]);
+  }, [currentPatch, subpatches, regularObjects, selectedIndex, commandText]);
 
   // Calculate entry indexes for keyboard navigation
   let entryIndex = 0;
@@ -530,6 +624,17 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   if (!currentPatch) {
     return <div className="p-4 text-white">No patch selected</div>;
   }
+
+  // Check if we're filtering (has search text)
+  const isFiltering = commandText.length > 0;
+
+  // Check if special entries match the search
+  const dotMatches = ".".includes(commandText.toLowerCase());
+  const dotDotMatches = "..".includes(commandText.toLowerCase());
+
+  // Should we show the special entries?
+  const showDot = !isFiltering || dotMatches;
+  const showDotDot = (!isFiltering || dotDotMatches) && (currentPatch as SubPatch).parentPatch;
 
   return (
     <div
@@ -549,8 +654,10 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       }}
     >
       <div className="flex-shrink-0 ">
-        <div className="breadcrumb text-xs text-zinc-400 px-2 w-full py-1">
-          {generateBreadcrumb()}
+        <div className="breadcrumb text-base text-zinc-400 px-2 w-full py-1">
+          {generateBreadcrumb()} {">"}{" "}
+          <span className="text-white">{buffer.patch?.name || "Patch"}</span>
+          {isFiltering && <span className="ml-2 text-blue-400">Filtering: {commandText}</span>}
         </div>
       </div>
 
@@ -560,12 +667,11 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
-        {/* Current patch (.) */}
-        {renderDirectoryEntry(".", handleCurrentClick, true, entryIndex++)}
+        {/* Current patch (.) - only show if not filtering or matches */}
+        {showDot && renderDirectoryEntry(".", handleCurrentClick, true, entryIndex++)}
 
-        {/* Parent patch (..) if available */}
-        {(currentPatch as SubPatch).parentPatch &&
-          renderDirectoryEntry("..", handleParentClick, true, entryIndex++)}
+        {/* Parent patch (..) if available - only show if not filtering or matches */}
+        {showDotDot && renderDirectoryEntry("..", handleParentClick, true, entryIndex++)}
 
         {/* Subpatches first */}
         {subpatches.length > 0 && (
@@ -582,14 +688,14 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
                 <div
                   key={node.id}
                   ref={(el) => setEntryRef(el, currentIndex)}
-                  className={`object-entry px-2 py-1 my-1 cursor-pointer text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
+                  className={`object-entry px-2 py-1 my-1 text-teal-400 cursor-pointer text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
                   onClick={(e: React.MouseEvent<HTMLDivElement>) =>
                     handleObjectNodeClick(node, e.metaKey)
                   }
                   data-index={currentIndex}
                 >
                   <div className="flex items-center">
-                    <BoxModelIcon className="directory-icon mr-2 text-zinc-400 w-3 h-3" />
+                    <BoxModelIcon className="directory-icon mr-2 text-teal-400 w-3 h-3" />
                     {isEditing ? (
                       <input
                         onClick={(e) => e.stopPropagation()}
