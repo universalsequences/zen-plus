@@ -149,6 +149,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
     setSelectedIndex,
     entryRefs,
     entriesCountRef,
+    entriesContainerRef,
     editingPatchIndex,
     setEditingPatchIndex,
     editingName,
@@ -173,6 +174,55 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       }
     }, 100);
   }, []);
+  
+  // Effect to scroll the selected item into view when selectedIndex changes
+  useEffect(() => {
+    // Force a more direct approach with direct DOM manipulation for scrolling
+    const scrollSelectedIntoView = () => {
+      if (entryRefs.current && selectedIndex >= 0 && selectedIndex < entryRefs.current.length) {
+        const selectedElement = entryRefs.current[selectedIndex];
+        const container = entriesContainerRef.current;
+        
+        if (selectedElement && container) {
+          // Get element's position relative to the container
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = selectedElement.getBoundingClientRect();
+          
+          // Calculate if element is visible
+          const isVisible = 
+            elementRect.top >= containerRect.top &&
+            elementRect.bottom <= containerRect.bottom;
+            
+          if (!isVisible) {
+            // Calculate position
+            const elementRelativeTop = elementRect.top - containerRect.top;
+            const elementOffset = container.scrollTop + elementRelativeTop;
+            
+            // Calculate the scroll position that centers the element
+            const center = elementOffset - (containerRect.height / 2) + (elementRect.height / 2);
+            
+            // Set the scroll position directly
+            container.scrollTop = center;
+            
+            // Force focus on the container
+            if (rootDivRef.current) {
+              rootDivRef.current.focus();
+            }
+          }
+        }
+      }
+    };
+    
+    // Call immediately
+    scrollSelectedIntoView();
+    
+    // Also try again after a brief delay to ensure DOM has updated
+    const timerId = setTimeout(scrollSelectedIntoView, 50);
+    
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [selectedIndex]);
 
   // Function to set a ref for an entry at a specific index
   const setEntryRef = useCallback((el: HTMLDivElement | null, index: number) => {
@@ -419,7 +469,8 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
 
       <div
         ref={entriesContainerRef}
-        className="directory-entries flex-grow h-96 overflow-y-auto focus:outline-none "
+        className="directory-entries flex-grow h-96 overflow-y-auto focus:outline-none"
+        style={{ overflowY: 'auto', display: 'block' }}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >

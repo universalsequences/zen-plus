@@ -12,6 +12,7 @@ interface UseDiredKeyboardNavigationProps {
   setSelectedIndex: (index: number) => void;
   entryRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   entriesCountRef: React.MutableRefObject<number>;
+  entriesContainerRef: React.RefObject<HTMLDivElement>;
   editingPatchIndex: number | null;
   setEditingPatchIndex: (index: number | null) => void;
   editingName: string;
@@ -35,6 +36,7 @@ export const useDiredKeyboardNavigation = ({
   setSelectedIndex,
   entryRefs,
   entriesCountRef,
+  entriesContainerRef,
   editingPatchIndex,
   setEditingPatchIndex,
   editingName,
@@ -152,29 +154,11 @@ export const useDiredKeyboardNavigation = ({
           }
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) => {
-            const newIndex = Math.min(prev + 1, entriesCount - 1);
-            // Scroll selected item into view
-            setTimeout(() => {
-              if (entryRefs.current[newIndex]) {
-                entryRefs.current[newIndex]?.scrollIntoView({ block: "nearest" });
-              }
-            }, 10);
-            return newIndex;
-          });
+          setSelectedIndex((prev) => Math.min(prev + 1, entriesCount - 1));
           break;
         case "ArrowUp":
           e.preventDefault();
-          setSelectedIndex((prev) => {
-            const newIndex = Math.max(prev - 1, 0);
-            // Scroll selected item into view
-            setTimeout(() => {
-              if (entryRefs.current[newIndex]) {
-                entryRefs.current[newIndex]?.scrollIntoView({ block: "nearest" });
-              }
-            }, 10);
-            return newIndex;
-          });
+          setSelectedIndex((prev) => Math.max(prev - 1, 0));
           break;
         case "Enter":
           e.preventDefault();
@@ -307,7 +291,7 @@ export const useDiredKeyboardNavigation = ({
             e.preventDefault();
 
             if (e.key === "ArrowDown") {
-              setSelectedIndex((prev) =>
+              setSelectedIndex((prev) => 
                 Math.min(prev + 1, entryRefs.current.filter(Boolean).length - 1)
               );
             } else if (e.key === "ArrowUp") {
@@ -409,6 +393,7 @@ export const useDiredKeyboardNavigation = ({
     setCurrentPatch,
     rootDivRef,
     entryRefs,
+    entriesContainerRef,
     setSelectedIndex,
     commandText,
     setCommandText,
