@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { Buffer, BufferType } from "@/lib/tiling/types";
 import { Patch, SubPatch } from "@/lib/nodes/types";
@@ -262,6 +262,39 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
     const allVisibleObjects = [...subpatches, ...regularObjects];
     return allVisibleObjects.findIndex(obj => obj.id === selectedNode.id);
   }, [findSelectedObjectNode, subpatches, regularObjects]);
+  
+  // State to track selected object position
+  const [selectedObjectPosition, setSelectedObjectPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  
+  // Get the selected object details for display
+  const selectedObjectDetails = useMemo(() => {
+    const node = findSelectedObjectNode(selectedIndex, showDot, showDotDot);
+    if (!node) return null;
+    
+    // Get best display name for the object
+    let displayName = "Object";
+    
+    if (node.subpatch?.name) {
+      // First priority: use the subpatch name if available
+      displayName = node.subpatch.name;
+    } else if (node.text) {
+      // Second priority: use the object text (typically "zen")
+      displayName = node.text;
+    }
+    
+    return {
+      id: node.id,
+      name: displayName,
+      objectText: node.text || "Object", // Original object text like "zen"
+      isSubpatch: !!node.subpatch,
+      hasPosition: !!node.position
+    };
+  }, [selectedIndex, showDot, showDotDot, findSelectedObjectNode]);
+  
+  // Handler to receive position updates from the spatial view
+  const handleSelectedObjectPosition = useCallback((x: number, y: number, width: number, height: number) => {
+    setSelectedObjectPosition({ x, y, width, height });
+  }, []);
 
   // Handle selecting an object from the spatial view
   const handleSpatialObjectSelect = useCallback((objectIndex: number) => {
@@ -473,21 +506,66 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
           <p>Click or press Enter on a regular object to open it as a buffer</p>
         </div>
         
-        {/* Spatial layout visualization */}
+        {/* Spatial layout visualization with connector */}
         <div className="spatial-view-container flex-shrink-0 ml-4 mb-4">
-          <SpatialLayoutView 
-            objects={
-              // Only show filtered objects but use all objects for layout calculation
-              currentPatch ? [...currentPatch.objectNodes] : []
-            }
-            // Only the visible objects
-            visibleObjects={[...subpatches, ...regularObjects]}
-            selectedIndex={findSelectedObjectIndex(selectedIndex, showDot, showDotDot)}
-            width={200} 
-            height={150}
-            className="rounded border border-zinc-800" 
-            onSelectObject={handleSpatialObjectSelect}
-          />
+          <div className="flex items-start">
+            {/* Spatial view */}
+            <div className="spatial-view relative">
+              <SpatialLayoutView 
+                objects={
+                  // Only show filtered objects but use all objects for layout calculation
+                  currentPatch ? [...currentPatch.objectNodes] : []
+                }
+                // Only the visible objects
+                visibleObjects={[...subpatches, ...regularObjects]}
+                selectedIndex={findSelectedObjectIndex(selectedIndex, showDot, showDotDot)}
+                width={200} 
+                height={150}
+                className="rounded border border-zinc-800" 
+                onSelectObject={handleSpatialObjectSelect}
+                onSelectedObjectPosition={handleSelectedObjectPosition}
+              />
+              
+              {/* Connector and object name */}
+              {selectedObjectDetails && (
+                <div className="connector-group absolute top-0 left-0 w-full h-full pointer-events-none">
+                  {/* Line will be drawn with SVG */}
+                  <svg className="absolute top-0 left-0 w-full h-full">
+                    <line 
+                      // Start from the center-right of the selected object
+                      x1={selectedObjectPosition.x + selectedObjectPosition.width}
+                      y1={selectedObjectPosition.y + selectedObjectPosition.height/2}
+                      // End at the label
+                      x2={210} 
+                      y2="75"
+                      stroke="#6b7280" 
+                      strokeWidth="1" 
+                      strokeDasharray="3,2"
+                      className="connector-line"
+                    />
+                  </svg>
+                  
+                  {/* Object name */}
+                  <div 
+                    className="object-label absolute text-xs text-zinc-300"
+                    style={{ 
+                      left: '215px', 
+                      top: '75px', 
+                      transform: 'translateY(-50%)',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {selectedObjectDetails.name}
+                    {selectedObjectDetails.isSubpatch && (
+                      <span className="text-teal-400 ml-1">
+                        ({selectedObjectDetails.objectText})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

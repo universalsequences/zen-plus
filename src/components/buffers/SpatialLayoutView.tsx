@@ -9,6 +9,7 @@ interface SpatialLayoutViewProps {
   height: number;
   className?: string;
   onSelectObject?: (index: number) => void;
+  onSelectedObjectPosition?: (x: number, y: number, width: number, height: number) => void;
 }
 
 /**
@@ -21,7 +22,8 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
   width,
   height,
   className = '',
-  onSelectObject
+  onSelectObject,
+  onSelectedObjectPosition
 }) => {
   // If visibleObjects is not provided, use objects
   const objectsToDisplay = visibleObjects || objects;
@@ -126,6 +128,22 @@ export const SpatialLayoutView: React.FC<SpatialLayoutViewProps> = ({
       objectsWithNormalizedPositions
     };
   }, [objects, objectsToDisplay]);
+  
+  // Report the position of the selected object when it changes
+  React.useEffect(() => {
+    if (selectedIndex >= 0 && selectedIndex < objectsWithNormalizedPositions.length && onSelectedObjectPosition) {
+      const selectedObj = objectsWithNormalizedPositions[selectedIndex];
+      if (selectedObj && selectedObj.isVisible) {
+        // Convert normalized position to pixels
+        onSelectedObjectPosition(
+          selectedObj.x * width,
+          selectedObj.y * height,
+          selectedObj.width * width,
+          selectedObj.height * height
+        );
+      }
+    }
+  }, [selectedIndex, objectsWithNormalizedPositions, width, height, onSelectedObjectPosition]);
   
   // If there are no objects with positions, show a message
   if (objectsWithNormalizedPositions.length === 0 || 
