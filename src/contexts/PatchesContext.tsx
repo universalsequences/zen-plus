@@ -228,6 +228,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         // Update both selectedPatch and selectedBuffer
         setSelectedPatch(parentPatch);
         setSelectedBuffer(parentBuffer);
+        setWorkingBuffers((prev) => [parentBuffer, ...prev]);
 
         resetRoot();
         patchesRef.current = Array.from(new Set(patches));
