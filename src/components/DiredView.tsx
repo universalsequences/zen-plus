@@ -4,6 +4,7 @@ import { Buffer, BufferType } from "@/lib/tiling/types";
 import { Patch, SubPatch } from "@/lib/nodes/types";
 import { type ObjectNode } from "@/lib/nodes/types";
 import { BoxModelIcon, CubeIcon } from "@radix-ui/react-icons";
+import { useBuffer } from "@/contexts/BufferContext";
 
 interface DiredViewProps {
   buffer: Buffer;
@@ -105,14 +106,28 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   // Reference to track the most recent count of entries
   const entriesCountRef = useRef<number>(0);
 
-  // Organize objects: subpatches first, then regular objects
+  // Get command text to use for filtering
+  const { commandText } = useBuffer();
+  
+  // Organize objects: subpatches first, then regular objects, with filtering
   const organizeObjects = useCallback(() => {
     if (!currentPatch) return { subpatches: [], regularObjects: [] };
 
     const subpatches: ObjectNode[] = [];
     const regularObjects: ObjectNode[] = [];
+    
+    const searchTerm = commandText.toLowerCase();
 
     currentPatch.objectNodes.forEach((node) => {
+      // Filter based on command text if there is any
+      const nodeText = (node.text || "").toLowerCase();
+      const subpatchName = node.subpatch ? (node.subpatch.name || "").toLowerCase() : "";
+      
+      // Skip if search term doesn't match
+      if (searchTerm && !nodeText.includes(searchTerm) && !subpatchName.includes(searchTerm)) {
+        return;
+      }
+      
       if (node.subpatch) {
         subpatches.push(node);
       } else {
@@ -121,7 +136,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
     });
 
     return { subpatches, regularObjects };
-  }, [currentPatch]);
+  }, [currentPatch, commandText]);
 
   // Get organized objects - needs to be called unconditionally
   const { subpatches, regularObjects } = currentPatch
@@ -676,6 +691,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       <div className="help-text mt-4 text-xs text-zinc-500 flex-shrink-0">
         <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
         <p>Press R on a subpatch to rename it</p>
+        <p>Type to filter objects by name</p>
         <p>Click or press Enter on "." to exit and open the current patch</p>
         <p>Click or press Enter on ".." to navigate up to parent</p>
         <p>Click or press Enter on a subpatch to navigate into it</p>

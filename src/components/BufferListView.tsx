@@ -1,7 +1,8 @@
-import React, { useCallback, useState, useEffect, useRef, KeyboardEvent } from "react";
+import React, { useCallback, useState, useEffect, useRef, KeyboardEvent, useMemo } from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { Buffer, BufferType, Tile } from "@/lib/tiling/types";
 import { BoxModelIcon, CircleIcon, CubeIcon } from "@radix-ui/react-icons";
+import { useBuffer } from "@/contexts/BufferContext";
 
 interface BufferListViewProps {
   buffer: Buffer;
@@ -53,14 +54,38 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     }
   };
 
-  // Filter out the current buffer from the list
+  // Get command text for filtering
+  const { commandText } = useBuffer();
+  
+  // Filter buffers based on command text and current buffer
   useEffect(() => {
-    visibleBuffersRef.current = workingBuffers.filter((b) => b.id !== buffer.id);
-    // Reset selection when buffer list changes
+    // Filter out current buffer and apply search filter if there's command text
+    const filteredBuffers = workingBuffers.filter((b) => {
+      // Always exclude the current buffer
+      if (b.id === buffer.id) return false;
+      
+      // If no command text, include all other buffers
+      if (!commandText) return true;
+      
+      // Search in buffer name, patch name, and object node text
+      const searchTerm = commandText.toLowerCase();
+      const bufferName = (b.name || "").toLowerCase();
+      const patchName = b.patch ? (b.patch.name || "").toLowerCase() : "";
+      const objectText = b.objectNode ? (b.objectNode.text || "").toLowerCase() : "";
+      
+      return bufferName.includes(searchTerm) || 
+             patchName.includes(searchTerm) || 
+             objectText.includes(searchTerm);
+    });
+    
+    visibleBuffersRef.current = filteredBuffers;
+    
+    // Reset selection when filtered list changes
     setSelectedIndex(0);
+    
     // Reset refs array for the new list
-    bufferItemsRef.current = Array(visibleBuffersRef.current.length).fill(null);
-  }, [workingBuffers, buffer.id]);
+    bufferItemsRef.current = Array(filteredBuffers.length).fill(null);
+  }, [workingBuffers, buffer.id, commandText]);
 
   // Function to handle buffer selection with special case handling
   const handleBufferSelect = useCallback(
@@ -457,8 +482,8 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     ],
   );
 
-  // Get visible buffers (excluding current buffer)
-  const visibleBuffers = workingBuffers.filter((b) => b.id !== buffer.id);
+  // Get visible buffers from ref (already filtered by commandText and excluding current buffer)
+  const visibleBuffers = visibleBuffersRef.current;
 
   return (
     <div
@@ -480,6 +505,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         <p>Press 'b' to show/hide buffer list</p>
         <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
         <p>Press 'r' on a patch buffer to rename it</p>
+        <p>Type to filter buffers by name</p>
         <p>Buffers with blue border are already displayed in another tile</p>
       </div>
     </div>
