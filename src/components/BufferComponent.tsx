@@ -14,8 +14,8 @@ import { useZoom } from "@/hooks/useZoom";
 import { useKeyBindings } from "@/hooks/useKeyBindings";
 import { useStorage } from "@/contexts/StorageContext";
 import { PatchProvider } from "@/contexts/PatchContext";
-import BufferListView from "./BufferListView";
-import DiredView from "./DiredView";
+import BufferListView from "./buffers/BufferListView";
+import DiredView from "./buffers/DiredView";
 import ObjectNodeWrapper from "./ObjectNodeWrapper";
 
 /**

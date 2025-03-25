@@ -55,7 +55,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
   };
 
   // Get command text for filtering
-  const { commandText } = useBuffer();
+  const { commandText, setCommandText } = useBuffer();
   
   // Filter buffers based on command text and current buffer
   useEffect(() => {
