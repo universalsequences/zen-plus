@@ -1,6 +1,7 @@
 import { usePatches } from "@/contexts/PatchesContext";
 import { Patch, SubPatch } from "@/lib/nodes/types";
 import { BufferType, type Buffer } from "@/lib/tiling/types";
+import { useBuffer } from "@/contexts/BufferContext";
 import { useCallback } from "react";
 
 export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
@@ -17,6 +18,8 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
     patchNames,
     setPatchNames,
   } = usePatches();
+  
+  const { commandText, setCommandText } = useBuffer();
 
   const isSelected = buffer === selectedBuffer;
 
@@ -63,6 +66,17 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
       <div className="my-auto text-zinc-100 ml-1">
         {buffer.objectNode ? buffer.objectNode.patch.name : ""}
       </div>
+      {isSelected && (
+        <div className="ml-auto flex items-center">
+          <input
+            type="text"
+            value={commandText}
+            onChange={(e) => setCommandText(e.target.value)}
+            placeholder="Command..."
+            className="px-2 py-0.5 text-xs bg-zinc-700 rounded border border-zinc-600 text-white"
+          />
+        </div>
+      )}
     </div>
   );
 };
