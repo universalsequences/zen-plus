@@ -56,37 +56,39 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
 
   // Get command text for filtering
   const { commandText, setCommandText } = useBuffer();
-  
+
   // Get visible buffers directly from workingBuffers to ensure we always have them
   // This creates a new filtered array on each render instead of relying on the ref
   const visibleBuffers = React.useMemo(() => {
-    return workingBuffers.filter(b => {
+    return workingBuffers.filter((b) => {
       // Always exclude the current buffer
       if (b.id === buffer.id) return false;
-      
+
       // If no command text, include all other buffers
       if (!commandText) return true;
-      
+
       // Search in buffer name, patch name, and object node text
       const searchTerm = commandText.toLowerCase();
       const bufferName = (b.name || "").toLowerCase();
       const patchName = b.patch ? (b.patch.name || "").toLowerCase() : "";
       const objectText = b.objectNode ? (b.objectNode.text || "").toLowerCase() : "";
-      
-      return bufferName.includes(searchTerm) || 
-             patchName.includes(searchTerm) || 
-             objectText.includes(searchTerm);
+
+      return (
+        bufferName.includes(searchTerm) ||
+        patchName.includes(searchTerm) ||
+        objectText.includes(searchTerm)
+      );
     });
   }, [workingBuffers, buffer.id, commandText]);
-  
+
   // Update refs and selection index when visible buffers change
   useEffect(() => {
     // Reset selection when filtered list changes
     setSelectedIndex(0);
-    
+
     // Reset refs array for the new list
     bufferItemsRef.current = Array(visibleBuffers.length).fill(null);
-    
+
     // Store the visible buffers in the ref for any code that relies on it
     visibleBuffersRef.current = visibleBuffers;
   }, [visibleBuffers]);
@@ -166,7 +168,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     (e: React.KeyboardEvent) => {
       // Only process keyboard navigation if this is the selected buffer
       if (selectedBuffer?.id !== buffer.id) return;
-      
+
       // Special key handling for ESC to clear the command/filter
       if (e.key === "Escape" && commandText) {
         e.preventDefault();
@@ -322,7 +324,7 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
           setCommandText("");
           return;
         }
-        
+
         // Skip if we're editing
         if (editingIndex !== null) return;
 
@@ -369,7 +371,15 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         window.removeEventListener("keydown", handleGlobalKeyDown);
       };
     }
-  }, [buffer.id, selectedBuffer, selectedIndex, handleBufferSelect, visibleBuffers, commandText, setCommandText]);
+  }, [
+    buffer.id,
+    selectedBuffer,
+    selectedIndex,
+    handleBufferSelect,
+    visibleBuffers,
+    commandText,
+    setCommandText,
+  ]);
 
   // Function to set a ref for a buffer item element
   const setBufferItemRef = useCallback((el: HTMLDivElement | null, index: number) => {
@@ -409,9 +419,9 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         <div
           key={b.id}
           ref={(el) => setBufferItemRef(el, index)}
-          className={`buffer-item px-2 py-1 text-xs my-1 cursor-pointer rounded transition-colors
+          className={`buffer-item px-2 py-1 text-xs my-1 border cursor-pointer transition-colors
             ${displayed ? "border-l-2 border-blue-500" : ""}
-            ${isSelected ? "bg-zinc-800" : "hover:bg-zinc-800"}
+            ${isSelected ? "border-orange-500" : "border-transparent"}
             [&.active-click]:bg-blue-500`}
           onClick={() => handleBufferSelect(b)}
           data-index={index}
@@ -504,7 +514,6 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
     ],
   );
 
-
   // Handle click on container to ensure focus and proper selection
   const handleContainerClick = useCallback(() => {
     // Focus the container and set this buffer as selected
@@ -516,25 +525,24 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
   return (
     <div
       ref={containerRef}
-      className="buffer-list w-full h-full overflow-auto bg-zinc-950 text-white flex flex-col"
+      className="buffer-list w-full p-10 h-full overflow-auto text-white flex flex-col"
       onKeyDown={handleKeyDown}
       onClick={handleContainerClick}
       tabIndex={0}
-      style={{ ["--active-click-bg" as any]: "rgba(59, 130, 246, 0.5)" }}
+      style={{
+        background: "#1c1c1c8f",
+        backdropFilter: "blur(32px)",
+      }}
     >
       <div className="buffer-items flex-grow overflow-y-auto">
         {visibleBuffers.length === 0 ? (
           <div className="empty-message p-2 text-zinc-400">
-            {commandText ? 
-              `No buffers matching "${commandText}"` : 
-              "No buffers available"}
+            {commandText ? `No buffers matching "${commandText}"` : "No buffers available"}
           </div>
         ) : (
           <>
             {commandText && (
-              <div className="filter-info text-xs text-blue-400 p-2">
-                Filtering: {commandText}
-              </div>
+              <div className="filter-info text-xs text-blue-400 p-2">Filtering: {commandText}</div>
             )}
             {visibleBuffers.map((b, index) => renderBufferItem(b, index))}
           </>

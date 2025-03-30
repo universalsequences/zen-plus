@@ -111,15 +111,6 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
     const emittedInstructions: Instruction[] = [];
     //let instructionCounter = 0;
     for (let instruction = getNext(); instruction !== undefined; instruction = getNext()) {
-      /*
-      console.log(
-        "executing script %s",
-        emittedInstructions.length,
-        instruction,
-        [...instructions],
-        [...register],
-      );
-      */
       emittedInstructions.push(instruction);
       switch (instruction.type) {
         case InstructionType.PipeMessage: {

@@ -127,7 +127,9 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
         .then((ret: ZenWorklet) => {
           onZenCompilation(ret, patch, zenGraph);
         })
-        .catch(() => {});
+        .catch((e) => {
+          console.log("got an error", e);
+        });
     });
   }, 120);
 };

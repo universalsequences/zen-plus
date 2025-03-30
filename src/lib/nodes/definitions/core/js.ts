@@ -18,6 +18,7 @@ export const js_scripting = (node: ObjectNode, ..._args: Lazy[]) => {
   node.branching = true;
   node.isResizable = true;
   node.hasDynamicInlets = true;
+  node.needsUX = true;
   if (!node.size) {
     node.size = { width: 300, height: 300 };
   }

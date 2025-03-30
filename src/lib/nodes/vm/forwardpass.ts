@@ -24,6 +24,13 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
 
   while (stack.length > 0) {
     const current = stack.pop()!;
+    /*
+    console.log(
+      "current=%s",
+      current.text,
+      stack.map((x) => x.text),
+    );
+    */
     result.push(current);
 
     if (current.skipCompilation || isCompiledType((current as ObjectNode).operatorContextType)) {
@@ -45,6 +52,7 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
       if (destinationInlet.isHot || (isMessage && inletNumber === 0)) {
         const inbound = destination.inlets.flatMap((inlet) => getInboundConnections(inlet));
         if (!inbound.every((c) => visitedConnections.has(c))) {
+          //console.log("pushing onto stack", destination.text);
           stack.push(destination);
         }
       }
@@ -147,14 +155,11 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
 
   const sourceNodes: Node[] = allNodes.filter((x) => isSourceNode(x));
 
-  console.log("source nodes=", sourceNodes);
-
   return sourceNodes;
 };
 
 export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
   const patch = isSubPatch ? _patch : getRootPatch(_patch);
-  patch.clearGetAllNodesCache();
   const nodeInstructions: NodeInstructions[] = [];
   const allSerializedObjects: SerializedObjectNode[] = [];
   const allSerializedMessages: SerializedMessageNode[] = [];

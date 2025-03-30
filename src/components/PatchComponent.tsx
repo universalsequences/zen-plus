@@ -109,7 +109,7 @@ const PatchComponent: React.FC<{
 
       onClick(e);
     },
-    [buffer],
+    [buffer, patch, onClick],
   );
 
   // Zoom functionality
@@ -305,7 +305,7 @@ const PatchComponent: React.FC<{
         onMouseDown={onMouseDown}
         className={classList}
       >
-        {!isCustomView && <PatchResizer isCustomView={false} />}
+        {!isCustomView && <PatchResizer patch={patch} isCustomView={false} />}
 
         <PatchInner
           isSelected={selectedPatch === patch}

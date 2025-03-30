@@ -112,7 +112,7 @@ interface BranchContext {
 export const compileInstructions = (nodes: Node[]) => {
   const isNodeInBranch = (node: Node, branch: Branch): boolean => {
     if (node === branch.rootNode) return true;
-    const forwardNodes = forwardTraversal(branch.rootNode);
+    const forwardNodes = forwardTraversal(branch.rootNode, undefined, true);
     return forwardNodes.includes(node);
   };
 
@@ -136,9 +136,12 @@ export const compileInstructions = (nodes: Node[]) => {
     return undefined;
   };
 
+  // pops the current branch if neceessary
   const popIfNecessary = (node: Node) => {
     if (branchStack.length === 0) return;
     let currentBranch = branchStack[branchStack.length - 1];
+
+    // TODO - if branch is consumed (i.e. we have no more ), we must pop
 
     while (currentBranch && !isNodeInBranch(node, currentBranch)) {
       const b = branchStack.pop();

@@ -4,10 +4,11 @@ import type { ObjectNode, SubPatch } from "@/lib/nodes/types";
 import { BoxIcon, CubeIcon } from "@radix-ui/react-icons";
 import React, { useEffect, useCallback, useState } from "react";
 import Attributes from "./Attributes";
+import { BufferType } from "@/lib/tiling/types";
 
 const Sidebar = () => {
   const { selectedNodes, setOpened, opened } = useSelection();
-  const { selectedPatch } = usePatches();
+  const { selectedPatch, selectedBuffer } = usePatches();
   const isSubPatch = selectedPatch && (selectedPatch as SubPatch).parentPatch !== undefined;
   const node =
     selectedNodes[0] || (selectedPatch ? (selectedPatch as SubPatch).parentNode : undefined);
@@ -57,7 +58,7 @@ const Sidebar = () => {
     opacity: isSubPatch || selectedNodes.length > 0 ? 1 : 0.5,
   };
 
-  if (selectedNodes.length === 0) {
+  if (selectedBuffer?.type !== BufferType.Patch) {
     return <></>;
   }
 

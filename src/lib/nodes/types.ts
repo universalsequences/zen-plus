@@ -263,6 +263,7 @@ export type ObjectNode = Positioned &
     parseAttributes: (text: string, context: OperatorContext) => string;
     processMessageForAttributes: (x: Message) => void;
     instructionNodes?: ObjectNode[];
+    resetCompilationState: () => void;
   };
 
 export interface SerializableCustom {

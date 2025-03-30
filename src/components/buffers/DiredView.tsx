@@ -54,10 +54,10 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   // Function to handle clicking on an object node
   const handleObjectNodeClick = useCallback(
     (objectNode: ObjectNode, newTile: boolean) => {
-      if (objectNode.subpatch) {
+      if (objectNode.subpatch && !newTile) {
         // If the object has a subpatch, navigate to it within Dired
         setCurrentPatch(objectNode.subpatch);
-      } else {
+      } else if (objectNode.needsUX) {
         // For regular objects, create an Object buffer
         const objectBuffer: Buffer = {
           id: objectNode.id,
@@ -174,7 +174,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       }
     }, 100);
   }, []);
-  
+
   // Effect to scroll the selected item into view when selectedIndex changes
   useEffect(() => {
     // Force a more direct approach with direct DOM manipulation for scrolling
@@ -182,28 +182,27 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       if (entryRefs.current && selectedIndex >= 0 && selectedIndex < entryRefs.current.length) {
         const selectedElement = entryRefs.current[selectedIndex];
         const container = entriesContainerRef.current;
-        
+
         if (selectedElement && container) {
           // Get element's position relative to the container
           const containerRect = container.getBoundingClientRect();
           const elementRect = selectedElement.getBoundingClientRect();
-          
+
           // Calculate if element is visible
-          const isVisible = 
-            elementRect.top >= containerRect.top &&
-            elementRect.bottom <= containerRect.bottom;
-            
+          const isVisible =
+            elementRect.top >= containerRect.top && elementRect.bottom <= containerRect.bottom;
+
           if (!isVisible) {
             // Calculate position
             const elementRelativeTop = elementRect.top - containerRect.top;
             const elementOffset = container.scrollTop + elementRelativeTop;
-            
+
             // Calculate the scroll position that centers the element
-            const center = elementOffset - (containerRect.height / 2) + (elementRect.height / 2);
-            
+            const center = elementOffset - containerRect.height / 2 + elementRect.height / 2;
+
             // Set the scroll position directly
             container.scrollTop = center;
-            
+
             // Force focus on the container
             if (rootDivRef.current) {
               rootDivRef.current.focus();
@@ -212,13 +211,13 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         }
       }
     };
-    
+
     // Call immediately
     scrollSelectedIntoView();
-    
+
     // Also try again after a brief delay to ensure DOM has updated
     const timerId = setTimeout(scrollSelectedIntoView, 50);
-    
+
     return () => {
       clearTimeout(timerId);
     };
@@ -443,7 +442,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
   return (
     <div
       ref={rootDivRef}
-      className="dired-view w-full h-full overflow-y-auto bg-zinc-950 text-white flex flex-col focus:outline-none"
+      className="dired-view w-full p-10 h-full overflow-y-auto text-white flex flex-col focus:outline-none"
       onKeyDown={handleKeyDown}
       tabIndex={0}
       onFocus={() => {
@@ -453,12 +452,14 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
         }
       }}
       style={{
+        background: "#1c1c1c8f",
+        backdropFilter: "blur(32px)",
         // Add some CSS for the active-click class
         ["--active-click-bg" as any]: "rgba(59, 130, 246, 0.5)", // zinc-500 with 50% opacity
       }}
     >
       <div className="flex-shrink-0 ">
-        <div className="breadcrumb text-base text-zinc-400 px-2 w-full py-1">
+        <div className="breadcrumb text-sm text-zinc-700 px-2 w-full py-1">
           {generateBreadcrumb(currentPatch)} {">"}{" "}
           <span className="text-white">{buffer.patch?.name || "Patch"}</span>
           {isFiltering && (
@@ -470,7 +471,7 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
       <div
         ref={entriesContainerRef}
         className="directory-entries flex-grow h-96 overflow-y-auto focus:outline-none"
-        style={{ overflowY: 'auto', display: 'block' }}
+        style={{ overflowY: "auto", display: "block" }}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
@@ -578,13 +579,13 @@ const DiredView: React.FC<DiredViewProps> = ({ buffer }) => {
 
       <div className="bottom-section flex flex-row items-start mt-4">
         {/*<div className="help-text text-xs text-zinc-500 flex-shrink-0">
-          <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
-          <p>Press R on a subpatch to rename it</p>
-          <p>Type to filter objects by name</p>
-          <p>Click or press Enter on "." to exit and open the current patch</p>
-          <p>Click or press Enter on ".." to navigate up to parent</p>
-          <p>Click or press Enter on a subpatch to navigate into it</p>
-          <p>Click or press Enter on a regular object to open it as a buffer</p>
+            <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
+            <p>Press R on a subpatch to rename it</p>
+            <p>Type to filter objects by name</p>
+            <p>Click or press Enter on "." to exit and open the current patch</p>
+            <p>Click or press Enter on ".." to navigate up to parent</p>
+            <p>Click or press Enter on a subpatch to navigate into it</p>
+            <p>Click or press Enter on a regular object to open it as a buffer</p>
             </div>*/}
 
         {/* Spatial layout visualization with connector */}

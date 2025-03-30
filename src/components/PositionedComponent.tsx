@@ -422,8 +422,8 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       ((objectNode as ObjectNode).name === "zen" || (objectNode as ObjectNode).isResizable)
     ) {
       allowSize = true;
-      nodeStyle.width = nodeSize.width;
-      nodeStyle.height = nodeSize.height;
+      nodeStyle.width = nodeSize.width + 2;
+      nodeStyle.height = nodeSize.height + 2;
     }
 
     // Handle divider sizing
@@ -463,7 +463,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
 
     // Handle fullscreen mode
     if (fullscreen || buffer) {
-      nodeStyle.width = "100%";
+      nodeStyle.width = "99.8%";
       nodeStyle.height = buffer ? "100%" : "100vh";
       nodeStyle.left = 0;
       nodeStyle.top = 0;

@@ -189,6 +189,9 @@ const BufferComponent: React.FC<{
         onClick={handleClick}
         className={classList}
       >
+        {!isCustomView && buffer.patch && isWindow && (
+          <PatchResizer patch={buffer.patch} isCustomView={false} />
+        )}
         {buffer.type === BufferType.Patch && buffer.patch && (
           <PatchInner
             isSelected={buffer === selectedBuffer}
@@ -205,7 +208,7 @@ const BufferComponent: React.FC<{
           <PatchProvider buffer={buffer} patch={buffer.patch}>
             <LockedProvider patch={buffer.patch}>
               <PositionProvider patch={buffer.patch}>
-                <div className="p-4 h-full w-full flex-grow flex-1 relative locked presentation">
+                <div className="bg-zinc-950 p-4 h-full w-full flex-grow flex-1 relative locked presentation">
                   <ObjectNodeWrapper objectNode={buffer.objectNode} />
                 </div>
               </PositionProvider>

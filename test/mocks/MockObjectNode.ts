@@ -452,4 +452,6 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
     }
     */
   }
+
+  resetCompilationState() {}
 }

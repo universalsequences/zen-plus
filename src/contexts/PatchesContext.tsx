@@ -11,11 +11,11 @@ export type Connections = {
 interface IPatchesContext {
   zenCode: string | null;
   goToParentTile: () => void;
-  splitTile: () => void;
+  splitTile: (direction?: "vertical" | "horizontal") => void;
   visualsCode: string | null;
   audioWorklet: AudioWorkletNode | null;
   setAudioWorklet: (x: AudioWorkletNode | null) => void;
-  liftPatchTile: (x: Patch) => void;
+  liftPatchTile: (x: Buffer) => void;
   selectedPatch: Patch | null;
   selectedBuffer: Buffer | null;
   closePatch: (x: Patch) => void;
@@ -48,6 +48,7 @@ interface IPatchesContext {
   setWorkingBuffers: React.Dispatch<React.SetStateAction<Buffer[]>>;
   renamePatch: (patch: Patch, newName: string) => void;
   getAllTilesWithBuffer: (x: string) => Tile[];
+  visibleBuffers: Buffer[];
 }
 
 interface Props {
@@ -78,6 +79,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   const [gridLayout, setGridLayout] = useState<GridLayout[]>([{ gridArea: "1/1/1/1" }]);
   const [patchNames, setPatchNames] = useState<{ [x: string]: string }>({});
   const [workingBuffers, setWorkingBuffers] = useState<Buffer[]>([]);
+  const [visibleBuffers, setVisibleBuffers] = useState<Buffer[]>([]);
 
   const [counter, setCounter] = useState(0);
   const [rootTile, setRootTile] = useState<Tile | null>(null);
@@ -104,7 +106,9 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       setSelectedBuffer(buffer);
 
       // Add to working buffers
-      setWorkingBuffers([buffer]);
+      setWorkingBuffers((prev) =>
+        prev.some((x) => x.id === buffer.id) ? prev : [...prev, buffer],
+      );
     } else {
       resetRoot();
     }
@@ -129,6 +133,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       _rootTile.splitDirection = rootTileRef.current.splitDirection;
       _rootTile.id = rootTileRef.current.id;
       rootTileRef.current = _rootTile;
+      setVisibleBuffers(_rootTile.getAllBuffers());
       setRootTile(_rootTile);
     }
   }, []);
@@ -641,32 +646,32 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     ],
   );
 
-  const splitTile = useCallback(() => {
-    if (rootTileRef.current && selectedPatch) {
-      let tile = rootTileRef.current.findPatch(selectedPatch);
-      if (selectedPatch && tile) {
-        let parentPatch = (selectedPatch as SubPatch).parentPatch;
-        if (parentPatch) {
-          if (patches.includes(parentPatch)) {
-            parentPatch = (parentPatch as SubPatch).parentPatch;
-          }
-          if (parentPatch && !patches.includes(parentPatch)) {
-            // Create a buffer for the parent patch
-            const parentBuffer = {
-              id: parentPatch.id,
-              type: BufferType.Patch,
-              patch: parentPatch,
-              name: parentPatch.name || "Untitled Patch",
-            };
+  const splitTile = useCallback(
+    (direction?: "horizontal" | "vertical") => {
+      if (rootTileRef.current && selectedBuffer) {
+        let tile = rootTileRef.current.findBuffer(selectedBuffer.id);
+        if (tile && workingBuffers.length >= 2) {
+          // Create a buffer for the parent patch
+          const parentBuffer = [...workingBuffers]
+            .reverse()
+            .find((x) => !rootTileRef.current.findBuffer(x.id));
 
+          console.log("parent buffer = ", parentBuffer, selectedBuffer);
+          if (parentBuffer) {
             let parentTile = tile.parent;
             tile.split(
-              parentTile && parentTile.splitDirection === "horizontal" ? "vertical" : "horizontal",
+              direction
+                ? direction
+                : parentTile && parentTile.splitDirection === "horizontal"
+                  ? "vertical"
+                  : "horizontal",
               parentBuffer,
             );
 
-            patchesRef.current = [...patches, parentPatch];
-            setPatches([...patches, parentPatch]);
+            if (parentBuffer.patch) {
+              patchesRef.current = [...patches, parentBuffer.patch];
+              setPatches([...patches, parentBuffer.patch]);
+            }
 
             // Add to working buffers list
             setWorkingBuffers((prevBuffers) => {
@@ -683,8 +688,9 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           }
         }
       }
-    }
-  }, [rootTile, selectedPatch, patches, setPatches, resetRoot, setWorkingBuffers]);
+    },
+    [rootTile, selectedPatch, patches, setPatches, resetRoot, setWorkingBuffers, selectedBuffer],
+  );
 
   useEffect(() => {
     basePatch.setZenCode = setZenCode;
@@ -701,71 +707,22 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   }, [patches, setGridTemplate, gridTemplate]);
 
   const liftPatchTile = useCallback(
-    (patch: Patch) => {
+    (buffer: Buffer) => {
       if (rootTileRef.current) {
-        let tile = rootTileRef.current.findPatch(patch);
-        if (tile && tile.parent) {
+        let tile = rootTileRef.current;
+        if (tile) {
           // Create a buffer for the patch
-          const patchBuffer = {
-            id: patch.id,
-            type: BufferType.Patch,
-            patch: patch,
-            name: patch.name || "Untitled Patch",
-          };
 
           // Set both buffer and patch for backward compatibility
-          tile.parent.buffer = patchBuffer;
-          tile.parent.patch = patch;
-
-          // Find child to remove
-          let childToKill = tile.parent.children.find(
-            (x) => x.patch !== patch && (!x.buffer || x.buffer.patch !== patch),
-          );
+          tile.buffer = buffer;
+          if (buffer.patch) tile.patch = buffer.patch;
 
           // Clear children
-          tile.parent.children = [];
+          tile.children = [];
 
-          if (tile.parent.parent === null) {
-            patchesRef.current = [patch];
-            setPatches([patch]);
-          } else {
-            if (childToKill) {
-              // Filter out patches from the killed child
-              const childPatch = childToKill.buffer?.patch || childToKill.patch;
-              if (childPatch) {
-                let newPatches = patches.filter((x) => x !== childPatch);
-                patchesRef.current = [...newPatches];
-                setPatches(newPatches);
-              }
-            }
-          }
+          if (buffer.patch) setPatches([buffer.patch]);
           resetRoot();
         }
-
-        setTimeout(() => {
-          // Update both selectedPatch and selectedBuffer
-          setSelectedPatch(patch);
-
-          // Find or create the buffer for this patch
-          const patchBuffer = {
-            id: patch.id,
-            type: BufferType.Patch,
-            patch: patch,
-            name: patch.name || "Untitled Patch",
-          };
-          setSelectedBuffer(patchBuffer);
-
-          // Add to working buffers list
-          setWorkingBuffers((prevBuffers) => {
-            // Add the new buffer at the start of the array
-            const updatedBuffers = [
-              patchBuffer,
-              ...prevBuffers.filter((buff) => buff.id !== patchBuffer.id),
-            ];
-            // Limit to most recent 10 buffers if needed
-            return updatedBuffers.slice(0, 10);
-          });
-        }, 200);
       }
     },
     [
@@ -995,6 +952,11 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         return;
       }
 
+      const existingTile = rootTileRef.current.findBuffer(buffer.id);
+      if (existingTile) {
+        setSelectedBuffer(buffer);
+        return;
+      }
       // Find the tile with the currently selected buffer
       const tile =
         rootTileRef.current.findBuffer(selectedBuffer.id) ||
@@ -1044,7 +1006,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   // Function to kill the current buffer and replace it with the previous one
   const killCurrentBuffer = useCallback(() => {
-    console.log("Killing current buffer");
     if (!rootTileRef.current || !selectedBuffer) {
       return;
     }
@@ -1055,13 +1016,11 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null);
 
     if (!currentTile) {
-      console.log("Current tile not found");
       return;
     }
 
     // Don't kill the buffer if there are no other buffers to switch to
     if (workingBuffers.length <= 1) {
-      console.log("Can't kill the only buffer");
       return;
     }
 
@@ -1088,13 +1047,6 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     // If we have a unique buffer, use it, otherwise try to close the tile
     if (uniqueNextBuffer) {
       console.log("Found unique buffer to switch to:", uniqueNextBuffer.id);
-      // Update working buffers list to remove the killed buffer
-      //setWorkingBuffers((prevBuffers) => {
-      //  return prevBuffers.filter((b) => b.id !== selectedBuffer.id);
-      //});
-
-      // Switch to the unique buffer
-
       setWorkingBuffers((prevBuffers) => {
         return [...prevBuffers.filter((b) => b.id !== selectedBuffer.id), selectedBuffer];
       });
@@ -1220,6 +1172,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         workingBuffers,
         setWorkingBuffers,
         renamePatch,
+        visibleBuffers,
       }}
     >
       {children}

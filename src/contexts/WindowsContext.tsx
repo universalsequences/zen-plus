@@ -21,7 +21,7 @@ const WindowsContext = createContext<IWindowsContext | undefined>(undefined);
 
 export const useWindows = (): IWindowsContext => {
   const context = useContext(WindowsContext);
-  if (!context) throw new Error("useWorkerHandler must be used within LockedProvider");
+  if (!context) throw new Error("ueWindow must be used within WindowsProvider");
   return context;
 };
 

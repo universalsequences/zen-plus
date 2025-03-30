@@ -250,8 +250,7 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
           let spacing = usableWidth / (iolets.length > 1 ? iolets.length - 1 : 1);
 
           // If only one inlet, center it
-          let ioletX =
-            iolets.length === 1 ? position.x + width / 2 : position.x + margin + i * spacing;
+          let ioletX = iolets.length === 1 ? position.x : position.x + margin + i * spacing;
 
           let ioletY = position.y;
 

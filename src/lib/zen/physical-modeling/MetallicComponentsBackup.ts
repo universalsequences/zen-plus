@@ -120,18 +120,6 @@ export class MetallicComponent {
     // Update the time accumulator (for modal behavior)
     this.time = accum(0.1 / 44100.0, 0, { min: 0, max: 1000000, exclusive: false });
 
-    console.log("this.time=", this.time);
-    console.log("currentChannel", this.currentChannel);
-    console.log("prevChanne;", this.prevChannel);
-    console.log("input", input);
-    console.log("nt2", this.nt2);
-    console.log("ucenter", this.u_center);
-    console.log("tension", this.tension);
-    console.log("p0", this.p0);
-    console.log("p_eff", this.p_eff);
-
-    console.log(this);
-
     return s(
       this.time,
       this.currentChannel,

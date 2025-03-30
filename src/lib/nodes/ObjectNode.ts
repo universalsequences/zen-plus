@@ -35,6 +35,7 @@ import { v4 as uuidv4 } from "uuid";
 import { compileVM } from "./vm/forwardpass";
 import { getRootPatch } from "./traverse";
 import { PresetManager } from "./definitions/core/preset";
+import { getInboundConnections } from "./vm/traversal";
 
 interface Constants {
   [x: string]: number | boolean;
@@ -775,6 +776,23 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         INLETS.push(inlet);
       }
 
+      const inbound = INLETS.flatMap((inlet) => getInboundConnections(inlet));
+
+      const debug_inlets = INLETS.filter(
+        (inlet) =>
+          inlet.messagesReceived! <
+          inbound
+            .filter((x) => x.destinationInlet === inlet)
+            .filter(
+              (x) =>
+                x.source &&
+                ((!(x.source as ObjectNode).name &&
+                  (x.source as MessageNode).messageType === undefined) ||
+                  ((x.source as MessageNode).messageType === undefined &&
+                    (x.source as ObjectNode).name !== "attrui")),
+            ).length,
+      );
+
       const _inlets = INLETS.filter(
         (inlet) =>
           inlet.messagesReceived! <
@@ -1203,6 +1221,46 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
     }
     for (const outlet of this.outlets) {
       outlet.connectionType = ConnectionType.AUDIO;
+    }
+  }
+
+  resetCompilationState() {
+    const node = this;
+    if (
+      node.operatorContextType !== OperatorContextType.ZEN &&
+      node.operatorContextType !== OperatorContextType.GL
+    ) {
+      return;
+    }
+    if (node.subpatch) {
+      for (const x of node.inlets) {
+        if (x.connections.length > 0) {
+          x.messagesReceived = undefined;
+          x.lastMessage = undefined;
+          x.markedMessages = [];
+        }
+      }
+      return;
+    }
+    for (const n of node.inlets) {
+      if (n.connections.length > 0) {
+        n.lastMessage = undefined;
+        n.messagesReceived = undefined;
+        n.markedMessages = [];
+      }
+    }
+    node.lastSentMessage = undefined;
+    const name = (node as ObjectNode).name;
+
+    // note: do we want latchcall here
+    if (
+      name === "call" ||
+      name === "defun" ||
+      name === "polycall" ||
+      name === "polytrig" ||
+      name === "latchcall"
+    ) {
+      node.storedMessage = undefined;
     }
   }
 }

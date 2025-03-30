@@ -22,9 +22,9 @@ export const DirectoryEntry: React.FC<DirectoryEntryProps> = ({
   return (
     <div
       ref={(el) => setEntryRef(el, index)}
-      className={`directory-entry px-2 py-1 text-xs my-1 cursor-pointer transition-colors ${
+      className={`directory-entry px-2 py-1 border text-xs my-1 cursor-pointer transition-colors ${
         isSpecial ? "text-zinc-100" : ""
-      } ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
+      } ${isSelected ? " border-orange-500 " : "border-transparent "} active:bg-zinc-500`}
       onClick={onClick}
       data-index={index}
     >
@@ -68,9 +68,7 @@ export const ObjectEntry: React.FC<ObjectEntryProps> = ({
   onSaveRename,
 }) => {
   // Determine name to display
-  const displayName = isSubpatch 
-    ? (node.subpatch?.name || node.text)
-    : node.text;
+  const displayName = isSubpatch ? node.subpatch?.name || node.text : node.text;
 
   const handleSaveRename = () => {
     if (node.subpatch && editingName.trim() && onSaveRename) {
@@ -103,7 +101,7 @@ export const ObjectEntry: React.FC<ObjectEntryProps> = ({
     <div
       key={node.id}
       ref={(el) => setEntryRef(el, index)}
-      className={`object-entry px-2 py-1 my-1 ${isSubpatch ? "text-teal-400" : ""} cursor-pointer text-xs transition-colors ${isSelected ? "bg-zinc-700" : ""} [&.active-click]:bg-zinc-500`}
+      className={`object-entry px-2 py-1 my-1 ${isSubpatch ? "text-teal-400" : ""} cursor-pointer text-xs transition-colors border  ${isSelected ? "border-orange-500" : "border-transparent"} [&.active-click]:bg-zinc-500`}
       onClick={onClick}
       data-index={index}
     >
@@ -113,7 +111,7 @@ export const ObjectEntry: React.FC<ObjectEntryProps> = ({
         ) : (
           <CubeIcon className="directory-icon mr-2 text-gray-400 w-3 h-3" />
         )}
-        
+
         {isEditing ? (
           <input
             onClick={(e) => e.stopPropagation()}
@@ -152,7 +150,9 @@ export const ObjectEntry: React.FC<ObjectEntryProps> = ({
             <span className="object-name">{displayName}</span>
             {/* Display scripting name if available */}
             {node.attributes?.["scripting name"] && (
-              <span className="scripting-name ml-2 text-zinc-400 italic">[{node.attributes["scripting name"]}]</span>
+              <span className="scripting-name ml-2 text-zinc-400 italic">
+                [{node.attributes["scripting name"]}]
+              </span>
             )}
           </div>
         )}

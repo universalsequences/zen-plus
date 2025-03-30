@@ -219,6 +219,8 @@ export const useKeyBindings = (
       if (e.key === "r" && e.metaKey && selectedConnection) {
         e.preventDefault();
       }
+
+      /*
       if (e.key === "1" && command) {
         e.preventDefault();
         if (selectedPatch) {
@@ -226,29 +228,13 @@ export const useKeyBindings = (
           setPatchWindows([]);
         }
       }
+      */
 
       if (e.key === "k" && command) {
         e.preventDefault();
         if (selectedPatch) {
           closePatch(selectedPatch);
         }
-      }
-
-      if (e.key === "2" && command) {
-        e.preventDefault();
-        if (selectedPatch) {
-          splitTile();
-        }
-      }
-      if (e.key === "u" && e.metaKey) {
-        e.preventDefault();
-        if (selectedPatch) {
-          liftPatchTile(selectedPatch);
-        }
-      }
-      if (e.key === "i" && e.metaKey) {
-        e.preventDefault();
-        switchTileDirection();
       }
 
       if (e.key === "ArrowUp" && e.metaKey) {

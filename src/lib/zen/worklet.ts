@@ -92,15 +92,15 @@ export const createWorklet = (
       return workletNode;
     };
 
-    ctxt.audioWorklet.addModule(url).then(() => {
-      /*
-      if (onlyCompile) {
-        resolve(onCompilation);
-        return;
-      }
-      */
-      onCompilation();
-    });
+    ctxt.audioWorklet
+      .addModule(url)
+      .then(() => {
+        onCompilation();
+      })
+      .catch((e) => {
+        console.log("error ", e);
+        console.log(code);
+      });
   });
 };
 

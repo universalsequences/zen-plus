@@ -1,13 +1,29 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { usePatches } from "@/contexts/PatchesContext";
+import { useWindows } from "@/contexts/WindowsContext";
+
+export interface KeyCommand {
+  key: string;
+  type: "ctrl" | "meta";
+}
 
 /**
  * Hook for handling global keyboard shortcuts not specific to patches
  * These commands don't require any patch-specific context
  */
 export const useGlobalKeyBindings = () => {
-  const { createDiredBuffer, createBufferListBuffer, killCurrentBuffer, selectedBuffer } =
-    usePatches();
+  const {
+    createDiredBuffer,
+    liftPatchTile,
+    createBufferListBuffer,
+    killCurrentBuffer,
+    splitTile,
+    selectedBuffer,
+  } = usePatches();
+
+  const { setPatchWindows } = useWindows();
+
+  const [keyCommand, setKeyCommand] = useState<KeyCommand | null>(null);
 
   // Handle keydown events globally
   const onKeyDown = useCallback(
@@ -21,30 +37,55 @@ export const useGlobalKeyBindings = () => {
         return;
       }
 
-      if (!e.metaKey) return;
+      if (e.metaKey) {
+        // Create a Dired (directory browser) buffer when 'd' is pressed
+        if (e.key === "d") {
+          e.preventDefault();
+          createDiredBuffer();
+          return;
+        }
 
-      // Create a Dired (directory browser) buffer when 'd' is pressed
-      if (e.key === "d") {
-        e.preventDefault();
-        createDiredBuffer();
-        return;
+        // Toggle BufferList buffer when 'b' is pressed
+        if (e.key === "b") {
+          e.preventDefault();
+          createBufferListBuffer();
+          return;
+        }
+
+        // Kill current buffer and switch to previous when 'k' is pressed
+        if (e.key === "k") {
+          e.preventDefault();
+          killCurrentBuffer();
+          return;
+        }
       }
 
-      // Toggle BufferList buffer when 'b' is pressed
-      if (e.key === "b") {
-        e.preventDefault();
-        createBufferListBuffer();
-        return;
+      if (e.key === "x" && e.ctrlKey) {
+        setKeyCommand({
+          type: "ctrl",
+          key: "x",
+        });
       }
 
-      // Kill current buffer and switch to previous when 'k' is pressed
-      if (e.key === "k") {
-        e.preventDefault();
-        killCurrentBuffer();
-        return;
+      if (keyCommand?.key === "x") {
+        switch (e.key) {
+          case "1":
+            if (selectedBuffer) {
+              liftPatchTile(selectedBuffer);
+              setPatchWindows([]);
+            }
+            break;
+          case "2":
+            if (selectedBuffer) splitTile("vertical");
+            break;
+          case "3":
+            if (selectedBuffer) splitTile("horizontal");
+            break;
+        }
+        setKeyCommand(null);
       }
     },
-    [createDiredBuffer, createBufferListBuffer, killCurrentBuffer, selectedBuffer],
+    [keyCommand, createDiredBuffer, createBufferListBuffer, killCurrentBuffer, selectedBuffer],
   );
 
   // Set up the global event listener
@@ -52,4 +93,6 @@ export const useGlobalKeyBindings = () => {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onKeyDown]);
+
+  return { keyCommand, setKeyCommand };
 };

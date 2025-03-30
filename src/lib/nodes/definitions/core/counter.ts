@@ -8,7 +8,6 @@ doc("counter", {
 });
 
 export const counter = (node: ObjectNode) => {
-  node.branching = true;
   let current = 0;
   let direction = 1; // 1 for up, -1 for down
   let hasCarried = false; // Will be true once a carry has been triggered at a boundary
@@ -89,7 +88,6 @@ export const counter = (node: ObjectNode) => {
       updateValue(msg, false);
       // Reset the carry flag when setting a specific value.
       hasCarried = false;
-      return [];
     } else if (msg === "inc") {
       // Manual increment.
       carryFlag = updateValue(current + inc);
@@ -99,7 +97,6 @@ export const counter = (node: ObjectNode) => {
     }
 
     // Return the current value and a "bang" if a carry was triggered.
-    const x = [current, carryFlag ? "bang" : undefined];
-    return x;
+    return [current];
   };
 };

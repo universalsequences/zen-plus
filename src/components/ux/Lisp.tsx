@@ -158,7 +158,7 @@ const Lisp: React.FC<{
             onMount={handleEditorDidMount}
             options={{
               theme: "vs-dark", // Dark mode
-              lineNumbers: "off", // This removes the line numbers
+              lineNumbers: "on", // This removes the line numbers
               readOnly: !lockedMode,
               fontFamily: "monospace",
               fontSize: (objectNode.attributes["font-size"] as number) || 14,

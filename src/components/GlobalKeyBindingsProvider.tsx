@@ -1,5 +1,17 @@
-import React from 'react';
-import { useGlobalKeyBindings } from '@/hooks/useGlobalKeyBindings';
+import React, { createContext, useState, useContext, useRef, useEffect } from "react";
+import { type KeyCommand, useGlobalKeyBindings } from "@/hooks/useGlobalKeyBindings";
+
+interface IGlobalKeyBindings {
+  keyCommand: KeyCommand | null;
+  setKeyCommand: React.Dispatch<React.SetStateAction<KeyCommand | null>>;
+}
+const GlobalKeyBindingsContext = createContext<IGlobalKeyBindings | undefined>(undefined);
+
+export const useGlobalKeyBindingsContext = (): IGlobalKeyBindings => {
+  const context = useContext(GlobalKeyBindingsContext);
+  if (!context) throw new Error("useMessageHandler must be used within MessageProvider");
+  return context;
+};
 
 /**
  * Component that wraps children and provides global keyboard bindings
@@ -7,10 +19,19 @@ import { useGlobalKeyBindings } from '@/hooks/useGlobalKeyBindings';
  */
 const GlobalKeyBindingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialize the global key bindings
-  useGlobalKeyBindings();
-  
+  const { keyCommand, setKeyCommand } = useGlobalKeyBindings();
+
   // This component doesn't render anything itself, just enables the keyboard shortcuts
-  return <>{children}</>;
+  return (
+    <GlobalKeyBindingsContext.Provider
+      value={{
+        keyCommand,
+        setKeyCommand,
+      }}
+    >
+      {children}
+    </GlobalKeyBindingsContext.Provider>
+  );
 };
 
 export default GlobalKeyBindingsProvider;

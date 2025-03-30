@@ -544,9 +544,6 @@ export const graphBranchMessageMessageRoute2 = () => {
   c(get1, m2);
   c(get2, m3);
 
-  console.log("m1=%s m2=%s m3=%3 m4=%3", m1.id, m2.id, m3.id, m4.id);
-  console.log("get1=%s get2=%s", get1.id, get2.id);
-  console.log("dict=%s", dict.id);
   const nodes = topologicalSearchFromNode(m1);
   return {
     nodes,
@@ -573,4 +570,90 @@ export const graphBranchMessageMessageRoute2 = () => {
       m4.id,
     ],
   };
+};
+
+export const branchPopperGraph = () => {
+  const patch = new MockPatch(undefined, false, false);
+
+  const filter = newObject("filter.%= 2 0 @field stepNumber ", patch, OperatorContextType.CORE);
+  const button = newObject("button", patch, OperatorContextType.CORE);
+  const counter = newObject("counter @max 16", patch, OperatorContextType.CORE);
+  const list_nth = newObject("list.nth", patch, OperatorContextType.CORE);
+
+  const select_message = new MessageNodeImpl(patch, MessageType.Message);
+  select_message.message = "select $1";
+
+  const in_button = newObject("button", patch, OperatorContextType.CORE);
+  const matrix = newObject("matrix @rows 1 @columns 6", patch, OperatorContextType.CORE);
+
+  const out_message = new MessageNodeImpl(patch, MessageType.Message);
+
+  c(filter, button);
+  c(button, counter);
+  c(select_message, matrix);
+  c(counter, list_nth);
+  c(counter, select_message);
+  c(matrix, list_nth, 1, 0);
+  c(list_nth, out_message, 1, 0);
+  c(in_button, matrix);
+
+  return { patch, filter, counter, button, in_button, out_message };
+};
+
+export const branchPopperGraphSwap = () => {
+  const patch = new MockPatch(undefined, false, false);
+
+  const filter = newObject("filter.%= 2 0 @field stepNumber ", patch, OperatorContextType.CORE);
+  const button = newObject("button", patch, OperatorContextType.CORE);
+  const counter = newObject("counter @max 16", patch, OperatorContextType.CORE);
+  const list_nth = newObject("list.nth", patch, OperatorContextType.CORE);
+
+  const select_message = new MessageNodeImpl(patch, MessageType.Message);
+  select_message.message = "select $1";
+
+  const in_button = newObject("button", patch, OperatorContextType.CORE);
+  const matrix = newObject("matrix @rows 1 @columns 6", patch, OperatorContextType.CORE);
+
+  const out_message = new MessageNodeImpl(patch, MessageType.Message);
+
+  c(filter, button);
+  c(button, counter);
+  c(counter, select_message);
+  c(select_message, matrix);
+  c(counter, list_nth);
+  c(matrix, list_nth, 1, 0);
+  c(list_nth, out_message, 1, 0);
+  c(in_button, matrix);
+
+  return { patch, filter, counter, button, in_button, out_message };
+};
+
+export const branchPopperGraphSwapMult = () => {
+  const patch = new MockPatch(undefined, false, false);
+
+  const filter = newObject("filter.%= 2 0 @field stepNumber ", patch, OperatorContextType.CORE);
+  const button = newObject("button", patch, OperatorContextType.CORE);
+  const counter = newObject("counter @max 16", patch, OperatorContextType.CORE);
+  const list_nth = newObject("list.nth", patch, OperatorContextType.CORE);
+  const mult = newObject("* 1", patch, OperatorContextType.CORE);
+
+  const select_message = new MessageNodeImpl(patch, MessageType.Message);
+  select_message.message = "select $1";
+
+  const in_button = newObject("button", patch, OperatorContextType.CORE);
+  const matrix = newObject("matrix @rows 1 @columns 6", patch, OperatorContextType.CORE);
+
+  const out_message = new MessageNodeImpl(patch, MessageType.Message);
+
+  c(filter, button);
+  c(button, counter);
+  c(counter, mult);
+  c(mult, select_message);
+  c(select_message, matrix);
+  c(counter, list_nth);
+  c(matrix, list_nth, 1, 0);
+  c(list_nth, out_message, 1, 0);
+  c(in_button, matrix);
+
+  return { patch, filter, counter, button, in_button, out_message };
 };

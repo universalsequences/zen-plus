@@ -1,8 +1,11 @@
 import { describe, it, expect } from "bun:test";
 import { compileInstructions } from "@/lib/nodes/vm/instructions";
-import { InstructionType } from "@/lib/nodes/vm/types";
+import { InstructionType, Instruction } from "@/lib/nodes/vm/types";
 import { evaluate } from "@/lib/nodes/vm/evaluate";
 import {
+  branchPopperGraph,
+  branchPopperGraphSwap,
+  branchPopperGraphSwapMult,
   graph1,
   graph2,
   graphBranch1,
@@ -17,6 +20,8 @@ import {
   graphSubPatch1,
   graphSubPatchIntoSubpatch,
 } from "./graphs";
+import { compileVM, topologicalSearchFromNode } from "@/lib/nodes/vm/forwardpass";
+import { ObjectNode } from "@/lib/nodes/types";
 
 describe("createInstructions", async () => {
   it("createInstructions simple", async () => {
@@ -288,5 +293,53 @@ describe("evaluateInstructions", async () => {
     const instructions = compileInstructions(nodes);
     const { objectsEvaluated } = evaluate(instructions, 5);
     expect(objectsEvaluated.map((x) => x.id)).toEqual(expectedObjectsEvaluated);
+  });
+
+  it("branch pop basic", () => {
+    const { patch, in_button, filter, out_message } = branchPopperGraph();
+    compileVM(patch, false);
+
+    const in_button_instructions = in_button.instructions;
+    expect(in_button.instructions).toBeDefined(true);
+    expect(in_button.instructions?.length, 5);
+
+    evaluate(in_button.instructions as Instruction[], "bang");
+    const { instructionsEvaluated } = evaluate(filter.instructions as Instruction[], {
+      stepNumber: 0,
+    });
+
+    expect(out_message.message).toBe(0);
+  });
+
+  it("inverse", () => {
+    // not enough to force objects before messages
+    // need to determine if the path leads to a cold path
+    const swap = branchPopperGraphSwap();
+    const swapNodes = topologicalSearchFromNode(swap.filter);
+    const normal = branchPopperGraph();
+    const normalNodes = topologicalSearchFromNode(normal.filter);
+
+    expect(swapNodes.map((x) => (x as ObjectNode).text)).toEqual(
+      normalNodes.map((x) => (x as ObjectNode).text),
+    );
+  });
+
+  it("inverse+mult", () => {
+    // not enough to force objects before messages
+    // need to determine if the path leads to a cold path
+    const { patch, filter, in_button, out_message } = branchPopperGraphSwapMult();
+    compileVM(patch, false);
+
+    expect(in_button.instructions).toBeDefined(true);
+    expect(in_button.instructions?.length, 5);
+
+    const nodes = topologicalSearchFromNode(filter);
+
+    evaluate(in_button.instructions as Instruction[], "bang");
+    const { instructionsEvaluated } = evaluate(filter.instructions as Instruction[], {
+      stepNumber: 0,
+    });
+
+    expect(out_message.message).toBe(0);
   });
 });

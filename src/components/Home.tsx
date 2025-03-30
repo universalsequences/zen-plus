@@ -146,8 +146,8 @@ export default function App(props: Props) {
         <MessageProvider>
           <SelectionProvider>
             <PatchesProvider basePatch={basePatch}>
-              <GlobalKeyBindingsProvider>
-                <WindowsProvider>
+              <WindowsProvider>
+                <GlobalKeyBindingsProvider>
                   <WorkerProvider patch={basePatch}>
                     <TilesProvider>
                       <StepsProvider>
@@ -157,8 +157,8 @@ export default function App(props: Props) {
                       </StepsProvider>
                     </TilesProvider>
                   </WorkerProvider>
-                </WindowsProvider>
-              </GlobalKeyBindingsProvider>
+                </GlobalKeyBindingsProvider>
+              </WindowsProvider>
             </PatchesProvider>
           </SelectionProvider>
         </MessageProvider>

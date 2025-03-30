@@ -1,5 +1,6 @@
 import { getRootPatch } from "../traverse";
 import { IOConnection, ObjectNode, SubPatch, Node, IOlet } from "../types";
+import { isObjectNode } from "./instructions";
 
 export const getOutboundConnections = (
   n: Node,
@@ -10,23 +11,23 @@ export const getOutboundConnections = (
 
 const isSubscribe = (object: ObjectNode) => {
   return false;
-  const { name } = object;
-  return name === "subscribe" || name === "r";
+  //const { name } = object;
+  //return name === "subscribe" || name === "r";
 };
 const isStaticSubscribe = (object: ObjectNode) => {
   return false;
-  return isSubscribe(object) && object.inlets[1].connections.length === 0;
+  //return isSubscribe(object) && object.inlets[1].connections.length === 0;
 };
 
 const isSendNode = (object: ObjectNode) => {
   return false;
-  const { name } = object;
-  return name === "send" || name === "s";
+  //const { name } = object;
+  //return name === "send" || name === "s";
 };
 
 const isStaticPublish = (object: ObjectNode) => {
   return false;
-  return isSendNode(object) && object.inlets[1].connections.length === 0;
+  //return isSendNode(object) && object.inlets[1].connections.length === 0;
 };
 
 export const getOutboundConnectionsFromOutlet = (
@@ -166,14 +167,24 @@ export const getOutboundConnectionsFromOutlet = (
   const ret = [...regularConnections, ...resolvedSubpatchConnections].filter(
     (x) => !visitedConnections.has(x),
   );
-  return ret;
+
+  // place objects first and message second
+  const objectConnections = ret.filter((x) => isObjectNode(x.destination));
+  const messageConnections = ret.filter((x) => !isObjectNode(x.destination));
+  return [...objectConnections, ...messageConnections];
 };
 
-export const forwardTraversal = (node: Node, visited = new Set<Node>()): Node[] => {
+export const forwardTraversal = (
+  node: Node,
+  visited = new Set<Node>(),
+  isHot?: boolean,
+): Node[] => {
   if (visited.has(node)) return [];
   visited.add(node);
-  const outbound = getOutboundConnections(node, new Set<IOConnection>());
-  return [node, ...outbound.flatMap((c) => forwardTraversal(c.destination, visited))];
+  const outbound = getOutboundConnections(node, new Set<IOConnection>()).filter(
+    (x) => isHot === undefined || x.destinationInlet.isHot === isHot,
+  );
+  return [node, ...outbound.flatMap((c) => forwardTraversal(c.destination, visited, isHot))];
 };
 
 export const getInboundConnections = (inlet: IOlet): IOConnection[] => {

@@ -17,6 +17,7 @@ export interface Buffer {
 
 export interface Tile {
   id: string;
+  getAllBuffers: () => Buffer[];
   parent: Tile | null;
   children: Tile[];
   position: { rowStart: number; rowEnd: number; colStart: number; colEnd: number };

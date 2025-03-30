@@ -390,7 +390,20 @@ export class PatchImpl implements Patch {
     const defuns = this.getAllNodes().filter((x) => x.name === "defun");
     for (const defun of defuns) {
       if (defun.inlets[0].lastMessage) {
-        defun.receive(defun.inlets[0], defun.inlets[0].lastMessage);
+        defun.fn?.(defun.inlets[0].lastMessage);
+      }
+    }
+
+    const polycalls = this.getAllNodes().filter((x) => x.name === "polycall");
+    for (const polycall of polycalls) {
+      const lastMessage = polycall.inlets[0].lastMessage;
+      const inletMessages = polycall.inlets.map((x) => x.lastMessage);
+      polycall.resetCompilationState();
+      polycall.inlets.forEach((inlet, i) => {
+        inlet.lastMessage = inletMessages[i];
+      });
+      if (lastMessage) {
+        polycall.receive(polycall.inlets[0], lastMessage);
       }
     }
   }

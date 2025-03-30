@@ -11,6 +11,7 @@ import type { Node, Patch, SubPatch } from "@/lib/nodes/types";
 import { useSelection } from "@/contexts/SelectionContext";
 import { SelectedNodeInfo } from "./SelectedNodeInfo";
 import { BufferType } from "@/lib/tiling/types";
+import { useGlobalKeyBindingsContext } from "./GlobalKeyBindingsProvider";
 
 enum Option {
   Save,
@@ -20,6 +21,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   // for now this will simply tell us what nested subpatches are
   const [option, setOption] = useState<Option | null>(null);
   const { selectedNodes } = useSelection();
+  const { keyCommand } = useGlobalKeyBindingsContext();
 
   const {
     patchDragging,
@@ -36,7 +38,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
   } = usePatches();
 
   const { buffer, assist } = usePatch();
-  let breadcrumbs: any[] = [];
+  let breadcrumbs: any[] | any = [];
   let _patch: Patch = patch;
   let [editing, setEditing] = useState(false);
   let [patchName, setPatchName] = useState(patch.name || "");
@@ -139,6 +141,15 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
 
   breadcrumbs.reverse();
 
+  /*
+  if (keyCommand) {
+    breadcrumbs = (
+      <div>
+      </div>
+    );
+  }
+  */
+
   const _closePatch = useCallback(() => {
     let _p = patches.filter((x) => x !== patch);
     if (_p.length === 0) {
@@ -218,7 +229,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           <GlobeIcon className="w-4 h-8 my-auto mr-3 cursor-pointer" />
         </PatchDropdown>
         <div className="flex relative pr-8 my-auto">
-          {breadcrumbs}
+          {keyCommand ? `${keyCommand.type}-${keyCommand.key}` : breadcrumbs}
           <Cross2Icon
             onClick={() => {
               closePatch(patch);

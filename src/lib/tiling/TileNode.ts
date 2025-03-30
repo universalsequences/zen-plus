@@ -25,11 +25,11 @@ export class TileNode implements Tile {
     this.position = position;
     this.splitDirection = null;
     this.size = 50;
-    
+
     // Handle initialization from either a Patch or a Buffer
-    if (patchOrBuffer && 'type' in patchOrBuffer) {
+    if (patchOrBuffer && "type" in patchOrBuffer) {
       // It's a Buffer
-      this.buffer = patchOrBuffer;
+      this.buffer = patchOrBuffer as Buffer;
       this.patch = patchOrBuffer.type === BufferType.Patch ? patchOrBuffer.patch || null : null;
     } else {
       // It's a Patch or null - create a Buffer if it's a Patch
@@ -39,7 +39,7 @@ export class TileNode implements Tile {
           id: uuid(),
           type: BufferType.Patch,
           patch: patchOrBuffer,
-          name: patchOrBuffer.name || 'Untitled Patch'
+          name: (patchOrBuffer as Patch).name || "Untitled Patch",
         };
       } else {
         this.buffer = null;
@@ -93,19 +93,19 @@ export class TileNode implements Tile {
 
   split(direction: Direction, newBufferOrPatch: Buffer | Patch): void {
     this.splitDirection = direction;
-    
+
     // Convert Patch to Buffer if needed
     let newBuffer: Buffer;
-    if (!('type' in newBufferOrPatch)) {
+    if (!("type" in newBufferOrPatch)) {
       // It's a Patch, convert to Buffer
       newBuffer = {
         id: uuid(),
         type: BufferType.Patch,
         patch: newBufferOrPatch,
-        name: newBufferOrPatch.name || 'Untitled Patch'
+        name: (newBufferOrPatch as Patch).name || "Untitled Patch",
       };
     } else {
-      newBuffer = newBufferOrPatch;
+      newBuffer = newBufferOrPatch as Buffer;
     }
 
     if (direction === "vertical") {
@@ -162,5 +162,14 @@ export class TileNode implements Tile {
       }
     }
     return null;
+  }
+
+  getAllBuffers() {
+    const buffers: Buffer[] = [];
+    if (this.buffer) {
+      buffers.push(this.buffer);
+    }
+    buffers.push(...this.children.flatMap((x) => x.getAllBuffers()));
+    return buffers;
   }
 }

@@ -3,6 +3,7 @@ import { Patch, SubPatch } from "@/lib/nodes/types";
 import { BufferType, type Buffer } from "@/lib/tiling/types";
 import { useBuffer } from "@/contexts/BufferContext";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useGlobalKeyBindingsContext } from "../GlobalKeyBindingsProvider";
 
 export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
   const {
@@ -18,6 +19,8 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
     patchNames,
     setPatchNames,
   } = usePatches();
+
+  const { keyCommand } = useGlobalKeyBindingsContext();
 
   const { commandText, setCommandText } = useBuffer();
 
@@ -75,9 +78,12 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
 
   // Handle keyboard events for the custom input
   useEffect(() => {
-    if (!isSelected) return;
+    if (!isSelected || buffer.type === BufferType.Object) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (keyCommand) {
+        return;
+      }
       if (e.key === "Escape") {
         // Clear command on escape
         setCommandText("");
@@ -150,7 +156,7 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSelected, commandText, cursorPosition, setCommandText]);
+  }, [isSelected, commandText, buffer, cursorPosition, setCommandText, keyCommand]);
 
   // When command text changes externally, move cursor to end
   useEffect(() => {
@@ -169,7 +175,9 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
     >
       <div className="my-auto mr-2">{name}</div>
       <div className="my-auto text-zinc-400">
-        {buffer.objectNode ? generateBreadcrumb(buffer.objectNode.patch.parentPatch) + " > " : ""}
+        {buffer.objectNode
+          ? generateBreadcrumb((buffer.objectNode.patch as SubPatch).parentPatch) + " > "
+          : ""}
       </div>
       <div className="my-auto text-zinc-100 ml-1">
         {buffer.objectNode ? buffer.objectNode.patch.name : ""}
@@ -180,7 +188,9 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
             ref={commandRef}
             className="px-2 py-1 text-xs rounded text-white font-mono min-w-[160px] relative my-auto "
           >
-            {commandText === "" ? (
+            {keyCommand ? (
+              `${keyCommand.type}-${keyCommand.key}`
+            ) : commandText === "" ? (
               ""
             ) : (
               <>

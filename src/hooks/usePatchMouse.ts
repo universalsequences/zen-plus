@@ -332,7 +332,9 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
               node instanceof ObjectNodeImpl &&
               (node.name === "zen" || (node as ObjectNode).isResizable)
             ) {
-              node.size.height = height;
+              if (node.name !== "attrui") {
+                node.size.height = height;
+              }
             }
             updateSize(node.id, { ...node.size });
 
@@ -349,7 +351,7 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
               if (objNode.size) {
                 objNode.size.width = width;
                 if (objNode.name === "zen" || objNode.isResizable) {
-                  objNode.size.height = height;
+                  if (objNode.name !== "attrui") objNode.size.height = height;
                 }
                 updateSize(objNode.id, { ...objNode.size });
 
@@ -592,6 +594,7 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
         // Create new object node at this position
         const objectNode = new ObjectNodeImpl(patch);
         const position = { x, y };
+        console.log("creating a node in patch=", patch);
 
         objectNode.created = true;
         newObjectNode(objectNode, position);

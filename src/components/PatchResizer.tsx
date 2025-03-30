@@ -5,10 +5,13 @@ import { useTilesContext } from "@/contexts/TilesContext";
 import { useWindows } from "@/contexts/WindowsContext";
 import { usePatchMouse } from "@/hooks/usePatchMouse";
 import { PatchResizeType } from "@/hooks/useTiles";
-import { SubPatch } from "@/lib/nodes/types";
+import { Patch, SubPatch } from "@/lib/nodes/types";
+import { useBuffer } from "@/contexts/BufferContext";
 
-export const PatchResizer: React.FC<{ isCustomView: boolean }> = ({ isCustomView }) => {
-  const { patch } = usePatch();
+export const PatchResizer: React.FC<{ patch: Patch; isCustomView: boolean }> = ({
+  patch,
+  isCustomView,
+}) => {
   const { setSelectedPatch, selectedPatch } = usePatches();
   const { gridTemplate } = useTilesContext();
   const { patchWindows } = useWindows();

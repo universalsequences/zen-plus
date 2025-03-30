@@ -82,7 +82,7 @@ const AttrUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         }}
         className={
           (lockedMode ? "" : " pointer-events-none ") +
-          "flex h-6 flex-1 bg-zinc-900 w-full flex-1 border-zinc-100"
+          "flex h-5 flex-1 bg-zinc-900 w-full flex-1 border-zinc-100"
         }
       >
         <select
