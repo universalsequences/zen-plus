@@ -33,6 +33,7 @@ interface IPatchesContext {
   changeTileForPatch: (a: Patch, b: Patch) => void;
   createDiredBuffer: () => void;
   createBufferListBuffer: () => void;
+  createWorkletCodeBuffer: () => void;
   switchToBuffer: (buffer: Buffer, newTile?: boolean) => void;
   killCurrentBuffer: () => void;
   goToPreviousPatch: () => void;
@@ -854,6 +855,88 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   // Forward declare the switchToBuffer function
   let switchToBufferFn: (buffer: Buffer, newTile?: boolean) => void;
+  
+  // Function to create a WorkletCode buffer that displays the current patch's worklet code
+  const createWorkletCodeBuffer = useCallback(() => {
+    const selectedBuffer = selectedBufferRef.current;
+    if (!rootTileRef.current || !selectedBuffer) {
+      return;
+    }
+
+    // Get the currently selected patch (if any)
+    const patchToUse = selectedBuffer.patch || selectedPatch;
+    if (!patchToUse) {
+      console.log("No patch selected to show worklet code for");
+      return;
+    }
+
+    // Check if we already have a WorkletCode buffer for this patch
+    const existingWorkletCodeBuffer = workingBuffers.find(
+      (b) => b.type === BufferType.WorkletCode && b.patch && b.patch.id === patchToUse.id
+    );
+
+    // If we found an existing WorkletCode buffer, use it
+    if (existingWorkletCodeBuffer) {
+      switchToBufferFn(existingWorkletCodeBuffer);
+      return;
+    }
+
+    // Create a new WorkletCode buffer
+    const workletCodeBuffer: Buffer = {
+      id: uuid(),
+      type: BufferType.WorkletCode,
+      name: `Worklet Code: ${patchToUse.name || "Unnamed Patch"}`,
+      patch: patchToUse,
+    };
+
+    // Find the currently selected tile
+    let selectedTile: Tile | null = null;
+
+    if (selectedBuffer) {
+      // Try finding by buffer ID first
+      selectedTile = rootTileRef.current.findBuffer(selectedBuffer.id);
+
+      if (!selectedTile && selectedPatch) {
+        // If not found by buffer, try finding by patch
+        selectedTile = rootTileRef.current.findPatch(selectedPatch);
+      }
+    }
+
+    // Fallback to root tile if no selected tile found
+    if (!selectedTile) {
+      selectedTile = rootTileRef.current;
+    }
+
+    // Replace the current buffer with the new WorkletCode buffer
+    selectedTile.buffer = workletCodeBuffer;
+
+    // Clear patch reference for tile if not a Patch buffer type
+    if (workletCodeBuffer.type !== BufferType.Patch) {
+      selectedTile.patch = null;
+    }
+
+    // Set the new buffer as selected
+    setSelectedBuffer(workletCodeBuffer);
+
+    // Add to working buffers list
+    setWorkingBuffers((prevBuffers) => {
+      const updatedBuffers = [
+        workletCodeBuffer,
+        ...prevBuffers.filter((b) => b.id !== workletCodeBuffer.id),
+      ];
+      return updatedBuffers.slice(0, 10);
+    });
+
+    resetRoot();
+  }, [
+    rootTile,
+    selectedBuffer,
+    selectedPatch,
+    setSelectedBuffer,
+    setWorkingBuffers,
+    resetRoot,
+    workingBuffers,
+  ]);
 
   // Function to toggle or create a BufferList buffer in the currently selected tile
   const createBufferListBuffer = useCallback(() => {
@@ -1154,6 +1237,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
         changeTileForPatch,
         createDiredBuffer,
         createBufferListBuffer,
+        createWorkletCodeBuffer,
         switchToBuffer,
         killCurrentBuffer,
         closePatch,

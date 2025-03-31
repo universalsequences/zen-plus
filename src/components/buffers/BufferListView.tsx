@@ -49,6 +49,8 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         return "Directory";
       case BufferType.BufferList:
         return "Buffer List";
+      case BufferType.WorkletCode:
+        return "Worklet Code";
       default:
         return "Unknown";
     }

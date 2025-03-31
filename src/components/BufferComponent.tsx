@@ -16,6 +16,7 @@ import { useStorage } from "@/contexts/StorageContext";
 import { PatchProvider } from "@/contexts/PatchContext";
 import BufferListView from "./buffers/BufferListView";
 import DiredView from "./buffers/DiredView";
+import WorkletCodeView from "./buffers/WorkletCodeView";
 import ObjectNodeWrapper from "./ObjectNodeWrapper";
 
 /**
@@ -217,6 +218,7 @@ const BufferComponent: React.FC<{
         )}
         {buffer.type === BufferType.Dired && <DiredView buffer={buffer} />}
         {buffer.type === BufferType.BufferList && <BufferListView buffer={buffer} />}
+        {buffer.type === BufferType.WorkletCode && <WorkletCodeView buffer={buffer} />}
 
         {!isWindow && children}
       </div>

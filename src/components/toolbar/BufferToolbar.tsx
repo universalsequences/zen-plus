@@ -31,9 +31,11 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
       ? "*buffer-list*"
       : buffer.type === BufferType.Dired
         ? "*dired*"
-        : buffer.type === BufferType.Object
-          ? buffer.objectNode?.name
-          : "";
+        : buffer.type === BufferType.WorkletCode
+          ? "*worklet-code*"
+          : buffer.type === BufferType.Object
+            ? buffer.objectNode?.name
+            : "";
 
   // Function to generate breadcrumb path
   const generateBreadcrumb = useCallback((currentPatch: Patch) => {

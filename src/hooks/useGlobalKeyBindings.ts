@@ -19,6 +19,7 @@ export const useGlobalKeyBindings = () => {
     killCurrentBuffer,
     splitTile,
     selectedBuffer,
+    createWorkletCodeBuffer,
   } = usePatches();
 
   const { setPatchWindows } = useWindows();
@@ -81,11 +82,24 @@ export const useGlobalKeyBindings = () => {
           case "3":
             if (selectedBuffer) splitTile("horizontal");
             break;
+          case "w":
+            if (selectedBuffer) createWorkletCodeBuffer();
+            break;
         }
         setKeyCommand(null);
       }
     },
-    [keyCommand, createDiredBuffer, createBufferListBuffer, killCurrentBuffer, selectedBuffer],
+    [
+      keyCommand, 
+      createDiredBuffer, 
+      createBufferListBuffer, 
+      killCurrentBuffer, 
+      selectedBuffer, 
+      createWorkletCodeBuffer,
+      liftPatchTile,
+      setPatchWindows,
+      splitTile
+    ],
   );
 
   // Set up the global event listener

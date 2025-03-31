@@ -5,6 +5,7 @@ export enum BufferType {
   Object,
   Dired,
   BufferList,
+  WorkletCode,
 }
 
 export interface Buffer {
