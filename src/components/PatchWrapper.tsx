@@ -6,6 +6,7 @@ import { PatchProvider } from "@/contexts/PatchContext";
 import { Patch } from "@/lib/nodes/types";
 import { Buffer, BufferType } from "@/lib/tiling/types";
 import Toolbar from "./Toolbar";
+import { BufferProvider } from "@/contexts/BufferContext";
 
 /**
  * Legacy PatchWrapper component that wraps a patch in context providers
@@ -26,26 +27,28 @@ const PatchWrapper: React.FC<{
     id: patch.id,
     type: BufferType.Patch,
     patch: patch,
-    name: patch.name || 'Untitled Patch'
+    name: patch.name || "Untitled Patch",
   };
-  
+
   return (
-    <PatchProvider patch={patch}>
-      <LockedProvider patch={patch}>
-        <PositionProvider patch={patch}>
-          <BufferComponent
-            isWindow={isWindow}
-            tileRef={tileRef}
-            maxWidth={maxWidth}
-            maxHeight={maxHeight}
-            index={index}
-            buffer={buffer}
-          >
-            <Toolbar patch={patch} />
-          </BufferComponent>
-        </PositionProvider>
-      </LockedProvider>
-    </PatchProvider>
+    <BufferProvider buffer={buffer}>
+      <PatchProvider patch={patch}>
+        <LockedProvider patch={patch}>
+          <PositionProvider patch={patch}>
+            <BufferComponent
+              isWindow={isWindow}
+              tileRef={tileRef}
+              maxWidth={maxWidth}
+              maxHeight={maxHeight}
+              index={index}
+              buffer={buffer}
+            >
+              <Toolbar patch={patch} />
+            </BufferComponent>
+          </PositionProvider>
+        </LockedProvider>
+      </PatchProvider>
+    </BufferProvider>
   );
 };
 

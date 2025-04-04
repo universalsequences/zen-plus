@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState } from "react";
-import { type Buffer } from "@/lib/tiling/types";
+import React, { createContext, useContext, useState, useRef } from "react";
+import { type Buffer, BufferType } from "@/lib/tiling/types";
 
 interface BufferContextType {
   currentBuffer: Buffer | null;
   commandText: string;
   setCommandText: React.Dispatch<React.SetStateAction<string>>;
+  containerRef: React.RefObject<HTMLDivElement> | null;
+  setContainerRef: (ref: React.RefObject<HTMLDivElement>) => void;
 }
 
 const BufferContext = createContext<BufferContextType | undefined>(undefined);
@@ -25,6 +27,13 @@ export const BufferProvider: React.FC<{
   buffer
 }) => {
   const [commandText, setCommandText] = useState<string>("");
+  const [containerRef, setContainerRefState] = useState<React.RefObject<HTMLDivElement> | null>(null);
+  
+  const setContainerRef = (ref: React.RefObject<HTMLDivElement>) => {
+    if (buffer.type === BufferType.Object) {
+      setContainerRefState(ref);
+    }
+  };
 
   return (
     <BufferContext.Provider
@@ -32,6 +41,8 @@ export const BufferProvider: React.FC<{
         currentBuffer: buffer,
         commandText,
         setCommandText,
+        containerRef,
+        setContainerRef,
       }}
     >
       {children}

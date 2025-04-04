@@ -163,7 +163,7 @@ export const compileInstructions = (nodes: Node[]) => {
       branchStack[branchStack.length - 1].branches[outletIndex].push(instruction);
     } else if ((node as ObjectNode).branching && outletIndex !== undefined) {
       const branch = branchStack[branchStack.length - 2];
-      if (branch) {
+      if (branch?.branches?.[outletIndex]) {
         branch.branches[outletIndex].push(instruction);
       } else {
         instructions.push(instruction);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { BufferType, type Buffer } from "@/lib/tiling/types";
 import { useLocked } from "@/contexts/LockedContext";
 import { useSelection } from "@/contexts/SelectionContext";
-import type { ObjectNode } from "@/lib/nodes/types";
+import type { ObjectNode, Node } from "@/lib/nodes/types";
 import Editor, { useMonaco } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import { usePatches } from "@/contexts/PatchesContext";
@@ -48,6 +48,14 @@ const Lisp: React.FC<{
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const commandModeKeyRef = useRef<Monaco.editor.IContextKey<boolean> | null>(null);
 
+  const selectedNodesRef = useRef<Node[]>([]);
+  const selectedBufferRef = useRef<Buffer | null>(null);
+
+  useEffect(() => {
+    selectedNodesRef.current = selectedNodes;
+    selectedBufferRef.current = selectedBuffer;
+  }, [selectedNodes, selectedBuffer]);
+
   // Sync command mode with context key
   useEffect(() => {
     if (commandModeKeyRef.current) {
@@ -78,7 +86,10 @@ const Lisp: React.FC<{
     }
 
     const monaco = monacoRef.current;
-    if (!monaco) return;
+    if (!monaco) {
+      console.log("no monaco", objectNode);
+      return;
+    }
     monaco.editor.setTheme("vs-dark");
     commandModeKeyRef.current = editor.createContextKey("commandMode", false);
 
@@ -86,24 +97,24 @@ const Lisp: React.FC<{
       setLockedMode(!lockedModeRef.current);
     });
 
-    // Enter command mode with Escape
-    editor.addCommand(monaco.KeyCode.Escape, () => {
-      setCommandMode(true);
-      setPrefix("");
-    });
-
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF, () => {
-      setFullScreen(!fullScreenRef.current);
-    });
-
     // Flash effect and message on Meta+Enter
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      const objectNode =
+        selectedBufferRef.current?.objectNode ||
+        (selectedNodesRef.current.find((x) => (x as ObjectNode).name === "js") as ObjectNode);
+      if (!objectNode) return;
+
       setFlash(true);
       setTimeout(() => setFlash(false), 500);
       objectNode.receive(objectNode.inlets[0], objectNode.inlets[0].lastMessage || "bang");
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO, function () {
+      const objectNode =
+        selectedBufferRef.current?.objectNode ||
+        (selectedNodesRef.current.find((x) => (x as ObjectNode).name === "js") as ObjectNode);
+      if (!objectNode) return;
+      console.log("is correct buffer", objectNode);
       // For regular objects, create an Object buffer
       const objectBuffer: Buffer = {
         id: objectNode.id,
@@ -117,12 +128,21 @@ const Lisp: React.FC<{
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD, function () {
+      if (!selectedNodesRef.current.includes(objectNode)) {
+        return;
+      }
       createDiredBuffer();
     });
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, function () {
+      if (!selectedNodesRef.current.includes(objectNode)) {
+        return;
+      }
       createBufferListBuffer();
     });
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, function () {
+      if (!selectedNodesRef.current.includes(objectNode)) {
+        return;
+      }
       killCurrentBuffer();
     });
   };

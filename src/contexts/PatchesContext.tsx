@@ -855,7 +855,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
   // Forward declare the switchToBuffer function
   let switchToBufferFn: (buffer: Buffer, newTile?: boolean) => void;
-  
+
   // Function to create a WorkletCode buffer that displays the current patch's worklet code
   const createWorkletCodeBuffer = useCallback(() => {
     const selectedBuffer = selectedBufferRef.current;
@@ -872,7 +872,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
     // Check if we already have a WorkletCode buffer for this patch
     const existingWorkletCodeBuffer = workingBuffers.find(
-      (b) => b.type === BufferType.WorkletCode && b.patch && b.patch.id === patchToUse.id
+      (b) => b.type === BufferType.WorkletCode && b.patch && b.patch.id === patchToUse.id,
     );
 
     // If we found an existing WorkletCode buffer, use it
@@ -1158,7 +1158,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
     const result: Tile[] = [];
 
     const searchTiles = (tile: Tile) => {
-      if (tile.buffer && tile.buffer.id === bufferId) {
+      if (tile.buffer && (bufferId === "" || tile.buffer.id === bufferId)) {
         result.push(tile);
       }
 

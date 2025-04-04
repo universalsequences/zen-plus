@@ -33,7 +33,11 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
     */
     result.push(current);
 
-    if (current.skipCompilation || isCompiledType((current as ObjectNode).operatorContextType)) {
+    if (
+      ((current as ObjectNode).isAsync && node !== current) ||
+      current.skipCompilation ||
+      isCompiledType((current as ObjectNode).operatorContextType)
+    ) {
       continue;
     }
 

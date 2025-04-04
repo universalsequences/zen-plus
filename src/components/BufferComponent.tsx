@@ -14,6 +14,7 @@ import { useZoom } from "@/hooks/useZoom";
 import { useKeyBindings } from "@/hooks/useKeyBindings";
 import { useStorage } from "@/contexts/StorageContext";
 import { PatchProvider } from "@/contexts/PatchContext";
+import { useBuffer } from "@/contexts/BufferContext";
 import BufferListView from "./buffers/BufferListView";
 import DiredView from "./buffers/DiredView";
 import WorkletCodeView from "./buffers/WorkletCodeView";
@@ -62,10 +63,13 @@ const BufferComponent: React.FC<{
     setWorkingBuffers,
   } = usePatches();
 
+  const ref = useRef<HTMLDivElement | null>(null);
+
   // UI state hooks
   const [draggingOver, setDraggingOver] = useState(false);
   const { gridTemplate } = useTilesContext();
   const { loadSubPatches } = useStorage();
+  const { setContainerRef } = useBuffer();
 
   // Extract patch for Patch buffer type (for backward compatibility)
   const patch = buffer.type === BufferType.Patch ? buffer.patch : null;
@@ -89,6 +93,10 @@ const BufferComponent: React.FC<{
     },
     [buffer, setSelectedBuffer, patch, setSelectedPatch, setWorkingBuffers],
   );
+
+  useEffect(() => {
+    setContainerRef(ref);
+  }, []);
 
   // Render the buffer with calculated dimensions and styling
   return React.useMemo(() => {
@@ -209,7 +217,10 @@ const BufferComponent: React.FC<{
           <PatchProvider buffer={buffer} patch={buffer.patch}>
             <LockedProvider patch={buffer.patch}>
               <PositionProvider patch={buffer.patch}>
-                <div className="bg-zinc-950 p-4 h-full w-full flex-grow flex-1 relative locked presentation">
+                <div
+                  ref={ref}
+                  className="bg-zinc-950 p-4 h-full w-full flex-grow flex-1 relative locked presentation"
+                >
                   <ObjectNodeWrapper objectNode={buffer.objectNode} />
                 </div>
               </PositionProvider>

@@ -123,16 +123,18 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
         _size[node.id] = node.size;
       }
       if (node.position) {
-        if (node.position.y > maxY) {
-          maxY = node.position.y;
+        const y = node.position.y + (node.size?.height || 0);
+        const x = node.position.x + (node.size?.width || 0);
+        if (y > maxY) {
+          maxY = y;
         }
-        if (node.position.x > maxX) {
-          maxX = node.position.x;
+        if (x > maxX) {
+          maxX = x;
         }
       }
     }
     if (maxY > 0 || maxX > 0) {
-      setSize({ width: maxX + 300, height: maxY + 300 });
+      setSize({ width: maxX + 100, height: maxY + 100 });
     }
     setSizeIndex(_size);
     sizeIndexRef.current = _size;

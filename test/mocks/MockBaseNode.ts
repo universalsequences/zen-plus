@@ -81,9 +81,9 @@ export class MockBaseNode implements Node {
     const objectNode = this as unknown as ObjectNode;
     if (objectNode.isAsync) {
       if (objectNode.instructions && objectNode.patch.vm) {
-        const r: VMEvaluation = objectNode.patch.vm.evaluateNode(this.id, msg);
+        const r: VMEvaluation | null = objectNode.patch.vm.evaluateNode(this.id, msg);
         // need to pass this back to main-thread
-        objectNode.patch.vm.sendEvaluationToMainThread?.(r);
+        if (r) objectNode.patch.vm.sendEvaluationToMainThread?.(r);
       }
       return;
     }

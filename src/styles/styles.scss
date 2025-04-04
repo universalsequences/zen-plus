@@ -881,3 +881,9 @@ div:active {
         -webkit-box-orient: vertical;
     }
 }
+
+.selected-buffer {
+    .node-component {
+        border-color: transparent !important;
+    }
+}
