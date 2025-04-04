@@ -1,5 +1,5 @@
 import { API } from "../../context";
-import type { Lazy, Message, NodeFunction, ObjectNode } from "../../types";
+import type { Lazy, Message, ObjectNode } from "../../types";
 import { doc } from "./doc";
 
 doc("unpack", {
@@ -30,7 +30,6 @@ export const pak = (node: ObjectNode, ...args: Lazy[]) => {
   node.branching = true;
   return (message: Message): Message[] => {
     if (message === "clear") {
-      console.log("clearing all inlets");
       for (const inlet of node.inlets) {
         inlet.lastMessage = undefined;
       }

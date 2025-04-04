@@ -231,7 +231,7 @@ describe("evaluateInstructions", async () => {
       InstructionType.Attribute,
       InstructionType.Store,
       InstructionType.EvaluateObject,
-      InstructionType.Store,
+      InstructionType.Branch,
     ]);
 
     evaluate(instructionsB, "bang");
@@ -244,13 +244,17 @@ describe("evaluateInstructions", async () => {
       InstructionType.Attribute,
       InstructionType.Store, // <lisp> store
       InstructionType.EvaluateObject, // <lisp> eval
-      InstructionType.Attribute, // <pack> attribute
+      InstructionType.Branch, // <pack> attribute
+    ]);
+
+    expect(instructionsA?.[3]?.branches?.[0].map((x) => x.type)).toEqual([
+      InstructionType.Attribute,
       InstructionType.Store, // pack store
       InstructionType.EvaluateObject, // pack eval
       InstructionType.Attribute, // matrix attribute
       InstructionType.Store, // matrix store
       InstructionType.EvaluateObject, // matrix eval
-      InstructionType.Store, // lisp store
+      InstructionType.Branch, // lisp branch
     ]);
   });
 

@@ -127,9 +127,9 @@ describe("compileVM", async () => {
 
     expect(getter.instructions?.map((x) => x.type)).toEqual([
       InstructionType.EvaluateObject,
-      InstructionType.ReplaceMessage,
       InstructionType.Attribute,
       InstructionType.Store,
+      InstructionType.ReplaceMessage,
       InstructionType.EvaluateObject,
       InstructionType.Branch,
     ]);

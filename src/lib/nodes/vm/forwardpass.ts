@@ -162,7 +162,7 @@ export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
   return sourceNodes;
 };
 
-export const compileVM = (_patch: Patch, isSubPatch: boolean) => {
+export const compileVM = (_patch: Patch, isSubPatch: boolean = false) => {
   const patch = isSubPatch ? _patch : getRootPatch(_patch);
   const nodeInstructions: NodeInstructions[] = [];
   const allSerializedObjects: SerializedObjectNode[] = [];
