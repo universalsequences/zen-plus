@@ -20,16 +20,6 @@ const calculateSize = (pattern: ETPattern): number => {
   }, 0);
 };
 
-function expandDashes(pattern: ETPattern): ETPattern {
-  return pattern.flatMap((atom) => {
-    if (atom === 1) return [1, 1]; // Expand Dash to two Dashes
-    if (typeof atom === "object" && "pattern" in atom) {
-      return [{ pattern: expandDashes(atom.pattern), size: atom.size }];
-    }
-    return [atom]; // Keep Dot or other types as is
-  });
-}
-
 // Helper to navigate to a pattern at a specific path
 const getPatternAtPath = (path: number[], fullPattern: ETPattern): ETPattern => {
   if (path.length === 1) return fullPattern;
@@ -80,7 +70,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   );
   // Update pattern output when changes occur
   useEffect(() => {
-    objectNode.receive(objectNode.inlets[0], JSON.stringify(expandDashes(pattern)));
+    objectNode.receive(objectNode.inlets[0], JSON.stringify(pattern));
   }, [pattern, objectNode]);
 
   // Update selected nested pattern based on cursor position
