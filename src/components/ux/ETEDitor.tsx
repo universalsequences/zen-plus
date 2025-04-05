@@ -3,7 +3,7 @@ import { usePosition } from "@/contexts/PositionContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import type { Atom, Dot, Dash, ETPattern } from "@/lib/nodes/definitions/core/et-system/editor";
 import { ObjectNode } from "@/lib/nodes/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
 // Constants for sizing
 const BASE_WIDTH = 32;
@@ -12,116 +12,108 @@ const DOT_SIZE = 1;
 const DASH_SIZE = 2;
 
 // Helper functions for working with patterns
-const calculateSize = (pattern) => {
+const calculateSize = (pattern: ETPattern): number => {
   return pattern.reduce((acc, atom) => {
-    if (atom === 0) return acc + DOT_SIZE; // dot is size 1
-    if (atom === 1) return acc + DASH_SIZE; // dash is size 2
-    return acc + atom.size; // nested pattern returns its defined size
+    if (atom === 0) return acc + DOT_SIZE;
+    if (atom === 1) return acc + DASH_SIZE;
+    return acc + atom.size;
   }, 0);
 };
 
 function expandDashes(pattern: ETPattern): ETPattern {
-  const result: ETPattern = [];
+  return pattern.flatMap((atom) => {
+    if (atom === 1) return [1, 1]; // Expand Dash to two Dashes
+    if (typeof atom === "object" && "pattern" in atom) {
+      return [{ pattern: expandDashes(atom.pattern), size: atom.size }];
+    }
+    return [atom]; // Keep Dot or other types as is
+  });
+}
 
-  for (let i = 0; i < pattern.length; i++) {
-    const atom = pattern[i];
+// Helper to navigate to a pattern at a specific path
+const getPatternAtPath = (path: number[], fullPattern: ETPattern): ETPattern => {
+  if (path.length === 1) return fullPattern;
 
-    // Check the type of atom
-    if (atom === 1) {
-      // If it's a Dash (1), add two Dashes
-      result.push(1, 1);
-    } else if (typeof atom === "object" && "pattern" in atom) {
-      // If it's a nested pattern, recursively expand its pattern
-      result.push({
-        pattern: expandDashes(atom.pattern),
-        size: atom.size,
-      });
+  let currentPattern = fullPattern;
+  for (let i = 0; i < path.length - 1; i++) {
+    const index = path[i];
+    const atom = currentPattern[index];
+    if (typeof atom === "object" && "pattern" in atom) {
+      currentPattern = atom.pattern;
     } else {
-      // For Dot (0) or any other type, add as is
-      result.push(atom);
+      return fullPattern; // Invalid path, return top-level pattern
     }
   }
-
-  return result;
-}
+  return currentPattern;
+};
 
 export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   const [pattern, setPattern] = useState<ETPattern>((objectNode.custom?.value as ETPattern) || []);
-
-  // Change from simple cursor index to cursor path
   const [cursorPath, setCursorPath] = useState<number[]>([0]);
+  const [selectedSymbols, setSelectedSymbols] = useState<number[][]>([]);
+  const [selectedNestedPattern, setSelectedNestedPattern] = useState<number[] | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<number[] | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { selectedNodes } = useSelection();
   const { lockedMode } = useLocked();
-  const [selectedSymbols, setSelectedSymbols] = useState<number[][]>([]);
-
-  // Debug state for development
-  const [debugInfo, setDebugInfo] = useState({
-    cursorPath: [0],
-    selectedSymbols: [] as number[][],
-  });
-
-  useEffect(() => {
-    console.log("pattern=", pattern);
-    objectNode.receive(objectNode.inlets[0], JSON.stringify(expandDashes(pattern)));
-  }, [pattern]);
-
-  // Update debug info whenever relevant states change
-  useEffect(() => {
-    setDebugInfo({
-      cursorPath,
-      selectedSymbols,
-    });
-  }, [cursorPath, selectedSymbols]);
-
   usePosition();
 
   const size = objectNode.size || { width: 100, height: 100 };
 
-  // Helper to get the current pattern based on cursor path
-  const getCurrentPattern = (path: number[], fullPattern: ETPattern): ETPattern => {
-    if (path.length === 1) return fullPattern;
+  // Add an event handler for direct container clicks to position cursor
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!lockedMode || !selectedNodes.includes(objectNode)) return;
 
-    // Navigate to the nested pattern
-    let currentPattern = fullPattern;
-    for (let i = 0; i < path.length - 1; i++) {
-      const index = path[i];
-      const atom = currentPattern[index];
-      if (typeof atom === "object" && "pattern" in atom) {
-        currentPattern = atom.pattern;
-      } else {
-        // Invalid path, return top-level pattern
-        return fullPattern;
+      // If clicking on the background (not an atom), position cursor at the end
+      if (e.target === containerRef.current) {
+        setCursorPath([pattern.length]);
+        if (!isDragging) {
+          setSelectedSymbols([]);
+        }
+        setSelectedNestedPattern(null);
       }
-    }
-    return currentPattern;
-  };
+    },
+    [isDragging],
+  );
+  // Update pattern output when changes occur
+  useEffect(() => {
+    objectNode.receive(objectNode.inlets[0], JSON.stringify(expandDashes(pattern)));
+  }, [pattern, objectNode]);
 
-  // Get the current cursor position in the current pattern
-  const getCurrentCursorPosition = (): number => {
-    return cursorPath[cursorPath.length - 1];
+  // Update selected nested pattern based on cursor position
+  useEffect(() => {
+    if (cursorPath.length > 1) {
+      // Cursor is inside a nested pattern, so select the containing pattern
+      const parentPath = cursorPath.slice(0, -1);
+      const atom = getAtomAtPath(parentPath, pattern);
+
+      if (typeof atom === "object" && "pattern" in atom) {
+        setSelectedNestedPattern(parentPath);
+      }
+    } else {
+      // Cursor is at top level, clear nested pattern selection
+      setSelectedNestedPattern(null);
+    }
+  }, [cursorPath, pattern]);
+
+  // Helper to check if a path is selected
+  const isPathSelected = (path: number[]): boolean => {
+    return selectedSymbols.some(
+      (selPath) => selPath.length === path.length && selPath.every((val, idx) => val === path[idx]),
+    );
   };
 
   // Insert atom at current cursor position
   const insertAtCursor = (atom: Atom) => {
     const newPattern = [...pattern];
-    let currentPattern = newPattern;
+    let currentPattern = getPatternAtPath(cursorPath, newPattern);
 
-    // Navigate to the correct nested pattern
-    for (let i = 0; i < cursorPath.length - 1; i++) {
-      const index = cursorPath[i];
-      const currentAtom = currentPattern[index];
-
-      if (typeof currentAtom === "object" && "pattern" in currentAtom) {
-        currentPattern = currentAtom.pattern;
-      }
-    }
-
-    // Insert at the current position
     const currentPosition = cursorPath[cursorPath.length - 1];
     currentPattern.splice(currentPosition, 0, atom);
 
-    // Update the pattern
     setPattern(newPattern);
 
     // Move cursor forward
@@ -132,35 +124,21 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
 
   // Delete atom at current cursor position
   const deleteAtCursor = () => {
-    if (getCurrentCursorPosition() === 0) {
-      // If at the beginning of a nested pattern, try to move up
+    const currentPosition = cursorPath[cursorPath.length - 1];
+
+    // If at the beginning of a pattern, try to move up
+    if (currentPosition === 0) {
       if (cursorPath.length > 1) {
-        const newPath = [...cursorPath];
-        newPath.pop();
-        setCursorPath(newPath);
-        return;
+        setCursorPath(cursorPath.slice(0, -1));
       }
-      return; // Already at the beginning of the top-level pattern
+      return;
     }
 
     const newPattern = [...pattern];
-    let currentPattern = newPattern;
-
-    // Navigate to the correct nested pattern
-    for (let i = 0; i < cursorPath.length - 1; i++) {
-      const index = cursorPath[i];
-      const currentAtom = currentPattern[index];
-
-      if (typeof currentAtom === "object" && "pattern" in currentAtom) {
-        currentPattern = currentAtom.pattern;
-      }
-    }
+    let currentPattern = getPatternAtPath(cursorPath, newPattern);
 
     // Delete at the position before cursor
-    const currentPosition = cursorPath[cursorPath.length - 1];
     currentPattern.splice(currentPosition - 1, 1);
-
-    // Update the pattern
     setPattern(newPattern);
 
     // Move cursor backward
@@ -173,7 +151,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   const createNestedPattern = () => {
     if (selectedSymbols.length === 0) return;
 
-    // For simplicity, we'll only handle selections within the same pattern level
+    // For simplicity, only handle selections within the same pattern level
     const firstPath = selectedSymbols[0];
     const patternLevel = firstPath.length - 1;
 
@@ -188,31 +166,15 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
 
     // Get the current pattern
     const newPattern = [...pattern];
-    let currentPattern = newPattern;
-
-    // Navigate to the correct pattern level
-    for (let i = 0; i < patternLevel; i++) {
-      const index = firstPath[i];
-      const currentAtom = currentPattern[index];
-
-      if (typeof currentAtom === "object" && "pattern" in currentAtom) {
-        currentPattern = currentAtom.pattern;
-      }
-    }
+    let currentPattern = getPatternAtPath(firstPath.slice(0, patternLevel), newPattern);
 
     // Extract selected atoms
     const selectedAtoms = indices.map((index) => currentPattern[index]);
-
-    // Calculate size of the nested pattern - this is crucial to maintain spacing
     const nestedSize = calculateSize(selectedAtoms);
-    console.log("Creating nested pattern with size:", nestedSize, "from atoms:", selectedAtoms);
-
-    // Create a copy of the selected atoms to avoid reference issues
-    const selectedAtomsCopy = [...selectedAtoms];
 
     // Create the nested pattern object
     const nestedPattern = {
-      pattern: selectedAtomsCopy,
+      pattern: [...selectedAtoms],
       size: nestedSize,
     };
 
@@ -223,11 +185,9 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
 
     // Insert the nested pattern at the position of the first selected atom
     currentPattern.splice(indices[0], 0, nestedPattern);
-
-    // Update the pattern
     setPattern(newPattern);
 
-    // Update cursor to point to after the new nested pattern
+    // Update cursor position
     const newCursorPath = firstPath.slice(0, patternLevel);
     newCursorPath.push(indices[0] + 1);
     setCursorPath(newCursorPath);
@@ -236,21 +196,210 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
     setSelectedSymbols([]);
   };
 
-  // Declare renderAtom function for recursive use
-  const renderAtom = (atom: Atom, atomPath: number[], isSelected: boolean) => {
+  // Parse a path string from data-path attribute
+  const parsePathString = (pathStr: string): number[] => {
+    return pathStr.split("-").map((p) => parseInt(p));
+  };
+
+  // Handle mouse down on an atom
+  const handleMouseDown = (e: React.MouseEvent, atomPath: number[]) => {
+    if (!lockedMode || !selectedNodes.includes(objectNode)) return;
+
+    // Prevent default to avoid text selection
+    e.preventDefault();
+
+    // Check if it's a nested pattern for selection
+    const atom = getAtomAtPath(atomPath, pattern);
+    if (typeof atom === "object" && "pattern" in atom) {
+      if (e.shiftKey) {
+        // Add to selection
+        setSelectedSymbols((prev) => [...prev, atomPath]);
+      } else {
+        // Set cursor inside the nested pattern at position 0
+        // Selected nested pattern will be updated via effect when cursor changes
+        setCursorPath([...atomPath, 0]);
+        setSelectedSymbols([]);
+      }
+    } else {
+      // Start drag selection or position cursor
+      if (e.shiftKey) {
+        // Start drag selection
+        setIsDragging(true);
+        setDragStart(atomPath);
+        setSelectedSymbols((prev) => [...prev, atomPath]);
+      } else {
+        // Set cursor position directly to this atom's position
+        // For top level atoms, set cursor after the atom
+        if (atomPath.length === 1) {
+          setCursorPath([atomPath[0] + 1]);
+        } else {
+          // For nested atoms, set cursor at this atom's position in parent
+          setCursorPath([...atomPath]);
+        }
+        setSelectedSymbols([]);
+      }
+    }
+  };
+
+  // Handle mouse move for drag selection
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !dragStart) return;
+
+    // Find element under mouse
+    const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+    const pathAttr = elemBelow?.getAttribute("data-path");
+
+    if (pathAttr) {
+      const currentPath = parsePathString(pathAttr);
+
+      // Only add to selection if not already selected and at same level as drag start
+      if (currentPath.length === dragStart.length && !isPathSelected(currentPath)) {
+        setSelectedSymbols((prev) => [...prev, currentPath]);
+      }
+    }
+  };
+
+  // Handle mouse up to end dragging
+  const handleMouseUp = useCallback((e: MouseEvent) => {
+    setTimeout(() => {
+      setIsDragging(false);
+      setDragStart(null);
+    }, 100);
+  }, []);
+
+  // Get an atom at a specific path
+  const getAtomAtPath = (path: number[], fullPattern: ETPattern): Atom => {
+    if (path.length === 0) return null;
+
+    let currentPattern = fullPattern;
+    let atom: Atom = null;
+
+    for (let i = 0; i < path.length; i++) {
+      const index = path[i];
+      atom = currentPattern[index];
+
+      if (i < path.length - 1) {
+        if (typeof atom === "object" && "pattern" in atom) {
+          currentPattern = atom.pattern;
+        } else {
+          return null; // Invalid path
+        }
+      }
+    }
+
+    return atom;
+  };
+
+  // Replace selected symbols with a nested pattern
+  const replaceSelectedWithNestedPattern = (nestedContent: ETPattern) => {
+    if (selectedSymbols.length === 0) return;
+
+    // Sort paths by depth (deeper paths first) to avoid index issues
+    const sortedPaths = [...selectedSymbols].sort((a, b) => {
+      if (a.length !== b.length) return b.length - a.length;
+
+      // If at same depth, sort by indices
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return a[i] - b[i];
+      }
+      return 0;
+    });
+
+    const newPattern = [...pattern];
+
+    // Process each path
+    for (const path of sortedPaths) {
+      // Get the pattern at the parent level
+      const parentPath = path.slice(0, -1);
+      const currentIndex = path[path.length - 1];
+
+      let parentPattern: ETPattern;
+      if (parentPath.length === 0) {
+        parentPattern = newPattern;
+      } else {
+        const parent = getAtomAtPath(parentPath, newPattern);
+        if (typeof parent === "object" && "pattern" in parent) {
+          parentPattern = parent.pattern;
+        } else {
+          continue; // Skip if parent pattern not found
+        }
+      }
+
+      // Replace atom with nested pattern
+      const nestedSize = calculateSize(nestedContent);
+      parentPattern[currentIndex] = {
+        pattern: [...nestedContent],
+        size: nestedSize,
+      };
+    }
+
+    setPattern(newPattern);
+    setSelectedSymbols([]);
+  };
+
+  // Update size of selected nested pattern
+  const updateNestedPatternSize = (newSize: number) => {
+    if (!selectedNestedPattern) return;
+
+    const newPattern = [...pattern];
+    const atom = getAtomAtPath(selectedNestedPattern, newPattern);
+
+    if (typeof atom === "object" && "pattern" in atom) {
+      // Create a new nested pattern with updated size
+      const parentPath = selectedNestedPattern.slice(0, -1);
+      const currentIndex = selectedNestedPattern[selectedNestedPattern.length - 1];
+
+      let parentPattern: ETPattern;
+      if (parentPath.length === 0) {
+        parentPattern = newPattern;
+      } else {
+        const parent = getAtomAtPath(parentPath, newPattern);
+        if (typeof parent === "object" && "pattern" in parent) {
+          parentPattern = parent.pattern;
+        } else {
+          return; // Skip if parent pattern not found
+        }
+      }
+
+      // Update the size
+      parentPattern[currentIndex] = {
+        ...atom,
+        size: newSize,
+      };
+
+      setPattern(newPattern);
+    }
+  };
+
+  // Render a single atom (dot, dash, or nested pattern)
+  const renderAtom = (
+    atom: Atom,
+    atomPath: number[],
+    isNested: boolean = false,
+    scaleFactor: number = 1,
+  ) => {
+    const isSelected = isPathSelected(atomPath);
+    const isNestedSelected =
+      selectedNestedPattern &&
+      selectedNestedPattern.length === atomPath.length &&
+      selectedNestedPattern.every((val, idx) => val === atomPath[idx]);
+    const width = isNested ? BASE_WIDTH * scaleFactor : BASE_WIDTH;
+
     if (atom === 0) {
-      // Dot - make square to match the width
+      // Dot
       return (
         <div
           key={atomPath.join("-")}
           className={`border-2 rounded-full ${!isSelected ? "border-white" : "bg-white"}`}
           style={{
-            width: `${BASE_WIDTH}px`,
-            height: `${BASE_WIDTH}px`, // Match width for perfect circles
+            width: `${width}px`,
+            height: `${width}px`,
             boxSizing: "border-box",
             margin: "1px",
+            cursor: "pointer",
           }}
           data-path={atomPath.join("-")}
+          onMouseDown={(e) => handleMouseDown(e, atomPath)}
         />
       );
     } else if (atom === 1) {
@@ -260,431 +409,286 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
           key={atomPath.join("-")}
           className={`border-2 rounded-full ${!isSelected ? "border-white" : "bg-white"}`}
           style={{
-            width: `${BASE_WIDTH * DASH_SIZE}px`,
-            height: `${BASE_WIDTH}px`, // Match dot height for consistency
+            width: `${width * DASH_SIZE}px`,
+            height: `${width}px`,
             boxSizing: "border-box",
             margin: "1px",
+            cursor: "pointer",
           }}
           data-path={atomPath.join("-")}
+          onMouseDown={(e) => handleMouseDown(e, atomPath)}
         />
       );
     } else if (typeof atom === "object" && "pattern" in atom) {
-      // Nested pattern
-      return renderNestedPattern(atom, atomPath, isSelected);
+      // Render nested pattern
+      return renderNestedPattern(atom, atomPath, isSelected || isNestedSelected, scaleFactor);
     }
 
     return null;
   };
+
+  // Render a cursor element
+  const renderCursor = (key: string, height: number = BASE_WIDTH) => (
+    <div
+      key={key}
+      className="animate-pulse bg-teal-500"
+      style={{
+        width: "1px",
+        height: `${height}px`,
+        marginLeft: "0px",
+        marginRight: "0px",
+      }}
+    />
+  );
 
   // Render nested pattern
   const renderNestedPattern = (
     nestedPattern: { pattern: ETPattern; size: number },
     path: number[],
     isSelected: boolean,
+    parentScaleFactor: number = 1,
   ) => {
-    // Calculate width based on size
-    const width = nestedPattern.size * BASE_WIDTH;
-
     // Calculate scaling factor for nested elements
-    // This ensures elements fit proportionally within the nested pattern
-    const totalElements = nestedPattern.pattern.length;
     const totalInnerSize = calculateSize(nestedPattern.pattern);
-    const scaleFactor = (0.5 * nestedPattern.size) / (totalInnerSize > 0 ? totalInnerSize : 1);
+    const scaleFactor =
+      1.5 *
+      ((0.5 * nestedPattern.size) / (totalInnerSize > 0 ? totalInnerSize : 1)) *
+      parentScaleFactor;
 
-    // Adjust the base width for children based on the scale factor
-    const adjustedBaseWidth = BASE_WIDTH * scaleFactor;
+    // Width based on size
+    const width = nestedPattern.size * BASE_WIDTH * parentScaleFactor;
 
     // Check if cursor is within this nested pattern
     const isCursorInThisPattern =
       cursorPath.length > path.length && path.every((val, idx) => cursorPath[idx] === val);
 
-    // Render the nested pattern content
-    const nestedContent = [];
+    const elements = [];
+    const currentPattern = nestedPattern.pattern;
 
-    // Special case: if cursor is in this pattern, we need to render the cursor
+    // If cursor is in this pattern, render atoms with cursor
     if (isCursorInThisPattern) {
-      // Find the index in this pattern where the cursor is
       const cursorIndexInPattern = cursorPath[path.length];
 
       // Render atoms before cursor
       for (let i = 0; i < cursorIndexInPattern; i++) {
-        const atom = nestedPattern.pattern[i];
-        const atomPath = [...path, i];
-        const atomIsSelected = selectedSymbols.some(
-          (selPath) =>
-            selPath.length === atomPath.length &&
-            selPath.every((val, idx) => val === atomPath[idx]),
-        );
-
-        // Calculate size for this atom with scaling
-        const atomSize = atom === 0 ? DOT_SIZE : atom === 1 ? DASH_SIZE : atom.size;
-        const atomWidth = atomSize * adjustedBaseWidth;
-
-        // Render atom with scaling
-        if (atom === 0) {
-          // Dot - scaled
-          nestedContent.push(
-            <div
-              key={atomPath.join("-")}
-              className={`border-2 rounded-full ${!atomIsSelected ? "border-white" : "bg-white"}`}
-              style={{
-                width: `${adjustedBaseWidth}px`,
-                height: `${adjustedBaseWidth}px`,
-                boxSizing: "border-box",
-                margin: "1px",
-              }}
-              data-path={atomPath.join("-")}
-            />,
-          );
-        } else if (atom === 1) {
-          // Dash - scaled
-          nestedContent.push(
-            <div
-              key={atomPath.join("-")}
-              className={`border-2 rounded-full ${!atomIsSelected ? "border-white" : "bg-white"}`}
-              style={{
-                width: `${adjustedBaseWidth * DASH_SIZE}px`,
-                height: `${adjustedBaseWidth}px`,
-                boxSizing: "border-box",
-                margin: "1px",
-              }}
-              data-path={atomPath.join("-")}
-            />,
-          );
-        } else if (typeof atom === "object" && "pattern" in atom) {
-          // Recursively render nested pattern with adjusted scale
-          nestedContent.push(renderNestedPattern(atom, atomPath, atomIsSelected));
-        }
+        elements.push(renderAtom(currentPattern[i], [...path, i], true, scaleFactor));
       }
 
       // Render cursor
-      nestedContent.push(
-        <div
-          key={`cursor-${path.join("-")}-${cursorIndexInPattern}`}
-          className="animate-pulse bg-teal-500"
-          style={{
-            width: "1px",
-            height: `${adjustedBaseWidth * 2}px`,
-            marginLeft: "0px",
-            marginRight: "0px",
-          }}
-        />,
+      elements.push(
+        renderCursor(
+          `cursor-${path.join("-")}-${cursorIndexInPattern}`,
+          BASE_WIDTH * 2 * scaleFactor,
+        ),
       );
 
       // Render atoms after cursor
-      for (let i = cursorIndexInPattern; i < nestedPattern.pattern.length; i++) {
-        const atom = nestedPattern.pattern[i];
-        const atomPath = [...path, i];
-        const atomIsSelected = selectedSymbols.some(
-          (selPath) =>
-            selPath.length === atomPath.length &&
-            selPath.every((val, idx) => val === atomPath[idx]),
-        );
-
-        // Calculate size for this atom with scaling
-        const atomSize = atom === 0 ? DOT_SIZE : atom === 1 ? DASH_SIZE : atom.size;
-        const atomWidth = atomSize * adjustedBaseWidth;
-
-        // Render atom with scaling
-        if (atom === 0) {
-          // Dot - scaled
-          nestedContent.push(
-            <div
-              key={atomPath.join("-")}
-              className={`border-2 rounded-full ${!atomIsSelected ? "border-white" : "bg-white"}`}
-              style={{
-                width: `${adjustedBaseWidth}px`,
-                height: `${adjustedBaseWidth}px`,
-                boxSizing: "border-box",
-                margin: "1px",
-              }}
-              data-path={atomPath.join("-")}
-            />,
-          );
-        } else if (atom === 1) {
-          // Dash - scaled
-          nestedContent.push(
-            <div
-              key={atomPath.join("-")}
-              className={`border-2 rounded-full ${!atomIsSelected ? "border-white" : "bg-white"}`}
-              style={{
-                width: `${adjustedBaseWidth * DASH_SIZE}px`,
-                height: `${adjustedBaseWidth}px`,
-                boxSizing: "border-box",
-                margin: "1px",
-              }}
-              data-path={atomPath.join("-")}
-            />,
-          );
-        } else if (typeof atom === "object" && "pattern" in atom) {
-          // Recursively render nested pattern with adjusted scale
-          nestedContent.push(renderNestedPattern(atom, atomPath, atomIsSelected));
-        }
+      for (let i = cursorIndexInPattern; i < currentPattern.length; i++) {
+        elements.push(renderAtom(currentPattern[i], [...path, i], true, scaleFactor));
       }
     } else {
       // Just render all atoms without cursor
-      for (let i = 0; i < nestedPattern.pattern.length; i++) {
-        const atom = nestedPattern.pattern[i];
-        const atomPath = [...path, i];
-        const atomIsSelected = selectedSymbols.some(
-          (selPath) =>
-            selPath.length === atomPath.length &&
-            selPath.every((val, idx) => val === atomPath[idx]),
-        );
-
-        // Calculate size for this atom with scaling
-        const atomSize = atom === 0 ? DOT_SIZE : atom === 1 ? DASH_SIZE : atom.size;
-        const atomWidth = atomSize * adjustedBaseWidth;
-
-        // Render atom with scaling
-        if (atom === 0) {
-          // Dot - scaled
-          nestedContent.push(
-            <div
-              key={atomPath.join("-")}
-              className={`border-2 rounded-full ${!atomIsSelected ? "border-white" : "bg-white"}`}
-              style={{
-                width: `${adjustedBaseWidth}px`,
-                height: `${adjustedBaseWidth}px`,
-                boxSizing: "border-box",
-                margin: "1px",
-              }}
-              data-path={atomPath.join("-")}
-            />,
-          );
-        } else if (atom === 1) {
-          // Dash - scaled
-          nestedContent.push(
-            <div
-              key={atomPath.join("-")}
-              className={`border-2 rounded-full ${!atomIsSelected ? "border-white" : "bg-white"}`}
-              style={{
-                width: `${adjustedBaseWidth * DASH_SIZE}px`,
-                height: `${adjustedBaseWidth}px`,
-                boxSizing: "border-box",
-                margin: "1px",
-              }}
-              data-path={atomPath.join("-")}
-            />,
-          );
-        } else if (typeof atom === "object" && "pattern" in atom) {
-          // Recursively render nested pattern with adjusted scale
-          nestedContent.push(renderNestedPattern(atom, atomPath, atomIsSelected));
-        }
+      for (let i = 0; i < currentPattern.length; i++) {
+        elements.push(renderAtom(currentPattern[i], [...path, i], true, scaleFactor));
       }
     }
+
+    // Check if this is the selected nested pattern for editing size
+    const isNestedSelected =
+      selectedNestedPattern &&
+      selectedNestedPattern.length === path.length &&
+      selectedNestedPattern.every((val, idx) => val === path[idx]);
+
+    // Determine border style based on selection state
+    let borderClass = "border-gray-500";
+    if (isSelected) borderClass = "border-blue-500";
+    if (isNestedSelected) borderClass = "border-yellow-500 border-2";
 
     // Return the container with content
     return (
       <div
         key={path.join("-")}
-        className={`relative border rounded-md ${isSelected ? "border-blue-500" : "border-gray-500"} flex items-center justify-center p-0`}
+        className={`relative border rounded-md ${borderClass} flex items-center justify-center p-0`}
         style={{
           width: `${width}px`,
-          height: `${BASE_WIDTH * 2}px`,
+          height: `${BASE_WIDTH * 2 * parentScaleFactor}px`,
           boxSizing: "border-box",
+          cursor: "pointer",
         }}
         data-path={path.join("-")}
+        onMouseDown={(e) => handleMouseDown(e, path)}
       >
-        {nestedContent}
-        <div className="bottom-0 right-1 text-xs absolute">{nestedPattern.size}</div>
+        {elements}
+        <div className="bottom-0 right-1 text-xs absolute">
+          {nestedPattern.size}
+          {isNestedSelected && <span className="ml-1 animate-pulse text-yellow-400">✏</span>}
+        </div>
       </div>
     );
   };
-
-  // Handle key events
-  const onKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!lockedMode) {
-        return;
-      }
-
-      if (!selectedNodes.includes(objectNode)) return;
-
-      console.log("Key pressed:", e.key, "Current cursor path:", cursorPath);
-
-      if (e.key === "o") {
-        insertAtCursor(0); // Insert dot
-      } else if (e.key === "-") {
-        insertAtCursor(1); // Insert dash
-      } else if (e.key === "Backspace") {
-        if (selectedSymbols.length > 0) {
-          // Delete selected symbols
-          // This is simplified - a more complete implementation would handle
-          // deleting selections at different levels
-          setSelectedSymbols([]);
-        } else {
-          deleteAtCursor();
-        }
-      } else if (e.key === "Enter") {
-        // Create nested pattern from selection
-        createNestedPattern();
-      } else if (e.key === "ArrowLeft") {
-        const currentPosition = getCurrentCursorPosition();
-        if (currentPosition > 0) {
-          // Move cursor left within current pattern
-          const newCursorPath = [...cursorPath];
-          newCursorPath[newCursorPath.length - 1] = currentPosition - 1;
-          setCursorPath(newCursorPath);
-        } else if (cursorPath.length > 1) {
-          // Move out of nested pattern to parent
-          const newCursorPath = cursorPath.slice(0, -1);
-          setCursorPath(newCursorPath);
-        }
-
-        if (e.metaKey) {
-          // Update selection
-          setSelectedSymbols((prev) => prev.slice(0, prev.length - 1));
-        }
-      } else if (e.key === "ArrowRight") {
-        const currentPattern = getCurrentPattern(cursorPath, pattern);
-        const currentPosition = getCurrentCursorPosition();
-
-        if (currentPosition < currentPattern.length) {
-          // Check if moving into a nested pattern
-          const nextAtom = currentPattern[currentPosition];
-
-          if (typeof nextAtom === "object" && "pattern" in nextAtom) {
-            // Move cursor into nested pattern
-            const newCursorPath = [...cursorPath];
-            newCursorPath[newCursorPath.length - 1] = currentPosition;
-            newCursorPath.push(0);
-            setCursorPath(newCursorPath);
-          } else {
-            // Move cursor right within current pattern
-            const newCursorPath = [...cursorPath];
-            newCursorPath[newCursorPath.length - 1] = currentPosition + 1;
-            setCursorPath(newCursorPath);
-          }
-        } else if (cursorPath.length > 1) {
-          // At the end of a nested pattern, move back to parent after the nested pattern
-          const parentPath = cursorPath.slice(0, -1);
-          const parentPosition = parentPath[parentPath.length - 1];
-
-          // Create new path at parent level, after the nested pattern
-          const newCursorPath = [...parentPath];
-          newCursorPath[newCursorPath.length - 1] = parentPosition + 1;
-          setCursorPath(newCursorPath);
-        }
-
-        if (e.metaKey) {
-          // Update selection
-          setSelectedSymbols((prev) => [...prev, [...cursorPath]]);
-        }
-      } else if (e.key === "Escape") {
-        // Move cursor up to parent pattern if in a nested pattern
-        if (cursorPath.length > 1) {
-          const newCursorPath = cursorPath.slice(0, -1);
-          setCursorPath(newCursorPath);
-        }
-      }
-    },
-    [pattern, lockedMode, selectedNodes, selectedSymbols, cursorPath],
-  );
-
-  useEffect(() => {
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onKeyDown]);
 
   // Render the main pattern with cursor
   const renderPattern = () => {
     const elements = [];
 
-    // Iterate through the pattern and render each atom with cursor in the right place
+    // Iterate through pattern and render atoms with cursor in the right place
     for (let i = 0; i <= pattern.length; i++) {
-      // Check if cursor should be at this position
-      const isCursorHere = cursorPath.length === 1 && cursorPath[0] === i;
-
-      // Render cursor if needed
-      if (isCursorHere) {
-        elements.push(
-          <div
-            key={`cursor-${i}`}
-            className="animate-pulse bg-teal-500"
-            style={{
-              width: "1px",
-              height: `${BASE_WIDTH * 1}px`,
-              marginLeft: "0px",
-              marginRight: "0px",
-            }}
-          />,
-        );
+      // Check if cursor should be at this position (top level only)
+      if (cursorPath.length === 1 && cursorPath[0] === i) {
+        elements.push(renderCursor(`cursor-${i}`, BASE_WIDTH));
       }
 
       // If we're at the end, don't try to render an atom
       if (i === pattern.length) continue;
 
-      // Get the atom at this position
-      const atom = pattern[i];
-      const atomPath = [i];
-
-      // Check if this atom is selected
-      const isSelected = selectedSymbols.some(
-        (path) =>
-          path.length === atomPath.length && path.every((val, idx) => val === atomPath[idx]),
-      );
-
-      // Use specialized rendering for atoms based on type
-      if (atom === 0) {
-        // Dot
-        elements.push(
-          <div
-            key={atomPath.join("-")}
-            className={`border-2 rounded-full ${!isSelected ? "border-white" : "bg-white"}`}
-            style={{
-              width: `${BASE_WIDTH}px`,
-              height: `${BASE_WIDTH}px`,
-              boxSizing: "border-box",
-              margin: "1px",
-            }}
-            data-path={atomPath.join("-")}
-          />,
-        );
-      } else if (atom === 1) {
-        // Dash
-        elements.push(
-          <div
-            key={atomPath.join("-")}
-            className={`border-2 rounded-full ${!isSelected ? "border-white" : "bg-white"}`}
-            style={{
-              width: `${BASE_WIDTH * DASH_SIZE}px`,
-              height: `${BASE_WIDTH}px`,
-              boxSizing: "border-box",
-              margin: "1px",
-            }}
-            data-path={atomPath.join("-")}
-          />,
-        );
-      } else if (typeof atom === "object" && "pattern" in atom) {
-        // Nested pattern
-        elements.push(renderNestedPattern(atom, atomPath, isSelected));
-      }
+      // Render atom at this position
+      elements.push(renderAtom(pattern[i], [i], false));
     }
 
     return elements;
   };
 
-  let count = 0;
-  for (let i = 0; i < pattern.length; i++) {
-    if (pattern[i] === 0) {
-      count++;
-    } else if (pattern[i] === 1) {
-      count += 2;
-    } else if ("size" in pattern[i]) count += pattern[i].size;
-  }
+  // Handle keyboard input
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!lockedMode || !selectedNodes.includes(objectNode)) return;
+
+      // Handle size editing for selected nested pattern
+      if (selectedNestedPattern && /^[0-9]$/.test(e.key)) {
+        // Only trigger size editing with Alt+number to avoid conflicts
+        // with normal typing when cursor is inside the pattern
+        const digit = parseInt(e.key);
+        const atom = getAtomAtPath(selectedNestedPattern, pattern);
+
+        if (typeof atom === "object" && "pattern" in atom) {
+          // Instead of appending, we just set the size directly to the entered digit
+          updateNestedPatternSize(digit);
+          e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
+        }
+        return;
+      }
+
+      // Handle special patterns for selected symbols
+      if (selectedSymbols.length > 0) {
+        // Replace selected with dot pattern
+        if (e.key === "d" || e.key === "D") {
+          replaceSelectedWithNestedPattern([0]);
+          return;
+        }
+
+        // Replace selected with dash pattern
+        if (e.key === "a" || e.key === "A") {
+          replaceSelectedWithNestedPattern([1]);
+          return;
+        }
+      }
+
+      const currentPattern = getPatternAtPath(cursorPath, pattern);
+      const currentPosition = cursorPath[cursorPath.length - 1];
+
+      switch (e.key) {
+        case "o":
+          insertAtCursor(0); // Insert dot
+          break;
+        case "-":
+          insertAtCursor(1); // Insert dash
+          break;
+        case "Backspace":
+          if (selectedSymbols.length > 0) {
+            setSelectedSymbols([]);
+          } else {
+            deleteAtCursor();
+          }
+          break;
+        case "Enter":
+          createNestedPattern();
+          break;
+        case "ArrowLeft":
+          if (currentPosition > 0) {
+            // Move cursor left within current pattern
+            setCursorPath([...cursorPath.slice(0, -1), currentPosition - 1]);
+          } else if (cursorPath.length > 1) {
+            // Move out of nested pattern to parent
+            setCursorPath(cursorPath.slice(0, -1));
+          }
+
+          if (e.metaKey) {
+            // Update selection
+            setSelectedSymbols((prev) => prev.slice(0, prev.length - 1));
+          }
+          break;
+        case "ArrowRight":
+          if (currentPosition < currentPattern.length) {
+            // Check if moving into a nested pattern
+            const nextAtom = currentPattern[currentPosition];
+
+            if (typeof nextAtom === "object" && "pattern" in nextAtom) {
+              // Move cursor into nested pattern
+              setCursorPath([...cursorPath, 0]);
+            } else {
+              // Move cursor right within current pattern
+              setCursorPath([...cursorPath.slice(0, -1), currentPosition + 1]);
+            }
+          } else if (cursorPath.length > 1) {
+            // At the end of a nested pattern, move back to parent after the nested pattern
+            const parentPath = cursorPath.slice(0, -1);
+            const parentPosition = parentPath[parentPath.length - 1];
+            setCursorPath([...parentPath.slice(0, -1), parentPosition + 1]);
+          }
+
+          if (e.metaKey) {
+            // Update selection
+            setSelectedSymbols((prev) => [...prev, [...cursorPath]]);
+          }
+          break;
+        case "Escape":
+          // Clear selections and move cursor up to parent pattern if in a nested pattern
+          setSelectedSymbols([]);
+          setSelectedNestedPattern(null);
+          if (cursorPath.length > 1) {
+            setCursorPath(cursorPath.slice(0, -1));
+          }
+          break;
+      }
+    },
+    [
+      pattern,
+      lockedMode,
+      selectedNodes,
+      selectedSymbols,
+      cursorPath,
+      objectNode,
+      selectedNestedPattern,
+    ],
+  );
+
+  // Setup event listeners
+  useEffect(() => {
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [onKeyDown]);
+
+  // Calculate total size of the pattern
+  const patternSize = pattern.reduce((acc, atom) => {
+    if (atom === 0) return acc + 1;
+    if (atom === 1) return acc + 2;
+    return acc + atom.size;
+  }, 0);
 
   return (
-    <div className="bg-black text-white w-full h-full flex flex-wrap items-center p-2 gap-0 relative">
+    <div
+      ref={containerRef}
+      className="bg-black text-white w-full h-full flex flex-wrap items-center p-2 gap-0 relative"
+      onMouseMove={handleMouseMove}
+      onClick={handleContainerClick}
+    >
       {renderPattern()}
-      <div className="right-1 bottom-1 absolute">{count}</div>
-      {/* Debug display for development */}
-      {/*
-      <div className="absolute bottom-0 left-0 text-xs text-white p-1 bg-gray-800 opacity-50">
-        Cursor: {JSON.stringify(debugInfo.cursorPath)},
-        Selected: {JSON.stringify(debugInfo.selectedSymbols.map(p => p.join(',')))}
-      </div>
-      */}
+      <div className="right-1 bottom-1 absolute">{patternSize}</div>
     </div>
   );
 };
