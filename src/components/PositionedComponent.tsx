@@ -98,12 +98,12 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
    */
   useEffect(() => {
     // Skip if node is a message or text hasn't changed
-    if (isMessageNode(node) || text === lastText.current) return;
+    if (text === lastText.current) return;
     lastText.current = text;
 
     // Skip for dividers or undefined node types
     const name = (node as ObjectNode).name;
-    if (((node as MessageNode).message === undefined && name === undefined) || name === "divider") {
+    if (name === undefined || name === "divider") {
       return;
     }
 
@@ -112,7 +112,8 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       const objectNode = node as ObjectNode;
       const isResizableNodeType =
         objectNode.isResizable ||
-        ["scope~", "umenu", "slots", "wasmviewer", "button"].includes(objectNode.name || "");
+        ["scope~", "umenu", "slots", "wasmviewer", "button"].includes(objectNode.name || "") ||
+        isMessageNode(node);
 
       if (isResizableNodeType && node.size) {
         // For resizable nodes, keep existing size
@@ -431,6 +432,11 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       nodeStyle.width = nodeSize.width;
       nodeStyle.height = nodeSize.height;
       allowSize = true;
+    }
+
+    if (isMessageNode(node)) {
+      allowSize = true;
+      if (nodeSize) nodeStyle.width = nodeSize.width;
     }
 
     // Add error class

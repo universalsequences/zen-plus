@@ -29,6 +29,7 @@ import {
 } from "./control";
 import { function_editor } from "./function";
 import { knob, slider } from "./slider";
+import { et_editor } from "./et-system/editor";
 import { preset } from "./preset";
 import { interval, metro, schedule } from "./metro";
 import { strings } from "./strings";
@@ -112,5 +113,6 @@ export const api: API = {
   modselector,
   panel,
   tab,
+  "et.editor": et_editor,
   "instructions.performance": instructionsPerformance,
 };

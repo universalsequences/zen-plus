@@ -142,7 +142,11 @@ export const compileInstructions = (nodes: Node[]) => {
     let currentBranch = branchStack[branchStack.length - 1];
 
     // TODO - if branch is consumed (i.e. we have no more ), we must pop
+    // by checking if the node if the current node is no longer in the branch, we can say that
+    // we have consumed that branch
 
+    const inBranch = currentBranch && isNodeInBranch(node, currentBranch);
+    console.log("node inBranch=%s", inBranch, node);
     while (currentBranch && !isNodeInBranch(node, currentBranch)) {
       const b = branchStack.pop();
       currentBranch = branchStack[branchStack.length - 1];

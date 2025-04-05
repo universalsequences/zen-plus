@@ -299,12 +299,13 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
 
         // Handle width-only resize
         if (orientation === Orientation.X) {
-          if (isObjectNode(node)) {
-            const x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
-            const width = x - position.x;
-            node.size.width = width;
-            updateSize(node.id, { ...node.size });
-          }
+          const x = (scrollRef.current.scrollLeft + client.x) / zoomRef.current;
+          const width = x - position.x;
+          node.size = {
+            ...node.size,
+            width: width,
+          };
+          updateSize(node.id, { ...node.size });
         }
         // Handle height-only resize
         else if (orientation === Orientation.Y) {

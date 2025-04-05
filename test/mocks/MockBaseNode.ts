@@ -21,6 +21,8 @@ import { v4 as uuidv4 } from "uuid";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { VMEvaluation } from "@/workers/vm/VM";
 import { BaseNode } from "@/lib/nodes/ObjectNode";
+import { getRootPatch } from "@/lib/nodes/traverse";
+import { compileVM } from "@/lib/nodes/vm/forwardpass";
 
 /**
  * all node types must extend this (i.e. ObjectNode and MessageNode)
@@ -169,6 +171,16 @@ export class MockBaseNode implements Node {
         this.patch.recompileGraph();
       }
     }
+
+    if (
+      compile &&
+      !isCompiledType(outlet.connectionType) &&
+      !this.patch.skipRecompile &&
+      getRootPatch(this.patch).finishedInitialCompile
+    ) {
+      compileVM(this.patch, false);
+    }
+
     return connection;
   }
 

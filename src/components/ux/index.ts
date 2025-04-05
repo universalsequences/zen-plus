@@ -34,6 +34,7 @@ import { ModSelector } from "./ModSelector";
 import { Panel } from "./Panel";
 import { InstructionsPerformance } from "./InstructionsPerformance";
 import TabObject from "./TabObject";
+import { ETEditor } from "./ETEDitor";
 
 export type NodeProps =
   | {
@@ -83,6 +84,7 @@ export const index: ComponentIndex = {
   panel: Panel,
   "instructions.performance": InstructionsPerformance,
   tab: TabObject,
+  "et.editor": ETEditor,
 };
 
 export const optionalIndex: ComponentIndex = {

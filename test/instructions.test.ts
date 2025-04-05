@@ -204,7 +204,7 @@ describe("evaluateInstructions", async () => {
   it("nested messagemessage should execute branches sequentially", () => {
     const { nodes, expectedObjectsEvaluated } = graphBranchMessageMessageNested();
     const instructions = compileInstructions(nodes);
-    const { objectsEvaluated } = evaluate(instructions, 5, true);
+    const { objectsEvaluated } = evaluate(instructions, 5);
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
   });
 
