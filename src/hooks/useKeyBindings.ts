@@ -124,7 +124,16 @@ export const useKeyBindings = (
         setCommand(true);
         return;
       }
-
+      if (selectedNodes.length > 0 && lockedMode) {
+        if (
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight"
+        ) {
+          e.preventDefault();
+        }
+      }
       // Buffer commands are now handled by useGlobalKeyBindings
 
       // Move selected nodes with arrow keys (new feature)

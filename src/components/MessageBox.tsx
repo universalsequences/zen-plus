@@ -38,7 +38,6 @@ const MessageBox: React.FC<{
   const lastMessage = useRef(rawMessage);
   useEffect(() => {
     if (lastMessage.current !== rawMessage) {
-      update();
       lastMessage.current = message;
     }
   }, [rawMessage]);
@@ -68,17 +67,6 @@ const MessageBox: React.FC<{
     },
     [setText],
   );
-
-  /*
-  useEffect(() => {
-    if (fullDiv.current) {
-      updateSize(messageNode.id, {
-        width: fullDiv.current.offsetWidth + 10,
-        height: fullDiv.current.offsetHeight,
-      });
-    }
-  }, [text]);
-  */
 
   const enter = useCallback(() => {
     if (text) {

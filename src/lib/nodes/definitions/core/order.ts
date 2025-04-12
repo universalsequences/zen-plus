@@ -23,6 +23,7 @@ doc("loadBang", {
 export const loadBang = (node: ObjectNode) => {
   node.needsLoad = true;
   return (message: Message): Message[] => {
+    console.log("calling load bang");
     return ["bang"];
   };
 };

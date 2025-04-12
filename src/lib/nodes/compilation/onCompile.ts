@@ -112,7 +112,10 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
       parentNode.useAudioNode(mergerIn);
       return;
     }
+    let a = new Date().getTime();
     const prepared = prepareAndCompile(patch, statement);
+    let b = new Date().getTime();
+    console.log("prepare and compile call=", b - a);
 
     const zenGraph = prepared.zenGraph;
     statement = prepared.statement;

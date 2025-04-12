@@ -24,7 +24,7 @@ export const SelectedNodeInfo = (props: Props) => {
         setOpened(!opened);
       }}
       style={{ minWidth: 60 }}
-      className={`cursor-pointer bg-zinc-800 border-r border-zinc-600 flex text-xs px-2 pr-2 w-full ${opened ? "underline" : ""}`}
+      className={`cursor-pointer bg-zinc-800 flex text-xs px-2 pr-2 w-full ${opened ? "underline" : ""}`}
     >
       <div
         className={`rounded-full px-3 mr-2 text-xs h-5 my-auto border border-zinc-700 context-type-${(props.node as ObjectNode).operatorContextType}`}

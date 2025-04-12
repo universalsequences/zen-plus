@@ -118,7 +118,8 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       if (isResizableNodeType && node.size) {
         // For resizable nodes, keep existing size
         updateSize(node.id, { ...node.size });
-      } else {
+      } else if (!isMessageNode(node)) {
+        console.log("standard resize");
         // For standard nodes, size to content
         const size = {
           width: ref.current.offsetWidth,
@@ -370,7 +371,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
         className += " comment";
         className = className.replace("border", "");
       } else {
-        className += " border-zinc-900";
+        className += " border-black";
       }
     } else if (position !== "relative") {
       className += " border-zinc-100";

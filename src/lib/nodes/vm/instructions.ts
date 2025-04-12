@@ -146,7 +146,6 @@ export const compileInstructions = (nodes: Node[]) => {
     // we have consumed that branch
 
     const inBranch = currentBranch && isNodeInBranch(node, currentBranch);
-    console.log("node inBranch=%s", inBranch, node);
     while (currentBranch && !isNodeInBranch(node, currentBranch)) {
       const b = branchStack.pop();
       currentBranch = branchStack[branchStack.length - 1];

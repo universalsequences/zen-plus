@@ -143,7 +143,6 @@ export class BaseNode implements Node {
   }
 
   connect(destination: Node, inlet: IOlet, outlet: IOlet, compile = true) {
-    console.log("connect called...");
     if (((this as unknown as ObjectNode).patch as SubPatch).clearCache) {
       (this as unknown as ObjectNode).patch.clearCache();
     }
@@ -201,13 +200,6 @@ export class BaseNode implements Node {
         this.outlets.indexOf(outlet),
       );
     }
-    console.log(
-      compile &&
-        !isCompiledType(outlet.connectionType) &&
-        !this.patch.skipRecompile &&
-        getRootPatch(this.patch).finishedInitialCompile,
-    );
-
     if (
       compile &&
       !isCompiledType(outlet.connectionType) &&

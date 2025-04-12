@@ -4,6 +4,7 @@ import { BufferType, type Buffer } from "@/lib/tiling/types";
 import { useBuffer } from "@/contexts/BufferContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlobalKeyBindingsContext } from "../GlobalKeyBindingsProvider";
+import { BoxIcon, CubeIcon } from "@radix-ui/react-icons";
 
 export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
   const {
@@ -171,17 +172,22 @@ export const BufferToolbar: React.FC<{ buffer: Buffer }> = ({ buffer }) => {
     <div
       style={{
         backdropFilter: "blur(8px)",
-        backgroundColor: isSelected ? "#0032ffb8" : "#373c4469",
+        backgroundColor: isSelected ? "#000000d9" : "#373c4469",
       }}
-      className={`px-2 text-xs h-8 w-full flex ${isSelected ? "" : ""}`}
+      className={`px-2 text-xs h-7 w-full flex ${isSelected ? "" : ""}`}
     >
+      {buffer.type === BufferType.Object ? (
+        <CubeIcon className="my-auto mr-2" />
+      ) : (
+        <BoxIcon className="my-auto mr-2" />
+      )}
       <div className="my-auto mr-2">{name}</div>
-      <div className="my-auto text-zinc-400">
+      <div className={`my-auto text-zinc-400`}>
         {buffer.objectNode
           ? generateBreadcrumb((buffer.objectNode.patch as SubPatch).parentPatch) + " > "
           : ""}
       </div>
-      <div className="my-auto text-zinc-100 ml-1">
+      <div className={`my-auto ml-2 text-zinc-200`}>
         {buffer.objectNode ? buffer.objectNode.patch.name : ""}
       </div>
       {showCommandInput && (

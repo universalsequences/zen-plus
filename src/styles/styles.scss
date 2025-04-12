@@ -132,7 +132,7 @@
 }
 
 .context-type-2, .node-component.context-type-2 {
-    background-color: #0118ff;
+    background-color: #183eff;
 }
 
 .context-type-6, .node-component.context-type-6 {
@@ -175,8 +175,9 @@
     //z-index: 1000000 !important;
 }
 
+
 body {
-    --dark-patch-color: #131315;
+    --dark-patch-color: #0e0f0f;
     color: white;
 }
 
@@ -190,9 +191,16 @@ body {
     }
 }
 
-.bg-toolbar.top-toolbar.selected-toolbar {
-    background-color:#0032ffb8;
+.patches-1 {
+    .tile.selected-patch {
+        border-color: transparent !important;
+    }
+
 }
+.bg-toolbar.top-toolbar.selected-toolbar {
+    background-color: #000000d9;
+}
+
 .bg-toolbar.top-toolbar {
     background-color: #373c4469;
     backdrop-filter: blur(8px);
@@ -315,18 +323,7 @@ body {
     .locked {
         .patcher-background {
             //background-image: radial-gradient(circle at center center, rgba(170, 155, 155, 0.78) 0%, rgba(114, 110, 100, 0.28) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(88 80 80 / 89%), rgb(86 78 78 / 90%));
-            background-image: radial-gradient(
-                    circle at center center,
-                    rgba(68, 67, 67, 0.51) 0%,
-                    rgba(61, 58, 58, 0.05) 11%,
-                    transparent 11%,
-                    transparent 100%
-                ),
-                linear-gradient(
-                    90deg,
-                    rgb(179 174 174 / 89%),
-                    rgb(165 158 158 / 99%)
-                );
+            background-image: radial-gradient(circle at center center, rgba(41, 41, 41, 0.44) 0%, rgba(28, 27, 27, 0.08) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(35 33 33 / 69%), rgb(33 32 32 / 69%));
         }
     }
     .patcher-background {
@@ -409,7 +406,7 @@ svg {
 
 .tile.selected-patch, .tile.selected-buffer {
     //border-color: #cbffef !important;
-    border-color: #0032ffb8 !important;
+    border-color: white !important;
 }
 
 .tile {
@@ -480,7 +477,7 @@ svg {
 }
 
 .bg-dark-transparent {
-    background-color: #000000a3;
+    background-color: #0000007a;
 }
 
 .knob-container {
@@ -686,6 +683,15 @@ div:active {
     animation: spin 1s linear infinite;
 }
 
+.border-black {
+    border-color: #2d2e2e !important;
+}
+
+.locked, .node-subpatch-component, .presentation {
+.border-black {
+    border-color: var(--dark-patch-color) !important;
+}
+}
 .locked {
     .patcher-background {
         background-color: #12151bf0;
@@ -701,6 +707,9 @@ div:active {
                 rgba(11, 11, 11, 0.69),
                 rgba(11, 11, 11, 0.69)
             );
+            background-image: radial-gradient(circle at center center, rgba(41, 41, 41, 0.44) 0%, rgba(28, 27, 27, 0.08) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(35 33 33 / 69%), rgb(33 32 32 / 69%));
+            background-image: unset !important;
+    background-color: var(--dark-patch-color) !important;
         background-size: 12px 12px;
     }
 }
@@ -708,8 +717,12 @@ div:active {
 .patcher-background {
     background-color: #12151bf0;
     //background-image: radial-gradient(circle at center center, rgb(0 0 0) 0%, rgb(28 27 27) 11%,transparent 11%, transparent 100%),linear-gradient(90deg, #0b0b0bf0,#0b0b0bf2);
-      background-image: radial-gradient(circle at center center, rgba(203, 203, 203, 0.2588235294) 0%, rgb(101 98 98 / 5%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
+      //background-image: radial-gradient(circle at center center, rgba(203, 203, 203, 0.2588235294) 0%, rgb(101 98 98 / 5%) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgba(11, 11, 11, 0.69), rgba(11, 11, 11, 0.69));
+      background-image: radial-gradient(circle at center center, rgba(203, 203, 203, 0.2588235294) 0%, rgba(101, 98, 98, 0.05) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(20 19 19 / 69%), rgb(20 19 19 / 69%));
     background-size: 12px 12px;
+            background-image: radial-gradient(circle at center center, rgba(203, 203, 203, 0.2588235294) 0%, rgba(101, 98, 98, 0.05) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(40 38 38 / 69%), rgb(41 39 39 / 69%));
+                background-image: radial-gradient(circle at center center, rgba(203, 203, 203, 0.2588235294) 0%, rgba(101, 98, 98, 0.05) 11%, transparent 11%, transparent 100%), linear-gradient(90deg, rgb(15 15 20 / 69%), rgb(15 15 18 / 69%));
+
 }
 
 .text-zen-violet {
@@ -846,7 +859,8 @@ div:active {
         color:#dac1f1;
     }
 .bg-zinc-920 {
-    background-color: #161616;
+        background-color: #1e1e2378;
+    border: 1px solid #1e1e22;
 }
 
 .light-mode {

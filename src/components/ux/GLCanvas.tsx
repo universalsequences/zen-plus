@@ -43,10 +43,8 @@ const GLCanvas: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   useEffect(() => {
     if (currentBuffer?.type === BufferType.Object && containerRef?.current) {
       const updateSize = () => {
-        console.log("buffer changed size...");
         if (containerRef.current) {
           const { clientWidth, clientHeight } = containerRef.current;
-          console.log("updating size=", clientWidth, containerRef.current);
           setContainerSize({
             width: clientWidth,
             height: clientHeight,
@@ -128,8 +126,6 @@ const GLCanvas: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       currentBuffer?.type === BufferType.Object && containerSize
         ? containerSize.height
         : objectNode.size?.height || 300;
-
-    console.log("SHADER WIDTH=", width);
 
     return (
       <Shader

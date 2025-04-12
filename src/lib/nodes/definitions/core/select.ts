@@ -86,10 +86,17 @@ doc("filterselect", {
 
 export const filterselect = (node: ObjectNode, ...messages: Lazy[]) => {
   node.branching = true;
+
+  let cache: Message[] = [];
+
   return (index: Message) => {
     if (typeof index === "number") {
       if (messages[index] && messages[index]()) {
-        return [messages[index]()];
+        const result = messages[index]();
+        if (result !== cache[index]) {
+          cache[index] = result;
+          return [messages[index]()];
+        }
       }
     }
     return [];

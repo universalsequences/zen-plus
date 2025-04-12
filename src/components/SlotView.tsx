@@ -441,7 +441,7 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         >
           <div>
             <div
-              className={`mr-2 ml-auto my-auto flex ${isMenuOpen ? "text-black" : "text-zinc-300"}`}
+              className={`mr-2 ml-auto my-auto flex ${isMenuOpen ? "text-black" : [...patches, ...patchWindows].includes(objectNode.subpatch as SubPatch) ? "text-zinc-200" : "text-zinc-400"}`}
             >
               <div>{name}</div>
               <div

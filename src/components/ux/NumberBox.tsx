@@ -141,16 +141,16 @@ const NumberBox: React.FC<{
   return (
     <div ref={ref}>
       <div
-        className={`${className ? className : "m-y"} bg-zinc-900 flex flex-1 active:bg-zinc-700 ${keyMode.current ? "cursor-text" : "cursor-ns-resize"}`}
+        className={`${className ? className : "m-y"} bg-zinc-800 h-full flex flex-1 active:bg-zinc-700 ${keyMode.current ? "cursor-text" : "cursor-ns-resize"}`}
       >
         <TriangleRightIcon
           onMouseDown={startEditing}
-          className="w-5 h-5 mr-2 invert active:fill-red-500"
+          className="w-5 h-5 mr-2 my-auto invert active:fill-red-500"
         />
         <div
           onMouseDown={startEditing}
           onDoubleClick={handleDoubleClick}
-          className="flex-1 active:text-green-200 text-white mt-0.5 w-10 flex"
+          className="flex-1 active:text-green-200 text-white my-auto w-10 flex"
         >
           {keyMode.current && editing ? (
             <input

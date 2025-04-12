@@ -4,7 +4,7 @@ import LockButton from "./LockButton";
 import PresentationMode from "./PresentationMode";
 import OrgSpaces from "./org/OrgSpaces";
 import PatchDropdown from "./PatchDropdown";
-import { GlobeIcon, CaretRightIcon, Cross2Icon } from "@radix-ui/react-icons";
+import { GlobeIcon, CaretRightIcon, Cross2Icon, BoxModelIcon } from "@radix-ui/react-icons";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import type { Node, Patch, SubPatch } from "@/lib/nodes/types";
@@ -177,7 +177,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
       {selectedNodes && selectedNodes[0]?.patch === patch && (
         <SelectedNodeInfo node={selectedNodes[0]} />
       )}
-      <div className="flex ml-3">
+      <div className="flex pl-3">
         <LockButton />
         <PresentationMode />
         {basePatch && <RecorderToolbar patch={basePatch} />}
@@ -196,11 +196,11 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
           className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
         >
           <PatchDropdown patch={patch}>
-            <GlobeIcon className="w-4 h-8 my-auto mr-3 cursor-pointer" />
+            <BoxModelIcon className="w-4 h-7 my-auto mr-3 cursor-pointer" />
           </PatchDropdown>
           <div
             style={{ minWidth: "100px" }}
-            className="ml-auto flex top-0 bottom my-auto right-0 flex h-full bg-zinc-800"
+            className="ml-auto flex top-0 bottom my-auto right-0 flex h-full"
           >
             {rightPart}
           </div>
@@ -226,7 +226,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
         className={`${isSelected ? "selected-toolbar" : ""} flex-1 bg-toolbar relative flex pl-2  top-toolbar h-full `}
       >
         <PatchDropdown patch={patch}>
-          <GlobeIcon className="w-4 h-8 my-auto mr-3 cursor-pointer" />
+          <BoxModelIcon className="w-4 h-7 my-auto mr-3 cursor-pointer" />
         </PatchDropdown>
         <div className="flex relative pr-8 my-auto">
           {keyCommand ? `${keyCommand.type}-${keyCommand.key}` : breadcrumbs}
@@ -253,7 +253,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
             ></div>
           </div>
 
-          <div className="flex w-full bg-zinc-800">{rightPart}</div>
+          <div className="flex w-full">{rightPart}</div>
         </div>
       </div>
     </div>

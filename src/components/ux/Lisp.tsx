@@ -90,7 +90,7 @@ const Lisp: React.FC<{
       console.log("no monaco", objectNode);
       return;
     }
-    monaco.editor.setTheme("vs-dark");
+    monaco.editor.setTheme("hc-black");
     commandModeKeyRef.current = editor.createContextKey("commandMode", false);
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, () => {
@@ -177,10 +177,9 @@ const Lisp: React.FC<{
             }}
             onMount={handleEditorDidMount}
             options={{
-              theme: "vs-dark", // Dark mode
-              lineNumbers: "on", // This removes the line numbers
+              theme: "hc-black", // Dark mode
+              lineNumbers: "off", // This removes the line numbers
               readOnly: !lockedMode,
-              fontFamily: "monospace",
               fontSize: (objectNode.attributes["font-size"] as number) || 14,
               lineHeight: 1.5 * ((objectNode.attributes["font-size"] as number) || 14),
               minimap: { enabled: false },

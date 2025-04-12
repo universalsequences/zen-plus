@@ -60,7 +60,7 @@ const FileComponent: React.FC<{
       }
     >
       <div
-        className={`${className}  mb-5 hover:bg-zinc-700 transition-colors bg-zinc-800 rounded-lg relative overflow-hidden`}
+        className={`${className}  mb-5 hover:bg-zinc-700 transition-colors bg-zinc-920 rounded-lg relative overflow-hidden`}
       >
         {file.screenshot && (
           <Image

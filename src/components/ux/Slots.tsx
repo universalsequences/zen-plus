@@ -53,7 +53,7 @@ export const Slots: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             borderTop:
               dragging && dragOverItemIndex === index ? "1px white solid" : "1px solid transparent",
           }}
-          className="bg-zinc-920 mb-0.5 "
+          className="bg-zinc-920 mb-0.5 rounded-md"
           draggable={lockedMode ? "true" : "false"}
         >
           <SlotView objectNode={x} />

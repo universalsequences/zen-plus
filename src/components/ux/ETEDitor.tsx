@@ -1,21 +1,16 @@
 import { useLocked } from "@/contexts/LockedContext";
 import { usePosition } from "@/contexts/PositionContext";
 import { useSelection } from "@/contexts/SelectionContext";
+import { useValue } from "@/contexts/ValueContext";
 import type { Atom, Dot, Dash, ETPattern } from "@/lib/nodes/definitions/core/et-system/editor";
 import { ObjectNode } from "@/lib/nodes/types";
 import { useCallback, useEffect, useState, useRef } from "react";
 
-// Constants for sizing
-const BASE_WIDTH = 32;
-const BASE_HEIGHT = 32;
-const DOT_SIZE = 1;
-const DASH_SIZE = 2;
-
 // Helper functions for working with patterns
 const calculateSize = (pattern: ETPattern): number => {
   return pattern.reduce((acc, atom) => {
-    if (atom === 0) return acc + DOT_SIZE;
-    if (atom === 1) return acc + DASH_SIZE;
+    if (atom === 0) return acc + 1; // DOT_SIZE = 1
+    if (atom === 1) return acc + 2; // DASH_SIZE = 2
     return acc + atom.size;
   }, 0);
 };
@@ -49,8 +44,39 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   const { selectedNodes } = useSelection();
   const { lockedMode } = useLocked();
   usePosition();
+  useValue();
 
   const size = objectNode.size || { width: 100, height: 100 };
+  const uxEditing = useRef(false);
+
+  // Calculate dynamic base width and heights based on objectNode.size and pattern size
+  const patternTotalSize = pattern.reduce((acc, atom) => {
+    if (atom === 0) return acc + 1; // DOT_SIZE
+    if (atom === 1) return acc + 2; // DASH_SIZE
+    return acc + atom.size;
+  }, 0);
+
+  // Ensure we have a minimum size to prevent elements from becoming too small
+  const minBaseWidth = 12;
+  // Calculate BASE_WIDTH dynamically based on container width and pattern size
+  // Add some padding (8px) to account for margin/border
+  const BASE_WIDTH = Math.max(
+    minBaseWidth,
+    Math.floor((size.width - 8) / Math.max(patternTotalSize, 1)),
+  );
+  // For height, use the container height divided by 2 to give room for nested patterns
+  const BASE_HEIGHT = Math.max(minBaseWidth, Math.floor((size.height - 8) / 2));
+  // Use the smaller of width or height to ensure proportional sizing
+  const BASE_SIZE = Math.min(BASE_WIDTH, BASE_HEIGHT);
+
+  // Constants derived from BASE_SIZE
+  const DOT_SIZE = 1;
+  const DASH_SIZE = 2;
+
+  useEffect(() => {
+    if (uxEditing.current) return;
+    if (objectNode.custom?.value) setPattern(objectNode.custom?.value as ETPattern);
+  }, [objectNode.custom?.value]);
 
   // Add an event handler for direct container clicks to position cursor
   const handleContainerClick = useCallback(
@@ -66,11 +92,16 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
         setSelectedNestedPattern(null);
       }
     },
-    [isDragging],
+    [isDragging, lockedMode, selectedNodes, objectNode, pattern],
   );
+
   // Update pattern output when changes occur
   useEffect(() => {
+    uxEditing.current = true;
     objectNode.receive(objectNode.inlets[0], JSON.stringify(pattern));
+    setTimeout(() => {
+      uxEditing.current = false;
+    }, 200);
   }, [pattern, objectNode]);
 
   // Update selected nested pattern based on cursor position
@@ -368,12 +399,15 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
     isNested: boolean = false,
     scaleFactor: number = 1,
   ) => {
+    if (isNested) {
+      scaleFactor = Math.min(2, scaleFactor);
+    }
     const isSelected = isPathSelected(atomPath);
     const isNestedSelected =
       selectedNestedPattern &&
       selectedNestedPattern.length === atomPath.length &&
       selectedNestedPattern.every((val, idx) => val === atomPath[idx]);
-    const width = isNested ? BASE_WIDTH * scaleFactor : BASE_WIDTH;
+    const width = isNested ? BASE_SIZE * scaleFactor : BASE_SIZE;
 
     if (atom === 0) {
       // Dot
@@ -411,17 +445,22 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       );
     } else if (typeof atom === "object" && "pattern" in atom) {
       // Render nested pattern
-      return renderNestedPattern(atom, atomPath, isSelected || isNestedSelected, scaleFactor);
+      return renderNestedPattern(
+        atom,
+        atomPath,
+        Boolean(isSelected || isNestedSelected),
+        scaleFactor,
+      );
     }
 
     return null;
   };
 
   // Render a cursor element
-  const renderCursor = (key: string, height: number = BASE_WIDTH) => (
+  const renderCursor = (key: string, height: number = BASE_SIZE) => (
     <div
       key={key}
-      className="animate-pulse bg-teal-500"
+      className="animate-pulse bg-red-500"
       style={{
         width: "1px",
         height: `${height}px`,
@@ -446,7 +485,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       parentScaleFactor;
 
     // Width based on size
-    const width = nestedPattern.size * BASE_WIDTH * parentScaleFactor;
+    const width = nestedPattern.size * BASE_SIZE * parentScaleFactor;
 
     // Check if cursor is within this nested pattern
     const isCursorInThisPattern =
@@ -468,7 +507,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       elements.push(
         renderCursor(
           `cursor-${path.join("-")}-${cursorIndexInPattern}`,
-          BASE_WIDTH * 2 * scaleFactor,
+          BASE_SIZE * 1 * scaleFactor,
         ),
       );
 
@@ -501,7 +540,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
         className={`relative border rounded-md ${borderClass} flex items-center justify-center p-0`}
         style={{
           width: `${width}px`,
-          height: `${BASE_WIDTH * 2 * parentScaleFactor}px`,
+          height: `${BASE_SIZE * 2 * parentScaleFactor}px`,
           boxSizing: "border-box",
           cursor: "pointer",
         }}
@@ -525,7 +564,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
     for (let i = 0; i <= pattern.length; i++) {
       // Check if cursor should be at this position (top level only)
       if (cursorPath.length === 1 && cursorPath[0] === i) {
-        elements.push(renderCursor(`cursor-${i}`, BASE_WIDTH));
+        elements.push(renderCursor(`cursor-${i}`, BASE_SIZE));
       }
 
       // If we're at the end, don't try to render an atom
@@ -553,6 +592,28 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
         if (typeof atom === "object" && "pattern" in atom) {
           // Instead of appending, we just set the size directly to the entered digit
           updateNestedPatternSize(digit);
+          e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
+        }
+        return;
+      }
+
+      if (selectedNestedPattern && e.key === "ArrowUp") {
+        const atom = getAtomAtPath(selectedNestedPattern, pattern);
+
+        if (typeof atom === "object" && "pattern" in atom) {
+          // Instead of appending, we just set the size directly to the entered digit
+          updateNestedPatternSize(atom.size + 1);
+          e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
+        }
+        return;
+      }
+
+      if (selectedNestedPattern && e.key === "ArrowDown") {
+        const atom = getAtomAtPath(selectedNestedPattern, pattern);
+
+        if (typeof atom === "object" && "pattern" in atom) {
+          // Instead of appending, we just set the size directly to the entered digit
+          updateNestedPatternSize(atom.size - 1);
           e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
         }
         return;
@@ -661,7 +722,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [onKeyDown]);
+  }, [onKeyDown, handleMouseUp]);
 
   // Calculate total size of the pattern
   const patternSize = pattern.reduce((acc, atom) => {
