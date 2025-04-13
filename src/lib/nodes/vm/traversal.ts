@@ -1,12 +1,15 @@
 import { getRootPatch } from "../traverse";
-import { IOConnection, ObjectNode, SubPatch, Node, IOlet } from "../types";
+import type { IOConnection, ObjectNode, Patch, SubPatch, Node, IOlet } from "../types";
 import { isObjectNode } from "./instructions";
 
 export const getOutboundConnections = (
   n: Node,
   visitedConnections: Set<IOConnection>,
+  zenPatch?: Patch,
 ): IOConnection[] => {
-  return n.outlets.flatMap((x) => getOutboundConnectionsFromOutlet(x, visitedConnections));
+  return n.outlets.flatMap((x) =>
+    getOutboundConnectionsFromOutlet(x, visitedConnections, zenPatch),
+  );
 };
 
 const isSubscribe = (object: ObjectNode) => {
@@ -33,6 +36,7 @@ const isStaticPublish = (object: ObjectNode) => {
 export const getOutboundConnectionsFromOutlet = (
   outlet: IOlet,
   visitedConnections: Set<IOConnection>,
+  zenPatch?: Patch,
 ): IOConnection[] => {
   const rawConnections = outlet.connections;
 
@@ -70,7 +74,7 @@ export const getOutboundConnectionsFromOutlet = (
     if (input) {
       resolvedSubpatchConnections.push(
         ...input.outlets.flatMap((outlet) =>
-          getOutboundConnectionsFromOutlet(outlet, visitedConnections),
+          getOutboundConnectionsFromOutlet(outlet, visitedConnections, zenPatch),
         ),
       );
     }
@@ -110,13 +114,19 @@ export const getOutboundConnectionsFromOutlet = (
       .getAllNodes()
       .filter((x) => isSubscribe(x) && x.arguments[0] === key);
     for (const subscribeNode of subscribeNodes) {
-      regularConnections.push(...getOutboundConnections(subscribeNode, visitedConnections));
+      regularConnections.push(
+        ...getOutboundConnections(subscribeNode, visitedConnections, zenPatch),
+      );
     }
   }
 
   for (const connection of outConnections) {
     // TODO - handle slots case
     const { destination } = connection;
+    if (zenPatch === destination.patch) {
+      resolvedSubpatchConnections.push(connection);
+      continue;
+    }
     const patch = destination.patch;
     const outletNumber =
       (destination as ObjectNode).name === "patchmessage"
@@ -129,7 +139,7 @@ export const getOutboundConnectionsFromOutlet = (
       if (slotNumber === patch.slotsNode.slots.length - 1) {
         const outlet = patch.slotsNode.outlets[0];
         if (outlet) {
-          const c = getOutboundConnectionsFromOutlet(outlet, visitedConnections);
+          const c = getOutboundConnectionsFromOutlet(outlet, visitedConnections, zenPatch);
           resolvedSubpatchConnections.push(...c);
         }
       } else {
@@ -147,7 +157,7 @@ export const getOutboundConnectionsFromOutlet = (
           for (const inNode of ins) {
             resolvedSubpatchConnections.push(
               ...inNode.outlets.flatMap((outlet) =>
-                getOutboundConnectionsFromOutlet(outlet, visitedConnections),
+                getOutboundConnectionsFromOutlet(outlet, visitedConnections, zenPatch),
               ),
             );
           }
@@ -158,7 +168,7 @@ export const getOutboundConnectionsFromOutlet = (
 
       if (outlet) {
         resolvedSubpatchConnections.push(
-          ...getOutboundConnectionsFromOutlet(outlet, visitedConnections),
+          ...getOutboundConnectionsFromOutlet(outlet, visitedConnections, zenPatch),
         );
       }
     }

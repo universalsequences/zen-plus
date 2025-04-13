@@ -1,7 +1,8 @@
 import { OperatorContextType } from "../context";
 import { PatchType, type Message, type ObjectNode, type Patch, type SubPatch } from "../types";
+import { recompileGraphTopological } from "./recompileGraphTopological";
 
-const debug = false;
+const debug = true;
 const dlog = (...x: any[]) => {
   if (debug) console.log(...x);
 };
@@ -107,6 +108,18 @@ export const recompileGraph = (patch: Patch) => {
   const parentNode = (patch as Patch as SubPatch).parentNode;
   const parentPatch = (patch as Patch as SubPatch).parentPatch;
 
+  /*
+  if (parentPatch) {
+    if (patch.isZenBase()) {
+      patch.isCompiling = true;
+    }
+    handleCompileReset(patch);
+    patch.waiting = false;
+    recompileGraphTopological(patch);
+    return;
+  }
+  */
+
   patch.sendNumberNodes();
   if (parentNode && parentNode.attributes.type === "core") {
     return;
@@ -115,6 +128,11 @@ export const recompileGraph = (patch: Patch) => {
     return;
   }
   if (patch.isZenBase()) {
+    console.log(
+      "*************** ************** ************** ************** ************* began compiling at %s",
+      new Date().getTime(),
+      patch,
+    );
     patch.isCompiling = true;
   }
 
@@ -257,6 +275,13 @@ export const recompileGraph = (patch: Patch) => {
       (patch as SubPatch).patchType === OperatorContextType.ZEN &&
       (patch as SubPatch).parentPatch
     ) {
+      const defuns = patch.getAllNodes().filter((x) => x.name === "defun");
+      for (const defun of defuns) {
+        if (defun.inlets[0].lastMessage) {
+          defun.fn?.(defun.inlets[0].lastMessage);
+        }
+      }
+
       const calls = patch
         .getAllNodes()
         .filter(

@@ -387,6 +387,7 @@ export class PatchImpl implements Patch {
       this.historyDependencies = [newHistory, ...this.historyDependencies];
       this.historyNodes.add(object);
     }
+    /*
     const defuns = this.getAllNodes().filter((x) => x.name === "defun");
     for (const defun of defuns) {
       if (defun.inlets[0].lastMessage) {
@@ -406,6 +407,7 @@ export class PatchImpl implements Patch {
         polycall.receive(polycall.inlets[0], lastMessage);
       }
     }
+    */
   }
 
   getJSON(): SerializedPatch {

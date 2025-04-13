@@ -50,6 +50,7 @@ doc("history", {
 
 export const zen_history = (object: ObjectNode) => {
   let h: History;
+  //object.branching = true;
 
   // for our AST, there are two cases with history
   // 1. we pipe data into the history
@@ -90,6 +91,7 @@ export const zen_history = (object: ObjectNode) => {
     }
 
     if (x === "bang") {
+      // } || ((x as Statement[])[0] as CompoundOperator).history === h) {
       // this refers to the initial pass. in this case, we just want to pass the
       // history's value through: i.e. history()
       let statement: Statement = [{ name: "history", history: h } as CompoundOperator];
@@ -120,7 +122,6 @@ export const containsSameHistory = (
   depth: number = 0,
   visited = new Set<Statement>(),
 ): Statement | null => {
-  //console.log('contains same history called looking for history', history, statement);
   if (visited.has(statement)) {
     return null;
   }
@@ -143,7 +144,7 @@ export const containsSameHistory = (
     }
     return null;
   }
-  if ((statement as CompoundOperator).history === history) {
+  if ((statement as CompoundOperator)?.history === history) {
     return statement;
   }
   return null;

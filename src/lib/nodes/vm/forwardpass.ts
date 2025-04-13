@@ -1,4 +1,4 @@
-import { isCompiledType } from "../context";
+import { OperatorContextType, isCompiledType } from "../context";
 import { getRootPatch } from "../traverse";
 import { getNodesFromInstructions, serializeInstruction } from "./serialization";
 import {
@@ -17,31 +17,35 @@ import { NodeInstructions } from "@/workers/core";
 import { Statement } from "../definitions/zen/types";
 import { PresetManager } from "../definitions/core/preset";
 
-export const topologicalSearchFromNode = (node: Node): Node[] => {
+export const topologicalSearchFromNode = (
+  node: Node,
+  isZenCompilation = false,
+  zenPatch?: Patch,
+): Node[] => {
   const stack = [node];
   const result: Node[] = [];
   const visitedConnections = new Set<IOConnection>();
 
   while (stack.length > 0) {
     const current = stack.pop()!;
-    /*
-    console.log(
-      "current=%s",
-      current.text,
-      stack.map((x) => x.text),
-    );
-    */
     result.push(current);
 
     if (
       ((current as ObjectNode).isAsync && node !== current) ||
-      current.skipCompilation ||
-      isCompiledType((current as ObjectNode).operatorContextType)
+      (isZenCompilation
+        ? !isCompiledType((current as ObjectNode).operatorContextType) &&
+          current.skipCompilation &&
+          (current as ObjectNode).operatorContextType !== OperatorContextType.NUMBER
+        : current.skipCompilation || isCompiledType((current as ObjectNode).operatorContextType))
     ) {
       continue;
     }
 
-    const connections = getOutboundConnections(current, new Set()).reverse();
+    const connections = getOutboundConnections(
+      current,
+      zenPatch ? visitedConnections : new Set(),
+      zenPatch,
+    ).reverse();
 
     for (const conn of connections) {
       if (visitedConnections.has(conn)) {
@@ -56,7 +60,6 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
       if (destinationInlet.isHot || (isMessage && inletNumber === 0)) {
         const inbound = destination.inlets.flatMap((inlet) => getInboundConnections(inlet));
         if (!inbound.every((c) => visitedConnections.has(c))) {
-          //console.log("pushing onto stack", destination.text);
           stack.push(destination);
         }
       }
@@ -67,16 +70,10 @@ export const topologicalSearchFromNode = (node: Node): Node[] => {
   return result;
 };
 
-const isSourceNode = (node: Node) => {
+export const isSourceNode = (node: Node) => {
   if ((node as ObjectNode).name === "preset") {
     return true;
   }
-
-  /*
-  if ((node as ObjectNode).subpatch && (node as ObjectNode).audioNode) {
-    return true;
-  }
-  */
 
   if (node.skipCompilation) {
     return false;

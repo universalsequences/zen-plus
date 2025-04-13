@@ -2,6 +2,7 @@ import { Instruction, InstructionType } from "./types";
 import { AttributeValue, Message, MessageNode, ObjectNode, OptimizedDataType } from "../types";
 import { evaluateAttributeInstruction } from "./attribute";
 import { isObjectNode } from "./instructions";
+import { forwardTraversal } from "./traversal";
 
 export interface Branching {
   id?: string;
@@ -56,13 +57,21 @@ const matchesDataType = (
   return null;
 };
 
-export const evaluate = (_instructions: Instruction[], _initialMessage: Message = "bang") => {
+export const evaluate = (
+  _instructions: Instruction[],
+  _initialMessage: Message = "bang",
+  stopOnEmpty = false,
+) => {
   let initialMessage: Message | undefined = _initialMessage;
   const replaceMessages: ReplaceMessage[] = [];
   const objectsEvaluated: ObjectNode[] = [];
   const mainThreadInstructions: MainThreadInstruction[] = [];
   const optimizedMainThreadInstructions: OptimizedMainThreadInstruction[] = [];
   const attributeUpdates: AttributeUpdate[] = [];
+  const skippedInstructions: {
+    value: Message;
+    instructions: Instruction[];
+  }[] = [];
 
   // TODO - need to keep track of all STOREs into nodes with skipCompilation along w/
   // any evaluateObject for skipCompilation  nodes (we will tell the main thread to run them)
@@ -168,6 +177,67 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
           // TODO - need to first determine that all inlets have messages
           const objectNode = instruction.node as ObjectNode;
 
+          /*
+           * note: this is for compiling zen patches . when we reach an evaluation instruction
+           * where the data is not ready, we end up splicing instructions
+          let skip = false;
+          if (
+            (objectNode.inlets[0] && objectNode.inlets[0].lastMessage === undefined) ||
+            objectNode.arguments.slice(0, objectNode.inlets.length - 1).some((x) => x === undefined)
+          ) {
+            if (stopOnEmpty && objectNode.name !== "out") {
+              console.log(
+                "%cmissing inlet message for object node evaluation id=%s",
+                "color:red",
+                objectNode.id,
+                objectNode.text,
+                objectNode,
+                [
+                  objectNode.inlets[0]?.lastMessage,
+                  ...objectNode.arguments.slice(0, objectNode.inlets.length - 1),
+                ],
+                instructions.map((x) => x.node?.id),
+              );
+              return {
+                mainThreadInstructions,
+                objectsEvaluated,
+                replaceMessages,
+                instructionsEvaluated: emittedInstructions,
+                attributeUpdates,
+                optimizedMainThreadInstructions,
+              };
+              const forward = forwardTraversal(objectNode);
+              const instructs: Instruction[] = [instruction];
+              while (instructions.length > 0) {
+                const next = instructions[0];
+                if (next.node && forward.includes(next.node) && next.node.name !== "out") {
+                  //console.log("moving foward node=%s id=%s", next.node.text, next.node.id);
+                  const instr = instructions.shift();
+                  if (instr) {
+                    instructs.push(instr);
+                  }
+                } else {
+                  if (objectNode.inlets[0].lastMessage === undefined && register[0] === undefined) {
+                    console.log("skipping add");
+                    break;
+                  }
+                  skippedInstructions.push({
+                    value: register[0] as Message,
+                    instructions: instructs,
+                  });
+                  break;
+                }
+              }
+              skippedInstructions.push({
+                value: register[0] as Message,
+                instructions: instructs,
+              });
+
+              break;
+            }
+          }
+          */
+
           // note - store operation needs to store in inlet as well
           const inputMessage =
             initialMessage !== undefined
@@ -202,6 +272,16 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
                 objectNode.instructionNodes = instruction.nodes;
               }
               register = objectNode.fn(inputMessage);
+              if (objectNode.name === "peek") {
+                console.log(
+                  "evaluating peek",
+                  objectNode.id,
+                  [...objectNode.arguments],
+                  inputMessage,
+                  [...register],
+                );
+              }
+
               objectsEvaluated?.push(objectNode);
             }
           }
@@ -215,6 +295,9 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
             node &&
             inletNumber !== undefined
           ) {
+            if (node.id === "66") {
+              console.log("storing in 66 outletNumber=%s", outletNumber, register[outletNumber]);
+            }
             if ((node as ObjectNode).arguments) {
               // store results in arguments (for inlets 1...) and inlet (for inlet 0)
               if (inletNumber > 0) {
@@ -287,6 +370,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
     );
     */
     return {
+      skippedInstructions,
       mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,
@@ -297,6 +381,7 @@ export const evaluate = (_instructions: Instruction[], _initialMessage: Message 
   } catch (e) {
     console.log("error=", e);
     return {
+      skippedInstructions,
       mainThreadInstructions,
       objectsEvaluated,
       replaceMessages,

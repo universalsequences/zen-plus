@@ -1,4 +1,12 @@
-import { Node, ObjectNode, IOConnection, MessageNode, SubPatch, MessageType } from "../types";
+import {
+  Node,
+  ObjectNode,
+  IOConnection,
+  MessageNode,
+  SubPatch,
+  MessageType,
+  Patch,
+} from "../types";
 import { createAttributeInstruction } from "./attribute";
 import {
   forwardTraversal,
@@ -13,7 +21,7 @@ export const isMessageNode = (node: Node, messageType?: MessageType) =>
 
 export const isObjectNode = (node: Node) => (node as ObjectNode).name !== undefined;
 
-const compileConnection = (connection: IOConnection): Instruction[] => {
+const compileConnection = (connection: IOConnection, patch?: Patch): Instruction[] => {
   const instructions: Instruction[] = [];
   const { destinationInlet, source, destination, sourceOutlet } = connection;
   const inletNumber = destination.inlets.indexOf(destinationInlet);
@@ -49,20 +57,20 @@ const compileConnection = (connection: IOConnection): Instruction[] => {
 
     if (input) {
       const connections = input.outlets.flatMap((outlet) => outlet.connections);
-      const compiledInstructions = connections.flatMap((c) => compileConnection(c));
+      const compiledInstructions = connections.flatMap((c) => compileConnection(c, patch));
       for (const instruction of compiledInstructions) {
         instructions.push(instruction);
         //pushInstruction(instructions, instruction, branch, branchIndex);
       }
       //instructions.push(...connections.flatMap((c) => compileConnection(c, branch, branchIndex)));
     }
-  } else if ((destination as ObjectNode).name === "out") {
+  } else if ((destination as ObjectNode).name === "out" && destination.patch !== patch) {
     // we have out so we need to find the right inlet to store in
     const subpatch = destination.patch as SubPatch;
     const outletNumber = ((destination as ObjectNode).arguments[0] as number) - 1;
     if (subpatch) {
       const compiledInstructions = subpatch.parentNode.outlets[outletNumber].connections.flatMap(
-        (c) => compileConnection(c),
+        (c) => compileConnection(c, patch),
       );
       for (const instruction of compiledInstructions) {
         instructions.push(instruction);
@@ -109,7 +117,7 @@ interface BranchContext {
 /**
  * compiles a list of topologically sorted nodes into a list of instructions that can be executed in a virtual machine
  * */
-export const compileInstructions = (nodes: Node[]) => {
+export const compileInstructions = (nodes: Node[], patch?: Patch) => {
   const isNodeInBranch = (node: Node, branch: Branch): boolean => {
     if (node === branch.rootNode) return true;
     const forwardNodes = forwardTraversal(branch.rootNode, undefined, true);
@@ -128,7 +136,7 @@ export const compileInstructions = (nodes: Node[]) => {
     // TODO ***** !!!!!!! this needs to not just use direct connections!!!!!!
     for (let i = 0; i < currentBranch.rootNode.outlets.length; i++) {
       const outlet = currentBranch.rootNode.outlets[i];
-      const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
+      const connections = getOutboundConnectionsFromOutlet(outlet, new Set(), patch);
       if (connections.map((x) => x.destination).includes(node)) {
         return i;
       }
@@ -269,10 +277,10 @@ export const compileInstructions = (nodes: Node[]) => {
           instructions.push(instruction);
         }
 
-        const connections = getOutboundConnectionsFromOutlet(outlet, new Set());
+        const connections = getOutboundConnectionsFromOutlet(outlet, new Set(), patch);
         const connectionInstructionsToPushIntoRoot = connections
           .flatMap((connection) => {
-            const compiled = compileConnection(connection);
+            const compiled = compileConnection(connection, patch);
             if (branchStack.length) {
               // if we're in a branch we handle pushing it directly into the branch here
               const branch =

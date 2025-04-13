@@ -109,7 +109,6 @@ const IOletsComponent = (props: Props) => {
                 <Tooltip.Trigger asChild>
                   <div
                     key={i}
-                    style={{ zIndex: 10000000000000000 }}
                     onMouseUp={(e: any) => {
                       // e.stopPropagation();
                       onMouseUp(e, iolet);
@@ -117,6 +116,11 @@ const IOletsComponent = (props: Props) => {
                     onMouseDown={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
                       onMouseDown(e, iolet)
                     }
+                    style={{
+                      zIndex: 10000000000000000,
+                      //backgroundColor: iolet.lastMessage !== undefined ? "red" : undefined,
+                      //borderColor: iolet.lastMessage !== undefined ? "red" : undefined,
+                    }}
                     className={
                       (nearestInlet &&
                       nearestInlet.node === props.node &&

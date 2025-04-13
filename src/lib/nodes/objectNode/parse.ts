@@ -378,7 +378,7 @@ const parseArguments = (
   defaultMessage?: number,
 ): (Message | undefined)[] => {
   const otherArguments: (Message | undefined)[] = [];
-  const defaultArgument = defaultMessage === undefined ? 0 : defaultMessage;
+  const defaultArgument = defaultMessage === undefined ? undefined : defaultMessage;
 
   for (let i = 0; i < Math.max(tokens.length, numberOfInlets); i++) {
     let parsed: Message =
