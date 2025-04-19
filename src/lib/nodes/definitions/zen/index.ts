@@ -21,7 +21,6 @@ import { zen_delay } from "./delay";
 import { filters } from "./filters";
 import { core } from "./core";
 import { data_index } from "./data";
-import SubpatchImpl from "../../Subpatch";
 import type { AttributeValue, SubPatch } from "../../types";
 import { initMemory } from "@/lib/zen";
 

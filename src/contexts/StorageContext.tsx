@@ -28,6 +28,7 @@ interface IStorageContext {
     isFavorited?: boolean,
     cursor?: Timestamp,
     searchText?: string,
+    hasScreenshot?: boolean,
   ) => Promise<FilesQueryResult>;
   fetchProject: (id: string, email: string) => Promise<File | null>;
   fetchPatch: (x: any, y?: boolean) => Promise<SerializedPatch>;
@@ -51,6 +52,7 @@ export const useStorage = (): IStorageContext => {
 export interface FilesQueryResult {
   cursor?: Timestamp;
   files: File[];
+  hasMore?: boolean;
 }
 
 export const StorageProvider: React.FC<Props> = ({ children }) => {
@@ -117,6 +119,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
     filterFavorites?: boolean,
     cursor?: Timestamp,
     searchText?: string,
+    hasScreenshot?: boolean,
   ): Promise<FilesQueryResult> => {
     return new Promise((resolve) => {
       user.getIdToken().then((token: string) => {
@@ -131,6 +134,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
             filterFavorites,
             cursor,
             searchText,
+            hasScreenshot,
           }),
         }).then(async (resp) => {
           let json = await resp.json();
@@ -144,6 +148,7 @@ export const StorageProvider: React.FC<Props> = ({ children }) => {
           }));
           resolve({
             files,
+            hasMore: json.hasMore || false,
             cursor: !json.cursor
               ? undefined
               : Timestamp.fromMillis(

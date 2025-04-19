@@ -215,6 +215,7 @@ const InnerObjectNodeComponent: React.FC<InnerObjectNodeComponentProps> = ({
    */
   const enterText = useCallback(
     async (text: string, context?: OperatorContext, file?: File) => {
+      setText(text);
       // Default to ZEN context if not specified
       context = context || getOperatorContext(OperatorContextType.ZEN);
       let success = true;
