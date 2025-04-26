@@ -23,6 +23,7 @@ import { core } from "./core";
 import { data_index } from "./data";
 import type { AttributeValue, SubPatch } from "../../types";
 import { initMemory } from "@/lib/zen";
+import { argument } from "./functions";
 
 doc("out", {
   description: "output of patch",
@@ -219,6 +220,16 @@ const input: NodeFunction = (node: ObjectNode, ...args: Lazy[]) => {
   }
 
   return (_message: Message) => {
+    if (subpatch.parentNode.attributes.mc) {
+      // in this case we send out "argument"
+      const inputNumber = args[0]() as number;
+      const argFunction = argument(
+        node,
+        () => inputNumber,
+        () => `arg_${inputNumber}`,
+      );
+      return argFunction(_message);
+    }
     if (!subpatch.parentPatch.isZen && subpatch.patchType === OperatorContextType.ZEN) {
       if (node.attributes["type"] === "core") {
         return [];
@@ -338,6 +349,14 @@ const zen: NodeFunction = (node: ObjectNode, ..._args: Lazy[]) => {
     target: ["JS", "C"],
     type: ["zen", "gl", "core", "audio"],
   };
+
+  if (!node.attributes.mc) {
+    node.attributes.mc = false;
+  }
+
+  if (!node.attributes.chans) {
+    node.attributes.chans = 6;
+  }
 
   return (message: Message) => {
     if (message === "clear" && node.subpatch?.zenGraph) {

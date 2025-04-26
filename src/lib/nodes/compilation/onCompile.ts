@@ -11,8 +11,9 @@ import { waitForBuffers } from "./wait";
 import { sortHistories } from "./histories";
 import { isTrivialGraph } from "./trivialGraph";
 import { onZenCompilation } from "./onZenCompilation";
+import { constructMCStatement } from "./mc";
 
-const constructStatements = (patch: PatchImpl, statement: Statement) => {
+export const constructStatements = (patch: PatchImpl, statement: Statement) => {
   const historyDependencies = patch.historyDependencies.filter((x) => notInFunction(x));
   const _statement = ["s" as Operator];
   for (const dependency of historyDependencies) {
@@ -37,10 +38,13 @@ const constructStatements = (patch: PatchImpl, statement: Statement) => {
 };
 
 export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
-  const statement =
-    patch.historyDependencies.length > 0 ? constructStatements(patch, _statement) : _statement;
-
   const parentNode = (patch as Patch as SubPatch).parentNode;
+  const mc = parentNode.attributes.mc;
+  const statement =
+    !mc && patch.historyDependencies.length > 0
+      ? constructStatements(patch, _statement)
+      : _statement;
+
   const ast = compileStatement(statement);
   const target = parentNode.attributes.target === "C" ? Target.C : Target.Javascript;
   const forceScalar = !parentNode.attributes.SIMD;
@@ -67,8 +71,21 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
     patch.outputStatements[outputNumber - 1] = statement;
     const numOutputs = patch.objectNodes.filter((x) => x.name === "out").length;
     const numFound = patch.outputStatements.filter((x) => x !== undefined).length;
+
+    const parentNode = (patch as unknown as SubPatch).parentNode;
     if (numFound === numOutputs) {
-      statement = ["s" as Operator, ...patch.outputStatements];
+      if (parentNode.attributes.mc) {
+        // we are in a mc node so use # of channels (chan attribute) to convert each statement
+        // into a single multi-output defun statement
+        // and then do severall "call" operators on the defun (for each chan)
+        // finally use nth to route each call to the right output of the actual thing
+        // we may need to actually go into the asts here and convert the "out" statements and collect them
+        // into a "body list" and add them to defun
+        const chans = parentNode.attributes.chans as number;
+        statement = constructMCStatement(patch, patch.outputStatements, chans) as Statement;
+      } else {
+        statement = ["s" as Operator, ...patch.outputStatements];
+      }
     }
   }
 

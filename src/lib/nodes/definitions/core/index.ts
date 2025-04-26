@@ -50,6 +50,7 @@ import { modselector } from "./modselector";
 import { panel } from "./panel";
 import { instructionsPerformance } from "./instructions.performance";
 import { tab } from "./ui/tab";
+import { midiout, midioutInlet } from "./midi";
 
 export const api: API = {
   js: js_scripting,
@@ -115,4 +116,9 @@ export const api: API = {
   tab,
   "et.editor": et_editor,
   "instructions.performance": instructionsPerformance,
+  midiout,
+  "midiout.1": (node) => midioutInlet(node, 1),
+  "midiout.2": (node) => midioutInlet(node, 2),
+  "midiout.3": (node) => midioutInlet(node, 3),
+  "midiout.4": (node) => midioutInlet(node, 4),
 };

@@ -175,7 +175,7 @@ doc("argument", {
   numberOfInlets: 3,
   numberOfOutlets: 1,
 });
-const argument = (node: ObjectNode, num: Lazy, name: Lazy) => {
+export const argument = (node: ObjectNode, num: Lazy, name: Lazy) => {
   return (_message: Message) => {
     let _name = name() || "arg_" + num();
     if (_name) {

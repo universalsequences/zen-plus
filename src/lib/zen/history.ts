@@ -102,6 +102,7 @@ export const history = (
       if (parent && (parent.isFunctionCaller || (FORCENEW && parent === parent.baseContext))) {
         parent = undefined;
       }
+
       if (parent && allEmitted.size > 0) {
         let contexts: Set<Context> = new Set();
         allEmitted.forEach((emitted) => {
@@ -111,7 +112,6 @@ export const history = (
 
         // evaluate the input to determine whether there are any loops between the incoming context
         // and the input argument
-        let hero = false;
         let proceed = true;
         let useShallow = false;
         let _input: Generated | undefined;
@@ -131,7 +131,6 @@ export const history = (
               contexts.add(getContextWithHistory(h, _context));
             }
             proceed = true;
-            hero = true;
           } else {
             proceed = false;
             if (!_input.codeFragments[0].context.isSIMD) {
@@ -145,6 +144,7 @@ export const history = (
 
             // experimentally found by process of elimination:
             // TODO: explain why this works
+            // UPDATE: this is insane, i am sorry lol
             let deep = deepestContext(Array.from(contexts));
             if (deep && deep.context !== deep.baseContext && parent.isSIMD) {
               proceed = false;
@@ -266,16 +266,7 @@ export const history = (
 
       if (_input && _input.context) {
         if (_input.context !== context) {
-          //console.log("inspecting input context completedCycles/emitted", getAllCompleted(_input.context), getAllEmitted(_input.context));
           if (_input.context.isSIMD) {
-            /*
-                        if (_input.context.context) {
-                            context = _input.context.context;
-                        } else {
-                            context = _input.context.useContext(false, true);
-                        }
-                        cachedContext = context;
-                        */
           } else {
             context = _input.context;
             cachedContext = context;

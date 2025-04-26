@@ -1,12 +1,20 @@
 import { Context, LoopContext } from "./context";
 import { simdMemo } from "./memo-simd";
-import { memo } from "./memo";
 import { ContextualBlock } from "./history";
 import { MemoryBlock } from "./block";
-import { UGen, Generated } from "./zen";
+import type { Generated } from "./zen";
+
+type Message = {
+  type: "schedule-set" | "memory-set";
+  body: {
+    idx: number;
+    value: number;
+    time?: number;
+  };
+};
 
 export type Clicker = ((context: Context) => Generated) & {
-  click?: (time?: number) => void;
+  click?: (time?: number, value?: number, index?: number) => void;
   getIdx?: () => number;
 };
 
@@ -16,61 +24,85 @@ export const click = (): Clicker => {
   let clickVar: string;
   let contextBlocks: ContextualBlock[] = [];
 
-  let clicker: Clicker = simdMemo((context: Context): Generated => {
-    let contextChanged = context !== _context;
+  const clicker = simdMemo((context: Context): Generated => {
+    const contextChanged = context !== _context;
     _context = context;
+
     if (block === undefined || contextChanged) {
       block = context.alloc(1);
       clickVar = context.useVariables("clickVal")[0];
+
+      // Clean up disposed contexts and add current one
       contextBlocks = contextBlocks.filter((x) => !x.context.disposed);
       contextBlocks.push({ block, context });
     }
 
-    // the memory gets set via messaging and once a 1 is received
-    // immediately set it back to 0
-    // aka: generate a 1 for exactly one SAMPLE!
-    let code = `
+    // Generate pulse: set memory back to 0 immediately after reading a positive value
+    const code = `
 ${context.varKeyword} ${clickVar} = memory[${block.idx}];
 if (${clickVar} > 0) {
-   memory[${block.idx}] = 0;
-}
-`;
+  memory[${block.idx}] = 0;
+}`;
+
     return context.emit(code, clickVar);
   });
 
-  clicker.click = (time?: number, value?: number) => {
-    for (let { context, block } of contextBlocks) {
+  // Add click method to trigger the clicker
+  clicker.click = (time?: number, value?: number, index?: number) => {
+    const actualValue = value ?? 1;
+
+    for (const { context, block } of contextBlocks) {
       const loopSize = (block.context as LoopContext).loopSize || 0;
+      const messageType = time !== undefined ? "schedule-set" : "memory-set";
+
       if (loopSize) {
-        for (let i = 0; i < loopSize; i++) {
-          const idx = (block._idx as number) + i;
-          let msg: any = {
-            type: time !== undefined ? "schedule-set" : "memory-set",
-            body: {
-              idx: idx,
-              value: value === undefined ? 1 : value,
-              time,
-            },
-          };
-          context.baseContext.postMessage(msg);
-        }
+        sendLoopContextMessage(context, block, messageType, loopSize, actualValue, time, index);
       } else {
-        let msg: any = {
-          type: time !== undefined ? "schedule-set" : "memory-set",
-          body: {
-            idx: block.idx,
-            value: value === undefined ? 1 : value,
-            time,
-          },
-        };
-        context.baseContext.postMessage(msg);
+        sendSingleMessage(context, block.idx, messageType, actualValue, time);
       }
     }
   };
 
-  clicker.getIdx = () => {
-    return block?.idx as number;
-  };
+  // Add method to retrieve memory index
+  clicker.getIdx = () => block?.idx;
 
   return clicker;
 };
+
+// Helper functions to improve readability
+
+function sendSingleMessage(
+  context: Context,
+  idx: number,
+  type: Message["type"],
+  value: number,
+  time?: number,
+): void {
+  const msg: Message = {
+    type,
+    body: {
+      idx,
+      value,
+      time,
+    },
+  };
+
+  context.baseContext.postMessage(msg);
+}
+
+function sendLoopContextMessage(
+  context: Context,
+  block: MemoryBlock,
+  type: Message["type"],
+  loopSize: number,
+  value: number,
+  time?: number,
+  index?: number,
+): void {
+  for (let i = 0; i < loopSize; i++) {
+    if (index !== undefined && i !== index) continue;
+
+    const idx = (block._idx as number) + i;
+    sendSingleMessage(context, idx, type, value, time);
+  }
+}

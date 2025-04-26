@@ -90,6 +90,7 @@ doc("scope~", {
 });
 
 export const scope_tilde = (node: ObjectNode) => {
+  node.isResizable = true;
   // setup the visualizer worklet and hook it up to this node
   createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor");
   return (_message: Message) => [];

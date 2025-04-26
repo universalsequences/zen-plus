@@ -317,6 +317,7 @@ const Edge: React.FC<{
     let isAudio = connection.sourceOutlet.connectionType === ConnectionType.AUDIO;
     let isCore = connection.sourceOutlet.connectionType === ConnectionType.CORE;
     let isGL = connection.sourceOutlet.connectionType === ConnectionType.GL;
+    let isMC = connection.sourceOutlet.mc;
     if (
       isAudio &&
       (connection.destination as ObjectNode).operatorContextType === OperatorContextType.CORE
@@ -356,9 +357,19 @@ const Edge: React.FC<{
                 className={
                   (isSelected ? " selected-edge " : "") +
                   "visible-edge pointer-events-auto " +
-                  (isGL ? "gl" : isCore ? "core" : isAudio ? "audio" : "zen")
+                  (isGL ? "gl" : isCore ? "core" : isMC ? "mc" : isAudio ? "audio" : "zen")
                 }
-                stroke={isSelected ? "red" : isCore ? "#ffffff" : isAudio ? "yellow" : strokeColor}
+                stroke={
+                  isSelected
+                    ? "red"
+                    : isCore
+                      ? "#ffffff"
+                      : isMC
+                        ? "#00e6ff"
+                        : isAudio
+                          ? "yellow"
+                          : strokeColor
+                }
                 strokeWidth={2}
               />
               <path

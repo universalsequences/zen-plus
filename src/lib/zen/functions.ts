@@ -30,11 +30,7 @@ export type Function = {
 
 export type LazyFunction = (context: Context, forceScalar: boolean) => Function;
 
-export const defun = (
-  name: string,
-  size: number,
-  ...bodies: UGen[]
-): LazyFunction => {
+export const defun = (name: string, size: number, ...bodies: UGen[]): LazyFunction => {
   let cache: Function;
 
   return (context: Context, forceScalar: boolean): Function => {
@@ -48,25 +44,17 @@ export const defun = (
       return cached;
     }
 
-    let functionContext = new LoopContext(
-      "invocation",
-      { min: 0, max: size },
-      context,
-    );
+    let functionContext = new LoopContext("invocation", { min: 0, max: size }, context);
     if (forceScalar) {
       functionContext.forceScalar = true;
     }
 
     // evaluate each body with the context
-    let _bodies: Generated[] = bodies.map((x, i) =>
-      output(x, i)(functionContext),
-    );
+    let _bodies: Generated[] = bodies.map((x, i) => output(x, i)(functionContext));
 
     // each of these has fragments
 
-    let histories = Array.from(
-      new Set(_bodies.flatMap((x) => x.histories).filter((x) => x)),
-    );
+    let histories = Array.from(new Set(_bodies.flatMap((x) => x.histories).filter((x) => x)));
     let outerHistories: string[] = Array.from(
       new Set(_bodies.flatMap((x) => x.outerHistories || [])),
     );
@@ -127,11 +115,7 @@ const containsCycle = (context: Context, args: Generated[]): boolean => {
 };
 
 // evaluate the function definition (created via defun)
-export const call = (
-  lazyFunction: LazyFunction,
-  invocation: number,
-  ...args: Arg[]
-): UGen => {
+export const call = (lazyFunction: LazyFunction, invocation: number, ...args: Arg[]): UGen => {
   let memoized: Generated;
 
   // call needs to be its own special call context, in which case it is completely seperate from other
@@ -148,7 +132,6 @@ export const call = (
     let originalContext = context;
     let historiesBeingWritten = getHistoriesBeingWrittenTo(context);
     if (memoized && lastHistoriesWritten !== undefined) {
-      //console.log('returning called memoize', memoized, context);
       let memoizationResult = determineMemoization(
         historiesBeingWritten,
         context,
@@ -166,7 +149,6 @@ export const call = (
     }
     lastHistoriesWritten = historiesBeingWritten.size;
 
-    //console.log("call yall");
     let innerContext = context.useContext(false, true);
     //innerContext.newBase = true;
 
@@ -175,10 +157,7 @@ export const call = (
 
     let forceScalar = containsCycle(context, _args);
 
-    let _func: Function = lazyFunction(
-      context.baseContext.useContext(false, true),
-      forceScalar,
-    );
+    let _func: Function = lazyFunction(context.baseContext.useContext(false, true), forceScalar);
 
     if (_func.context!.forceScalar !== forceScalar) {
       forceScalar = _func.context!.forceScalar;
@@ -204,8 +183,7 @@ export const call = (
     // how do we route the correct arguments to the right ordering
     // we almost need to "name"
     let THIS = context.target === Target.Javascript ? "this." : "";
-    let keyword =
-      context.target === Target.C ? context.varKeyword + "*" : "let";
+    let keyword = context.target === Target.C ? context.varKeyword + "*" : "let";
     //let code = `${keyword} ${variable} = ${THIS}${name} (${invocation}, ${_args.map(x => x.variable).join(",")});
 
     let i = 0;
@@ -236,9 +214,7 @@ export const call = (
 `;
 
     // need to mark this as a isFunctionCaller
-    let _context = forceScalar
-      ? context.useContext(false)
-      : context.useContext(false, true);
+    let _context = forceScalar ? context.useContext(false) : context.useContext(false, true);
     if (!forceScalar) {
       _context.isFunctionCaller = true;
     }
@@ -285,7 +261,10 @@ export const call = (
     let _funcs = generated.functions || [];
 
     // append function
-    generated.functions = [..._funcs, _func];
+    generated.functions = Array.from(
+      new Set([..._funcs, _func, ...emitFunctions(...([..._funcs, _func] as Generated[]))]),
+    );
+
     memoized = generated;
     if (forceScalar) {
       memoized.usingForceScalarFunction = true;
@@ -348,9 +327,7 @@ export const latchcall = (
 
       // then we need to actually use this history context
       let historyContexts: Context[] = [];
-      for (let h of downstreamHistories.filter((x) =>
-        historiesBeingWritten.has(x),
-      )) {
+      for (let h of downstreamHistories.filter((x) => historiesBeingWritten.has(x))) {
         let historyContext = getContextWithHistory(h, context);
         historyContexts.push(historyContext);
       }
@@ -367,10 +344,7 @@ export const latchcall = (
     }
 
     //context = context.useContext(false);
-    let _func: Function = lazyFunction(
-      context.baseContext.useContext(false, true),
-      true,
-    );
+    let _func: Function = lazyFunction(context.baseContext.useContext(false, true), true);
     let totalOutputs = _func.totalOutputs || countOutputs(_func.codeFragments);
     let name = _func.name;
     block = block || context.alloc(totalOutputs);
@@ -379,8 +353,7 @@ export const latchcall = (
     // how do we route the correct arguments to the right ordering
     // we almost need to "name"
     let THIS = context.target === Target.Javascript ? "this." : "";
-    let keyword =
-      context.target === Target.C ? context.varKeyword + "*" : "let";
+    let keyword = context.target === Target.C ? context.varKeyword + "*" : "let";
 
     let code = "";
 
@@ -413,12 +386,7 @@ memory[${(block.idx as number) + i}] = ${THIS}${_func.name}_out[${invocation}][$
 
     let variable = `(memory + ${block.idx as number})`;
 
-    let generated: Generated = context.emit(
-      code,
-      variable,
-      _latchCondition,
-      ..._args,
-    );
+    let generated: Generated = context.emit(code, variable, _latchCondition, ..._args);
     let _funcs = generated.functions || [];
 
     // append function
@@ -500,12 +468,9 @@ export const nth = (array: Arg, index: Arg = 0) => {
           const regex = /\(memory \+ (\d+)\)\[(\d+)\]/;
 
           // Replace the matched pattern with the desired format memory[number+index]
-          offsetedArray = offsetedArray.replace(
-            regex,
-            (match, number, index) => {
-              return `memory[${Number.parseInt(number) + Number.parseInt(index)}]`;
-            },
-          );
+          offsetedArray = offsetedArray.replace(regex, (match, number, index) => {
+            return `memory[${Number.parseInt(number) + Number.parseInt(index)}]`;
+          });
         }
       }
 
@@ -529,12 +494,7 @@ export const nth = (array: Arg, index: Arg = 0) => {
         histories: [],
       };
 
-      let generated: Generated = context.emit(
-        "",
-        codeFragment.variable,
-        _index,
-        _array,
-      );
+      let generated: Generated = context.emit("", codeFragment.variable, _index, _array);
       codeFragment.histories = generated.codeFragments[0].histories;
       generated.codeFragments = [codeFragment];
       memoized = generated;
@@ -596,12 +556,7 @@ export const nth = (array: Arg, index: Arg = 0) => {
         histories: [],
       };
 
-      let generated: Generated = context.emit(
-        "",
-        codeFragment.variable,
-        _index,
-        _array,
-      );
+      let generated: Generated = context.emit("", codeFragment.variable, _index, _array);
       codeFragment.histories = generated.codeFragments[0].histories;
       generated.codeFragments = [codeFragment];
       memoized = generated;
@@ -635,9 +590,7 @@ export const emitFunctions = (...gen: Generated[]): Function[] => {
 };
 
 export const emitArguments = (...gen: Generated[]): Argument[] => {
-  return Array.from(new Set(gen.flatMap((x) => x.functionArguments))).filter(
-    (x) => x,
-  );
+  return Array.from(new Set(gen.flatMap((x) => x.functionArguments))).filter((x) => x);
 };
 
 // when argument is called we need to simply just use its name...

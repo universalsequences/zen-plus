@@ -122,6 +122,7 @@ export interface IOConnection {
   segmentation?: number; // y position of segmentation
   created?: boolean;
   splitter?: ChannelSplitterNode;
+  mc?: number; // number of channels an mc iolet connection is responsible for
 }
 
 export type IOlet = Identifiable & {
@@ -136,6 +137,8 @@ export type IOlet = Identifiable & {
   node?: ObjectNode;
   callback?: (x: Message) => void;
   optimizedDataType?: OptimizedDataType[];
+  mc?: boolean; // is this a multi-channel iolet
+  chans?: number; // how many channels in this mc iolet
 };
 
 export enum OptimizedDataType {

@@ -232,7 +232,9 @@ export class BaseNode implements Node {
     const sourceNode = (this as unknown as ObjectNode).audioNode;
     let destNode = (destination as unknown as ObjectNode).audioNode;
     if (sourceNode && destNode) {
-      const splitter = this.patch.audioContext!.createChannelSplitter(this.outlets.length);
+      const splitter = this.patch.audioContext!.createChannelSplitter(
+        sourceOutlet.chans ? sourceOutlet.chans * this.outlets.length : this.outlets.length,
+      );
       connection.splitter = splitter;
       sourceNode.connect(splitter);
 
@@ -240,11 +242,33 @@ export class BaseNode implements Node {
         destNode = (connection.destination as ObjectNode).merger;
       }
       if (destNode) {
-        splitter.connect(
-          destNode,
-          this.outlets.indexOf(sourceOutlet),
-          destination.inlets.indexOf(destinationInlet),
-        );
+        const outletNumber = this.outlets.indexOf(sourceOutlet);
+        const inletNumber = destination.inlets.indexOf(destinationInlet);
+        if (sourceOutlet.mc) {
+          const sourceChans = sourceOutlet.chans as number;
+          const destChans = destinationInlet.chans || 1;
+
+          for (let i = 0; i < sourceChans; i++) {
+            const j = destinationInlet.mc ? i : 0;
+            const outIndex = outletNumber * sourceChans + i;
+            const inIndex = inletNumber * destChans + j;
+            splitter.connect(destNode, outIndex, inIndex);
+          }
+        } else {
+          if (destinationInlet.mc) {
+            // we are going from non-mc to mc inlet
+            const destChans = destinationInlet.chans || 1;
+            for (let i = 0; i < destChans; i++) {
+              splitter.connect(
+                destNode,
+                outletNumber,
+                i + destChans * destination.inlets.indexOf(destinationInlet),
+              );
+            }
+          } else {
+            splitter.connect(destNode, outletNumber, destination.inlets.indexOf(destinationInlet));
+          }
+        }
       }
     }
   }
@@ -1210,7 +1234,11 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   useAudioNode(audioNode: AudioNode) {
     this.audioNode = audioNode;
 
-    for (let i = 0; i < this.audioNode.channelCount; i++) {
+    const channelCount =
+      typeof this.attributes.chans === "number"
+        ? this.audioNode.channelCount / this.attributes.chans
+        : this.audioNode.channelCount;
+    for (let i = 0; i < channelCount; i++) {
       if (!this.outlets[i]) {
         this.newOutlet(`channel ${i + 1}`, ConnectionType.AUDIO);
       }

@@ -5,6 +5,7 @@ import { PatchImpl } from "../Patch";
 import { getRootPatch } from "../traverse";
 import { mapReceive } from "./recompileGraph";
 import { bangModSelectors } from "../definitions/core/modselector";
+import { setupMCNode } from "./mc";
 
 export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: ZenGraph) => {
   patch.audioNode = ret.workletNode;
@@ -19,6 +20,10 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
   patch.workletCode = ret.code;
 
   const parentNode = (patch as Patch as SubPatch).parentNode;
+
+  if (!parentNode) {
+    throw new Error("no parent node in subpatch");
+  }
 
   ret.workletNode.port.onmessage = (e) => {
     if (e.data.type === "wasm-ready") {
@@ -50,24 +55,34 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
 
   patch.disconnectGraph();
 
-  const merger = patch.audioContext?.createChannelMerger(zenGraph.numberOfInputs);
-  if (parentNode) {
-    parentNode.merger = merger;
-    merger?.connect(ret.workletNode);
-
-    for (let i = 0; i < parentNode.outlets.length; i++) {
-      parentNode.outlets[i].connectionType = ConnectionType.AUDIO;
-    }
+  if (parentNode.attributes.mc) {
+    // we are a multi-channel node
+    setupMCNode(parentNode);
   }
+
+  // take the outputs from the generated zen audio worklet, and map to a channel merger node
+  // this allows us to then connect this "objectNode" to other "audio/zen" nodes
+  const merger = patch.audioContext?.createChannelMerger(zenGraph.numberOfInputs);
+
+  console.log("number of inputs=", zenGraph.numberOfInputs, zenGraph, parentNode, patch.audioNode);
+
+  // note: for mc nodes this is unchanged ^^
+  // upon connecting two nodes we will "do the right thing"
+
+  parentNode.merger = merger;
+  merger?.connect(ret.workletNode);
+
+  for (let i = 0; i < parentNode.outlets.length; i++) {
+    parentNode.outlets[i].connectionType = ConnectionType.AUDIO;
+  }
+
   patch.worklets.push({
     workletNode: ret.workletNode,
     graph: zenGraph,
     merger: merger,
   });
 
-  if (parentNode) {
-    parentNode.useAudioNode(patch.audioNode);
-  }
+  parentNode.useAudioNode(patch.audioNode);
 
   parentNode.setAttribute("messageRate", (parentNode.attributes.messageRate as number) || 32);
 
