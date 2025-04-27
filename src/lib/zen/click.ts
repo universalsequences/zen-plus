@@ -24,7 +24,7 @@ export const click = (): Clicker => {
   let clickVar: string;
   let contextBlocks: ContextualBlock[] = [];
 
-  const clicker = simdMemo((context: Context): Generated => {
+  const clicker: Clicker = simdMemo((context: Context): Generated => {
     const contextChanged = context !== _context;
     _context = context;
 
@@ -55,16 +55,19 @@ if (${clickVar} > 0) {
       const loopSize = (block.context as LoopContext).loopSize || 0;
       const messageType = time !== undefined ? "schedule-set" : "memory-set";
 
-      if (loopSize) {
+      if (index !== undefined) {
+        console.log("sending single message=", block._idx + index, actualValue, time);
+        sendSingleMessage(context, (block._idx as number) + index, messageType, actualValue, time);
+      } else if (loopSize) {
         sendLoopContextMessage(context, block, messageType, loopSize, actualValue, time, index);
       } else {
-        sendSingleMessage(context, block.idx, messageType, actualValue, time);
+        sendSingleMessage(context, block.idx as number, messageType, actualValue, time);
       }
     }
   };
 
   // Add method to retrieve memory index
-  clicker.getIdx = () => block?.idx;
+  clicker.getIdx = () => block?.idx as number;
 
   return clicker;
 };

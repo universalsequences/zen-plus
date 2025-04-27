@@ -1,5 +1,5 @@
-import { UGen, Arg } from "./zen";
-import { history, History } from "./history";
+import type { UGen } from "./zen";
+import { history, type History } from "./history";
 
 export interface ParamInfo {
   name: string;
@@ -8,8 +8,9 @@ export interface ParamInfo {
   defaultValue?: number;
   idx?: number;
 }
+
 export type ParamGen = UGen & {
-  set?: (val: number, time?: number) => void;
+  set?: (val: number, time?: number, invocation?: number) => void;
   getInitData?: () => number;
   getParamInfo?: () => ParamInfo;
 };
@@ -19,15 +20,17 @@ export const param = (
   name: string = "hello",
   min?: number,
   max?: number,
+  mc = false,
 ): ParamGen => {
-  let ssd: History = history(val, { inline: false, name: name, min, max });
+  let ssd: History = history(val, { inline: false, name: name, min, max, mc });
 
   let p: ParamGen = ssd();
-  p.set = (val: number, time?: number) => {
+  p.set = (val: number, time?: number, invocation?: number) => {
+    console.log("setting param invocation=", invocation, val);
     if (isNaN(val)) {
       val = 0;
     }
-    ssd.value!(val, time!);
+    ssd.value!(val, time, invocation);
   };
 
   p.getInitData = () => {

@@ -390,6 +390,10 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
     // Add operator context type class
     if ((node as ObjectNode).operatorContextType && !isCustom) {
       className += " context-type-" + (node as ObjectNode).operatorContextType;
+
+      if (node.inlets[0]?.mc) {
+        className += " mc-node";
+      }
     }
 
     // Build style object

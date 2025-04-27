@@ -17,6 +17,7 @@ export const z_click = (node: ObjectNode) => {
   node.inlets[0].optimizedDataType = [OptimizedDataType.NUMBER];
 
   return (message: Message) => {
+    console.log("click message=", message);
     if (!clicker) {
       clicker = click();
       node.click = clicker;
@@ -26,12 +27,19 @@ export const z_click = (node: ObjectNode) => {
     }
 
     // otherwise we simply click
-    if (!isNaN(parseFloat(message as string))) {
+    if (!Array.isArray(message) && !isNaN(parseFloat(message as string))) {
       message = parseFloat(message as string);
     }
     if (typeof message === "number") {
+      console.log("timed click");
       clicker.click!(44100 * (message - (node.patch.audioContext?.currentTime || 0)));
+    } else if (Array.isArray(message) && typeof message[0] === "number") {
+      const time = 44100 * (message[0] - (node.patch.audioContext?.currentTime || 0));
+      const invocation = message[1] as number;
+      console.log("click=", time, invocation);
+      clicker.click!(time, 1, invocation);
     } else {
+      console.log("untimed click");
       clicker.click!();
     }
     return [];

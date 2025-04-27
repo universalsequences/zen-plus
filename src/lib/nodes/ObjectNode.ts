@@ -227,6 +227,7 @@ export class BaseNode implements Node {
   }
 
   connectAudioNode(connection: IOConnection) {
+    console.log("connect audio node called");
     const { destination, sourceOutlet, destinationInlet } = connection;
     // todo -- figure out why BaseNode is not being typed as ObjectNode
     const sourceNode = (this as unknown as ObjectNode).audioNode;
@@ -271,6 +272,7 @@ export class BaseNode implements Node {
         }
       }
     }
+    console.log("connect audio node finished");
   }
 
   disconnect(connection: IOConnection, compile = true, ignoreAudio?: boolean) {

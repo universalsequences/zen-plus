@@ -52,12 +52,17 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     object.attributes["default"] = 0;
   }
 
+  if (!object.attributes.mc) {
+    object.attributes.mc = false;
+  }
+
   if (object.attributes["tag"] === undefined) {
     object.attributes["tag"] = "";
   }
 
   let _param: ParamGen;
   return (x: Message): Statement[] => {
+    console.log("Param.name=%s message", name(), x);
     if (typeof x === "number") {
       object.storedMessage = x;
     }
@@ -71,11 +76,18 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
           name() as string,
           min as number,
           max as number,
+          object.attributes.mc as boolean,
         );
         object.param = _param;
         object.storedParameterValue = object.storedMessage as number;
       } else {
-        _param = param(defaultValue, name() as string, min as number, max as number);
+        _param = param(
+          defaultValue,
+          name() as string,
+          min as number,
+          max as number,
+          object.attributes.mc as boolean,
+        );
         object.param = _param;
         object.storedParameterValue = defaultValue;
       }
@@ -94,6 +106,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     }
     let isScheduleSet = Array.isArray(x) && typeof x[0] === "number";
     if (typeof x === "number" || isScheduleSet) {
+      console.log("array =", x);
       if (Array.isArray(x)) {
         if (isNaN(x[0] as number)) {
           return [];
@@ -102,9 +115,14 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         let time = x[1] as number;
         time = (time - object.patch.audioContext!.currentTime) * 44100;
         const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
-        _param.set!(value as number, time);
+        const invocation = x[2] as number;
+
+        console.log("setting with invocation", value, time, invocation);
+        _param.set!(value as number, time, invocation);
+
         object.storedParameterValue = value as number;
         object.storedMessage = value as number;
+        console.log("finished set");
       } else {
         if (isNaN(x as number)) {
           return [];
@@ -114,6 +132,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         _param.set!(value as number);
         object.storedParameterValue = value as number;
         object.storedMessage = value as number;
+        console.log("finished set");
       }
 
       return [];

@@ -1,6 +1,7 @@
 import { doc } from "./doc";
 import { gate } from "./gate";
 import { route } from "./route";
+import { mc_unpack, mc_voicer } from "./mc";
 import { slots } from "./slots";
 import { oscilloscope } from "./oscilloscope";
 import { live_meter } from "./meter";
@@ -145,6 +146,8 @@ export const api: API = {
   "scope~": scope_tilde,
   "send~": send,
   "receive~": receive,
+  "mc.unpack~": mc_unpack,
+  "mc.voicer": mc_voicer,
   "oscilloscope~": oscilloscope,
   publishPatchSignals: publishPatchSignals,
 };

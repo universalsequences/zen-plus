@@ -205,6 +205,7 @@ export const parse = (
     (objectNode.name && objectNode.name.includes("modeling")) ||
     objectNode.name === "uniform" ||
     objectNode.name === "color" ||
+    objectNode.name === "click" ||
     objectNode.name === "data" ||
     objectNode.name === "param" ||
     objectNode.name === "history" ||

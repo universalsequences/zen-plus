@@ -10,6 +10,7 @@ export const constructMCStatement = (
   outStatements: Statement[],
   chans: number,
 ) => {
+  console.log("construct mc statement begin");
   const numberOfOutputs = outStatements.length;
   const parentNode = (patch as unknown as SubPatch).parentNode;
   const numberOfInputs = parentNode.inlets.length;
@@ -87,6 +88,7 @@ export const constructMCStatement = (
   }
 
   const sStatement = ["s" as Operator, ...mcOutStatements];
+  console.log("construct mc statement ended");
   return sStatement;
 };
 
