@@ -128,7 +128,7 @@ export class VM {
     let payload: SyncWorkerState[] = [];
     for (const id in this.nodes) {
       const node = this.nodes[id];
-      if (node instanceof MockObjectNode) {
+      if (node instanceof MockObjectNode && !node.skipCompilation) {
         if (node.custom) {
           const json = node.custom.getJSON();
           payload.push({

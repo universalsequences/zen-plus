@@ -33,20 +33,28 @@ export class FilterGraphValue extends MutableValue {
       type: "lowpass",
       cutoff: 1000,
       resonance: 0.7,
-      gain: 0
-    }
+      gain: 0,
+    },
   ];
   activeFilterIndex: number = 0;
-  
+
   // For backward compatibility
-  get filterType(): FilterType { return this.filters[this.activeFilterIndex].type; }
-  get cutoff(): number { return this.filters[this.activeFilterIndex].cutoff; }
-  get resonance(): number { return this.filters[this.activeFilterIndex].resonance; }
-  get gain(): number { return this.filters[this.activeFilterIndex].gain; }
+  get filterType(): FilterType {
+    return this.filters[this.activeFilterIndex].type;
+  }
+  get cutoff(): number {
+    return this.filters[this.activeFilterIndex].cutoff;
+  }
+  get resonance(): number {
+    return this.filters[this.activeFilterIndex].resonance;
+  }
+  get gain(): number {
+    return this.filters[this.activeFilterIndex].gain;
+  }
 
   constructor(node: ObjectNode, initialValue: Partial<FilterParams> = {}) {
     super(node, 0);
-    
+
     // Initialize with default filter
     if (initialValue.type) this.filters[0].type = initialValue.type;
     if (initialValue.cutoff) this.filters[0].cutoff = initialValue.cutoff;
@@ -61,11 +69,23 @@ export class FilterGraphValue extends MutableValue {
         type: "lowpass",
         cutoff: 1000,
         resonance: 0.7,
-        gain: 0
+        gain: 0,
       });
     }
     this.activeFilterIndex = index;
     this.updateValue();
+  }
+
+  getJSON() {
+    console.log("get json filters=", this.filters);
+    return this.filters;
+  }
+
+  fromJSON(x: any) {
+    console.log("from json=", x);
+    if (Array.isArray(x)) {
+      this.filters = x;
+    }
   }
 
   setFilterType(type: FilterType, filterIndex?: number) {
@@ -102,7 +122,7 @@ export class FilterGraphValue extends MutableValue {
         type: "lowpass",
         cutoff: 1000,
         resonance: 0.7,
-        gain: 0
+        gain: 0,
       });
     }
   }
@@ -120,14 +140,14 @@ export class FilterGraphValue extends MutableValue {
   getParams(): FilterParams {
     return {
       ...this.filters[this.activeFilterIndex],
-      filterIndex: this.activeFilterIndex
+      filterIndex: this.activeFilterIndex,
     };
   }
-  
+
   getAllFilters(): Filter[] {
     return this.filters;
   }
-  
+
   getNumFilters(): number {
     return this.filters.length;
   }
@@ -177,11 +197,12 @@ export const filtergraph = (node: ObjectNode) => {
   if (!node.custom) {
     custom = new FilterGraphValue(node);
     node.custom = custom;
-    
+
     // Initialize required number of filters based on activeFilters attribute
     const activeFilters = Number(node.attributes["activeFilters"]) || 1;
     for (let i = 0; i < activeFilters; i++) {
-      if (i > 0) { // First filter is already created by default
+      if (i > 0) {
+        // First filter is already created by default
         custom.ensureFilterExists(i);
       }
     }
@@ -191,12 +212,12 @@ export const filtergraph = (node: ObjectNode) => {
       node.onNewValue({
         ...custom.getParams(),
         allFilters: custom.getAllFilters(),
-        numFilters: activeFilters
+        numFilters: activeFilters,
       });
     }
   } else {
     custom = node.custom as FilterGraphValue;
-    
+
     // Ensure the number of filters matches the activeFilters attribute
     const activeFilters = Number(node.attributes["activeFilters"]) || 1;
     for (let i = 0; i < activeFilters; i++) {
@@ -208,12 +229,12 @@ export const filtergraph = (node: ObjectNode) => {
   const outputAllParams = () => {
     const activeFilters = Number(node.attributes["activeFilters"]) || 1;
     const allFilters = custom.getAllFilters();
-    
+
     const messages = [];
-    
+
     // First output the number of active filters
     messages.push(["numFilters", activeFilters]);
-    
+
     // Then output the parameters for each filter
     for (let i = 0; i < activeFilters; i++) {
       if (i < allFilters.length) {
@@ -224,7 +245,7 @@ export const filtergraph = (node: ObjectNode) => {
         messages.push(["gain", filter.gain, i]);
       }
     }
-    
+
     return messages;
   };
 
@@ -241,36 +262,39 @@ export const filtergraph = (node: ObjectNode) => {
 
     if (Array.isArray(msg)) {
       // Handle message arrays for setting parameters
-      
+
       // Set active filters count
       if (msg[0] === "activeFilters" && typeof msg[1] === "number") {
         const numFilters = Math.max(1, Math.min(16, msg[1])); // Limit to reasonable range
         node.attributes["activeFilters"] = numFilters;
-        
+
         // Ensure we have enough filters
         for (let i = 0; i < numFilters; i++) {
           custom.ensureFilterExists(i);
         }
-        
+
         // Update UI
         if (node.onNewValue) {
           node.onNewValue({
             ...custom.getParams(),
             allFilters: custom.getAllFilters(),
-            numFilters: numFilters
+            numFilters: numFilters,
           });
         }
-        
+
         return [["activeFilters", numFilters]];
       }
-      
+
       // Set active filter index
       if (msg[0] === "activeFilter" && typeof msg[1] === "number") {
-        const filterIndex = Math.max(0, Math.min(Number(node.attributes["activeFilters"]) - 1, msg[1]));
+        const filterIndex = Math.max(
+          0,
+          Math.min(Number(node.attributes["activeFilters"]) - 1, msg[1]),
+        );
         custom.setActiveFilter(filterIndex);
         return [["activeFilter", filterIndex]];
       }
-      
+
       // Handle filter type setting
       if (msg[0] === "type" && typeof msg[1] === "string") {
         const filterType = msg[1] as FilterType;
@@ -282,7 +306,7 @@ export const filtergraph = (node: ObjectNode) => {
           // Check if a specific filter index was provided
           const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
           custom.setFilterType(filterType, filterIndex);
-          
+
           // Return the applied changes
           const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
           return [["type", filterType, appliedIndex]];
@@ -293,7 +317,7 @@ export const filtergraph = (node: ObjectNode) => {
       if (msg[0] === "cutoff" && typeof msg[1] === "number") {
         const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
         custom.setCutoff(msg[1], filterIndex);
-        
+
         const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
         const appliedValue = custom.filters[appliedIndex].cutoff;
         return [["cutoff", appliedValue, appliedIndex]];
@@ -303,7 +327,7 @@ export const filtergraph = (node: ObjectNode) => {
       if (msg[0] === "resonance" && typeof msg[1] === "number") {
         const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
         custom.setResonance(msg[1], filterIndex);
-        
+
         const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
         const appliedValue = custom.filters[appliedIndex].resonance;
         return [["resonance", appliedValue, appliedIndex]];
@@ -313,7 +337,7 @@ export const filtergraph = (node: ObjectNode) => {
       if (msg[0] === "gain" && typeof msg[1] === "number") {
         const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
         custom.setGain(msg[1], filterIndex);
-        
+
         const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
         const appliedValue = custom.filters[appliedIndex].gain;
         return [["gain", appliedValue, appliedIndex]];

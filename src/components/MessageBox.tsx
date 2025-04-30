@@ -60,7 +60,7 @@ const MessageBox: React.FC<{
       };
       messageNode.size = {
         ...size,
-        width: e.target.value.length * 5.5,
+        width: e.target.value.length * 7.2,
       };
       updateSize(messageNode.id, messageNode.size);
       setText(e.target.value);
