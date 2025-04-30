@@ -51,6 +51,7 @@ import { panel } from "./panel";
 import { instructionsPerformance } from "./instructions.performance";
 import { tab } from "./ui/tab";
 import { midiout, midioutInlet } from "./midi";
+import { filtergraph } from "./filtergraph";
 
 export const api: API = {
   js: js_scripting,
@@ -118,4 +119,5 @@ export const api: API = {
   "instructions.performance": instructionsPerformance,
   midiout,
   "keyboard.transpose": keyboardTranspose,
+  filtergraph,
 };

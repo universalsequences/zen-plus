@@ -13,6 +13,7 @@ import Button from "./Button";
 import Preset from "./Preset";
 import FunctionUX from "./FunctionUX";
 import Divider from "./Divider";
+import FilterGraph from "./FilterGraph";
 import GLCanvas from "./GLCanvas";
 import SVGCanvas from "./SVGCanvas";
 import Slider from "./Slider";
@@ -71,6 +72,7 @@ export const index: ComponentIndex = {
   knob: Knob,
   divider: Divider,
   waveform: Waveform,
+  filtergraph: FilterGraph,
   function: FunctionUX,
   button: Button,
   preset: Preset,
