@@ -53,7 +53,7 @@ const computeFrequencyResponse = (
       let rawMagnitude = 1.0 / denominator;
 
       // Add very sharp resonance boost
-      const resonanceBoost = ((q - 0.1) / (20 - 0.1)) * 32; // Max 20 dB at Q=20
+      const resonanceBoost = ((q - 0.1) / (20 - 0.1)) * 32; // Max 32 dB at Q=20
       const peakFactor = Math.exp(-16 * Math.pow(octaves - 0.03, 2)); // Even narrower, sharper peak
       rawMagnitude *= Math.pow(10, (resonanceBoost * peakFactor) / 20);
 
@@ -65,24 +65,41 @@ const computeFrequencyResponse = (
     }
 
     case "highpass": {
-      // Highpass filter with continuous curve and resonance
-      const octaves = logCutoff - logF;
+      // Emulate Ableton's 24 dB/octave highpass filter with steep transitions
+      const octaves = logCutoff - logF; // Inverted for highpass (opposite of lowpass)
 
-      if (octaves < -1) {
-        // Flat response well above cutoff
-        return 0;
-      } else {
-        // Create a function that asymptotically approaches -60dB for lower frequencies
-        const rolloffFactor = Math.min(1, 0.8 + resonance * 0.05);
-        const rolloff = -40 * Math.max(0, Math.tanh(octaves * 2 * rolloffFactor));
+      // Normalize resonance to Q factor (range: 0.1 to 20)
+      const q = Math.max(0.1, Math.min(20, resonance));
 
-        // Resonance peak near cutoff
-        const resFactor = Math.max(0, resonance - 0.7);
-        const resPeak = resFactor * 6 * Math.exp(-36 * (octaves - 0.05) * (octaves - 0.05));
+      // Frequency ratio (ω/ωc)
+      const w = Math.pow(10, octaves);
 
-        // Combine for final response
-        return rolloff + resPeak;
-      }
+      // Amplify Q's effect for sharper peaks and steeper transitions
+      const effectiveQ = q * (1 + q * 10); // Match lowpass Q scaling
+
+      // Introduce a sharper cutoff effect by increasing the filter order
+      const steepnessFactor = 1 + (q / 20) * 12; // Match lowpass steepness scaling
+      const denominator = Math.sqrt(
+        1.0 +
+          Math.pow(w, Math.pow(q, 0.5) * 6) * steepnessFactor + // Higher-order term for steeper rolloff
+          Math.pow(w, 4) * (1 + (q / 20) * 10.5) + // Adjusted 4th-order term
+          (10.5 * Math.pow(w, 3)) / effectiveQ + // Sharper damping term
+          (100 * (2.0 * Math.pow(w, 2))) / Math.pow(effectiveQ, 2), // Sharper resonance term
+      );
+
+      // Calculate raw magnitude for highpass (invert lowpass behavior)
+      let rawMagnitude = 1.0 / denominator;
+
+      // Add very sharp resonance boost, mirrored for highpass
+      const resonanceBoost = ((q - 0.1) / (20 - 0.1)) * 32; // Max 32 dB at Q=20
+      const peakFactor = Math.exp(-16 * Math.pow(octaves + 0.03, 2)); // Peak just above cutoff
+      rawMagnitude *= Math.pow(10, (resonanceBoost * peakFactor) / 20);
+
+      // Convert to dB
+      let responseDb = 20.0 * Math.log10(rawMagnitude);
+
+      // Clamp to visible range (-60 dB to +20 dB)
+      return Math.max(-60, Math.min(20, responseDb));
     }
 
     case "bandpass": {
@@ -653,11 +670,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
       {/* Control point */}
       <circle cx={cutoffX} cy={controlPointY} r={5} fill="#ffffff" />
-
-      {/* Only show filter type label */}
-      <text x={5} y={12} fill={objectNode.attributes["textColor"] || "#ffffff"} fontSize="10px">
-        {filterParams.type}
-      </text>
     </svg>
   );
 };
