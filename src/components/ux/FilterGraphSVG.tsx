@@ -6,6 +6,7 @@ import {
   FilterGraphValue,
   FilterType,
   FilterParams,
+  Filter,
 } from "../../lib/nodes/definitions/core/filtergraph";
 
 export type FilterGraphProps = {
@@ -325,23 +326,62 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
   const custom = objectNode.custom as FilterGraphValue;
 
   // Subscribe to value changes
-  const value = useValue(custom.id);
+  const { value } = useValue();
+  console.log("use value=", value);
 
-  // Get the current filter parameters
+  // Track all filters and number of active filters
+  const [allFilters, setAllFilters] = useState<Filter[]>(custom.getAllFilters());
+  const [numFilters, setNumFilters] = useState<number>(
+    Number(objectNode.attributes["activeFilters"]) || 1,
+  );
+  const [activeFilterIndex, setActiveFilterIndex] = useState<number>(0);
+
+  // Get the current filter parameters for the active filter
   const [filterParams, setFilterParams] = useState({
     type: custom.filterType,
     cutoff: custom.cutoff,
     resonance: custom.resonance,
     gain: custom.gain,
+    filterIndex: 0,
   });
 
   // Update filter params when node.onNewValue is called
   useEffect(() => {
-    if (objectNode.newValue && typeof objectNode.newValue === "object") {
-      const newParams = objectNode.newValue as FilterParams;
-      setFilterParams(newParams);
+    if (!value) return;
+
+    const newParams = value as FilterParams & {
+      allFilters?: Filter[];
+      numFilters?: number;
+    };
+
+    console.log("value changed=", newParams);
+    // Update the current filter parameters
+    setFilterParams({
+      type: newParams.type,
+      cutoff: newParams.cutoff,
+      resonance: newParams.resonance,
+      gain: newParams.gain,
+      filterIndex: newParams.filterIndex || 0,
+    });
+
+    // Update the active filter index if provided
+    if (newParams.filterIndex !== undefined) {
+      setActiveFilterIndex(newParams.filterIndex);
     }
-  }, [objectNode.newValue]);
+
+    const allFilters = custom.getAllFilters();
+
+    console.log("all filters=", allFilters);
+    // Update all filters if provided
+    setAllFilters([...allFilters]);
+
+    // Update number of active filters if provided
+    if (newParams.numFilters !== undefined) {
+      setNumFilters(newParams.numFilters);
+    }
+  }, [value]);
+
+  console.log("filter params=", filterParams, allFilters);
 
   // Interaction state for dragging
   const [isDragging, setIsDragging] = useState(false);
@@ -349,47 +389,80 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   // Update local state when the custom value itself changes
   useEffect(() => {
+    setAllFilters([...custom.getAllFilters()]);
+    setNumFilters(Number(objectNode.attributes["activeFilters"]) || 1);
+
+    // Update active filter parameters
     setFilterParams({
       type: custom.filterType,
       cutoff: custom.cutoff,
       resonance: custom.resonance,
       gain: custom.gain,
+      filterIndex: custom.activeFilterIndex,
     });
-  }, [value]);
 
-  // Generate the response curve path data
-  const responseCurvePath = useMemo(() => {
-    const { type, cutoff, resonance, gain } = filterParams;
-    const numPoints = 300; // High number of points for smooth curve
-    let pathData = "";
+    setActiveFilterIndex(custom.activeFilterIndex);
+  }, [value, objectNode.attributes]);
 
-    for (let i = 0; i <= numPoints; i++) {
-      const x = (i / numPoints) * width;
-      const frequency = mapToFrequency(x, width);
-      const response = computeFrequencyResponse(type, frequency, cutoff, resonance, gain);
-      const y = mapFromDb(response, height);
+  // Generate response curve paths for all active filters
+  const responsePathsData = useMemo(() => {
+    console.log("response changed...");
+    const paths: { path: string; filter: Filter; index: number }[] = [];
 
-      if (i === 0) {
-        pathData += `M ${x},${y}`;
-      } else {
-        pathData += ` L ${x},${y}`;
+    // Generate a curve for each active filter
+    for (let i = 0; i < numFilters; i++) {
+      if (i < allFilters.length) {
+        const filter = allFilters[i];
+        const numPoints = 300; // High number of points for smooth curve
+        let pathData = "";
+
+        for (let j = 0; j <= numPoints; j++) {
+          const x = (j / numPoints) * width;
+          const frequency = mapToFrequency(x, width);
+          const response = computeFrequencyResponse(
+            filter.type,
+            frequency,
+            filter.cutoff,
+            filter.resonance,
+            filter.gain,
+          );
+          const y = mapFromDb(response, height);
+
+          if (j === 0) {
+            pathData += `M ${x},${y}`;
+          } else {
+            pathData += ` L ${x},${y}`;
+          }
+        }
+
+        paths.push({
+          path: pathData,
+          filter: filter,
+          index: i,
+        });
       }
     }
 
-    return pathData;
-  }, [filterParams, width, height]);
+    return paths;
+  }, [allFilters, numFilters, width, height]);
 
-  // Calculate cutoff line position
-  const cutoffX = mapFromFrequency(filterParams.cutoff, width);
-
-  // Calculate control point position
-  const controlPointY = getControlPointY(
-    filterParams.type,
-    filterParams.cutoff,
-    filterParams.resonance,
-    filterParams.gain,
-    height,
-  );
+  // Calculate cutoff line and control point positions for each filter
+  const filterPositions = useMemo(() => {
+    console.log("filters changing");
+    return allFilters.slice(0, numFilters).map((filter, index) => {
+      return {
+        cutoffX: mapFromFrequency(filter.cutoff, width),
+        controlPointY: getControlPointY(
+          filter.type,
+          filter.cutoff,
+          filter.resonance,
+          filter.gain,
+          height,
+        ),
+        index,
+      };
+    });
+  }, [allFilters, numFilters, width, height]);
 
   // Select appropriate frequency markers based on component width
   const getFrequencyMarks = () => {
@@ -458,20 +531,24 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
       // Update internal state
       setFilterParams(newParams);
 
-      // Send parameters to the node
-      custom.setCutoff(newParams.cutoff);
-      custom.setResonance(newParams.resonance);
+      // Send parameters to the node with active filter index
+      custom.setCutoff(newParams.cutoff, activeFilterIndex);
+      custom.setResonance(newParams.resonance, activeFilterIndex);
 
       if (["peak", "lowshelf", "highshelf"].includes(filterParams.type)) {
-        custom.setGain(newParams.gain);
+        custom.setGain(newParams.gain, activeFilterIndex);
       }
 
-      // Output message with updated parameter
-      objectNode.receive(objectNode.inlets[0], ["cutoff", newParams.cutoff]);
-      objectNode.receive(objectNode.inlets[0], ["resonance", newParams.resonance]);
+      // Output message with updated parameter and filter index
+      objectNode.receive(objectNode.inlets[0], ["cutoff", newParams.cutoff, activeFilterIndex]);
+      objectNode.receive(objectNode.inlets[0], [
+        "resonance",
+        newParams.resonance,
+        activeFilterIndex,
+      ]);
 
       if (["peak", "lowshelf", "highshelf"].includes(filterParams.type)) {
-        objectNode.receive(objectNode.inlets[0], ["gain", newParams.gain]);
+        objectNode.receive(objectNode.inlets[0], ["gain", newParams.gain, activeFilterIndex]);
       }
     };
 
@@ -503,11 +580,36 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Calculate distance from control point
-    const distance = Math.sqrt(Math.pow(x - cutoffX, 2) + Math.pow(y - controlPointY, 2));
-    if (distance < 10) {
+    // Find the closest control point from all filters
+    let closestDistance = Infinity;
+    let closestFilterIndex = -1;
+
+    filterPositions.forEach(({ cutoffX, controlPointY, index }) => {
+      const distance = Math.sqrt(Math.pow(x - cutoffX, 2) + Math.pow(y - controlPointY, 2));
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestFilterIndex = index;
+      }
+    });
+
+    // If we found a close enough filter point, start dragging it
+    if (closestDistance < 10 && closestFilterIndex >= 0) {
+      // Set this filter as active
+      setActiveFilterIndex(closestFilterIndex);
+      custom.setActiveFilter(closestFilterIndex);
+
+      // Update UI state for the dragging operation
       setIsDragging(true);
       setDragStart({ x, y });
+
+      // Update the filter params to reflect the active filter
+      setFilterParams({
+        type: allFilters[closestFilterIndex].type,
+        cutoff: allFilters[closestFilterIndex].cutoff,
+        resonance: allFilters[closestFilterIndex].resonance,
+        gain: allFilters[closestFilterIndex].gain,
+        filterIndex: closestFilterIndex,
+      });
     }
   };
 
@@ -515,6 +617,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (isLocked) return;
 
+    // Cycle through filter types for the active filter
     const filterTypes: FilterType[] = [
       "lowpass",
       "highpass",
@@ -529,11 +632,23 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
     const nextIndex = (currentIndex + 1) % filterTypes.length;
     const newType = filterTypes[nextIndex];
 
-    // Update the filter type
-    custom.setFilterType(newType);
+    // Update the filter type for the active filter
+    custom.setFilterType(newType, activeFilterIndex);
 
-    // Send the type message
-    objectNode.receive(objectNode.inlets[0], ["type", newType]);
+    // Send the type message with filter index
+    objectNode.receive(objectNode.inlets[0], ["type", newType, activeFilterIndex]);
+  };
+
+  // Handle filter selection by click
+  const handleClick = (filterIndex: number) => {
+    if (isLocked) return;
+
+    // Set the clicked filter as active
+    setActiveFilterIndex(filterIndex);
+    custom.setActiveFilter(filterIndex);
+
+    // Send the active filter message
+    objectNode.receive(objectNode.inlets[0], ["activeFilter", filterIndex]);
   };
 
   // Helper to format frequency labels
@@ -542,6 +657,32 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
       return `${freq / 1000}k`;
     }
     return freq.toString();
+  };
+
+  // Helper to get colors for each filter (main color and variations)
+  const getFilterColor = (index: number) => {
+    const baseColors = [
+      "#ff9500", // Orange (primary)
+      "#00b4ff", // Blue
+      "#00ff7f", // Green
+      "#ff3377", // Pink
+      "#bbbb00", // Yellow
+      "#cc44ff", // Purple
+      "#ff5533", // Red-orange
+      "#33cccc", // Teal
+    ];
+
+    // Use the base color if available, otherwise cycle
+    const baseColor = baseColors[index % baseColors.length];
+
+    // Make the inactive filters more transparent
+    const opacity = index === activeFilterIndex ? 1.0 : 0.4;
+
+    return {
+      stroke: baseColor,
+      shadow: `drop-shadow(0 0 2px ${baseColor}99)`,
+      opacity,
+    };
   };
 
   return (
@@ -646,30 +787,69 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
         );
       })}
 
-      {/* Filter response curve */}
-      <path
-        d={responseCurvePath}
-        stroke={objectNode.attributes["curveColor"] || "#ff9500"}
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="drop-shadow(0 0 2px rgba(255, 149, 0, 0.7))"
-      />
+      {/* Render all filter response curves */}
+      {responsePathsData.map(({ path, filter, index }) => {
+        const color = getFilterColor(index);
+        return (
+          <path
+            key={`filter-${index}`}
+            d={path}
+            stroke={color.stroke}
+            strokeWidth="2"
+            opacity={color.opacity}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter={color.shadow}
+          />
+        );
+      })}
 
-      {/* Cutoff frequency indicator line */}
-      <line
-        x1={cutoffX}
-        y1={0}
-        x2={cutoffX}
-        y2={height}
-        stroke="#ffffff"
-        strokeWidth="1"
-        strokeDasharray="2,2"
-      />
+      {/* Render all cutoff frequency indicator lines and control points */}
+      {filterPositions.map(({ cutoffX, controlPointY, index }) => {
+        const color = getFilterColor(index);
+        const isActive = index === activeFilterIndex;
 
-      {/* Control point */}
-      <circle cx={cutoffX} cy={controlPointY} r={5} fill="#ffffff" />
+        return (
+          <g key={`control-${index}`}>
+            {/* Cutoff frequency indicator line */}
+            <line
+              x1={cutoffX}
+              y1={0}
+              x2={cutoffX}
+              y2={height}
+              stroke={color.stroke}
+              strokeWidth={isActive ? "1" : "0.5"}
+              strokeDasharray="2,2"
+              opacity={color.opacity}
+            />
+
+            {/* Control point */}
+            <circle
+              cx={cutoffX}
+              cy={controlPointY}
+              r={isActive ? 5 : 4}
+              fill={color.stroke}
+              strokeWidth={isActive ? 2 : 0}
+              stroke="#ffffff"
+              opacity={color.opacity}
+              onClick={() => handleClick(index)}
+            />
+
+            {/* Filter type indicator (shown only for active filter or when hovering) */}
+            {isActive && (
+              <text x={cutoffX} y={10} fill={color.stroke} fontSize="8px" textAnchor="middle">
+                {allFilters[index].type} ({index + 1})
+              </text>
+            )}
+          </g>
+        );
+      })}
+
+      {/* Display active filters count */}
+      <text x={width - 10} y={10} fill="#ffffff" fontSize="8px" textAnchor="end">
+        Filters: {numFilters}
+      </text>
     </svg>
   );
 };

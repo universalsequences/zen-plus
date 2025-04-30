@@ -17,40 +17,94 @@ export interface FilterParams {
   cutoff: number;
   resonance: number;
   gain: number;
+  filterIndex?: number; // Optional filter index for multiple filters
+}
+
+export interface Filter {
+  type: FilterType;
+  cutoff: number;
+  resonance: number;
+  gain: number;
 }
 
 export class FilterGraphValue extends MutableValue {
-  filterType: FilterType = "lowpass";
-  cutoff: number = 1000;
-  resonance: number = 0.7;
-  gain: number = 0;
+  filters: Filter[] = [
+    {
+      type: "lowpass",
+      cutoff: 1000,
+      resonance: 0.7,
+      gain: 0
+    }
+  ];
+  activeFilterIndex: number = 0;
+  
+  // For backward compatibility
+  get filterType(): FilterType { return this.filters[this.activeFilterIndex].type; }
+  get cutoff(): number { return this.filters[this.activeFilterIndex].cutoff; }
+  get resonance(): number { return this.filters[this.activeFilterIndex].resonance; }
+  get gain(): number { return this.filters[this.activeFilterIndex].gain; }
 
   constructor(node: ObjectNode, initialValue: Partial<FilterParams> = {}) {
     super(node, 0);
-    if (initialValue.type) this.filterType = initialValue.type;
-    if (initialValue.cutoff) this.cutoff = initialValue.cutoff;
-    if (initialValue.resonance) this.resonance = initialValue.resonance;
-    if (initialValue.gain) this.gain = initialValue.gain;
+    
+    // Initialize with default filter
+    if (initialValue.type) this.filters[0].type = initialValue.type;
+    if (initialValue.cutoff) this.filters[0].cutoff = initialValue.cutoff;
+    if (initialValue.resonance) this.filters[0].resonance = initialValue.resonance;
+    if (initialValue.gain) this.filters[0].gain = initialValue.gain;
   }
 
-  setFilterType(type: FilterType) {
-    this.filterType = type;
+  setActiveFilter(index: number) {
+    // Ensure we have enough filters
+    while (this.filters.length <= index) {
+      this.filters.push({
+        type: "lowpass",
+        cutoff: 1000,
+        resonance: 0.7,
+        gain: 0
+      });
+    }
+    this.activeFilterIndex = index;
     this.updateValue();
   }
 
-  setCutoff(freq: number) {
-    this.cutoff = Math.max(20, Math.min(20000, freq));
+  setFilterType(type: FilterType, filterIndex?: number) {
+    const index = filterIndex !== undefined ? filterIndex : this.activeFilterIndex;
+    this.ensureFilterExists(index);
+    this.filters[index].type = type;
     this.updateValue();
   }
 
-  setResonance(q: number) {
-    this.resonance = Math.max(0.1, Math.min(20, q));
+  setCutoff(freq: number, filterIndex?: number) {
+    const index = filterIndex !== undefined ? filterIndex : this.activeFilterIndex;
+    this.ensureFilterExists(index);
+    this.filters[index].cutoff = Math.max(20, Math.min(20000, freq));
     this.updateValue();
   }
 
-  setGain(db: number) {
-    this.gain = Math.max(-40, Math.min(40, db));
+  setResonance(q: number, filterIndex?: number) {
+    const index = filterIndex !== undefined ? filterIndex : this.activeFilterIndex;
+    this.ensureFilterExists(index);
+    this.filters[index].resonance = Math.max(0.1, Math.min(20, q));
     this.updateValue();
+  }
+
+  setGain(db: number, filterIndex?: number) {
+    const index = filterIndex !== undefined ? filterIndex : this.activeFilterIndex;
+    this.ensureFilterExists(index);
+    this.filters[index].gain = Math.max(-40, Math.min(40, db));
+    this.updateValue();
+  }
+
+  private ensureFilterExists(index: number) {
+    while (this.filters.length <= index) {
+      this.filters.push({
+        type: "lowpass",
+        cutoff: 1000,
+        resonance: 0.7,
+        gain: 0
+      });
+    }
   }
 
   private updateValue() {
@@ -65,11 +119,17 @@ export class FilterGraphValue extends MutableValue {
 
   getParams(): FilterParams {
     return {
-      type: this.filterType,
-      cutoff: this.cutoff,
-      resonance: this.resonance,
-      gain: this.gain,
+      ...this.filters[this.activeFilterIndex],
+      filterIndex: this.activeFilterIndex
     };
+  }
+  
+  getAllFilters(): Filter[] {
+    return this.filters;
+  }
+  
+  getNumFilters(): number {
+    return this.filters.length;
   }
 }
 
@@ -108,30 +168,64 @@ export const filtergraph = (node: ObjectNode) => {
   if (!node.attributes["textColor"]) {
     node.attributes["textColor"] = "#ffffff";
   }
+  if (!node.attributes["activeFilters"]) {
+    node.attributes["activeFilters"] = 1;
+  }
 
   // Create and initialize the custom value object
   let custom: FilterGraphValue;
   if (!node.custom) {
     custom = new FilterGraphValue(node);
     node.custom = custom;
+    
+    // Initialize required number of filters based on activeFilters attribute
+    const activeFilters = Number(node.attributes["activeFilters"]) || 1;
+    for (let i = 0; i < activeFilters; i++) {
+      if (i > 0) { // First filter is already created by default
+        custom.ensureFilterExists(i);
+      }
+    }
 
     // Send initial parameters to UX
     if (node.onNewValue) {
-      node.onNewValue(custom.getParams());
+      node.onNewValue({
+        ...custom.getParams(),
+        allFilters: custom.getAllFilters(),
+        numFilters: activeFilters
+      });
     }
   } else {
     custom = node.custom as FilterGraphValue;
+    
+    // Ensure the number of filters matches the activeFilters attribute
+    const activeFilters = Number(node.attributes["activeFilters"]) || 1;
+    for (let i = 0; i < activeFilters; i++) {
+      custom.ensureFilterExists(i);
+    }
   }
 
   // Helper to output all parameters as a series of messages
   const outputAllParams = () => {
-    const params = custom.getParams();
-    return [
-      ["type", params.type],
-      ["cutoff", params.cutoff],
-      ["resonance", params.resonance],
-      ["gain", params.gain],
-    ];
+    const activeFilters = Number(node.attributes["activeFilters"]) || 1;
+    const allFilters = custom.getAllFilters();
+    
+    const messages = [];
+    
+    // First output the number of active filters
+    messages.push(["numFilters", activeFilters]);
+    
+    // Then output the parameters for each filter
+    for (let i = 0; i < activeFilters; i++) {
+      if (i < allFilters.length) {
+        const filter = allFilters[i];
+        messages.push(["type", filter.type, i]);
+        messages.push(["cutoff", filter.cutoff, i]);
+        messages.push(["resonance", filter.resonance, i]);
+        messages.push(["gain", filter.gain, i]);
+      }
+    }
+    
+    return messages;
   };
 
   // Return the message handling function
@@ -146,8 +240,38 @@ export const filtergraph = (node: ObjectNode) => {
     }
 
     if (Array.isArray(msg)) {
-      console.log("type...", msg);
       // Handle message arrays for setting parameters
+      
+      // Set active filters count
+      if (msg[0] === "activeFilters" && typeof msg[1] === "number") {
+        const numFilters = Math.max(1, Math.min(16, msg[1])); // Limit to reasonable range
+        node.attributes["activeFilters"] = numFilters;
+        
+        // Ensure we have enough filters
+        for (let i = 0; i < numFilters; i++) {
+          custom.ensureFilterExists(i);
+        }
+        
+        // Update UI
+        if (node.onNewValue) {
+          node.onNewValue({
+            ...custom.getParams(),
+            allFilters: custom.getAllFilters(),
+            numFilters: numFilters
+          });
+        }
+        
+        return [["activeFilters", numFilters]];
+      }
+      
+      // Set active filter index
+      if (msg[0] === "activeFilter" && typeof msg[1] === "number") {
+        const filterIndex = Math.max(0, Math.min(Number(node.attributes["activeFilters"]) - 1, msg[1]));
+        custom.setActiveFilter(filterIndex);
+        return [["activeFilter", filterIndex]];
+      }
+      
+      // Handle filter type setting
       if (msg[0] === "type" && typeof msg[1] === "string") {
         const filterType = msg[1] as FilterType;
         if (
@@ -155,31 +279,47 @@ export const filtergraph = (node: ObjectNode) => {
             filterType,
           )
         ) {
-          console.log("setting filtertype", filterType);
-          custom.setFilterType(filterType);
-          // onNewValue is called in setFilterType via updateValue
-          return [["type", filterType]];
+          // Check if a specific filter index was provided
+          const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
+          custom.setFilterType(filterType, filterIndex);
+          
+          // Return the applied changes
+          const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
+          return [["type", filterType, appliedIndex]];
         }
       }
 
+      // Handle cutoff setting
       if (msg[0] === "cutoff" && typeof msg[1] === "number") {
-        custom.setCutoff(msg[1]);
-        // onNewValue is called in setCutoff via updateValue
-        return [["cutoff", custom.cutoff]];
+        const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
+        custom.setCutoff(msg[1], filterIndex);
+        
+        const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
+        const appliedValue = custom.filters[appliedIndex].cutoff;
+        return [["cutoff", appliedValue, appliedIndex]];
       }
 
+      // Handle resonance setting
       if (msg[0] === "resonance" && typeof msg[1] === "number") {
-        custom.setResonance(msg[1]);
-        // onNewValue is called in setResonance via updateValue
-        return [["resonance", custom.resonance]];
+        const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
+        custom.setResonance(msg[1], filterIndex);
+        
+        const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
+        const appliedValue = custom.filters[appliedIndex].resonance;
+        return [["resonance", appliedValue, appliedIndex]];
       }
 
+      // Handle gain setting
       if (msg[0] === "gain" && typeof msg[1] === "number") {
-        custom.setGain(msg[1]);
-        // onNewValue is called in setGain via updateValue
-        return [["gain", custom.gain]];
+        const filterIndex = typeof msg[2] === "number" ? msg[2] : undefined;
+        custom.setGain(msg[1], filterIndex);
+        
+        const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
+        const appliedValue = custom.filters[appliedIndex].gain;
+        return [["gain", appliedValue, appliedIndex]];
       }
 
+      // Return all parameters
       if (msg[0] === "getparams") {
         return outputAllParams();
       }
