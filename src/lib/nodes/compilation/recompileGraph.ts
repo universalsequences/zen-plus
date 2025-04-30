@@ -2,7 +2,7 @@ import { OperatorContextType } from "../context";
 import { PatchType, type Message, type ObjectNode, type Patch, type SubPatch } from "../types";
 import { recompileGraphTopological } from "./recompileGraphTopological";
 
-const debug = true;
+const debug = false;
 const dlog = (...x: any[]) => {
   if (debug) console.log(...x);
 };

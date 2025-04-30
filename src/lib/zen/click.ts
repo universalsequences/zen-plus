@@ -56,7 +56,6 @@ if (${clickVar} > 0) {
       const messageType = time !== undefined ? "schedule-set" : "memory-set";
 
       if (index !== undefined) {
-        console.log("sending single message=", block._idx + index, actualValue, time);
         sendSingleMessage(context, (block._idx as number) + index, messageType, actualValue, time);
       } else if (loopSize) {
         sendLoopContextMessage(context, block, messageType, loopSize, actualValue, time, index);

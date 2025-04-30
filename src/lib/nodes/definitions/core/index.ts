@@ -4,7 +4,7 @@ import { registryIndex } from "./registry";
 import { xy_control } from "./xy";
 import { hooks } from "./hooks/index";
 import { dedupe } from "./dedupe";
-import { keydown } from "./keys";
+import { keydown, keyboardTranspose } from "./keys";
 import { queue } from "./queue";
 import { currenttime, converttime } from "./time";
 import { select, route, filterselect } from "./select";
@@ -117,8 +117,5 @@ export const api: API = {
   "et.editor": et_editor,
   "instructions.performance": instructionsPerformance,
   midiout,
-  "midiout.1": (node) => midioutInlet(node, 1),
-  "midiout.2": (node) => midioutInlet(node, 2),
-  "midiout.3": (node) => midioutInlet(node, 3),
-  "midiout.4": (node) => midioutInlet(node, 4),
+  "keyboard.transpose": keyboardTranspose,
 };

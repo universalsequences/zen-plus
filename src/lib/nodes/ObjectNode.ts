@@ -1,4 +1,3 @@
-console.log("Object IMPL");
 import { registerUUID, uuid } from "@/lib/uuid/IDGenerator";
 import { parse } from "./objectNode/parse";
 import type { Definition } from "../docs/docs";
@@ -227,7 +226,6 @@ export class BaseNode implements Node {
   }
 
   connectAudioNode(connection: IOConnection) {
-    console.log("connect audio node called");
     const { destination, sourceOutlet, destinationInlet } = connection;
     // todo -- figure out why BaseNode is not being typed as ObjectNode
     const sourceNode = (this as unknown as ObjectNode).audioNode;
@@ -272,7 +270,6 @@ export class BaseNode implements Node {
         }
       }
     }
-    console.log("connect audio node finished");
   }
 
   disconnect(connection: IOConnection, compile = true, ignoreAudio?: boolean) {
@@ -895,7 +892,6 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
 
       return;
     }
-    //console.log(`%cmain thread object=[${this.text}](${message})`, "color: lime");
 
     if (this.definition && !this.definition.isHot) {
       const indexOf = this.inletIndexCache[inlet.id] || this.inlets.indexOf(inlet);

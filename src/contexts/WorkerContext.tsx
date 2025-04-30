@@ -693,7 +693,13 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
       }
 
       // If eligible for ring buffer and we can write to it
-      if (messageType && ringBufferRef.current.canWrite()) {
+      if (
+        messageType &&
+        ringBufferRef.current.canWrite() &&
+        (!Array.isArray(messageData) ||
+          messageData.length === 1 ||
+          typeof messageData[0] !== "object")
+      ) {
         const success = ringBufferRef.current.write(messageType, nodeId, messageData);
         if (success) {
           //console.log("successfully wrote ", messageType, nodeId, messageData);

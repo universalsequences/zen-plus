@@ -26,7 +26,6 @@ export const param = (
 
   let p: ParamGen = ssd();
   p.set = (val: number, time?: number, invocation?: number) => {
-    console.log("setting param invocation=", invocation, val);
     if (isNaN(val)) {
       val = 0;
     }

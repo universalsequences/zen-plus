@@ -62,9 +62,25 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
 
   let _param: ParamGen;
   return (x: Message): Statement[] => {
-    console.log("Param.name=%s message", name(), x);
     if (typeof x === "number") {
       object.storedMessage = x;
+
+      if (object.inlets[0]?.connections.length > 0) {
+        for (const connection of object.inlets[0].connections) {
+          const source = connection.source;
+          if ((source as ObjectNode).name === "attrui") {
+            (source as ObjectNode).storedMessage = `${name() as string} ${x}`;
+            (source as ObjectNode).onNewValue?.(x);
+            (source as ObjectNode).text = `attrui ${name() as string} ${x}`;
+            const custom = (source as ObjectNode).custom;
+            if (custom) {
+              custom.value = x;
+              (source as ObjectNode).updateWorkerState();
+              // need to send this value to the worker thread...
+            }
+          }
+        }
+      }
     }
 
     if (_param === undefined) {
@@ -106,7 +122,6 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
     }
     let isScheduleSet = Array.isArray(x) && typeof x[0] === "number";
     if (typeof x === "number" || isScheduleSet) {
-      console.log("array =", x);
       if (Array.isArray(x)) {
         if (isNaN(x[0] as number)) {
           return [];
@@ -117,12 +132,10 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
         const invocation = x[2] as number;
 
-        console.log("setting with invocation", value, time, invocation);
         _param.set!(value as number, time, invocation);
 
         object.storedParameterValue = value as number;
         object.storedMessage = value as number;
-        console.log("finished set");
       } else {
         if (isNaN(x as number)) {
           return [];
@@ -132,7 +145,6 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         _param.set!(value as number);
         object.storedParameterValue = value as number;
         object.storedMessage = value as number;
-        console.log("finished set");
       }
 
       return [];
@@ -256,9 +268,6 @@ doc("compressor", {
   numberOfOutlets: 1,
   description: "simple compressor, with sidechain compression",
   defaultValue: 0,
-  //saturation: '',
-  //makeup_gain: '',
-  //attack_mode: '',
 });
 
 export const compressor = (

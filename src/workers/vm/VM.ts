@@ -125,7 +125,6 @@ export class VM {
 
   syncWorkerStateWithMainThread() {
     // need to fetch all nodes with a "custom" -> getJSON() and send over in one large payload
-    console.log("sync worker state...");
     let payload: SyncWorkerState[] = [];
     for (const id in this.nodes) {
       const node = this.nodes[id];
