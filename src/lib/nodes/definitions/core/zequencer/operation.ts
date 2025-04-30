@@ -27,10 +27,10 @@ export type Operation<
   schema: TSchema;
   apply: (
     operation: v.InferOutput<TSchema>,
-    steps: GenericStepData[],
+    steps: GenericStepData[][],
     userDefinedSchema: StepDataSchema,
   ) => {
-    steps: GenericStepData[];
+    steps: GenericStepData[][];
     schema: StepDataSchema;
   };
 };

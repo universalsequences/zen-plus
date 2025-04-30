@@ -11,16 +11,17 @@ import type {
 
 export const deleteStep = (
   deleteSteps: DeleteStepMessage,
-  steps: GenericStepData[],
+  steps: GenericStepData[][],
   userDefinedSchema: StepDataSchema,
 ) => {
-  const stepsAfterDelete = [...steps];
+  // Create a deep copy of the steps to modify
+  const stepsAfterDelete = steps.map(voices => [...voices]);
 
   for (const stepNumber of deleteSteps.stepsToDelete) {
-    stepsAfterDelete[stepNumber] = getDefaultStep(
-      stepNumber,
-      userDefinedSchema,
-    );
+    if (stepNumber >= 0 && stepNumber < stepsAfterDelete.length) {
+      // Replace with a default step with a single voice
+      stepsAfterDelete[stepNumber] = [getDefaultStep(stepNumber, userDefinedSchema)];
+    }
   }
 
   return { steps: stepsAfterDelete, schema: userDefinedSchema };

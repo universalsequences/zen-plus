@@ -64,10 +64,18 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
 
   const updateUI = () => {
     if (node.onNewValues && node.steps) {
+      console.log("update ui=", node);
       const xyz = [lastStepNumber, node.steps];
       for (const id in node.onNewValues) {
         node.onNewValues[id]([lastStepNumber]);
       }
+    }
+
+    if (node.steps) {
+      console.log("node.steps=", node.steps);
+      node.custom.value = node.steps.map((voiceArray) =>
+        voiceArray.map((voice) => ({ ...voice })),
+      ) as Message[];
     }
   };
 
@@ -101,23 +109,30 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
   };
 
   return (message: Message) => {
+    console.log("message=", message);
     if (Array.isArray(message) && node.steps) {
-      const keys = Object.keys(message[0]);
-      if (Object.keys(node.steps[0]).every((x) => keys.includes(x))) {
-        node.steps = message as GenericStepData[];
+      // Handle receiving an array of steps
+      // This now expects a nested array structure for polyphonic data
+      if (Array.isArray(message[0])) {
+        // This is already in the correct format (array of arrays of GenericStepData)
+        node.steps = message as GenericStepData[][];
+        console.log("setting setps directly");
         updateUI();
         return [];
       }
     }
+
     // schema will come in the form of an object
     // so operation: ["schema", [{name: "transpose", min: 0, max: 12, default: 0}]
     const parsedSchema = v.safeParse(StepSchema, message);
+    console.log("parse schema=", parsedSchema);
     if (parsedSchema.success) {
       schema = parsedSchema.output;
       node.steps = setupSchema(schema, node.steps || [], node.attributes.length as number);
       node.stepsSchema = schema;
       updateUI();
       if (node.onNewStepSchema && node.stepsSchema) {
+        console.log("sending step schema=", node.stepsSchema);
         node.onNewStepSchema(node.stepsSchema);
       }
       return [];
@@ -137,14 +152,28 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
       lastStepNumber = stepNumber;
       updateUI();
 
-      if (node.steps[stepNumber].on) {
-        handleParameterLocks(node.steps[stepNumber].parameterLocks, tick.time);
-        return [
-          {
+      const stepVoices = node.steps[stepNumber];
+      if (!stepVoices || stepVoices.length === 0) {
+        return [];
+      }
+
+      // Check if any of the voices at this step are on
+      const activeVoices = stepVoices.filter((voice) => voice.on);
+
+      if (activeVoices.length > 0) {
+        // Process all active voices at this step
+        const results = activeVoices.map((voice) => {
+          // Process parameter locks for this voice
+          handleParameterLocks(voice.parameterLocks, tick.time);
+
+          // Return the step data with time
+          return {
             time: tick.time,
-            ...node.steps[stepNumber],
-          },
-        ];
+            ...voice,
+          };
+        });
+
+        return results;
       }
       return [];
     }
@@ -159,7 +188,13 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
         updateUI();
 
         if (node.custom && node.steps) {
-          node.custom.value = node.steps.map((x) => ({ ...x })) as Message[];
+          // Update the custom value to contain the full polyphonic steps data
+          console.log("node.step=", node.steps);
+          node.custom.value = node.steps.map((voiceArray) =>
+            voiceArray.map((voice) => ({ ...voice })),
+          ) as Message[];
+
+          // Only send the current step number to the UI
           (node.custom as MutableValue).updateMainThread([
             { nodeId: node.id, value: [lastStepNumber] },
           ]);

@@ -95,6 +95,7 @@ export const Step: React.FC<{
         name: "duration",
         stepNumber: stepEditingDuration,
         value: duration,
+        voiceIndex: 0, // Always edit the first voice for UI interaction
       });
     }
     if (selection) {
@@ -146,8 +147,11 @@ export const Step: React.FC<{
       if (step.on) {
         setSelectedSteps([]);
       }
+      
+      // Toggle operation now toggles the first voice at this step position
       node.receive(node.inlets[0], {
         stepNumberToToggle: stepNumber,
+        voiceIndex: 0 // Always target the first voice for UI interaction
       });
     },
     [

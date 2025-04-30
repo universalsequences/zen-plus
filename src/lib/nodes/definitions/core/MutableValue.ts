@@ -70,6 +70,7 @@ export class MutableValue implements SerializableCustom {
   }
 
   updateMainThread(onNewValues?: OnNewValues[]) {
+    console.log("mutate value changed=", this.value);
     const evaluation: VMEvaluation = {
       instructionsEvaluated: [],
       replaceMessages: [],

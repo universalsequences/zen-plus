@@ -10,7 +10,7 @@ import type {
 
 export const moveStep = (
   move: MoveStepMessage,
-  steps: GenericStepData[],
+  steps: GenericStepData[][],
   userDefinedSchema: StepDataSchema,
 ) => {
   const { fromStepNumber, toStepNumber, selectedSteps } = move;
@@ -25,24 +25,38 @@ export const moveStep = (
   const moveOffset = toStepNumber - fromStepNumber;
   const moveDirection = Math.sign(moveOffset);
 
+  // Create a deep copy of the steps array to work with
+  const movedSteps = steps.map(stepVoices => [...stepVoices]);
+  
   // Collect steps to be moved and remove them from their original positions
-  const movedSteps = steps.slice();
-  const stepsBeingMoved: GenericStepData[] = [];
+  const stepsBeingMoved: GenericStepData[][] = [];
+  
   for (const stepNumber of stepsToMove) {
-    stepsBeingMoved.push(movedSteps[stepNumber]);
-    movedSteps[stepNumber] = getDefaultStep(stepNumber, userDefinedSchema);
+    if (stepNumber >= 0 && stepNumber < movedSteps.length) {
+      // Store all voices for this step position
+      stepsBeingMoved.push([...movedSteps[stepNumber]]);
+      
+      // Replace with a default step (single voice)
+      movedSteps[stepNumber] = [getDefaultStep(stepNumber, userDefinedSchema)];
+    }
   }
 
   // Insert moved steps into their new positions
   for (let i = 0; i < stepsToMove.length; i++) {
     const originalStepNumber = stepsToMove[i];
     const newStepNumber = originalStepNumber + moveOffset;
-    const stepToInsert = stepsBeingMoved[i];
+    const stepVoicesToInsert = stepsBeingMoved[i];
 
     // Ensure we're not inserting out of bounds
-    if (newStepNumber >= 0 && newStepNumber < movedSteps.length) {
-      movedSteps[newStepNumber] = stepToInsert;
-      stepToInsert.stepNumber = newStepNumber;
+    if (newStepNumber >= 0 && newStepNumber < movedSteps.length && stepVoicesToInsert) {
+      // Update step numbers for all voices
+      const updatedVoices = stepVoicesToInsert.map(voice => ({
+        ...voice,
+        stepNumber: newStepNumber
+      }));
+      
+      // Replace the voices at the target position
+      movedSteps[newStepNumber] = updatedVoices;
     }
   }
 
@@ -55,11 +69,12 @@ export const moveStep = (
     );
 
     for (let i = startShift; i <= endShift; i++) {
-      if (
-        !stepsToMove.includes(i - moveOffset) &&
-        movedSteps[i].stepNumber !== i
-      ) {
-        movedSteps[i].stepNumber = i;
+      if (!stepsToMove.includes(i - moveOffset) && i >= 0 && i < movedSteps.length) {
+        // Update step number for all voices at this position
+        movedSteps[i] = movedSteps[i].map(voice => ({
+          ...voice,
+          stepNumber: i
+        }));
       }
     }
   }

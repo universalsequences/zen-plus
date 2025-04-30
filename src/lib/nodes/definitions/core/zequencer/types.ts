@@ -45,6 +45,7 @@ export const SetFieldForStepSchema = v.object({
   stepNumber: v.number(),
   name: v.string(),
   value: v.union([v.boolean(), v.number()]),
+  voiceIndex: v.optional(v.number()),
 });
 
 export type SetFieldForStepMessage = v.InferInput<typeof SetFieldForStepSchema>;
@@ -70,6 +71,7 @@ export type DeleteStepMessage = v.InferInput<typeof DeleteStepSchema>;
 // Define the schema for the toggle step message
 export const ToggleStepSchema = v.object({
   stepNumberToToggle: v.number(),
+  voiceIndex: v.optional(v.number()),
 });
 
 // Define the type for the toggle step message

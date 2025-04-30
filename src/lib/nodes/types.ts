@@ -247,7 +247,7 @@ export type ObjectNode = Positioned &
     signalOptions?: SignalOption[];
     slots?: Slot[];
     parentSlots?: ObjectNode;
-    steps?: GenericStepData[];
+    steps?: GenericStepData[][];  // Changed from GenericStepData[] to GenericStepData[][]
     stepsSchema?: StepDataSchema;
     updateSize: (size: Size) => void;
     controllingParamNode?: ObjectNode; // any param nodes that are controleld by this node
