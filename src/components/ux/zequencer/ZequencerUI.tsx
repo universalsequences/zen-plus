@@ -28,7 +28,6 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const { selectedNodes } = useSelection();
 
   const { node } = useAttributedByNameNode(objectNode, attributes.name as string, "zequencer.core");
-  console.log("node=", node);
   const currentStepNumber = Array.isArray(value) ? (value[0] as number) : 0;
 
   const selectedStepsRef = useRef(selectedSteps);
@@ -41,7 +40,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
         node.steps = node.custom.value as GenericStepData[][];
       } else {
         // Convert legacy format to polyphonic
-        node.steps = (node.custom.value as GenericStepData[]).map(step => [step]);
+        node.steps = (node.custom.value as GenericStepData[]).map((step) => [step]);
       }
     }
   }
@@ -56,12 +55,12 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   // Helper to find steps in the nested structure
   const findStepInPolyphonicStructure = (step: GenericStepData, steps: GenericStepData[][]) => {
     if (!steps) return false;
-    
+
     // Check each step position and its voices
     for (let i = 0; i < steps.length; i++) {
       const voices = steps[i];
       // Check if this step exists in any of the voices
-      if (voices && voices.some(voice => voice.stepNumber === step.stepNumber)) {
+      if (voices && voices.some((voice) => voice.stepNumber === step.stepNumber)) {
         return true;
       }
     }
@@ -70,12 +69,12 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
   useEffect(() => {
     if (!node?.steps || !selectedStepsRef.current) return;
-    
+
     // Filter selected steps to only include those still present in the step data
-    const validSelectedSteps = selectedStepsRef.current.filter(
-      step => findStepInPolyphonicStructure(step, node.steps)
+    const validSelectedSteps = selectedStepsRef.current.filter((step) =>
+      findStepInPolyphonicStructure(step, node.steps),
     );
-    
+
     if (validSelectedSteps.length !== selectedStepsRef.current.length) {
       setSelectedSteps(validSelectedSteps.length > 0 ? validSelectedSteps : null);
     }
@@ -107,7 +106,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     if (selection && node?.steps) {
       // Get the first voice from each step position in the selection range
       const selectedVoices: GenericStepData[] = [];
-      
+
       for (let i = selection.fromStepNumber; i <= selection.toStepNumber; i++) {
         if (i >= 0 && i < node.steps.length) {
           const voices = node.steps[i];
@@ -117,10 +116,10 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
           }
         }
       }
-      
+
       setSelectedSteps(selectedVoices.length > 0 ? selectedVoices : null);
     }
-    
+
     setStepEditingDuration(null);
     setStepNumberMoving(null);
     setSelection(null);
@@ -161,19 +160,22 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const [stepEditingDuration, setStepEditingDuration] = useState<number | null>(null);
 
   // Helper to find step numbers in polyphonic structure
-  const findStepNumbersInPolyphonicSteps = (steps: GenericStepData[], allSteps: GenericStepData[][]) => {
+  const findStepNumbersInPolyphonicSteps = (
+    steps: GenericStepData[],
+    allSteps: GenericStepData[][],
+  ) => {
     const stepNumbers: number[] = [];
-    
+
     for (const step of steps) {
       for (let i = 0; i < allSteps.length; i++) {
         const voices = allSteps[i];
-        if (voices && voices.some(voice => voice.stepNumber === step.stepNumber)) {
+        if (voices && voices.some((voice) => voice.stepNumber === step.stepNumber)) {
           stepNumbers.push(i);
           break;
         }
       }
     }
-    
+
     return stepNumbers;
   };
 
@@ -182,11 +184,11 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
       if (!selectedSteps || !node?.steps || !selectedSteps.length) {
         return;
       }
-      
+
       if (e.key === "Backspace") {
         // Find all step positions that contain selected steps
         const stepsToDelete = findStepNumbersInPolyphonicSteps(selectedSteps, node.steps);
-        
+
         if (stepsToDelete.length > 0) {
           node.receive(node.inlets[0], {
             stepsToDelete,
@@ -198,7 +200,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
         const stepNumbers = selectedSteps.map((x) => x.stepNumber);
         const fromStepNumber = Math.min(...stepNumbers);
         const toStepNumber = fromStepNumber - 1;
-        
+
         node.receive(node.inlets[0], {
           fromStepNumber,
           toStepNumber,
@@ -210,7 +212,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
         const stepNumbers = selectedSteps.map((x) => x.stepNumber);
         const fromStepNumber = Math.min(...stepNumbers);
         const toStepNumber = fromStepNumber + 1;
-        
+
         node.receive(node.inlets[0], {
           fromStepNumber,
           toStepNumber,
@@ -220,7 +222,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
         e.preventDefault();
         // Use step numbers from the selected steps
         const stepNumbers = selectedSteps.map((x) => x.stepNumber);
-        
+
         node.receive(node.inlets[0], {
           stepsToLegato: stepNumbers,
         });

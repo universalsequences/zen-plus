@@ -57,6 +57,11 @@ export const moveStep = (
       
       // Replace the voices at the target position
       movedSteps[newStepNumber] = updatedVoices;
+      
+      // Ensure the first voice has the 'on' property set to true for visibility
+      if (updatedVoices.length > 0) {
+        updatedVoices[0].on = true;
+      }
     }
   }
 

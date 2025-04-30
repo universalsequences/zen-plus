@@ -60,13 +60,30 @@ export const Step: React.FC<{
       if (!lockedMode) {
         return;
       }
+
       down.current = true;
-      if (!e.metaKey && step.on) {
+
+      // If the user is starting a drag operation (not a selection with metaKey)
+      if (
+        !e.metaKey &&
+        (step.on || (node.steps && node.steps[stepNumber] && node.steps[stepNumber].length > 0))
+      ) {
+        // Check if this step exists in node.steps
+        const currentStepVoices = node.steps?.[stepNumber];
+
+        // Get the first voice from the current step
+        const currentStep =
+          currentStepVoices && currentStepVoices.length > 0 ? currentStepVoices[0] : step;
+
+        // Set the stepNumber to track for movement
         setStepNumberMoving(stepNumber);
+
+        // Select this step if it's not already selected
         if (!isSelected) {
-          setSelectedSteps([step]);
+          setSelectedSteps([currentStep]);
         }
       } else {
+        // Starting a selection
         setSelection({
           fromStepNumber: stepNumber,
           toStepNumber: stepNumber,
@@ -76,6 +93,7 @@ export const Step: React.FC<{
     [
       lockedMode,
       step,
+      node,
       selectPatch,
       setStepNumberMoving,
       setSelection,
@@ -104,12 +122,28 @@ export const Step: React.FC<{
         toStepNumber: stepNumber,
       });
     } else if (stepNumberMoving !== null && stepNumberMoving !== stepNumber) {
+      // Execute the move operation
       node.receive(node.inlets[0], {
         fromStepNumber: stepNumberMoving,
         toStepNumber: stepNumber,
         selectedSteps: selectedSteps?.map((x) => x.stepNumber) || [],
       });
+
+      // Update the step being moved to the new position
       setStepNumberMoving(stepNumber);
+
+      // Give a longer delay to allow the move operation to complete and state to return from worker thread
+      setTimeout(() => {
+        // Get the step at the new position after the move operation
+        const updatedSteps = node.steps;
+        if (updatedSteps && updatedSteps[stepNumber] && updatedSteps[stepNumber].length > 0) {
+          const newStep = updatedSteps[stepNumber][0]; // Always use the first voice
+          if (newStep && newStep.on) {
+            setSelectedSteps([newStep]);
+          }
+        }
+      }, 20); // Increased delay to 50ms to account for cross-thread communication
+
       setStepMoved(true);
     }
   }, [
@@ -123,6 +157,7 @@ export const Step: React.FC<{
     stepNumber,
     setStepNumberMoving,
     setStepMoved,
+    setSelectedSteps,
   ]);
 
   const toggle = useCallback(
@@ -147,11 +182,11 @@ export const Step: React.FC<{
       if (step.on) {
         setSelectedSteps([]);
       }
-      
+
       // Toggle operation now toggles the first voice at this step position
       node.receive(node.inlets[0], {
         stepNumberToToggle: stepNumber,
-        voiceIndex: 0 // Always target the first voice for UI interaction
+        voiceIndex: 0, // Always target the first voice for UI interaction
       });
     },
     [
