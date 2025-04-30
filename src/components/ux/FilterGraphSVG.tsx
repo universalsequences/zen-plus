@@ -27,7 +27,7 @@ const computeFrequencyResponse = (
   // Filter response calculations with proper curve shapes
   switch (filterType) {
     case "lowpass": {
-      // Emulate Ableton's 24 dB/octave lowpass filter with sharper transitions
+      // Emulate Ableton's 24 dB/octave lowpass filter with even steeper transitions
       const octaves = logF - logCutoff;
 
       // Normalize resonance to Q factor (range: 0.1 to 20)
@@ -36,26 +36,25 @@ const computeFrequencyResponse = (
       // Frequency ratio (ω/ωc)
       const w = Math.pow(10, octaves);
 
-      // Adjust Q to create a sharper resonance effect
-      const effectiveQ = q * (1 + q / 10); // Amplify Q's effect for sharper peaks
+      // Amplify Q's effect for sharper peaks and steeper transitions
+      const effectiveQ = q * (1 + q * 10); // Stronger Q scaling for high resonance
 
-      // 4-pole lowpass filter transfer function with sharper transitions
-      // Mimic a Chebyshev-like response for steeper cutoff
-      const rippleFactor = 1 + (q / 20) * 0.5; // Slight ripple for steeper transition
+      // Introduce a sharper cutoff effect by increasing the filter order
+      const steepnessFactor = 1 + (q / 20) * 12; // Increase steepness with Q
       const denominator = Math.sqrt(
         1.0 +
-          Math.pow(w, 4) * rippleFactor + // 4th-order term with ripple
-          (1.2 * Math.pow(w, 3)) / effectiveQ + // Adjusted damping term
-          (1.5 * Math.pow(w, 2)) / Math.pow(effectiveQ, 2), // Sharper resonance term
+          Math.pow(w, Math.pow(q, 0.5) * 6) * steepnessFactor + // Higher-order term for steeper rolloff
+          Math.pow(w, 4) * (1 + (q / 20) * 10.5) + // Adjusted 4th-order term
+          (10.5 * Math.pow(w, 3)) / effectiveQ + // Sharper damping term
+          (100 * (2.0 * Math.pow(w, 2))) / Math.pow(effectiveQ, 2), // Sharper resonance term
       );
 
       // Calculate raw magnitude
       let rawMagnitude = 1.0 / denominator;
 
-      // Add sharp resonance boost
-      // Narrower peak to match Ableton's focused resonance
-      const resonanceBoost = ((q - 0.1) / (20 - 0.1)) * 18; // Max 18 dB at Q=20
-      const peakFactor = Math.exp(-4 * Math.pow(octaves + 0.05, 2)); // Narrower, sharper peak
+      // Add very sharp resonance boost
+      const resonanceBoost = ((q - 0.1) / (20 - 0.1)) * 32; // Max 20 dB at Q=20
+      const peakFactor = Math.exp(-16 * Math.pow(octaves - 0.03, 2)); // Even narrower, sharper peak
       rawMagnitude *= Math.pow(10, (resonanceBoost * peakFactor) / 20);
 
       // Convert to dB
