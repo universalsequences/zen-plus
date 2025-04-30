@@ -14,6 +14,7 @@ import Preset from "./Preset";
 import FunctionUX from "./FunctionUX";
 import Divider from "./Divider";
 import FilterGraph from "./FilterGraph";
+import FilterGraphSVG from "./FilterGraphSVG";
 import GLCanvas from "./GLCanvas";
 import SVGCanvas from "./SVGCanvas";
 import Slider from "./Slider";
@@ -72,7 +73,7 @@ export const index: ComponentIndex = {
   knob: Knob,
   divider: Divider,
   waveform: Waveform,
-  filtergraph: FilterGraph,
+  filtergraph: FilterGraphSVG, // Using SVG version instead of canvas
   function: FunctionUX,
   button: Button,
   preset: Preset,
