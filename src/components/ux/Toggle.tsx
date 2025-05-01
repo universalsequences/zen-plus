@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ObjectNode } from "@/lib/nodes/types";
-import { Cross2Icon, PauseIcon, PlayIcon } from "@radix-ui/react-icons";
+import { CircleIcon, Cross2Icon, PauseIcon, PlayIcon } from "@radix-ui/react-icons";
 import { usePosition } from "@/contexts/PositionContext";
 import { useLocked } from "@/contexts/LockedContext";
 import { useValue } from "@/contexts/ValueContext";
@@ -26,6 +26,7 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
   }, [objectNode.custom, lockedMode, objectNode]);
 
   const isPlayIcon = objectNode.attributes.playIcon;
+  const isCircle = objectNode.attributes.circle;
   const { text, fillColor, strokeColor } = objectNode.attributes;
   return (
     <div
@@ -47,6 +48,11 @@ export const Toggle: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => 
     >
       {text !== "" ? (
         <span className="m-auto text-xs">{text}</span>
+      ) : isCircle ? (
+        <div
+          className="w-full h-full rounded-full"
+          style={{ backgroundColor: value ? (strokeColor as string) : "gray" }}
+        />
       ) : isPlayIcon ? (
         !value ? (
           <PlayIcon className="w-full h-full" color={strokeColor as string} />

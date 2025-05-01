@@ -7,7 +7,7 @@ import { dedupe } from "./dedupe";
 import { keydown, keyboardTranspose } from "./keys";
 import { queue } from "./queue";
 import { currenttime, converttime } from "./time";
-import { select, route, filterselect } from "./select";
+import { select, route, filterselect, messagefilter } from "./select";
 import { lisp } from "./lisp";
 import { dict, dict_get, dictpack } from "./json";
 import { toggle } from "./toggle";
@@ -120,4 +120,5 @@ export const api: API = {
   midiout,
   "keyboard.transpose": keyboardTranspose,
   filtergraph,
+  messagefilter,
 };

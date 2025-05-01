@@ -1,5 +1,6 @@
+import { publish } from "@/lib/messaging/queue";
 import { ObjectNode } from "../../ObjectNode";
-import { Message } from "../../types";
+import { Message, MessageObject } from "../../types";
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
 
@@ -76,13 +77,31 @@ export class FilterGraphValue extends MutableValue {
     this.updateValue();
   }
 
+  set value(x) {
+    if (x === undefined) {
+      return;
+    }
+    if (this.executing) return;
+    if (typeof x === "number" && Number.isNaN(x as number)) {
+      return;
+    }
+    publish("statechanged", {
+      node: this.objectNode,
+      state: x,
+    });
+
+    this._value = x;
+    this.filters = x as Filter[];
+    console.log("setting values", x);
+
+    this.updateMainThread();
+  }
+
   getJSON() {
-    console.log("get json filters=", this.filters);
-    return this.filters;
+    return this.filters.map((x) => ({ ...x }));
   }
 
   fromJSON(x: any) {
-    console.log("from json=", x);
     if (Array.isArray(x)) {
       this.filters = x;
     }
@@ -129,12 +148,13 @@ export class FilterGraphValue extends MutableValue {
 
   private updateValue() {
     // This triggers the state change notification
-    this.value = this.value + 1;
+    this.value = this.getAllFilters();
 
     // Notify UX component about parameter changes
     if (this.objectNode.onNewValue) {
-      this.objectNode.onNewValue(this.getParams());
+      this.objectNode.onNewValue(this.getAllFilters());
     }
+    this.updateMainThread(undefined, this.getAllFilters());
   }
 
   getParams(): FilterParams {
@@ -145,7 +165,7 @@ export class FilterGraphValue extends MutableValue {
   }
 
   getAllFilters(): Filter[] {
-    return this.filters;
+    return this.filters.map((x) => ({ ...x }));
   }
 
   getNumFilters(): number {
@@ -169,8 +189,9 @@ export const filtergraph = (node: ObjectNode) => {
   // Make the node resizable with default size
   node.needsLoad = true;
   node.isResizable = true;
-  node.skipCompilation = true;
-  node.needsMainThread = true;
+  node.needsUX = true;
+  //node.skipCompilation = true;
+  //node.needsMainThread = true;
   if (!node.size) {
     node.size = { width: 200, height: 100 };
   }
@@ -253,7 +274,26 @@ export const filtergraph = (node: ObjectNode) => {
   return (msg: Message) => {
     if (msg === "bang") {
       // Output current parameter values when banged
-      return outputAllParams();
+      return custom.getAllFilters();
+    }
+
+    if (Array.isArray(msg) && typeof msg[0] === "object") {
+      console.log("filtergraph received object fromJSON", msg);
+      custom.fromJSON(msg);
+      /// note: this is being called by
+      /*
+      if (node.onNewValue) {
+        node.onNewValue({
+          ...custom.getParams(),
+          allFilters: custom.getAllFilters(),
+          numFilters: 1,
+        });
+      }
+      */
+      custom.updateMainThread(undefined, custom.getAllFilters(), custom.getAllFilters());
+
+      // we are setting the entire filter
+      return custom.getAllFilters();
     }
 
     if (typeof msg === "string") {
@@ -309,7 +349,7 @@ export const filtergraph = (node: ObjectNode) => {
 
           // Return the applied changes
           const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
-          return [["type", filterType, appliedIndex]];
+          return custom.getAllFilters();
         }
       }
 
@@ -320,7 +360,7 @@ export const filtergraph = (node: ObjectNode) => {
 
         const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
         const appliedValue = custom.filters[appliedIndex].cutoff;
-        return [["cutoff", appliedValue, appliedIndex]];
+        return custom.getAllFilters();
       }
 
       // Handle resonance setting
@@ -330,7 +370,7 @@ export const filtergraph = (node: ObjectNode) => {
 
         const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
         const appliedValue = custom.filters[appliedIndex].resonance;
-        return [["resonance", appliedValue, appliedIndex]];
+        return custom.getAllFilters();
       }
 
       // Handle gain setting
@@ -340,12 +380,12 @@ export const filtergraph = (node: ObjectNode) => {
 
         const appliedIndex = filterIndex !== undefined ? filterIndex : custom.activeFilterIndex;
         const appliedValue = custom.filters[appliedIndex].gain;
-        return [["gain", appliedValue, appliedIndex]];
+        return custom.getAllFilters();
       }
 
       // Return all parameters
       if (msg[0] === "getparams") {
-        return outputAllParams();
+        return custom.getAllFilters();
       }
     }
 

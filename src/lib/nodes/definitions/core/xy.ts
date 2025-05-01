@@ -45,9 +45,7 @@ export class XYControl {
     }));
   }
 
-  set value(v) {
-    console.log("xy contorl value=", v);
-  }
+  set value(v) {}
 
   get value() {
     return this.points;
@@ -75,6 +73,7 @@ doc("xy.control", {
 export const xy_control = (node: ObjectNode) => {
   node.skipCompilation = true;
   node.needsMainThread = true;
+  node.needsUX = true;
   node.isResizable = true;
   if (!node.size) {
     node.size = { width: 200, height: 200 };

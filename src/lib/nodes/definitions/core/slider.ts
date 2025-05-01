@@ -11,6 +11,8 @@ doc("slider", {
 
 export const slider = (node: ObjectNode) => {
   node.needsLoad = true;
+  node.skipCompilation = true;
+  node.needsMainThread = true;
   node.isResizable = true;
 
   if (!node.size) {

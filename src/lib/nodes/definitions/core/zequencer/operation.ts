@@ -21,9 +21,7 @@ import { multiplyPatternLength } from "./multiplyPatternLength";
 import { legatoSteps } from "./legatoSteps";
 
 // Define a generic operation type
-export type Operation<
-  TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
-> = {
+export type Operation<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>> = {
   schema: TSchema;
   apply: (
     operation: v.InferOutput<TSchema>,
@@ -62,22 +60,13 @@ export const operationsRegistry = [
     schema: LegatoStepsSchema,
     apply: legatoSteps,
   },
-] as const as readonly Operation<
-  v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>
->[];
+] as const as readonly Operation<v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>[];
 
 type OperationsRegistry = typeof operationsRegistry;
 
 function handleOperationImpl<
-  T extends readonly Operation<
-    v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>
-  >[],
->(
-  registry: T,
-  message: Message,
-  steps: GenericStepData[],
-  stepDataSchema: StepDataSchema,
-) {
+  T extends readonly Operation<v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>[],
+>(registry: T, message: Message, steps: GenericStepData[][], stepDataSchema: StepDataSchema) {
   for (const operation of registry) {
     const parsed = v.safeParse(operation.schema, message);
     if (parsed.success) {
@@ -94,13 +83,8 @@ function handleOperationImpl<
 
 export const handleOperation = (
   message: Message,
-  steps: GenericStepData[],
+  steps: GenericStepData[][],
   stepDataSchema: StepDataSchema,
 ) => {
-  return handleOperationImpl(
-    operationsRegistry,
-    message,
-    steps,
-    stepDataSchema,
-  );
+  return handleOperationImpl(operationsRegistry, message, steps, stepDataSchema);
 };

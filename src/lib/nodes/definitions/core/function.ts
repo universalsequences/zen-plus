@@ -2,6 +2,7 @@ import { ListPool } from "@/lib/lisp/ListPool";
 import { doc } from "./doc";
 import { publish } from "@/lib/messaging/queue";
 import type { AttributeValue, Message, ObjectNode } from "@/lib/nodes/types";
+import { VMEvaluation } from "@/workers/vm/VM";
 
 export interface Point {
   x: number;
@@ -11,19 +12,27 @@ export interface Point {
 
 export class FunctionEditor {
   points: Point[];
-  objectNode?: ObjectNode;
+  objectNode: ObjectNode;
   updates: number;
-  value: Message;
+  _value: Message;
   adsr: boolean;
   listPool: ListPool;
 
-  constructor(objectNode?: ObjectNode) {
+  constructor(objectNode: ObjectNode) {
     this.objectNode = objectNode;
     this.points = [];
     this.updates = 0;
-    this.value = 0;
+    this._value = 0;
     this.adsr = false;
     this.listPool = new ListPool();
+  }
+
+  get value() {
+    return this._value;
+  }
+
+  set value(x: Message) {
+    this.fromJSON(x);
   }
 
   getJSON() {
@@ -45,6 +54,34 @@ export class FunctionEditor {
       this.objectNode.patch.onNewMessage(this.objectNode.id, this.updates++);
     }
     this.update();
+    this.updateMainThread();
+  }
+
+  updateMainThread() {
+    const evaluation: VMEvaluation = {
+      instructionsEvaluated: [],
+      replaceMessages: [],
+      objectsEvaluated: [],
+      mainThreadInstructions: [],
+      optimizedMainThreadInstructions: [],
+      onNewValue: [
+        {
+          nodeId: this.objectNode.id,
+          value: this.getJSON(),
+        },
+      ],
+      onNewSharedBuffer: [],
+      mutableValueChanged: [
+        {
+          nodeId: this.objectNode.id,
+          value: this.getJSON(),
+        },
+      ],
+      onNewValues: [],
+      attributeUpdates: [],
+      onNewStepSchema: [],
+    };
+    this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation, false);
   }
 
   addBreakPoint(x: Point) {
@@ -203,8 +240,6 @@ doc("function", {
   ],
 });
 export const function_editor = (node: ObjectNode) => {
-  node.skipCompilation = true;
-  node.needsMainThread = true;
   if (!node.custom) {
     node.custom = new FunctionEditor(node);
   }
@@ -245,9 +280,9 @@ export const function_editor = (node: ObjectNode) => {
   const collect = () => {
     const editor = node.custom as FunctionEditor;
     if (editor.adsr) {
-      const ed1 = new FunctionEditor();
+      const ed1 = new FunctionEditor(node);
       ed1.points = editor.points.slice(0, 3);
-      const ed2 = new FunctionEditor();
+      const ed2 = new FunctionEditor(node);
       ed2.points = editor.points.slice(3);
       const attackDecay = ed1.points[2].x;
       const release = 1000 - ed2.points[0].x;
@@ -301,6 +336,12 @@ export const function_editor = (node: ObjectNode) => {
       editor.updateUX();
       return collect();
     },
+    "add-break-point": (x: number, y: number) => {
+      const editor = node.custom as FunctionEditor;
+      editor.addBreakPoint({ x, y });
+      editor.updateUX();
+      return collect();
+    },
     curve: (idx: number, curve: number) => {
       const editor = node.custom as FunctionEditor;
       if (editor.points[idx]) {
@@ -326,6 +367,12 @@ export const function_editor = (node: ObjectNode) => {
         if (Number.isNaN(a) || Number.isNaN(b)) return [];
         return op(a, b);
       }
+    } else if (Array.isArray(msg) && msg[0] === "set-points") {
+      console.log("object set points=", msg.slice(1));
+      const editor = node.custom as FunctionEditor;
+      editor.points = msg.slice(1) as Point[];
+      editor.updateUX();
+      return collect();
     }
     if (msg === "bang") {
       return collect();

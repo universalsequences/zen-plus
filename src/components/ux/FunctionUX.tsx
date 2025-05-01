@@ -3,13 +3,15 @@ import { useLocked } from "@/contexts/LockedContext";
 import { useMessage } from "@/contexts/MessageContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import { usePosition } from "@/contexts/PositionContext";
-import { ObjectNode } from "@/lib/nodes/types";
+import { Coordinate, ObjectNode } from "@/lib/nodes/types";
 import { Point, FunctionEditor } from "@/lib/nodes/definitions/core/function";
 import { usePatchSelector } from "@/hooks/usePatchSelector";
+import { useValue } from "@/contexts/ValueContext";
 
 const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let ref = useRef<SVGSVGElement | null>(null);
   const { sizeIndex } = usePosition();
+  const { value } = useValue();
   const { selectPatch } = usePatchSelector();
   let { width, height } = sizeIndex[objectNode.id] || {
     width: 300,
@@ -19,6 +21,20 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let [points, setPoints] = useState(editor.points);
   useSelection();
   let { lockedMode } = useLocked();
+  const addedPoint = useRef(false);
+
+  useEffect(() => {
+    if (editor.points) {
+      console.log("setting points=", value);
+      setPoints(editor.points as Coordinate[]);
+
+      if (addedPoint.current) {
+        let point = editor.points[editor.points.length - 1];
+        setEditing(point);
+        addedPoint.current = false;
+      }
+    }
+  }, [editor.points]);
 
   let { messages } = useMessage();
   let message = messages[objectNode.id];
@@ -60,10 +76,10 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       x = 1000 * (x / width);
       y = 1 - y / height;
 
-      editor.addBreakPoint({ x, y });
-      let point = editor.points[editor.points.length - 1];
+      objectNode.receive(objectNode.inlets[0], `add-break-point ${x} ${y}`);
+      addedPoint.current = true;
+      //editor.addBreakPoint({ x, y });
       setPoints([...editor.points]);
-      setEditing(point);
     },
     [setPoints, setEditing, width, height],
   );
@@ -143,17 +159,23 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           editing.x = x;
           editing.y = y;
         }
+        console.log("ux. setting points=", editor.points);
+        objectNode.receive(objectNode.inlets[0], ["set-points", ...editor.points]);
         setPoints([...editor.points]);
       } else if (curveEdit) {
         if (editor.adsr && editor.points.indexOf(curveEdit) === 2) {
           editor.points[2].y = y;
           editor.points[3].y = y;
+          console.log("ux. setting points=", editor.points);
+          objectNode.receive(objectNode.inlets[0], ["set-points", ...editor.points]);
           setPoints([...editor.points]);
         } else {
           curveEdit.c = -1 + y * 2;
           if (Math.abs(curveEdit.c) < 0.05) {
             curveEdit.c = 0;
           }
+          console.log("ux. setting points=", editor.points);
+          objectNode.receive(objectNode.inlets[0], ["set-points", ...editor.points]);
           setPoints([...editor.points]);
         }
       }

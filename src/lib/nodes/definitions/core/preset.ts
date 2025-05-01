@@ -101,7 +101,7 @@ export class PresetManager {
     this.presets[this.currentPreset] = { ...oldPreset };
   }
 
-  switchToPreset(presetNumber: number) {
+  switchToPreset(presetNumber: number, voice?: number) {
     const oldPreset = this.currentPreset;
     if (oldPreset !== undefined && this.buffer) {
       const hadPresets = Object.keys(this.presets[oldPreset]).length > 0;
@@ -207,7 +207,6 @@ export class PresetManager {
   }
 
   fromJSON(x: any, force?: boolean) {
-    console.log("preset from json called", x, force);
     if (x.presets) {
       this.serializedPresets = x.presets;
     }
@@ -281,6 +280,9 @@ export const preset = (object: ObjectNode) => {
         for (let i = 1; i < x.length; i++) {
           mgmt.deletePreset(i);
         }
+      } else if (typeof x === "object" && "voice" in x && "preset" in x) {
+        const { voice, preset } = x;
+        mgmt.switchToPreset(Math.round(preset as number), voice as number);
       }
     }
     return [];

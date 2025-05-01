@@ -129,7 +129,7 @@ let perfMonitoringActive = false;
 const PERF_MONITOR_INTERVAL = 1000; // 1s performance monitoring interval
 
 // sends one round of instructions evaluation to the main thread
-const sendEvaluationToMainThread = (data: VMEvaluation) => {
+const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
   const {
     mutableValueChanged,
     replaceMessages,
@@ -239,7 +239,9 @@ const sendEvaluationToMainThread = (data: VMEvaluation) => {
     }
   }
 
-  vm.clear();
+  if (clear) {
+    vm.clear();
+  }
 };
 
 vm.sendEvaluationToMainThread = sendEvaluationToMainThread;

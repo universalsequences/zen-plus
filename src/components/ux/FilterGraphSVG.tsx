@@ -327,8 +327,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   // Subscribe to value changes
   const { value } = useValue();
-  console.log("use value=", value);
-
   // Track all filters and number of active filters
   const [allFilters, setAllFilters] = useState<Filter[]>(custom.getAllFilters());
   const [numFilters, setNumFilters] = useState<number>(
@@ -354,7 +352,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
       numFilters?: number;
     };
 
-    console.log("value changed=", newParams);
     // Update the current filter parameters
     setFilterParams({
       type: newParams.type,
@@ -371,7 +368,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
     const allFilters = custom.getAllFilters();
 
-    console.log("all filters=", allFilters);
     // Update all filters if provided
     setAllFilters([...allFilters]);
 
@@ -380,8 +376,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
       setNumFilters(newParams.numFilters);
     }
   }, [value]);
-
-  console.log("filter params=", filterParams, allFilters);
 
   // Interaction state for dragging
   const [isDragging, setIsDragging] = useState(false);
@@ -406,7 +400,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   // Generate response curve paths for all active filters
   const responsePathsData = useMemo(() => {
-    console.log("response changed...");
     const paths: { path: string; filter: Filter; index: number }[] = [];
 
     // Generate a curve for each active filter
@@ -448,7 +441,6 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   // Calculate cutoff line and control point positions for each filter
   const filterPositions = useMemo(() => {
-    console.log("filters changing");
     return allFilters.slice(0, numFilters).map((filter, index) => {
       return {
         cutoffX: mapFromFrequency(filter.cutoff, width),

@@ -91,7 +91,7 @@ export class VM {
   // Performance tracking
   totalInstructionsEvaluated: number = 0;
 
-  sendEvaluationToMainThread?: (evaluation: VMEvaluation) => void;
+  sendEvaluationToMainThread?: (evaluation: VMEvaluation, clearState?: boolean) => void;
 
   sendWorkerStateToMainThread?: (payload: SyncWorkerState[]) => void;
 
@@ -111,7 +111,9 @@ export class VM {
     let o1 = (this.nodes[o.id] as ObjectNode) || new MockObjectNode(p);
     o1.onNewValue = (value) => this.onNewValue.push({ nodeId: o1.id, value: value });
     o1.onNewValues = {
-      1: (value) => this.onNewValues.push({ nodeId: o1.id, value: value }),
+      1: (value) => {
+        this.onNewValues.push({ nodeId: o1.id, value: value });
+      },
     };
     o1.onNewSharedBuffer = (value) => {
       this.newSharedBuffers.push({ nodeId: o1.id, sharedBuffer: value });

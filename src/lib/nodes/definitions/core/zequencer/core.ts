@@ -1,4 +1,4 @@
-import type { AttributeValue, Message, ObjectNode } from "@/lib/nodes/types";
+import type { AttributeValue, Message, MessageObject, ObjectNode } from "@/lib/nodes/types";
 import { doc } from "../doc";
 import { MutableValue } from "../MutableValue";
 import {
@@ -11,7 +11,7 @@ import {
   ParameterLock,
 } from "./types";
 import * as v from "valibot";
-import { setupSchema } from "./setupSchema";
+import { getDefaultStep, setupSchema } from "./setupSchema";
 import { handleOperation } from "./operation";
 import { getRootPatch } from "@/lib/nodes/traverse";
 
@@ -64,16 +64,13 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
 
   const updateUI = () => {
     if (node.onNewValues && node.steps) {
-      console.log("update ui=", node);
-      const xyz = [lastStepNumber, node.steps];
       for (const id in node.onNewValues) {
         node.onNewValues[id]([lastStepNumber]);
       }
     }
 
     if (node.steps) {
-      console.log("node.steps=", node.steps);
-      node.custom.value = node.steps.map((voiceArray) =>
+      (node.custom as MutableValue).value = node.steps.map((voiceArray) =>
         voiceArray.map((voice) => ({ ...voice })),
       ) as Message[];
     }
@@ -108,15 +105,81 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     }
   };
 
+  type NoteOn = {
+    type: "noteon";
+  } & {
+    [x: string]: number;
+  };
+  type NoteOff = {
+    type: "noteoff";
+  } & {
+    [x: string]: number;
+  };
+
+  let recordingNoteOn: {
+    [semitone: number]: number;
+  } = {};
+
+  const handleNoteOn = (noteon: NoteOn) => {
+    const stepData = node.steps?.[0][0];
+    if (stepData) {
+      for (const key in noteon) {
+        if (key in stepData) {
+          // we have a match
+          const num = noteon[key];
+          recordingNoteOn[num] = lastStepNumber || 0;
+        }
+      }
+    }
+  };
+
+  const handleNoteOff = (noteoff: NoteOff) => {
+    const stepData = node.steps?.[0][0];
+    if (stepData) {
+      for (const key in noteoff) {
+        if (key in stepData) {
+          // we have a match
+          const num = noteoff[key];
+          const stepNumber = recordingNoteOn[num];
+          const duration = Math.max(1, lastStepNumber - stepNumber);
+          if (node.stepsSchema) {
+            const stepData = getDefaultStep(stepNumber, node.stepsSchema);
+            stepData[key] = num;
+            stepData.on = true;
+            stepData["duration"] = duration;
+            if (node.steps?.[stepNumber]?.length === 1 && !node.steps[stepNumber][0].on) {
+              node.steps[stepNumber] = [stepData];
+            } else {
+              node.steps?.[stepNumber].push(stepData);
+            }
+          }
+          updateUI();
+        }
+      }
+    }
+  };
+
   return (message: Message) => {
-    console.log("message=", message);
+    if (message === "clear" && node.stepsSchema) {
+      node.steps = setupSchema(node.stepsSchema, [], node.attributes.length as number);
+      updateUI();
+      return [];
+    }
+    // handle recording
+    if (typeof message === "object" && (message as MessageObject).type === "noteon") {
+      handleNoteOn(message as NoteOn);
+      return [];
+    } else if (typeof message === "object" && (message as MessageObject).type === "noteoff") {
+      handleNoteOff(message as NoteOff);
+      return [];
+    }
+
     if (Array.isArray(message) && node.steps) {
       // Handle receiving an array of steps
       // This now expects a nested array structure for polyphonic data
       if (Array.isArray(message[0])) {
         // This is already in the correct format (array of arrays of GenericStepData)
         node.steps = message as GenericStepData[][];
-        console.log("setting setps directly");
         updateUI();
         return [];
       }
@@ -125,14 +188,12 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     // schema will come in the form of an object
     // so operation: ["schema", [{name: "transpose", min: 0, max: 12, default: 0}]
     const parsedSchema = v.safeParse(StepSchema, message);
-    console.log("parse schema=", parsedSchema);
     if (parsedSchema.success) {
       schema = parsedSchema.output;
       node.steps = setupSchema(schema, node.steps || [], node.attributes.length as number);
       node.stepsSchema = schema;
       updateUI();
       if (node.onNewStepSchema && node.stepsSchema) {
-        console.log("sending step schema=", node.stepsSchema);
         node.onNewStepSchema(node.stepsSchema);
       }
       return [];
@@ -173,7 +234,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
           };
         });
 
-        return results;
+        return [results];
       }
       return [];
     }

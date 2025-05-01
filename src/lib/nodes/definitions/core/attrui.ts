@@ -45,7 +45,7 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
       return [`${name()} ${value} ${time}`];
     }
     if (typeof _message === "number" && name()) {
-      const msg = `${name()} ${value()}`;
+      const msg = `${name()} ${_message}`;
       return [msg];
     }
     if (name() && value() !== undefined) {

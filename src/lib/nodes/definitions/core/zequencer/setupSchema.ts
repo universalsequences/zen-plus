@@ -21,13 +21,13 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
   }
 
   // Duplicate the pattern to fill the new length
-  for (let i = 0; i < length; i++) {
+  for (let i = steps.length; i < length; i++) {
     const sourceIndex = i % existingSteps.length;
     const sourceStepArray = existingSteps[sourceIndex] || [];
 
     if (sourceStepArray.length > 0) {
       // Clone the source steps for this position
-      const newStepArray: MyStep[] = sourceStepArray.map(sourceStep => {
+      const newStepArray: MyStep[] = sourceStepArray.map((sourceStep) => {
         const newStep: MyStep = {
           ...sourceStep,
           stepNumber: i,

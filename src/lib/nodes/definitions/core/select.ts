@@ -102,3 +102,21 @@ export const filterselect = (node: ObjectNode, ...messages: Lazy[]) => {
     return [];
   };
 };
+
+doc("messagefilter", {
+  numberOfInlets: 2,
+  numberOfOutlets: 1,
+  inletNames: ["msg", "control"],
+  description: "filters messages based on control",
+});
+
+export const messagefilter = (node: ObjectNode, control: Lazy) => {
+  node.branching = true;
+
+  return (msg: Message) => {
+    if (control()) {
+      return [msg];
+    }
+    return [];
+  };
+};

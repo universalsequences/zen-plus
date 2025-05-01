@@ -27,6 +27,9 @@ export const toggle = (node: ObjectNode) => {
   if (!node.attributes.playIcon) {
     node.attributes.playIcon = false;
   }
+  if (!node.attributes.circle) {
+    node.attributes.circle = false;
+  }
   if (!node.attributes.text) {
     node.attributes.text = "";
   }

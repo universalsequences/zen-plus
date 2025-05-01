@@ -158,6 +158,7 @@ export class RingBuffer {
    * Returns true if the message was written successfully
    */
   write(type: MessageType, nodeId: string, message?: any): boolean {
+    console.log("trying to write=", message);
     //console.log(`RingBuffer.write - type=${type}, nodeId=${nodeId}, direction=${this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN"}`);
 
     // Special cases for optimized message formats
@@ -918,8 +919,10 @@ export class RingBuffer {
         const encodedItems: ArrayBuffer[] = [];
 
         for (const item of value) {
+          console.log("encoing item=", item);
           const encodedItem = this.encodeValue(item);
           if (encodedItem) {
+            console.log("pushing encoded item=", encodedItem);
             encodedItems.push(encodedItem);
             totalSize += encodedItem.byteLength;
           }
@@ -1038,10 +1041,12 @@ export class RingBuffer {
           }
 
           const arrayLength = view.getUint32(offset + 1);
+          console.log("trying to dedcode value type array of arrayLength=", arrayLength);
           const result: any[] = [];
 
           // Check if this is a packed numeric array
           if (buffer.byteLength >= offset + 9 && arrayLength > 0) {
+            console.log("is packed numberic array");
             const elementSize = view.getUint32(offset + 5);
 
             if (elementSize === 8 && buffer.byteLength >= offset + 9 + arrayLength * 8) {
@@ -1055,8 +1060,10 @@ export class RingBuffer {
 
           // Generic array handling (slower)
           let currentOffset = offset + 5;
+          console.log("is generic array currentOffset=%s", buffer.byteLength);
           for (let i = 0; i < arrayLength && currentOffset < buffer.byteLength; i++) {
             const itemValue = this.decodeValue(buffer, currentOffset);
+            console.log("decoded value=", itemValue);
             result.push(itemValue);
 
             // Move to next item (this is inefficient and would need proper offset tracking)
@@ -1075,6 +1082,7 @@ export class RingBuffer {
               currentOffset += 5 + strLen;
             } else {
               // Can't determine size, break to avoid infinite loop
+              console.log("cant determine size...");
               break;
             }
           }

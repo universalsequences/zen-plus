@@ -272,16 +272,6 @@ export const evaluate = (
                 objectNode.instructionNodes = instruction.nodes;
               }
               register = objectNode.fn(inputMessage);
-              if (objectNode.name === "peek") {
-                console.log(
-                  "evaluating peek",
-                  objectNode.id,
-                  [...objectNode.arguments],
-                  inputMessage,
-                  [...register],
-                );
-              }
-
               objectsEvaluated?.push(objectNode);
             }
           }
@@ -295,9 +285,6 @@ export const evaluate = (
             node &&
             inletNumber !== undefined
           ) {
-            if (node.id === "66") {
-              console.log("storing in 66 outletNumber=%s", outletNumber, register[outletNumber]);
-            }
             if ((node as ObjectNode).arguments) {
               // store results in arguments (for inlets 1...) and inlet (for inlet 0)
               if (inletNumber > 0) {
