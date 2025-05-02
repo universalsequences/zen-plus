@@ -41,9 +41,12 @@ export class PresetManager {
   sharedBuffer?: SharedArrayBuffer;
   buffer?: Uint8Array;
   hydrated = true;
+  currentVoicePreset?: number;
+  voiceToPreset: Map<number, number>;
 
   constructor(object: ObjectNode) {
     this.objectNode = object;
+    this.voiceToPreset = new Map();
 
     this.presets = [];
     for (let i = 0; i < 64; i++) {
@@ -108,6 +111,10 @@ export class PresetManager {
       this.buffer[oldPreset] = hadPresets ? 1 : 0;
       this.buffer[presetNumber] = 2;
     }
+    if (voice !== undefined) {
+      this.currentVoicePreset = presetNumber;
+      this.voiceToPreset.set(voice, presetNumber);
+    }
     this.switching = true;
     let old = this.presets[this.currentPreset];
     let preset = this.presets[presetNumber];
@@ -166,6 +173,16 @@ export class PresetManager {
     this.switching = false;
   }
 
+  handleVoiceStateChange(stateChange: StateChange, presetNumber: number) {
+    const { node, state } = stateChange;
+
+    for (const [voice, preset] of this.voiceToPreset.entries()) {
+      if (preset === presetNumber) {
+        node.custom?.fromJSON(state, undefined, voice);
+      }
+    }
+  }
+
   listen() {
     subscribe("statechanged", (stateChange: Message) => {
       if (this.switching) {
@@ -185,6 +202,9 @@ export class PresetManager {
       let nodeId = _stateChange.node.id;
       if (this.presetNodes?.has(nodeId)) {
         this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
+        if (this.currentVoicePreset !== undefined) {
+          this.handleVoiceStateChange(_stateChange, this.currentVoicePreset);
+        }
         if (this.buffer && this.buffer[this.currentPreset] !== 2) {
           this.buffer[this.currentPreset] = 1;
         }

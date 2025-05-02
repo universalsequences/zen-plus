@@ -262,6 +262,7 @@ doc("function", {
   ],
 });
 export const function_editor = (node: ObjectNode) => {
+  node.branching = true;
   if (!node.custom) {
     node.custom = new FunctionEditor(node);
   }
@@ -378,7 +379,6 @@ export const function_editor = (node: ObjectNode) => {
   };
 
   return (msg: Message) => {
-    console.log("function.received=", msg);
     const editor = node.custom as FunctionEditor;
     if (typeof msg === "object" && "voice" in msg && "points" in msg) {
       const points = msg.points as Point[];
@@ -403,9 +403,6 @@ export const function_editor = (node: ObjectNode) => {
     } else if (Array.isArray(msg) && msg[0] === "set-points") {
       editor.points = msg.slice(1) as Point[];
       editor.updateUX();
-      return collect();
-    }
-    if (msg === "bang") {
       return collect();
     }
 

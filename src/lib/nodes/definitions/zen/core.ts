@@ -62,6 +62,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
 
   let _param: ParamGen;
   return (x: Message): Statement[] => {
+    let originalMessage = x;
     if (typeof x === "number") {
       object.storedMessage = x;
 
@@ -150,8 +151,6 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
         const invocation = x[2] as number;
 
-        if (invocation !== undefined) {
-        }
         _param.set!(value as number, time, invocation);
 
         object.storedParameterValue = value as number;

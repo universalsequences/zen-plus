@@ -46,6 +46,7 @@ doc("mc.voicer", {
 });
 
 export const mc_voicer = (node: ObjectNode) => {
+  // Default attribute settings
   if (node.attributes.chans === undefined) {
     node.attributes.chans = 6;
   }
@@ -63,15 +64,17 @@ export const mc_voicer = (node: ObjectNode) => {
   const voiceActivities: number[] = [];
   const freqToVoiceMap = new Map<number, number>(); // Maps frequencies to voice indexes
   const voiceToFreqMap = new Map<number, number>(); // Maps voice indexes to frequencies
+  const voiceToPresetMap = new Map<number, number | null>(); // Maps voice indexes to their current preset or null
   const chans = node.attributes.chans as number;
   const ctx = node.patch.audioContext;
   node.inlets[0].mc = true;
   node.inlets[0].chans = chans;
   node.outlets[0].connectionType = ConnectionType.CORE;
 
-  // Initialize voice activities array
+  // Initialize voice activities and preset mappings
   for (let i = 0; i < chans; i++) {
     voiceActivities[i] = 0;
+    voiceToPresetMap.set(i, null);
   }
 
   if (ctx) {
@@ -96,56 +99,54 @@ export const mc_voicer = (node: ObjectNode) => {
     setup();
   }
 
-  // Helper function to find the least active voice
-  const findLeastActiveVoice = (): number => {
-    let minActivity = -Infinity;
-    let minIndex = 0;
-
-    for (let i = 0; i < chans; i++) {
-      const diff = new Date().getTime() - voiceTimestamps[i];
-      if (diff > minActivity) {
-        minActivity = diff;
-        minIndex = i;
-      }
-    }
-
-    return minIndex;
-  };
-
   const voiceTimestamps: number[] = new Array(chans).fill(0);
 
-  return (_message: Message) => {
-    // ensure the connection is of type CORE (simply for UI syntax sugar)
-    node.outlets[0].connectionType = ConnectionType.CORE;
+  // Helper function to find the least active voice among a list of voices
+  const findLeastActiveVoice = (voices: number[]): number => {
+    let maxDiff = -Infinity;
+    let chosenVoice = voices[0];
+    const now = new Date().getTime();
+    for (const i of voices) {
+      const diff = now - voiceTimestamps[i];
+      if (diff > maxDiff) {
+        maxDiff = diff;
+        chosenVoice = i;
+      }
+    }
+    return chosenVoice;
+  };
 
-    // only respond to object messages
+  return (_message: Message) => {
+    node.outlets[0].connectionType = ConnectionType.CORE;
     if (typeof _message !== "object") return [];
     const message = _message as MessageObject;
-
-    // extract the frequency from the message
-    const frequency = (message as MessageObject)[node.attributes.field as string] as number;
-
-    // list of polyphony counts per "preset". for example [1,2,3,4] preset=0 is monophonic, preset=1 has 2 voice polyphony, preset=3 hsa 3 voice ...
-    const polyphony =
-      node.attributes.polyphony === "" ? [] : (node.attributes.polyphony as number[]);
-    console.log("polyphony = ", polyphony);
-
-    // current preset selected, if any
-    // if selected, then we allocate voices to that preset based on polyphony trying to subdivide the available
-    // voices
-    const preset = node.attributes.preset === "" ? undefined : (node.attributes.preset as number);
-    console.log("preset = ", preset);
+    const frequency = message[node.attributes.field as string] as number;
+    const polyphony = (node.attributes.polyphony as number[]) || [];
+    const preset = node.attributes.preset as number | undefined;
+    const usePolyphony =
+      polyphony.length > 0 && preset !== undefined && preset >= 0 && preset < polyphony.length;
+    let K_P: number;
+    if (usePolyphony) {
+      K_P = polyphony[preset];
+    } else {
+      K_P = chans; // Default to total number of voices
+    }
 
     if (message.type === "noteoff") {
       if (freqToVoiceMap.has(frequency)) {
         const voice = freqToVoiceMap.get(frequency) as number;
         const timestamp = voiceTimestamps[voice];
+        /*
         setTimeout(() => {
-          const newTimestamp = voiceTimestamps[voice];
-          if (timestamp === newTimestamp) {
+          if (voiceTimestamps[voice] === timestamp) {
             freqToVoiceMap.delete(frequency);
+            voiceToFreqMap.delete(voice);
+            if (!usePolyphony) {
+              voiceToPresetMap.set(voice, null);
+            }
           }
         }, 100);
+        */
         return [
           {
             ...message,
@@ -157,39 +158,72 @@ export const mc_voicer = (node: ObjectNode) => {
       return [];
     }
 
+    // Note-on handling
     let voiceChosen: number;
+    const now = new Date().getTime();
 
-    // Check if this frequency is already mapped to a voice
     if (freqToVoiceMap.has(frequency)) {
-      // Reuse the voice that's already playing this frequency
       voiceChosen = freqToVoiceMap.get(frequency)!;
     } else {
-      // Find the first inactive voice
-      const now = new Date().getTime();
-      const inactiveVoice = voiceActivities.findIndex(
-        (activity, i) => activity === 0 && now - voiceTimestamps[i] > 20,
-      );
+      if (usePolyphony) {
+        // Get voices currently assigned to the preset
+        const voicesForP = Array.from({ length: chans }, (_, i) => i).filter(
+          (i) => voiceToPresetMap.get(i) === preset,
+        );
 
-      if (inactiveVoice !== -1) {
-        // Use the first inactive voice
-        voiceChosen = inactiveVoice;
-      } else {
-        // If all voices are active, use the least active voice
-        voiceChosen = findLeastActiveVoice();
+        if (K_P === 1 && voicesForP.length >= 1) {
+          // Monophonic case: reuse the existing voice
+          voiceChosen = voicesForP[0];
+        } else if (voicesForP.length < K_P) {
+          // Can allocate a new voice
+          const freeVoices = Array.from({ length: chans }, (_, i) => i).filter(
+            (i) => voiceToPresetMap.get(i) === null,
+          );
+          const inactiveFreeVoices = freeVoices.filter(
+            (i) => voiceActivities[i] === 0 && now - voiceTimestamps[i] > 20,
+          );
 
-        // Remove the old frequency mapping for this voice
-        if (voiceToFreqMap.has(voiceChosen)) {
-          const oldFreq = voiceToFreqMap.get(voiceChosen)!;
-          freqToVoiceMap.delete(oldFreq);
+          if (inactiveFreeVoices.length > 0) {
+            voiceChosen = inactiveFreeVoices[0];
+          } else if (freeVoices.length > 0) {
+            voiceChosen = findLeastActiveVoice(freeVoices);
+          } else {
+            // No free voices, steal from other presets
+            const otherVoices = Array.from({ length: chans }, (_, i) => i).filter(
+              (i) => voiceToPresetMap.get(i) !== preset,
+            );
+            voiceChosen = findLeastActiveVoice(otherVoices);
+          }
+        } else {
+          // Polyphony limit reached, steal from preset's voices
+          voiceChosen = findLeastActiveVoice(voicesForP);
         }
+      } else {
+        // No polyphony, use any inactive voice or least active
+        const inactiveVoices = Array.from({ length: chans }, (_, i) => i).filter(
+          (i) => voiceActivities[i] === 0 && now - voiceTimestamps[i] > 20,
+        );
+        if (inactiveVoices.length > 0) {
+          voiceChosen = inactiveVoices[0];
+        } else {
+          voiceChosen = findLeastActiveVoice(Array.from({ length: chans }, (_, i) => i));
+        }
+      }
+
+      // If the chosen voice was used by another frequency, remove that mapping
+      if (voiceToFreqMap.has(voiceChosen)) {
+        const oldFreq = voiceToFreqMap.get(voiceChosen)!;
+        freqToVoiceMap.delete(oldFreq);
       }
 
       // Update mappings
       freqToVoiceMap.set(frequency, voiceChosen);
       voiceToFreqMap.set(voiceChosen, frequency);
+      if (usePolyphony) {
+        voiceToPresetMap.set(voiceChosen, preset);
+      }
+      voiceTimestamps[voiceChosen] = now;
     }
-
-    voiceTimestamps[voiceChosen] = new Date().getTime();
 
     // Output the chosen voice
     return [
