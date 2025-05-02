@@ -247,7 +247,7 @@ export type ObjectNode = Positioned &
     signalOptions?: SignalOption[];
     slots?: Slot[];
     parentSlots?: ObjectNode;
-    steps?: GenericStepData[][];  // Changed from GenericStepData[] to GenericStepData[][]
+    steps?: GenericStepData[][]; // Changed from GenericStepData[] to GenericStepData[][]
     stepsSchema?: StepDataSchema;
     updateSize: (size: Size) => void;
     controllingParamNode?: ObjectNode; // any param nodes that are controleld by this node
@@ -271,7 +271,7 @@ export type ObjectNode = Positioned &
 
 export interface SerializableCustom {
   getJSON: () => any;
-  fromJSON: (x: any, y?: boolean) => void;
+  fromJSON: (x: any, y?: boolean, voice?: number) => void;
   value: Message;
   execute: (x?: number) => void;
 }

@@ -158,7 +158,6 @@ export class RingBuffer {
    * Returns true if the message was written successfully
    */
   write(type: MessageType, nodeId: string, message?: any): boolean {
-    console.log("trying to write=", message);
     //console.log(`RingBuffer.write - type=${type}, nodeId=${nodeId}, direction=${this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN"}`);
 
     // Special cases for optimized message formats
@@ -919,10 +918,8 @@ export class RingBuffer {
         const encodedItems: ArrayBuffer[] = [];
 
         for (const item of value) {
-          console.log("encoing item=", item);
           const encodedItem = this.encodeValue(item);
           if (encodedItem) {
-            console.log("pushing encoded item=", encodedItem);
             encodedItems.push(encodedItem);
             totalSize += encodedItem.byteLength;
           }
@@ -982,7 +979,7 @@ export class RingBuffer {
     let message: any = undefined;
     if (buffer.byteLength > 2 + nodeIdLength) {
       const messageBuffer = buffer.slice(2 + nodeIdLength);
-      message = this.decodeValue(messageBuffer);
+      message = this.decodeValue(messageBuffer).value;
     }
     return { type, nodeId, message };
   }
@@ -990,10 +987,10 @@ export class RingBuffer {
   /**
    * Decode a value from its binary representation
    */
-  private decodeValue(buffer: ArrayBuffer, offset: number = 0): any {
+  private decodeValue(buffer: ArrayBuffer, offset: number = 0): { value: any; size: number } {
     if (!buffer || buffer.byteLength <= offset) {
       console.error("Invalid or empty buffer in decodeValue");
-      return undefined;
+      return { value: undefined, size: 0 };
     }
 
     try {
@@ -1002,51 +999,49 @@ export class RingBuffer {
 
       switch (valueType) {
         case RingBuffer.VALUE_TYPE_NULL:
-          return null;
+          return { value: null, size: 1 };
 
         case RingBuffer.VALUE_TYPE_UNDEFINED:
-          return undefined;
+          return { value: undefined, size: 1 };
 
         case RingBuffer.VALUE_TYPE_NUMBER:
           if (buffer.byteLength < offset + 9) {
             console.error("Invalid buffer length for number decoding");
-            return undefined;
+            return { value: undefined, size: 0 };
           }
-          return view.getFloat64(offset + 1);
+          return { value: view.getFloat64(offset + 1), size: 9 };
 
         case RingBuffer.VALUE_TYPE_BOOLEAN_TRUE:
-          return true;
+          return { value: true, size: 1 };
 
         case RingBuffer.VALUE_TYPE_BOOLEAN_FALSE:
-          return false;
+          return { value: false, size: 1 };
 
         case RingBuffer.VALUE_TYPE_STRING:
           if (buffer.byteLength < offset + 5) {
             console.error("Invalid buffer length for string decoding");
-            return "";
+            return { value: "", size: 0 };
           }
           const stringLength = view.getUint32(offset + 1);
           if (buffer.byteLength < offset + 5 + stringLength) {
             console.error("Invalid string length for buffer size");
-            return "";
+            return { value: "", size: 0 };
           }
           const stringBytes = new Uint8Array(buffer, offset + 5, stringLength);
           const decoder = new TextDecoder();
-          return decoder.decode(stringBytes);
+          return { value: decoder.decode(stringBytes), size: 5 + stringLength };
 
         case RingBuffer.VALUE_TYPE_ARRAY:
           if (buffer.byteLength < offset + 5) {
             console.error("Invalid buffer length for array decoding");
-            return [];
+            return { value: [], size: 0 };
           }
 
           const arrayLength = view.getUint32(offset + 1);
-          console.log("trying to dedcode value type array of arrayLength=", arrayLength);
           const result: any[] = [];
 
           // Check if this is a packed numeric array
           if (buffer.byteLength >= offset + 9 && arrayLength > 0) {
-            console.log("is packed numberic array");
             const elementSize = view.getUint32(offset + 5);
 
             if (elementSize === 8 && buffer.byteLength >= offset + 9 + arrayLength * 8) {
@@ -1054,125 +1049,89 @@ export class RingBuffer {
               for (let i = 0; i < arrayLength; i++) {
                 result.push(view.getFloat64(offset + 9 + i * 8));
               }
-              return result;
+              return { value: result, size: 9 + arrayLength * 8 };
             }
           }
 
-          // Generic array handling (slower)
+          // Generic array handling
           let currentOffset = offset + 5;
-          console.log("is generic array currentOffset=%s", buffer.byteLength);
           for (let i = 0; i < arrayLength && currentOffset < buffer.byteLength; i++) {
-            const itemValue = this.decodeValue(buffer, currentOffset);
-            console.log("decoded value=", itemValue);
+            const { value: itemValue, size: itemSize } = this.decodeValue(buffer, currentOffset);
             result.push(itemValue);
-
-            // Move to next item (this is inefficient and would need proper offset tracking)
-            // A real implementation would track the offset increments properly
-            if (typeof itemValue === "number") {
-              currentOffset += 9; // 1 + 8
-            } else if (
-              typeof itemValue === "boolean" ||
-              itemValue === null ||
-              itemValue === undefined
-            ) {
-              currentOffset += 1;
-            } else if (typeof itemValue === "string") {
-              // String header (5) + string length
-              const strLen = view.getUint32(currentOffset + 1);
-              currentOffset += 5 + strLen;
-            } else {
-              // Can't determine size, break to avoid infinite loop
-              console.log("cant determine size...");
-              break;
-            }
+            currentOffset += itemSize;
           }
 
-          return result;
+          return { value: result, size: currentOffset - offset };
 
         case RingBuffer.VALUE_TYPE_FLOAT32_ARRAY:
           if (buffer.byteLength < offset + 8) {
             console.error("Invalid buffer length for Float32Array decoding");
-            return new Float32Array(0);
+            return { value: new Float32Array(0), size: 0 };
           }
           const float32Length = view.getUint32(offset + 1);
           if (buffer.byteLength < offset + 8 + float32Length * 4) {
             console.error("Invalid Float32Array length for buffer size");
-            return new Float32Array(0);
+            return { value: new Float32Array(0), size: 0 };
           }
-          // Create a new Float32Array with the data (to avoid alignment issues)
-          const float32Data = new Float32Array(float32Length);
-          const srcFloat32Array = new Float32Array(buffer);
-          // Copy from index 2 (8 byte offset) to our new array
-          for (let i = 0; i < float32Length; i++) {
-            float32Data[i] = srcFloat32Array[i + 2];
-          }
-          return float32Data;
+          // Slice the buffer directly, ensuring proper alignment
+          const float32Data = new Float32Array(buffer, offset + 8, float32Length);
+          return { value: float32Data, size: 8 + float32Length * 4 };
 
         case RingBuffer.VALUE_TYPE_FLOAT64_ARRAY:
           if (buffer.byteLength < offset + 8) {
             console.error("Invalid buffer length for Float64Array decoding");
-            return new Float64Array(0);
+            return { value: new Float64Array(0), size: 0 };
           }
           const float64Length = view.getUint32(offset + 1);
           if (buffer.byteLength < offset + 8 + float64Length * 8) {
             console.error("Invalid Float64Array length for buffer size");
-            return new Float64Array(0);
+            return { value: new Float64Array(0), size: 0 };
           }
-          // Create a new Float64Array with the data
-          const float64Data = new Float64Array(float64Length);
-          const srcFloat64Array = new Float64Array(buffer);
-          // Copy from index 1 (8 byte offset) to our new array
-          for (let i = 0; i < float64Length; i++) {
-            float64Data[i] = srcFloat64Array[i + 1];
-          }
-          return float64Data;
+          // Slice the buffer directly, ensuring proper alignment
+          const float64Data = new Float64Array(buffer, offset + 8, float64Length);
+          return { value: float64Data, size: 8 + float64Length * 8 };
 
         case RingBuffer.VALUE_TYPE_INT32_ARRAY:
           if (buffer.byteLength < offset + 8) {
             console.error("Invalid buffer length for Int32Array decoding");
-            return new Int32Array(0);
+            return { value: new Int32Array(0), size: 0 };
           }
           const int32Length = view.getUint32(offset + 1);
           if (buffer.byteLength < offset + 8 + int32Length * 4) {
             console.error("Invalid Int32Array length for buffer size");
-            return new Int32Array(0);
+            return { value: new Int32Array(0), size: 0 };
           }
-          // Create a new Int32Array with the data
-          const int32Data = new Int32Array(int32Length);
-          const srcInt32Array = new Int32Array(buffer);
-          // Copy from index 2 (8 byte offset) to our new array
-          for (let i = 0; i < int32Length; i++) {
-            int32Data[i] = srcInt32Array[i + 2];
-          }
-          return int32Data;
+          // Slice the buffer directly, ensuring proper alignment
+          const int32Data = new Int32Array(buffer, offset + 8, int32Length);
+          return { value: int32Data, size: 8 + int32Length * 4 };
 
-        case RingBuffer.VALUE_TYPE_OBJECT:
+        case RingBuffer.VALUE_TYPE_OBJECT: {
           if (buffer.byteLength < offset + 5) {
             console.error("Invalid buffer length for object decoding");
-            return {};
+            return { value: {}, size: 0 };
           }
           const jsonLength = view.getUint32(offset + 1);
           if (buffer.byteLength < offset + 5 + jsonLength) {
             console.error("Invalid JSON length for buffer size");
-            return {};
+            return { value: {}, size: 0 };
           }
           const jsonBytes = new Uint8Array(buffer, offset + 5, jsonLength);
-          const decoder2 = new TextDecoder();
-          const jsonStr = decoder2.decode(jsonBytes);
+          const decoder = new TextDecoder();
+          const jsonStr = decoder.decode(jsonBytes);
           try {
-            return JSON.parse(jsonStr);
+            return { value: JSON.parse(jsonStr), size: 5 + jsonLength };
           } catch (e) {
             console.error("Error parsing JSON:", e);
-            return {};
+            return { value: {}, size: 0 };
           }
-
+        }
         default:
           console.error("Unknown value type:", valueType);
-          return undefined;
+          return { value: undefined, size: 0 };
       }
     } catch (error) {
       console.error("Error in decodeValue:", error);
-      return undefined;
+      return { value: undefined, size: 0 };
     }
   }
 

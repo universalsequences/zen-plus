@@ -17,20 +17,21 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     width: 300,
     height: 80,
   };
+  const [editingIndex, setEditingIndex] = useState(-1);
   let editor: FunctionEditor = objectNode.custom as any as FunctionEditor;
   let [points, setPoints] = useState(editor.points);
   useSelection();
   let { lockedMode } = useLocked();
   const addedPoint = useRef(false);
+  const editing = points[editingIndex];
 
   useEffect(() => {
     if (editor.points) {
-      console.log("setting points=", value);
       setPoints(editor.points as Coordinate[]);
 
       if (addedPoint.current) {
         let point = editor.points[editor.points.length - 1];
-        setEditing(point);
+        setEditingIndex(editor.points.length - 1);
         addedPoint.current = false;
       }
     }
@@ -48,7 +49,6 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   let [curveEdit, setCurveEdit] = useState<Point | null>(null);
 
-  let [editing, setEditing] = useState<Point | null>(null);
   const onClick = useCallback(
     (e: any) => {
       if (!ref.current) {
@@ -81,7 +81,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       //editor.addBreakPoint({ x, y });
       setPoints([...editor.points]);
     },
-    [setPoints, setEditing, width, height],
+    [setPoints, width, height],
   );
 
   let paths = editor.toSVGPaths(width, height);
@@ -103,7 +103,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         let key = e.key;
         if (key === "Backspace") {
           editor.points = editor.points.filter((x) => x !== editing);
-          setEditing(null);
+          setEditingIndex(-1);
           setPoints([...editor.points]);
         }
       }
@@ -159,14 +159,12 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           editing.x = x;
           editing.y = y;
         }
-        console.log("ux. setting points=", editor.points);
         objectNode.receive(objectNode.inlets[0], ["set-points", ...editor.points]);
         setPoints([...editor.points]);
       } else if (curveEdit) {
         if (editor.adsr && editor.points.indexOf(curveEdit) === 2) {
           editor.points[2].y = y;
           editor.points[3].y = y;
-          console.log("ux. setting points=", editor.points);
           objectNode.receive(objectNode.inlets[0], ["set-points", ...editor.points]);
           setPoints([...editor.points]);
         } else {
@@ -174,7 +172,6 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           if (Math.abs(curveEdit.c) < 0.05) {
             curveEdit.c = 0;
           }
-          console.log("ux. setting points=", editor.points);
           objectNode.receive(objectNode.inlets[0], ["set-points", ...editor.points]);
           setPoints([...editor.points]);
         }
@@ -187,7 +184,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const onMouseUp = useCallback(
     (e: MouseEvent) => {
       if (editing) {
-        setEditing(null);
+        setEditingIndex(-1);
         objectNode.receive(objectNode.inlets[0], "bang");
         editor.update();
       }
@@ -195,7 +192,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         setCurveEdit(null);
       }
     },
-    [editing, curveEdit, setEditing, setCurveEdit, width, height, editor],
+    [editing, curveEdit, setCurveEdit, width, height, editor],
   );
 
   let sortedPoints = [...points].sort((a, b) => a.x - b.x);
@@ -286,7 +283,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                   if (!lockedMode) {
                     return;
                   }
-                  setEditing(point);
+                  setEditingIndex(i);
                 }}
                 x={-2 + (width * point.x) / 1000}
                 y={-4 + (1.0 - point.y) * height}
@@ -301,7 +298,7 @@ const FunctionUX: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
                   if (!lockedMode) {
                     return;
                   }
-                  setEditing(point);
+                  setEditingIndex(i);
                 }}
                 className="cursor-pointer"
                 x={-4 + (width * point.x) / 1000}

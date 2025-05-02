@@ -32,14 +32,19 @@ export const evaluateAttributeInstruction = (
 
   const tokens = message.split(" ");
   const name = tokens[0];
-  const value =
+  const value = message;
+  /*
     tokens.length === 3
       ? [Number.parseFloat(tokens[1]), Number.parseFloat(tokens[2])]
       : Number.parseFloat(tokens[1]);
+      */
   // todo - extract time
   const matchingNodes = instruction.nodes?.filter((x) => x.arguments[0] === name) || [];
 
+  const visited = new Set<string>();
   for (const node of matchingNodes) {
+    if (visited.has(node.id)) continue;
+    visited.add(node.id);
     mainThreadInstructions.push({
       nodeId: node.id,
       inletMessages: [value],

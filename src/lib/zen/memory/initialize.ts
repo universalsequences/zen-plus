@@ -21,7 +21,8 @@ export const determineMemorySize = (context: Context) => {
 export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
   const initializes: any = [];
   const memorySize = determineMemorySize(context);
-  if (memorySize > 4000000) {
+  if (true) {
+    //memorySize > 4000000) {
     // memory is huge so go thru one at a time
     console.log("memory is huge...");
     for (const block of context.memory.blocksInUse) {

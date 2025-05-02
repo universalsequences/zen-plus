@@ -189,14 +189,11 @@ class UpdateBatcher {
   }
 
   private handleMutableValueChanged(mutableValueChanged: MutableValueChanged[]) {
-    console.log("handle mutable value changed=", mutableValueChanged);
     for (const { nodeId, value } of mutableValueChanged) {
       const node = this.objects[nodeId];
       if (!node?.custom) continue;
-      console.log("setting value", value);
       node.custom.value = value;
       if (node.onNewValue) {
-        console.log("on new value", value);
         node.onNewValue(value);
       }
     }

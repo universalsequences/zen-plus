@@ -146,7 +146,6 @@ export const evaluate = (
         }
         case InstructionType.ReplaceMessage: {
           if (instruction.outletNumber === undefined) {
-            console.log("missing outlet number ofr pipe", instruction);
             throw new Error("missing outlet number for pipe");
           }
           const messageToReplace = register[instruction.outletNumber];

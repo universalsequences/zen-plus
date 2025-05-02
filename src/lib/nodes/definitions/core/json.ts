@@ -8,7 +8,6 @@ doc("dict", {
   numberOfOutlets: 1,
   numberOfInlets: (x) => x,
   description: "creates a json object out of keys values",
-  isHot: false,
 });
 
 export const dict: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
@@ -37,12 +36,10 @@ export const dict_get: NodeFunction = (_node: ObjectNode, ...indices: Lazy[]) =>
     inlet.hidden = false;
   }
   return (dict: Message) => {
-    console.log("get called with", dict, indices[0]());
     const ret = indices.map((index) => (dict as Record<string, Message>)[index() as string]);
     if (ret.every((x) => x === undefined)) {
       return [];
     }
-    console.log("returning ret=", ret);
     return ret;
   };
 };

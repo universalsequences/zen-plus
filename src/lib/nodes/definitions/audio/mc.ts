@@ -52,6 +52,13 @@ export const mc_voicer = (node: ObjectNode) => {
   if (node.attributes.field === undefined) {
     node.attributes.field = "semitone";
   }
+  if (node.attributes.preset === undefined) {
+    node.attributes.preset = "";
+  }
+  if (node.attributes.polyphony === undefined) {
+    node.attributes.polyphony = "";
+  }
+
   const listeners: AudioWorkletNode[] = [];
   const voiceActivities: number[] = [];
   const freqToVoiceMap = new Map<number, number>(); // Maps frequencies to voice indexes
@@ -108,11 +115,26 @@ export const mc_voicer = (node: ObjectNode) => {
   const voiceTimestamps: number[] = new Array(chans).fill(0);
 
   return (_message: Message) => {
+    // ensure the connection is of type CORE (simply for UI syntax sugar)
     node.outlets[0].connectionType = ConnectionType.CORE;
+
+    // only respond to object messages
     if (typeof _message !== "object") return [];
     const message = _message as MessageObject;
 
+    // extract the frequency from the message
     const frequency = (message as MessageObject)[node.attributes.field as string] as number;
+
+    // list of polyphony counts per "preset". for example [1,2,3,4] preset=0 is monophonic, preset=1 has 2 voice polyphony, preset=3 hsa 3 voice ...
+    const polyphony =
+      node.attributes.polyphony === "" ? [] : (node.attributes.polyphony as number[]);
+    console.log("polyphony = ", polyphony);
+
+    // current preset selected, if any
+    // if selected, then we allocate voices to that preset based on polyphony trying to subdivide the available
+    // voices
+    const preset = node.attributes.preset === "" ? undefined : (node.attributes.preset as number);
+    console.log("preset = ", preset);
 
     if (message.type === "noteoff") {
       if (freqToVoiceMap.has(frequency)) {

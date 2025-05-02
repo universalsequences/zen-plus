@@ -39,19 +39,21 @@ export class MutableValue implements SerializableCustom {
     return this._value;
   }
 
-  fromJSON(x: any) {
-    this.value = x;
+  fromJSON(x: any, empty?: boolean, voice?: number) {
+    if (voice === undefined) this.value = x;
 
-    if (this.objectNode.onNewValue && this.useOnNewValue) {
+    if (voice === undefined && this.objectNode.onNewValue && this.useOnNewValue) {
       this.objectNode.onNewValue(x);
     }
 
     if (this.objectNode.operatorContextType === OperatorContextType.AUDIO) {
       this.objectNode.receive(this.objectNode.inlets[0], this.value);
     }
-    this.updateMainThread();
+    if (voice === undefined) {
+      this.updateMainThread();
+    }
     this.executing = true;
-    this.execute(x);
+    this.execute(x, voice);
     this.executing = false;
   }
 
@@ -59,10 +61,10 @@ export class MutableValue implements SerializableCustom {
     return this.value;
   }
 
-  execute(value?: number) {
+  execute(value?: number, voice?: number) {
     const evaluation = this.objectNode.patch.vm?.evaluateNode(
       this.objectNode.id,
-      value === undefined ? "bang" : value,
+      value === undefined ? "bang" : voice !== undefined ? { voice, value } : value,
     );
     if (evaluation) {
       this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);

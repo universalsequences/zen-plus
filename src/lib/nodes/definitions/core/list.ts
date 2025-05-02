@@ -11,7 +11,6 @@ doc("unpack", {
 export const unpack = (node: ObjectNode, ...args: Lazy[]) => {
   return (message: Message): Message[] => {
     if (Array.isArray(message)) {
-      console.log("unpack calling", [...message]);
       return [...message] as Message[];
     }
     if (ArrayBuffer.isView(message)) {
@@ -28,6 +27,30 @@ doc("pak", {
 });
 
 export const pak = (node: ObjectNode, ...args: Lazy[]) => {
+  node.branching = true;
+  return (message: Message): Message[] => {
+    if (message === "clear") {
+      for (const inlet of node.inlets) {
+        inlet.lastMessage = undefined;
+      }
+      return [];
+    }
+    const list: Message[] = [message];
+    for (const a of args) {
+      list.push(a() as Message);
+    }
+    return [list] as Message[];
+  };
+};
+
+doc("pack", {
+  numberOfInlets: (x) => x - 1,
+  numberOfOutlets: 1,
+  description: "packs inlets into a list",
+  isHot: false,
+});
+
+export const pack = (node: ObjectNode, ...args: Lazy[]) => {
   node.branching = true;
   return (message: Message): Message[] => {
     if (message === "clear") {
@@ -373,4 +396,5 @@ export const lists: API = {
   unpack,
   iter,
   pak,
+  pack,
 };

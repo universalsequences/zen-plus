@@ -109,16 +109,34 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
       }
     }
     if (typeof x === "string" && x !== "bang") {
-      const tokens = x.split(" ");
+      const tokens = x.split(" ").filter((x) => x.trim() !== "");
       if (tokens.length === 2) {
         x = parseFloat(tokens[1]);
+
+        if (object.attributes.mc) {
+          return [];
+        }
       } else if (tokens.length === 3 && tokens[0] === name()) {
         x = [parseFloat(tokens[1]), parseFloat(tokens[2])];
+      } else if (tokens.length === 4 && tokens[0] === name()) {
+        if (object.attributes.mc) {
+          x = [
+            parseFloat(tokens[1]),
+            object.patch.audioContext?.currentTime || 0,
+            parseFloat(tokens[3]),
+          ];
+        } else {
+          x = parseFloat(tokens[1]);
+        }
       }
     }
     if (typeof x === "string" && x !== "bang" && x.split(" ").length === 2) {
       let split = x.split(" ");
       x = parseFloat(split[1]);
+
+      if (object.attributes.mc) {
+        return [];
+      }
     }
     let isScheduleSet = Array.isArray(x) && typeof x[0] === "number";
     if (typeof x === "number" || isScheduleSet) {
@@ -132,6 +150,8 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
         const invocation = x[2] as number;
 
+        if (invocation !== undefined) {
+        }
         _param.set!(value as number, time, invocation);
 
         object.storedParameterValue = value as number;

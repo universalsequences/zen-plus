@@ -74,7 +74,7 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
 };
 
 export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNumber?: number) => {
-  console.log("onCompile return", outputNumber);
+  console.log("onCompile return", outputNumber, patch.isCompiling, patch);
   let statement = inputStatement;
   if (outputNumber !== undefined) {
     patch.outputStatements[outputNumber - 1] = statement;

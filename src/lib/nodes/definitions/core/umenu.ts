@@ -53,6 +53,7 @@ doc("umenu", {
 export const umenu = (node: ObjectNode) => {
   node.needsLoad = true;
   node.needsUX = true;
+  node.isResizable = true;
   if (!node.attributes["options"]) {
     node.attributes["options"] = "";
   }

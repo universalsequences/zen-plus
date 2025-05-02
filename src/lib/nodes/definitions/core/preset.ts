@@ -103,7 +103,7 @@ export class PresetManager {
 
   switchToPreset(presetNumber: number, voice?: number) {
     const oldPreset = this.currentPreset;
-    if (oldPreset !== undefined && this.buffer) {
+    if (oldPreset !== undefined && this.buffer && voice === undefined) {
       const hadPresets = Object.keys(this.presets[oldPreset]).length > 0;
       this.buffer[oldPreset] = hadPresets ? 1 : 0;
       this.buffer[presetNumber] = 2;
@@ -119,7 +119,9 @@ export class PresetManager {
       preset = this.presets[presetNumber];
     }
     if (preset) {
-      this.currentPreset = presetNumber;
+      if (voice === undefined) {
+        this.currentPreset = presetNumber;
+      }
       for (let id in preset) {
         let { node, state } = preset[id];
 
@@ -131,10 +133,10 @@ export class PresetManager {
           ) {
             // only nodes with scripting name or attrui
             // TODO
-            objectNode.custom.fromJSON(state);
+            objectNode.custom.fromJSON(state, undefined, voice);
 
             try {
-              objectNode.custom.execute?.(state);
+              //objectNode.custom.execute?.(state);
             } catch (e) {
               // ignore error;
             }

@@ -1,4 +1,4 @@
-import type { ObjectNode, Message, Lazy, NodeFunction } from "@/lib/nodes/types";
+import type { ObjectNode, Message, Lazy, NodeFunction, MessageObject } from "@/lib/nodes/types";
 import { publish } from "@/lib/messaging/queue";
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
@@ -43,6 +43,10 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
         custom.value = value as number;
       }
       return [`${name()} ${value} ${time}`];
+    }
+    if (typeof _message === "object" && name()) {
+      const msg = `${name()} ${(_message as MessageObject).value as number} 0 ${(_message as MessageObject).voice as number} `;
+      return [msg];
     }
     if (typeof _message === "number" && name()) {
       const msg = `${name()} ${_message}`;

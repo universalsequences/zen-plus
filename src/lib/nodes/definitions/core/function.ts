@@ -1,7 +1,7 @@
 import { ListPool } from "@/lib/lisp/ListPool";
 import { doc } from "./doc";
 import { publish } from "@/lib/messaging/queue";
-import type { AttributeValue, Message, ObjectNode } from "@/lib/nodes/types";
+import type { AttributeValue, Message, MessageObject, ObjectNode } from "@/lib/nodes/types";
 import { VMEvaluation } from "@/workers/vm/VM";
 
 export interface Point {
@@ -33,19 +33,39 @@ export class FunctionEditor {
 
   set value(x: Message) {
     this.fromJSON(x);
+
+    publish("statechanged", {
+      node: this.objectNode,
+      state: x,
+    });
   }
 
   getJSON() {
     return this.points.map((pt) => ({ ...pt }));
   }
 
-  fromJSON(x: Message) {
+  fromJSON(x: Message, y?: boolean, voice?: number) {
     if (Array.isArray(x)) {
       this.points = x as Point[];
       if (this.objectNode) {
-        this.objectNode.receive(this.objectNode.inlets[0], "bang");
-        this.updateUX();
+        if (voice !== undefined) {
+          this.execute(voice);
+        } else {
+          this.objectNode.receive(this.objectNode.inlets[0], "bang");
+        }
+        if (voice === undefined) this.updateUX();
       }
+    }
+  }
+
+  execute(voice?: number) {
+    const evaluation = this.objectNode.patch.vm?.evaluateNode(this.objectNode.id, {
+      voice,
+      points: [...this.points],
+    } as MessageObject);
+
+    if (evaluation) {
+      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
     }
   }
 
@@ -227,16 +247,18 @@ export class FunctionEditor {
 
 doc("function", {
   numberOfInlets: 1,
-  numberOfOutlets: 7,
+  numberOfOutlets: 9,
   description: "function editor",
   outletNames: [
     "list",
     "interpolated list",
     "attack-decay interpolated list",
     "release list",
-    "attack-decay size",
+    "voice",
+    "attack",
+    "decay",
     "sustain",
-    "release size",
+    "release",
   ],
 });
 export const function_editor = (node: ObjectNode) => {
@@ -277,17 +299,18 @@ export const function_editor = (node: ObjectNode) => {
 
   node.needsLoad = true;
 
-  const collect = () => {
+  const collect = (voice = 0) => {
     const editor = node.custom as FunctionEditor;
     if (editor.adsr) {
       const ed1 = new FunctionEditor(node);
       ed1.points = editor.points.slice(0, 3);
       const ed2 = new FunctionEditor(node);
       ed2.points = editor.points.slice(3);
-      const attackDecay = ed1.points[2].x;
+      const attack = ed1.points[1].x;
+      const decay = ed1.points[2].x - attack;
       const release = 1000 - ed2.points[0].x;
 
-      ed1.points = scaleAttackDecay(attackDecay, ed1.points);
+      ed1.points = scaleAttackDecay(attack + decay, ed1.points);
       ed2.points = scaleRelease(release, ed2.points);
       const releaseBufferList = ed2.toBufferList();
       releaseBufferList[999] = 0;
@@ -296,8 +319,10 @@ export const function_editor = (node: ObjectNode) => {
         editor.toBufferList(),
         ed1.toBufferList(),
         releaseBufferList,
-        attackDecay,
-        ed1.points[2].y,
+        voice,
+        attack,
+        decay,
+        ed1.points[2].y, // sustain
         release,
       ];
     }
@@ -353,6 +378,14 @@ export const function_editor = (node: ObjectNode) => {
   };
 
   return (msg: Message) => {
+    console.log("function.received=", msg);
+    const editor = node.custom as FunctionEditor;
+    if (typeof msg === "object" && "voice" in msg && "points" in msg) {
+      const points = msg.points as Point[];
+      const voice = msg.voice as number;
+      editor.points = points;
+      return collect(voice);
+    }
     if (typeof msg === "string") {
       const tokens = msg.split(" ");
       const op = ops[tokens[0]];
@@ -368,8 +401,6 @@ export const function_editor = (node: ObjectNode) => {
         return op(a, b);
       }
     } else if (Array.isArray(msg) && msg[0] === "set-points") {
-      console.log("object set points=", msg.slice(1));
-      const editor = node.custom as FunctionEditor;
       editor.points = msg.slice(1) as Point[];
       editor.updateUX();
       return collect();

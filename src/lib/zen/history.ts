@@ -338,11 +338,16 @@ export const history = (
     // Set initial data for the memory block
     const initializeBlockWithData = (block: MemoryBlock) => {
       if (val !== undefined) {
-        block.initData = new Float32Array(params?.mc ? new Array(block.size).fill(val) : [val]);
+        block.initData = new Float32Array(
+          params?.mc ? new Array(block.context.loopSize).fill(val) : [val],
+        );
       }
       if (cachedValue !== undefined) {
+        if (params?.mc) {
+          console.log("block=", block, params);
+        }
         block.initData = new Float32Array(
-          params?.mc ? new Array(block.size).fill(cachedValue) : [cachedValue],
+          params?.mc ? new Array(block.context.loopSize).fill(cachedValue) : [cachedValue],
         );
       }
     };

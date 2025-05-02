@@ -92,7 +92,6 @@ export class FilterGraphValue extends MutableValue {
 
     this._value = x;
     this.filters = x as Filter[];
-    console.log("setting values", x);
 
     this.updateMainThread();
   }
@@ -278,7 +277,6 @@ export const filtergraph = (node: ObjectNode) => {
     }
 
     if (Array.isArray(msg) && typeof msg[0] === "object") {
-      console.log("filtergraph received object fromJSON", msg);
       custom.fromJSON(msg);
       /// note: this is being called by
       /*
