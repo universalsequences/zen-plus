@@ -44,12 +44,12 @@ export class FunctionEditor {
     return this.points.map((pt) => ({ ...pt }));
   }
 
-  fromJSON(x: Message, y?: boolean, voice?: number) {
+  fromJSON(x: Message, isPreset?: boolean, voice?: number, time?: number) {
     if (Array.isArray(x)) {
       this.points = x as Point[];
       if (this.objectNode) {
         if (voice !== undefined) {
-          this.execute(voice);
+          this.execute(voice, time);
         } else {
           this.objectNode.receive(this.objectNode.inlets[0], "bang");
         }
@@ -58,9 +58,10 @@ export class FunctionEditor {
     }
   }
 
-  execute(voice?: number) {
+  execute(voice?: number, time?: number) {
     const evaluation = this.objectNode.patch.vm?.evaluateNode(this.objectNode.id, {
       voice,
+      time,
       points: [...this.points],
     } as MessageObject);
 
@@ -247,18 +248,19 @@ export class FunctionEditor {
 
 doc("function", {
   numberOfInlets: 1,
-  numberOfOutlets: 9,
+  numberOfOutlets: 10,
   description: "function editor",
   outletNames: [
     "list",
     "interpolated list",
     "attack-decay interpolated list",
     "release list",
-    "voice",
     "attack",
+    "attackdecay",
     "decay",
     "sustain",
     "release",
+    "shape",
   ],
 });
 export const function_editor = (node: ObjectNode) => {
@@ -300,7 +302,7 @@ export const function_editor = (node: ObjectNode) => {
 
   node.needsLoad = true;
 
-  const collect = (voice = 0) => {
+  const collect = (voice = 0, time = 0, skip = false) => {
     const editor = node.custom as FunctionEditor;
     if (editor.adsr) {
       const ed1 = new FunctionEditor(node);
@@ -310,7 +312,23 @@ export const function_editor = (node: ObjectNode) => {
       const attack = ed1.points[1].x;
       const decay = ed1.points[2].x - attack;
       const release = 1000 - ed2.points[0].x;
+      const shape = attack / (attack + decay);
 
+      if (skip) {
+        return [
+          0,
+          0,
+          0,
+          0,
+          `attack ${attack * 4} ${time} ${voice}`,
+          `attackdecay ${(attack + decay) * 4} ${time} ${voice}`,
+          `decay ${decay * 4} ${time} ${voice}`,
+          `sustain ${ed1.points[2].y} ${time} ${voice}`, // sustain
+          `release ${release * 4} ${time} ${voice}`,
+          `shape ${shape} ${time} ${voice}`,
+        ];
+      }
+      console.log("not skipping");
       ed1.points = scaleAttackDecay(attack + decay, ed1.points);
       ed2.points = scaleRelease(release, ed2.points);
       const releaseBufferList = ed2.toBufferList();
@@ -320,11 +338,12 @@ export const function_editor = (node: ObjectNode) => {
         editor.toBufferList(),
         ed1.toBufferList(),
         releaseBufferList,
-        voice,
-        attack,
-        decay,
-        ed1.points[2].y, // sustain
-        release,
+        `attack ${attack * 4} ${time} ${voice}`,
+        `attackdecay ${(attack + decay) * 4} ${time} ${voice}`,
+        `decay ${decay * 4} ${time} ${voice}`,
+        `sustain ${ed1.points[2].y} ${time} ${voice}`, // sustain
+        `release ${release * 4} ${time} ${voice}`,
+        `shape ${shape} ${time} ${voice}`,
       ];
     }
     return [
@@ -380,11 +399,12 @@ export const function_editor = (node: ObjectNode) => {
 
   return (msg: Message) => {
     const editor = node.custom as FunctionEditor;
-    if (typeof msg === "object" && "voice" in msg && "points" in msg) {
+    if (typeof msg === "object" && "voice" in msg && "points" in msg && "time" in msg) {
       const points = msg.points as Point[];
       const voice = msg.voice as number;
+      const time = msg.time as number;
       editor.points = points;
-      return collect(voice);
+      return collect(voice, time, true);
     }
     if (typeof msg === "string") {
       const tokens = msg.split(" ");
@@ -393,17 +413,20 @@ export const function_editor = (node: ObjectNode) => {
         if (tokens.length === 2) {
           const val = Number.parseFloat(tokens[1]);
           if (Number.isNaN(val)) return [];
-          return op(val);
+          op(val);
+          return [];
         }
         const a = Number.parseFloat(tokens[1]);
         const b = Number.parseFloat(tokens[2]);
         if (Number.isNaN(a) || Number.isNaN(b)) return [];
-        return op(a, b);
+        op(a, b);
+        return [];
       }
     } else if (Array.isArray(msg) && msg[0] === "set-points") {
       editor.points = msg.slice(1) as Point[];
       editor.updateUX();
-      return collect();
+      collect();
+      return [];
     }
 
     return [];

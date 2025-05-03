@@ -271,7 +271,7 @@ export type ObjectNode = Positioned &
 
 export interface SerializableCustom {
   getJSON: () => any;
-  fromJSON: (x: any, y?: boolean, voice?: number) => void;
+  fromJSON: (x: any, y?: boolean, voice?: number, time?: number) => void;
   value: Message;
   execute: (x?: number) => void;
 }

@@ -108,6 +108,7 @@ doc("messagefilter", {
   numberOfOutlets: 1,
   inletNames: ["msg", "control"],
   description: "filters messages based on control",
+  isHot: false,
 });
 
 export const messagefilter = (node: ObjectNode, control: Lazy) => {
@@ -118,5 +119,23 @@ export const messagefilter = (node: ObjectNode, control: Lazy) => {
       return [msg];
     }
     return [];
+  };
+};
+
+doc("gate", {
+  numberOfOutlets: "channels",
+  numberOfInlets: 2,
+  inletNames: ["msg", "control"],
+  description: "routes outputs based on control input",
+  isHot: false,
+});
+
+export const gate = (node: ObjectNode, control: Lazy) => {
+  node.branching = true;
+
+  return (msg: Message) => {
+    const arr = new Array(node.outlets.length).fill(undefined);
+    arr[(control() as number) - 1] = msg;
+    return arr;
   };
 };

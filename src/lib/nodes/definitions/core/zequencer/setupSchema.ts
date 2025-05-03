@@ -12,6 +12,7 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
   existingSteps: (BaseStepData & StepFromSchemas<Schemas>)[][],
   length: number,
 ) => {
+  console.log("setup schema called with length=%s", length);
   type MyStep = BaseStepData & StepFromSchemas<Schemas>;
   const steps: MyStep[][] = [];
 

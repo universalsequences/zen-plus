@@ -290,6 +290,7 @@ export const evaluate = (
                 (node as ObjectNode).arguments[inletNumber - 1] = register[outletNumber] as Message;
               }
               inlet.lastMessage = register[outletNumber] as Message;
+            } else {
             }
             /*
             if (false && (node as ObjectNode).needsMainThread) {
@@ -299,8 +300,11 @@ export const evaluate = (
                 nodeId: node.id,
                 inletMessages,
               });
+            } else {
+
             }
             */
+          } else {
           }
           break;
         }

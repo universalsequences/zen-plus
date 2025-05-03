@@ -72,6 +72,7 @@ export const keyboardTranspose: NodeFunction = (node: ObjectNode) => {
   type NoteMessage = {
     type: "noteon" | "noteoff";
     semitone: number;
+    live?: boolean;
   };
 
   // We'll no longer need the frequency conversion
@@ -123,6 +124,7 @@ export const keyboardTranspose: NodeFunction = (node: ObjectNode) => {
       const noteMessage: NoteMessage = {
         type: "noteon",
         semitone: semitone,
+        live: true,
       };
 
       // Send the note message to the outlet
@@ -151,6 +153,7 @@ export const keyboardTranspose: NodeFunction = (node: ObjectNode) => {
       const noteMessage: NoteMessage = {
         type: "noteoff",
         semitone: semitone,
+        live: true,
       };
 
       // Send the note off message to the outlet

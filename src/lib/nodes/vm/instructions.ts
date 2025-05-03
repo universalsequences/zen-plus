@@ -2,6 +2,7 @@ import {
   Node,
   ObjectNode,
   IOConnection,
+  IOlet,
   MessageNode,
   SubPatch,
   MessageType,
@@ -21,20 +22,14 @@ export const isMessageNode = (node: Node, messageType?: MessageType) =>
 
 export const isObjectNode = (node: Node) => (node as ObjectNode).name !== undefined;
 
-const compileConnection = (connection: IOConnection, patch?: Patch): Instruction[] => {
+const compileConnection = (
+  connection: IOConnection,
+  outletNumber: number,
+  patch?: Patch,
+): Instruction[] => {
   const instructions: Instruction[] = [];
   const { destinationInlet, source, destination, sourceOutlet } = connection;
   const inletNumber = destination.inlets.indexOf(destinationInlet);
-  const inbound = getInboundConnections(sourceOutlet);
-  if (!inbound[0]) {
-    //console.log("no inbound on source outlet=", sourceOutlet);
-    return [];
-  }
-  const outletNumber = inbound[0].source.outlets.indexOf(inbound[0].sourceOutlet);
-
-  if (outletNumber === -1) {
-    throw new Error("outlet number -1");
-  }
 
   // handle attribute case
   if (inletNumber === 0) {
@@ -70,7 +65,7 @@ const compileConnection = (connection: IOConnection, patch?: Patch): Instruction
     const outletNumber = ((destination as ObjectNode).arguments[0] as number) - 1;
     if (subpatch) {
       const compiledInstructions = subpatch.parentNode.outlets[outletNumber].connections.flatMap(
-        (c) => compileConnection(c, patch),
+        (c) => compileConnection(c, outletNumber, patch),
       );
       for (const instruction of compiledInstructions) {
         instructions.push(instruction);
@@ -280,7 +275,8 @@ export const compileInstructions = (nodes: Node[], patch?: Patch) => {
         const connections = getOutboundConnectionsFromOutlet(outlet, new Set(), patch);
         const connectionInstructionsToPushIntoRoot = connections
           .flatMap((connection) => {
-            const compiled = compileConnection(connection, patch);
+            const outletNumber = node.outlets.indexOf(outlet);
+            const compiled = compileConnection(connection, outletNumber, patch);
             if (branchStack.length) {
               // if we're in a branch we handle pushing it directly into the branch here
               const branch =

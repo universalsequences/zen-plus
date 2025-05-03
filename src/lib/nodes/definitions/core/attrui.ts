@@ -45,7 +45,9 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
       return [`${name()} ${value} ${time}`];
     }
     if (typeof _message === "object" && name()) {
-      const msg = `${name()} ${(_message as MessageObject).value as number} 0 ${(_message as MessageObject).voice as number} `;
+      const obj = _message as MessageObject;
+      const { value, voice, time } = obj;
+      const msg = `${name()} ${value as number} ${time as number} ${voice as number}`;
       return [msg];
     }
     if (typeof _message === "number" && name()) {

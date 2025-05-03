@@ -62,14 +62,14 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
 
   let lastStepNumber = 0;
 
-  const updateUI = () => {
+  const updateUI = (onlyStepNumber = false) => {
     if (node.onNewValues && node.steps) {
       for (const id in node.onNewValues) {
         node.onNewValues[id]([lastStepNumber]);
       }
     }
 
-    if (node.steps) {
+    if (node.steps && !onlyStepNumber) {
       (node.custom as MutableValue).value = node.steps.map((voiceArray) =>
         voiceArray.map((voice) => ({ ...voice })),
       ) as Message[];
@@ -190,7 +190,9 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     const parsedSchema = v.safeParse(StepSchema, message);
     if (parsedSchema.success) {
       schema = parsedSchema.output;
-      node.steps = setupSchema(schema, node.steps || [], node.attributes.length as number);
+      const length =
+        node.steps?.length !== 16 ? node.steps?.length || 16 : (node.attributes.length as number);
+      node.steps = setupSchema(schema, node.steps || [], length);
       node.stepsSchema = schema;
       updateUI();
       if (node.onNewStepSchema && node.stepsSchema) {
@@ -211,7 +213,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
 
       const stepNumber = tick.stepNumber % node.steps.length;
       lastStepNumber = stepNumber;
-      updateUI();
+      updateUI(true);
 
       const stepVoices = node.steps[stepNumber];
       if (!stepVoices || stepVoices.length === 0) {

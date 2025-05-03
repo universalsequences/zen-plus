@@ -104,7 +104,11 @@ export class PresetManager {
     this.presets[this.currentPreset] = { ...oldPreset };
   }
 
-  switchToPreset(presetNumber: number, voice?: number) {
+  switchToPreset(presetNumber: number, voice?: number, time?: number) {
+    if (voice !== undefined && this.voiceToPreset.get(voice) === presetNumber) {
+      this.currentVoicePreset = presetNumber;
+      return;
+    }
     const oldPreset = this.currentPreset;
     if (oldPreset !== undefined && this.buffer && voice === undefined) {
       const hadPresets = Object.keys(this.presets[oldPreset]).length > 0;
@@ -140,7 +144,7 @@ export class PresetManager {
           ) {
             // only nodes with scripting name or attrui
             // TODO
-            objectNode.custom.fromJSON(state, undefined, voice);
+            objectNode.custom.fromJSON(state, undefined, voice, time);
 
             try {
               //objectNode.custom.execute?.(state);
@@ -178,7 +182,7 @@ export class PresetManager {
 
     for (const [voice, preset] of this.voiceToPreset.entries()) {
       if (preset === presetNumber) {
-        node.custom?.fromJSON(state, undefined, voice);
+        node.custom?.fromJSON(state, undefined, voice, 0);
       }
     }
   }
@@ -202,8 +206,8 @@ export class PresetManager {
       let nodeId = _stateChange.node.id;
       if (this.presetNodes?.has(nodeId)) {
         this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
-        if (this.currentVoicePreset !== undefined) {
-          this.handleVoiceStateChange(_stateChange, this.currentVoicePreset);
+        if (this.currentPreset !== undefined) {
+          this.handleVoiceStateChange(_stateChange, this.currentPreset);
         }
         if (this.buffer && this.buffer[this.currentPreset] !== 2) {
           this.buffer[this.currentPreset] = 1;
@@ -302,9 +306,9 @@ export const preset = (object: ObjectNode) => {
         for (let i = 1; i < x.length; i++) {
           mgmt.deletePreset(i);
         }
-      } else if (typeof x === "object" && "voice" in x && "preset" in x) {
-        const { voice, preset } = x;
-        mgmt.switchToPreset(Math.round(preset as number), voice as number);
+      } else if (typeof x === "object" && "voice" in x && "preset" in x && "time" in x) {
+        const { voice, preset, time } = x;
+        mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number);
       }
     }
     return [];

@@ -100,9 +100,20 @@ export class FilterGraphValue extends MutableValue {
     return this.filters.map((x) => ({ ...x }));
   }
 
-  fromJSON(x: any) {
+  fromJSON(x: any, isPreset?: boolean, voice?: number, time?: number) {
     if (Array.isArray(x)) {
       this.filters = x;
+      this.execute(this.filters, voice, time);
+    }
+  }
+
+  execute(filters?: Filter[], voice?: number, time?: number) {
+    const evaluation = this.objectNode.patch.vm?.evaluateNode(
+      this.objectNode.id,
+      voice !== undefined ? { voice, filters, time } : filters,
+    );
+    if (evaluation) {
+      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
     }
   }
 
@@ -276,6 +287,16 @@ export const filtergraph = (node: ObjectNode) => {
       return custom.getAllFilters();
     }
 
+    if (typeof msg === "object" && "voice" in msg && "filters" in msg && "time" in msg) {
+      const time = msg.time as number;
+      const voice = msg.voice as number;
+      const filters = msg.filters as Filter[];
+      return filters.map((filter) => ({
+        ...filter,
+        voice,
+        time,
+      }));
+    }
     if (Array.isArray(msg) && typeof msg[0] === "object") {
       custom.fromJSON(msg);
       /// note: this is being called by
@@ -320,7 +341,7 @@ export const filtergraph = (node: ObjectNode) => {
           });
         }
 
-        return [["activeFilters", numFilters]];
+        return []; //[["activeFilters", numFilters]];
       }
 
       // Set active filter index
@@ -330,7 +351,7 @@ export const filtergraph = (node: ObjectNode) => {
           Math.min(Number(node.attributes["activeFilters"]) - 1, msg[1]),
         );
         custom.setActiveFilter(filterIndex);
-        return [["activeFilter", filterIndex]];
+        return []; //[["activeFilter", filterIndex]];
       }
 
       // Handle filter type setting

@@ -32,7 +32,7 @@ class MetroWorklet extends AudioWorkletProcessor {
   }
 
   get lookahead() {
-    return 1000;
+    return Math.floor(this.divisor * 0.85);
   }
 
   process(inputs, outputs, parameters) {

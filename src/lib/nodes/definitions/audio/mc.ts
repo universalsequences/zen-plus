@@ -122,7 +122,10 @@ export const mc_voicer = (node: ObjectNode) => {
     const message = _message as MessageObject;
     const frequency = message[node.attributes.field as string] as number;
     const polyphony = (node.attributes.polyphony as number[]) || [];
-    const preset = node.attributes.preset as number | undefined;
+    const preset =
+      "preset" in message
+        ? (message.preset as number)
+        : (node.attributes.preset as number | undefined);
     const usePolyphony =
       polyphony.length > 0 && preset !== undefined && preset >= 0 && preset < polyphony.length;
     let K_P: number;
@@ -135,27 +138,21 @@ export const mc_voicer = (node: ObjectNode) => {
     if (message.type === "noteoff") {
       if (freqToVoiceMap.has(frequency)) {
         const voice = freqToVoiceMap.get(frequency) as number;
-        const timestamp = voiceTimestamps[voice];
-        /*
-        setTimeout(() => {
-          if (voiceTimestamps[voice] === timestamp) {
-            freqToVoiceMap.delete(frequency);
-            voiceToFreqMap.delete(voice);
-            if (!usePolyphony) {
-              voiceToPresetMap.set(voice, null);
-            }
-          }
-        }, 100);
-        */
-        return [
-          {
-            ...message,
-            time: message.time || node.patch.audioContext!.currentTime + 0.03,
-            voice,
-          },
-        ];
+        // Send noteoff message immediately
+        const noteoffMessage = {
+          ...message,
+          time: message.time || node.patch.audioContext!.currentTime + 0.01,
+          voice,
+        };
+        // Immediately remove mappings
+        freqToVoiceMap.delete(frequency);
+        voiceToFreqMap.delete(voice);
+        if (!usePolyphony) {
+          voiceToPresetMap.set(voice, null);
+        }
+        return [noteoffMessage];
       }
-      return [];
+      return []; // No action if frequency not found
     }
 
     // Note-on handling
@@ -230,7 +227,7 @@ export const mc_voicer = (node: ObjectNode) => {
       {
         ...message,
         voice: voiceChosen,
-        time: message.time || node.patch.audioContext!.currentTime,
+        time: message.time || node.patch.audioContext!.currentTime + 0.01,
       },
     ];
   };

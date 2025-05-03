@@ -185,9 +185,10 @@ export default class MessageNodeImpl extends MockBaseNode implements MessageNode
     ) {
       let msg = this.message;
       for (let i = 0; i < incomingMessage.length; i++) {
-        if (incomingMessage[i] !== undefined) {
-          msg = msg.replaceAll(`\$${i + 1}`, incomingMessage[i].toString());
-        }
+        msg = msg.replaceAll(
+          `\$${i + 1}`,
+          incomingMessage[i] === undefined ? "" : incomingMessage[i].toString(),
+        );
       }
       return msg;
     }

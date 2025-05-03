@@ -121,11 +121,7 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         x = [parseFloat(tokens[1]), parseFloat(tokens[2])];
       } else if (tokens.length === 4 && tokens[0] === name()) {
         if (object.attributes.mc) {
-          x = [
-            parseFloat(tokens[1]),
-            object.patch.audioContext?.currentTime || 0,
-            parseFloat(tokens[3]),
-          ];
+          x = [parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])];
         } else {
           x = parseFloat(tokens[1]);
         }
@@ -151,7 +147,18 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
         const invocation = x[2] as number;
 
-        _param.set!(value as number, time, invocation);
+        /*
+        console.log(
+          "param set time name=%s value=%s time=%s invocation=%s",
+          name(),
+          value,
+          time,
+          invocation,
+          originalMessage,
+        );
+        */
+
+        _param.set!(value as number, Math.max(0, time), invocation);
 
         object.storedParameterValue = value as number;
         object.storedMessage = value as number;
