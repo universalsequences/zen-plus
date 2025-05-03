@@ -1,7 +1,7 @@
 import { useStepsContext } from "@/contexts/StepsContext";
 import { FieldSchema, GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 import { ObjectNode } from "@/lib/nodes/types";
-import { Dispatch, SetStateAction, useCallback, useRef } from "react";
+import { Dispatch, SetStateAction, useState, useCallback, useRef } from "react";
 import { usePatches } from "../../../contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "@/hooks/usePatchSelector";
@@ -23,6 +23,7 @@ export const CirklonStep = (props: Props) => {
   const { min = 0, max = 1 } = fieldSchema;
   const ratio = Math.min(1, (value - min) / (max - min));
   const ref = useRef<HTMLDivElement | null>(null);
+  const [hovering, setHovering] = useState(false);
   const { selectPatch } = usePatchSelector();
 
   const update = useCallback(
@@ -79,6 +80,8 @@ export const CirklonStep = (props: Props) => {
       className={`${step.on ? "" : "opacity-20 pointer-events-none"} w-full h-full relative  flex`}
     >
       <div
+        onMouseOver={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         ref={ref}
@@ -88,6 +91,14 @@ export const CirklonStep = (props: Props) => {
           style={{ bottom: `${ratio * 100}%`, backgroundColor: color }}
           className="h-0.5  w-full flex-1 absolute"
         />
+        {hovering && (
+          <div
+            style={{ fontSize: 8 }}
+            className="absolute top-0 bottom-0 my-auto text-xs text-white table w-full text-center"
+          >
+            {Math.round(100 * value) / 100}
+          </div>
+        )}
       </div>
     </div>
   );

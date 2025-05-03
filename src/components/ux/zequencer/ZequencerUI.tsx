@@ -186,12 +186,16 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
       }
 
       if (e.key === "Backspace") {
-        // Find all step positions that contain selected steps
+        // Get the IDs of the selected steps
+        const stepIdsToDelete = selectedSteps.map(step => step.id);
+        
+        // For backward compatibility, also find step numbers
         const stepsToDelete = findStepNumbersInPolyphonicSteps(selectedSteps, node.steps);
 
-        if (stepsToDelete.length > 0) {
+        if (stepsToDelete.length > 0 || stepIdsToDelete.length > 0) {
           node.receive(node.inlets[0], {
             stepsToDelete,
+            stepIdsToDelete,
           });
         }
       } else if (e.key === "ArrowLeft") {

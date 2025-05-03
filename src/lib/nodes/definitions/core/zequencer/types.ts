@@ -36,6 +36,7 @@ export interface ParameterLock {
 }
 
 export interface BaseStepData {
+  id: string;
   on: boolean;
   stepNumber: number;
   parameterLocks: ParameterLock[];
@@ -64,6 +65,7 @@ export type MoveStepMessage = v.InferInput<typeof MoveStepSchema>;
 
 export const DeleteStepSchema = v.object({
   stepsToDelete: v.array(v.number()),
+  stepIdsToDelete: v.optional(v.array(v.string())),
 });
 
 export type DeleteStepMessage = v.InferInput<typeof DeleteStepSchema>;

@@ -8,6 +8,11 @@ import type {
   ToggleStepMessage,
 } from "./types";
 
+// Generate a unique ID for a step
+const generateStepId = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 export const toggleStep = <Schemas extends readonly FieldSchema[]>(
   toggleMessage: ToggleStepMessage,
   steps: GenericStepData[][],
@@ -21,21 +26,29 @@ export const toggleStep = <Schemas extends readonly FieldSchema[]>(
       steps[stepNumberToToggle] = [getDefaultStep(stepNumberToToggle, schema)];
     }
     
-    // Ensure the requested voice exists
-    while (steps[stepNumberToToggle].length <= voiceIndex) {
-      const template = { ...steps[stepNumberToToggle][0] };
-      template.on = false;
-      steps[stepNumberToToggle].push(template);
-    }
+    // Check if any voice at this step is on
+    const anyStepIsOn = steps[stepNumberToToggle].some(step => step.on);
     
-    const step = steps[stepNumberToToggle][voiceIndex] as BaseStepData & StepFromSchemas<Schemas>;
-    
-    if (step.on) {
-      // Reset the voice to default with 'on' set to false
+    if (anyStepIsOn) {
+      // If any voice is on, turn them all off and remove extra steps
       const defaultStep = getDefaultStep(stepNumberToToggle, schema);
-      steps[stepNumberToToggle][voiceIndex] = defaultStep;
+      steps[stepNumberToToggle] = [defaultStep]; // Keep only one default step
     } else {
-      // If the step is off, simply turn it on
+      // If all steps are off, turn on the specified voice
+      // Ensure the requested voice exists
+      while (steps[stepNumberToToggle].length <= voiceIndex) {
+        const template = { ...steps[stepNumberToToggle][0] };
+        template.on = false;
+        
+        // Ensure the template has an ID
+        if (!template.id) {
+          template.id = generateStepId();
+        }
+        
+        steps[stepNumberToToggle].push(template);
+      }
+      
+      const step = steps[stepNumberToToggle][voiceIndex] as BaseStepData & StepFromSchemas<Schemas>;
       step.on = true;
     }
   }

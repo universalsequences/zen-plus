@@ -32,6 +32,8 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
         const newStep: MyStep = {
           ...sourceStep,
           stepNumber: i,
+          // Ensure all steps have an ID - keep existing or generate new
+          id: sourceStep.id || generateStepId(),
         };
 
         // Ensure all fields from the schema are present
@@ -55,7 +57,12 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
   return steps;
 };
 
-// The getDefaultStep function remains unchanged
+// Generate a unique ID for a step
+const generateStepId = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+// The getDefaultStep function now includes a unique ID
 export const getDefaultStep = <Schemas extends readonly FieldSchema[]>(
   stepNumber: number,
   userDefinedSchema: StepDataSchema,
@@ -68,6 +75,7 @@ export const getDefaultStep = <Schemas extends readonly FieldSchema[]>(
       return acc;
     },
     {
+      id: generateStepId(),
       stepNumber,
       on: false,
       parameterLocks: [],
