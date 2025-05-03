@@ -15,10 +15,12 @@ import {
   ToggleStepSchema,
   MultiplyPatternLengthSchema,
   LegatoStepsSchema,
+  AddStepSchema,
 } from "./types";
 import { toggleStep } from "./toggleStep";
 import { multiplyPatternLength } from "./multiplyPatternLength";
 import { legatoSteps } from "./legatoSteps";
+import { addStep } from "./addStep";
 
 // Define a generic operation type
 export type Operation<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>> = {
@@ -59,6 +61,10 @@ export const operationsRegistry = [
   {
     schema: LegatoStepsSchema,
     apply: legatoSteps,
+  },
+  {
+    schema: AddStepSchema,
+    apply: addStep,
   },
 ] as const as readonly Operation<v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>[];
 

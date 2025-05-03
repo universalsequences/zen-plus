@@ -30,6 +30,10 @@ export const zequencer_ui = (node: ObjectNode) => {
   if (!node.attributes.stepBaseColor) {
     node.attributes.stepBaseColor = "#000000";
   }
+  
+  if (node.attributes.pianoRollHeight === undefined) {
+    node.attributes.pianoRollHeight = 60; // Default height in pixels
+  }
 
   node.isResizable = true;
   return () => {

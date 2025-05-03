@@ -11,6 +11,7 @@ import type { GenericStepData, StepDataSchema } from "@/lib/nodes/definitions/co
 import { useStepsContext } from "@/contexts/StepsContext";
 import { Cirklon } from "./Cirklon";
 import { CirklonParameters } from "./CirklonParameters";
+import { PianoRoll } from "./PianoRoll";
 
 export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   usePosition();
@@ -135,18 +136,30 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const rows: GenericStepData[][] = [];
   const steps = node?.steps;
   if (steps) {
-    // For the UI, we only show the first voice of each step position
-    // This creates a 2D array [row][column] from the polyphonic structure
-    const flatSteps: GenericStepData[] = steps.map((voiceArray) => {
+    // Create a flat array of steps, preferring selected steps when available
+    const flatSteps: GenericStepData[] = steps.map((voiceArray, stepIndex) => {
       // If there's no voice at this position, return a default step
       if (!voiceArray || voiceArray.length === 0) {
         return {
+          id: "",
           on: false,
-          stepNumber: 0,
+          stepNumber: stepIndex,
           parameterLocks: [],
         } as GenericStepData;
       }
-      // Show only the first voice for UI purposes
+
+      // Check if we have a selected step at this position
+      const selectedStep = selectedSteps?.find((step) => step.stepNumber === stepIndex);
+
+      // If there's a selected step at this position and it exists in the voices array, use it
+      if (selectedStep) {
+        const matchingVoice = voiceArray.find((voice) => voice.id === selectedStep.id);
+        if (matchingVoice) {
+          return matchingVoice;
+        }
+      }
+
+      // Otherwise, show the first voice (default behavior)
       return voiceArray[0];
     });
 
@@ -187,8 +200,8 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
       if (e.key === "Backspace") {
         // Get the IDs of the selected steps
-        const stepIdsToDelete = selectedSteps.map(step => step.id);
-        
+        const stepIdsToDelete = selectedSteps.map((step) => step.id);
+
         // For backward compatibility, also find step numbers
         const stepsToDelete = findStepNumbersInPolyphonicSteps(selectedSteps, node.steps);
 
@@ -244,21 +257,46 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     if (node?.steps) {
       const durs = new Array(node.steps.length).fill(false);
       for (let i = 0; i < node.steps.length; i++) {
-        // Get the first voice at this step (for UI purposes)
+        // Get all voices at this step
         const stepVoices = node.steps[i];
         if (stepVoices && stepVoices.length > 0) {
-          const firstVoice = stepVoices[0];
-          if (firstVoice.duration && firstVoice.on) {
-            const duration = firstVoice.duration as number;
-            for (let j = 0; j < duration; j++) {
-              durs[i + j] = true;
+          // Find all active steps at this position
+          const activeSteps = stepVoices.filter((voice) => voice.on);
+
+          // If we have selected steps, prioritize them
+          const selectedStep = selectedSteps?.find(
+            (step) => step.stepNumber === i && stepVoices.some((v) => v.id === step.id),
+          );
+
+          if (selectedStep) {
+            // If we have a selected step at this position, use its duration
+            const matchingStep = stepVoices.find((v) => v.id === selectedStep.id);
+            if (matchingStep && matchingStep.duration && matchingStep.on) {
+              const duration = matchingStep.duration as number;
+              for (let j = 0; j < duration; j++) {
+                durs[i + j] = true;
+              }
+            }
+          } else if (activeSteps.length > 0) {
+            // No specific selection - display the longest duration among all active steps
+            let maxDuration = 0;
+            for (const step of activeSteps) {
+              if (step.duration && typeof step.duration === "number") {
+                maxDuration = Math.max(maxDuration, step.duration as number);
+              }
+            }
+
+            if (maxDuration > 0) {
+              for (let j = 0; j < maxDuration; j++) {
+                durs[i + j] = true;
+              }
             }
           }
         }
       }
       setDurationSteps(durs);
     }
-  }, [node?.steps]);
+  }, [node?.steps, selectedSteps]);
 
   const schema = node?.stepsSchema as StepDataSchema;
   const [parameter, setParameter] = useState(schema?.[0]?.name);
@@ -270,9 +308,62 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
   const [mouseStartY, setMouseStartY] = useState<number | null>(null);
 
+  // Handler for when a step is clicked in the piano roll
+  const handlePianoRollStepClick = useCallback(
+    (step: GenericStepData) => {
+      if (!node) return;
+
+      // If step is already selected, unselect it
+      if (selectedSteps?.some((s) => s.id === step.id)) {
+        setSelectedSteps(selectedSteps.filter((s) => s.id !== step.id));
+      } else {
+        // Make sure we have the most up-to-date version of the step from node.steps
+        // This is important to ensure the correct step is selected in the sequencer view
+        let updatedStep = step;
+
+        if (node.steps && node.steps[step.stepNumber]) {
+          const exactStep = node.steps[step.stepNumber].find((voice) => voice.id === step.id);
+          if (exactStep) {
+            updatedStep = exactStep;
+          }
+        }
+
+        // Select the step (either add to selection with meta key or replace selection)
+        setSelectedSteps([updatedStep]);
+
+        // Check if we need to scroll the view to ensure this step is visible
+        const stepRow = Math.floor(step.stepNumber / 16);
+        if (stepRow >= rows.length) {
+          // The step might be outside the visible rows, so we can't scroll to it
+          return;
+        }
+
+        // We could add scrolling to the right row here if needed in the future
+      }
+    },
+    [node, selectedSteps, setSelectedSteps, rows.length],
+  );
+
+  // Get the piano roll height from attributes
+  const pianoRollHeight = Number(attributes.pianoRollHeight || 60);
+
   return (
     <div className="bg-zinc-900 p-2" style={{ width, height }}>
       <div className="flex flex-col gap-1 h-full">
+        {/* Piano Roll Visualization */}
+        {node && pianoRollHeight > 0 && (
+          <div className="mb-2">
+            <PianoRoll
+              objectNode={objectNode}
+              node={node}
+              pianoRollHeight={pianoRollHeight}
+              onStepClick={handlePianoRollStepClick}
+              schema={schema}
+              currentStepNumber={currentStepNumber}
+            />
+          </div>
+        )}
+
         <div className="flex flex-col gap-1 h-full">
           {showParameters && schema && parameter && (
             <CirklonParameters
@@ -303,7 +394,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
                       stepEditingDuration={stepEditingDuration}
                       setStepEditingDuration={setStepEditingDuration}
                       isDurationStep={durationSteps[rowIndex * 16 + index] || false}
-                      isSelected={selectedSteps?.includes(step) || false}
+                      isSelected={selectedSteps?.some((s) => s.id === step.id) || false}
                       selection={selection}
                       setSelection={setSelection}
                       stepBaseColor={attributes.stepBaseColor as string}

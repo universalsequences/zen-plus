@@ -7,7 +7,7 @@ import type {
 
 export const multiplyPatternLength = (
   message: MultiplyPatternLengthMessage,
-  steps: GenericStepData[],
+  steps: GenericStepData[][],
   schema: StepDataSchema,
 ) => {
   const { patternLengthMultiple } = message;

@@ -43,10 +43,12 @@ export class PresetManager {
   hydrated = true;
   currentVoicePreset?: number;
   voiceToPreset: Map<number, number>;
+  counter: number;
 
   constructor(object: ObjectNode) {
     this.objectNode = object;
     this.voiceToPreset = new Map();
+    this.counter = 0;
 
     this.presets = [];
     for (let i = 0; i < 64; i++) {
@@ -107,7 +109,9 @@ export class PresetManager {
   switchToPreset(presetNumber: number, voice?: number, time?: number) {
     if (voice !== undefined && this.voiceToPreset.get(voice) === presetNumber) {
       this.currentVoicePreset = presetNumber;
-      return;
+      if (this.counter++ > 10) {
+        return;
+      }
     }
     const oldPreset = this.currentPreset;
     if (oldPreset !== undefined && this.buffer && voice === undefined) {

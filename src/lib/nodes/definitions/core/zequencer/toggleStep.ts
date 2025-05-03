@@ -48,7 +48,13 @@ export const toggleStep = <Schemas extends readonly FieldSchema[]>(
         steps[stepNumberToToggle].push(template);
       }
       
+      // Get the target step and ensure it has a valid ID
       const step = steps[stepNumberToToggle][voiceIndex] as BaseStepData & StepFromSchemas<Schemas>;
+      if (!step.id) {
+        step.id = generateStepId();
+      }
+      
+      // Set the step to ON
       step.on = true;
     }
   }

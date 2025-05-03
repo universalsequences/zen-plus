@@ -29,11 +29,15 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
     if (sourceStepArray.length > 0) {
       // Clone the source steps for this position
       const newStepArray: MyStep[] = sourceStepArray.map((sourceStep) => {
+        // Determine if this is a duplicate or a step that needs to retain its ID
+        // If the source index matches the current index, it's the original step, otherwise it's a duplicate
+        const isNewDuplicate = sourceIndex !== i;
+        
         const newStep: MyStep = {
           ...sourceStep,
           stepNumber: i,
-          // Ensure all steps have an ID - keep existing or generate new
-          id: sourceStep.id || generateStepId(),
+          // Generate new IDs for duplicated steps, keep original IDs only for original steps
+          id: isNewDuplicate ? generateStepId() : (sourceStep.id || generateStepId()),
         };
 
         // Ensure all fields from the schema are present

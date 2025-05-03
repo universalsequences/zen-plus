@@ -71,9 +71,12 @@ export const Step: React.FC<{
         // Check if this step exists in node.steps
         const currentStepVoices = node.steps?.[stepNumber];
 
-        // Get the first voice from the current step
-        const currentStep =
-          currentStepVoices && currentStepVoices.length > 0 ? currentStepVoices[0] : step;
+        // First, search for this exact step by ID in the voices array
+        const exactStep = currentStepVoices?.find(voice => voice.id === step.id);
+        
+        // If the exact step is found, use it, otherwise fall back to the first voice or provided step
+        const currentStep = exactStep || 
+          (currentStepVoices && currentStepVoices.length > 0 ? currentStepVoices[0] : step);
 
         // Set the stepNumber to track for movement
         setStepNumberMoving(stepNumber);
@@ -109,12 +112,38 @@ export const Step: React.FC<{
     }
     if (stepEditingDuration !== null) {
       const duration = Math.max(1, stepNumber - stepEditingDuration + 1);
-      node.receive(node.inlets[0], {
-        name: "duration",
-        stepNumber: stepEditingDuration,
-        value: duration,
-        voiceIndex: 0, // Always edit the first voice for UI interaction
-      });
+      
+      // Get all steps at the editing position
+      const stepVoices = node.steps?.[stepEditingDuration];
+      
+      if (stepVoices && stepVoices.length > 0) {
+        // Find all active steps (ON) at this position
+        const activeSteps = stepVoices.filter(voice => voice.on);
+        
+        if (activeSteps.length > 0) {
+          // If there are multiple active steps (chord), update all of them
+          // Use batch update approach - update each step one by one
+          activeSteps.forEach((activeStep, index) => {
+            // Add a small delay between operations to ensure they process in order
+            setTimeout(() => {
+              node.receive(node.inlets[0], {
+                name: "duration",
+                stepNumber: stepEditingDuration,
+                value: duration,
+                stepId: activeStep.id
+              });
+            }, index * 5); // Small 5ms staggered delay between operations
+          });
+        } else {
+          // Fall back to editing the first voice if no active steps are found
+          node.receive(node.inlets[0], {
+            name: "duration",
+            stepNumber: stepEditingDuration,
+            value: duration,
+            voiceIndex: 0
+          });
+        }
+      }
     }
     if (selection) {
       setSelection({
@@ -183,10 +212,26 @@ export const Step: React.FC<{
         setSelectedSteps([]);
       }
 
-      // Toggle operation now toggles the first voice at this step position
+      // If this is an actual step with an ID and it's currently ON, toggle it OFF
+      if (step.id && step.on) {
+        // First check if there's a matching step in the voices at this position
+        const stepVoices = node.steps?.[stepNumber];
+        const matchingStep = stepVoices?.find(v => v.id === step.id);
+        
+        if (matchingStep) {
+          // Delete this specific step (since we're toggling it off)
+          node.receive(node.inlets[0], {
+            stepsToDelete: [],
+            stepIdsToDelete: [step.id]
+          });
+          return;
+        }
+      }
+      
+      // For OFF -> ON toggling or if no matching step found, use the regular toggle operation
       node.receive(node.inlets[0], {
         stepNumberToToggle: stepNumber,
-        voiceIndex: 0, // Always target the first voice for UI interaction
+        voiceIndex: 0,
       });
     },
     [
@@ -199,6 +244,8 @@ export const Step: React.FC<{
       lockedMode,
       node,
       stepNumber,
+      step,
+      setSelectedSteps
     ],
   );
   const isInSelection =

@@ -28,10 +28,12 @@ export const CirklonStep = (props: Props) => {
 
   const update = useCallback(
     (value: number) => {
+      // Use the step ID directly for precise editing instead of stepNumber/voiceIndex
       objectNode.receive(objectNode.inlets[0], {
         name: parameter,
         value,
-        stepNumber: step.stepNumber,
+        stepNumber: step.stepNumber, // Keep for backward compatibility
+        stepId: step.id // Use stepId for direct targeting
       });
     },
     [parameter, step],

@@ -47,6 +47,7 @@ export const SetFieldForStepSchema = v.object({
   name: v.string(),
   value: v.union([v.boolean(), v.number()]),
   voiceIndex: v.optional(v.number()),
+  stepId: v.optional(v.string()), // Add stepId for direct step targeting
 });
 
 export type SetFieldForStepMessage = v.InferInput<typeof SetFieldForStepSchema>;
@@ -96,3 +97,14 @@ export const LegatoStepsSchema = v.object({
 
 // Define the type for the legato steps message
 export type LegatoStepsMessage = v.InferOutput<typeof LegatoStepsSchema>;
+
+// Define the schema for the add step message
+export const AddStepSchema = v.object({
+  stepNumber: v.number(),
+  pitchField: v.string(),
+  pitchValue: v.number(),
+});
+
+// Define the type for the add step message
+export type AddStepMessage = v.InferOutput<typeof AddStepSchema>;
+
