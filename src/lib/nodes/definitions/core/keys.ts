@@ -13,19 +13,33 @@ export const keydown: NodeFunction = (node: ObjectNode, key: Lazy) => {
   node.needsLoad = true;
   node.needsMainThread = true;
   node.skipCompilation = true;
+
+  const pressedKeys = new Set<string>();
+
   window?.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
       return; // Ignore the event if it's from an input field or text box
     }
+
+    // Skip if key is already pressed (prevents repeat events)
+    if (pressedKeys.has(e.key)) {
+      return;
+    }
+
+    pressedKeys.add(e.key);
+
     const _key = key() === "space" ? " " : key();
     if (_key === "") {
       node.send(node.outlets[0], e.key);
-      return;
-    }
-    if (e.key === _key) {
+    } else if (e.key === _key) {
       e.preventDefault();
       node.send(node.outlets[0], "bang");
     }
+  });
+
+  // Clear pressed key on keyup to allow new press
+  window?.addEventListener("keyup", (e: KeyboardEvent) => {
+    pressedKeys.delete(e.key);
   });
 
   return (_message: Message) => {

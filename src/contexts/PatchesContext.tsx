@@ -1042,8 +1042,8 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
       }
       // Find the tile with the currently selected buffer
       const tile =
-        rootTileRef.current.findBuffer(selectedBuffer.id) ||
-        (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null);
+        (selectedPatch ? rootTileRef.current.findPatch(selectedPatch) : null) ||
+        rootTileRef.current.findBuffer(selectedBuffer.id);
 
       if (tile) {
         if (newTile) {

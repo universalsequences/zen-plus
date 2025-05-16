@@ -47,6 +47,14 @@ export const metro = (node: ObjectNode, bpm: Lazy) => {
           const data: any = e.data;
           const time = data.time as number;
           const stepNumber = data.stepNumber;
+          /*
+          console.log(
+            "sending time=%s",
+            time,
+            time - node.patch.audioContext?.currentTime,
+            node.patch.audioContext?.currentTime,
+          );
+          */
           node.send(node.outlets[0], { time, stepNumber } as any);
         };
 

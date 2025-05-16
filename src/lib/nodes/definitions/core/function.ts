@@ -49,7 +49,7 @@ export class FunctionEditor {
       this.points = x as Point[];
       if (this.objectNode) {
         if (voice !== undefined) {
-          this.execute(voice, time);
+          return this.execute(voice, time);
         } else {
           this.objectNode.receive(this.objectNode.inlets[0], "bang");
         }
@@ -66,6 +66,9 @@ export class FunctionEditor {
     } as MessageObject);
 
     if (evaluation) {
+      if (voice !== undefined) {
+        return evaluation;
+      }
       this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
     }
   }
@@ -309,8 +312,8 @@ export const function_editor = (node: ObjectNode) => {
       ed1.points = editor.points.slice(0, 3);
       const ed2 = new FunctionEditor(node);
       ed2.points = editor.points.slice(3);
-      const attack = ed1.points[1].x;
-      const decay = ed1.points[2].x - attack;
+      const attack = Math.pow(ed1.points[1].x * 0.1, 2);
+      const decay = Math.pow((ed1.points[2].x - ed1.points[1].x) * 0.1, 2);
       const release = 1000 - ed2.points[0].x;
       const shape = attack / (attack + decay);
 
@@ -320,8 +323,8 @@ export const function_editor = (node: ObjectNode) => {
           0,
           0,
           0,
-          `attack ${attack * 4} ${time} ${voice}`,
-          `attackdecay ${(attack + decay) * 4} ${time} ${voice}`,
+          `attack ${attack * 1} ${time} ${voice}`,
+          `attackdecay ${attack + decay} ${time} ${voice}`,
           `decay ${decay * 4} ${time} ${voice}`,
           `sustain ${ed1.points[2].y} ${time} ${voice}`, // sustain
           `release ${release * 4} ${time} ${voice}`,
@@ -405,6 +408,9 @@ export const function_editor = (node: ObjectNode) => {
       const time = msg.time as number;
       editor.points = points;
       return collect(voice, time, true);
+    }
+    if (msg === "bang" && !node.attributes.adsr) {
+      return collect();
     }
     if (typeof msg === "string") {
       const tokens = msg.split(" ");

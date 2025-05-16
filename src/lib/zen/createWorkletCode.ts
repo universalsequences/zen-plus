@@ -96,11 +96,14 @@ this.port.postMessage({type: "error-compiling", data: "yo"});
          }
        } else if (e.data.type === "message-port") {
          this.messagePort =  e.data.port;
-       }else if (e.data.type === "load-wasm") {
+       } else if (e.data.type === "load-wasm") {
           this.loadWASM(e.data.body);
        } else if (e.data.type === "schedule-set") {
          let {idx, value, time} = e.data.body;
          this.events.push(e.data.body);
+       } else if (e.data.type === "cancel-schedule-set") {
+         const { uuid } = e.data.body;
+         this.cancelSchedule(uuid);
        } else if (e.data.type === "messageRate") {
          this.messageRate = e.data.body;
        } else if (e.data.type === "init-memory") {
@@ -143,6 +146,10 @@ this.port.postMessage({type: "error-compiling", data: "yo"});
            this.ready = true;
        }
     }
+  }
+
+  cancelSchedule(uuid) {
+    this.events = this.events.filter(x => x.uuid !== uuid);
   }
 
   createSineTable() {

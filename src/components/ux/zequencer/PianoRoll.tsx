@@ -283,7 +283,7 @@ export const PianoRoll: React.FC<PianoRollProps> = ({
               zIndex: 5,
               pointerEvents: "none",
               boxShadow: "0 0 4px rgba(255, 255, 255, 0.7)",
-              transition: "left 0.05s ease-out",
+              transform: "translateX(-1px)", // Center the line perfectly
             }}
           />
 

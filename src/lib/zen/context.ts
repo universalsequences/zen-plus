@@ -38,7 +38,12 @@ type EmittedVariables = {
   [key: string]: boolean;
 };
 
-export type ContextMessageType = "memory-set" | "memory-get" | "schedule-set" | "init-memory";
+export type ContextMessageType =
+  | "memory-set"
+  | "memory-get"
+  | "schedule-set"
+  | "init-memory"
+  | "cancel-schedule-set";
 
 export interface ContextMessage {
   type: ContextMessageType;

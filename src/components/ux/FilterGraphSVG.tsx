@@ -654,7 +654,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
   // Helper to get colors for each filter (main color and variations)
   const getFilterColor = (index: number) => {
     const baseColors = [
-      "#ff9500", // Orange (primary)
+      objectNode.attributes.curveColor || "#ff9500", // Orange (primary)
       "#00b4ff", // Blue
       "#00ff7f", // Green
       "#ff3377", // Pink

@@ -33,8 +33,8 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
       return;
     }
 
-    // Send messages using the optimized format for better performance
     /*
+    // Send messages using the optimized format for better performance
     parentNode.send(parentNode.outlets[0], {
       type: e.data.type,
       subType: e.data.subType,

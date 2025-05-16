@@ -53,8 +53,9 @@ export class MutableValue implements SerializableCustom {
       this.updateMainThread();
     }
     this.executing = true;
-    this.execute(x, voice, time);
+    const ret = this.execute(x, voice, time);
     this.executing = false;
+    return ret;
   }
 
   getJSON() {
@@ -71,7 +72,11 @@ export class MutableValue implements SerializableCustom {
           : value,
     );
     if (evaluation) {
-      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
+      if (voice === undefined) {
+        this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
+      } else {
+        return evaluation;
+      }
     }
   }
 

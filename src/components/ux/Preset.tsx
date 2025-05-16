@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { PresetManager } from "@/lib/nodes/definitions/core/preset";
+import { PresetManager, SlotToPreset } from "@/lib/nodes/definitions/core/preset";
 import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
@@ -16,6 +16,10 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let [current, setCurrent] = useState(mgmt.currentPreset);
   const isMouseDown = useRef(false);
   const [selectedPresets, setSelectedPresets] = useState<number[]>([]);
+
+  const showNames = objectNode.attributes.showNames as boolean;
+  const slotMode = objectNode.attributes.slotMode as boolean;
+  const numberOfSlots = objectNode.attributes.slots as number;
 
   const onMouseUp = useCallback((e: MouseEvent) => {
     isMouseDown.current = false;
@@ -63,41 +67,84 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const { value } = useValue();
 
+  const presetNames = Array.isArray(value) ? (value[1] as string) : mgmt.presetNames;
+  const slotToPreset = Array.isArray(value) ? (value[2] as SlotToPreset) : {};
+  const currentPattern = Array.isArray(value) ? (value[3] as number) : 0;
+
+  console.log("value received=", value);
+
   useEffect(() => {
-    if (value !== undefined) {
-      setCurrent(value as number);
+    if (Array.isArray(value)) {
+      setCurrent(value[0] as number);
     }
   }, [value]);
 
   const switchToPreset = useCallback(
-    (presetNumber: number) => {
-      objectNode.receive(objectNode.inlets[0], presetNumber);
-      setCurrent(presetNumber);
+    (presetNumber: number, switchMode = false) => {
+      if (slotMode && !switchMode) {
+        objectNode.receive(objectNode.inlets[0], ["copy-to-slot", presetNumber]);
+      } else {
+        objectNode.receive(objectNode.inlets[0], presetNumber);
+      }
     },
-    [setCurrent, mgmt, lockedMode],
+    [setCurrent, mgmt, lockedMode, slotMode],
   );
+
+  const onChangeName = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    objectNode.receive(objectNode.inlets[0], ["set-name", value]);
+  }, []);
+
+  const currentPresetNumber = slotMode ? slotToPreset[current]?.[currentPattern] : current;
+  console.log("current preset number=", currentPresetNumber);
 
   return (
     <div
       style={{ width, height }}
-      className="flex flex-wrap overflow-hidden content-start bg-zinc-950"
+      className={`${showNames ? "overflow-scroll p-1" : "flex flex-wrap overflow-hidden"} content-start bg-zinc-950`}
     >
+      {slotMode && (
+        <div className="flex flex-wrap">
+          {new Array(numberOfSlots).fill(1).map((x, i) => (
+            <div
+              onClick={() => switchToPreset(i, true)}
+              className={`flex text-white text-xs text-center w-6 h-6 border ${i === current ? "border-white" : "border-zinc-600"} rounded-full m-0.5 cursor-pointer`}
+            >
+              <div className="m-auto">{i + 1}</div>
+            </div>
+          ))}
+        </div>
+      )}
       {mgmt.presets.map((_preset, i) => (
         <div
           key={i}
           onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => onMouseDown(e, i)}
           onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => onMouseOver(e, i)}
           className={
-            "w-3 h-3 m-0.5 cursor-pointer transition-colors " +
+            (showNames ? "w-full h-4" : "w-3 h-3") +
+            " m-0.5 cursor-pointer border transition-colors " +
             (selectedPresets.includes(i)
               ? "bg-red-500"
-              : mgmt.buffer?.[i] === 2
-                ? "bg-zinc-100 "
-                : mgmt.buffer?.[i]
-                  ? "bg-zinc-700"
-                  : "bg-zinc-900")
+              : currentPresetNumber === i
+                ? showNames
+                  ? "border-white"
+                  : "bg-zinc-100 "
+                : !showNames && mgmt.buffer?.[i] === 1
+                  ? "bg-zinc-700 border-transparent "
+                  : "bg-zinc-900 border-transparent ")
           }
-        ></div>
+        >
+          {showNames ? (
+            <input
+              className="text-white bg-transparent outline-none"
+              onChange={onChangeName}
+              type="text"
+              value={presetNames[i]}
+            />
+          ) : (
+            ""
+          )}
+        </div>
       ))}
     </div>
   );

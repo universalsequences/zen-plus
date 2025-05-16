@@ -129,7 +129,8 @@ let perfMonitoringActive = false;
 const PERF_MONITOR_INTERVAL = 1000; // 1s performance monitoring interval
 
 // sends one round of instructions evaluation to the main thread
-const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
+const sendEvaluationToMainThread = (data: VMEvaluation, clear = true, debug = true) => {
+  //console.log("send evaluation to main thread", data);
   const {
     mutableValueChanged,
     replaceMessages,
@@ -146,6 +147,7 @@ const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
   // Try using ring buffer for critical real-time updates first
   let sentViaRingBuffer = false;
   let sentOptimizedViaRingBuffer = false;
+  let count = 0;
 
   // First try to send optimized main thread instructions via ring buffer
   if (
@@ -163,12 +165,14 @@ const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
             optimizedDataType: instruction.optimizedDataType,
             message: instruction.message,
           },
+          false,
         );
         // If any fail, we'll fall back to regular main thread instructions
         if (!success) {
           sentOptimizedViaRingBuffer = false;
           break;
         } else {
+          count++;
         }
       } else {
         sentOptimizedViaRingBuffer = false;
@@ -187,11 +191,14 @@ const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
           MessageType.MAIN_THREAD_INSTRUCTION,
           instruction.nodeId,
           instruction,
+          false,
         );
         // If any fail, we'll fall back to postMessage for all
         if (!success) {
           sentViaRingBuffer = false;
           break;
+        } else {
+          count++;
         }
       } else {
         sentViaRingBuffer = false;
@@ -199,6 +206,8 @@ const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
       }
     }
   }
+
+  ringBuffer?.signalCallback?.(count);
 
   // If we couldn't send via ring buffer or there are other updates,
   // use regular postMessage
@@ -350,7 +359,7 @@ const startPerformanceMonitoring = () => {
 // Function to process data from the ring buffer
 const processRingBufferData = () => {
   try {
-    if (ringBuffer?.canRead()) {
+    while (ringBuffer?.canRead()) {
       const message = ringBuffer.read();
       if (message) {
         processRingBufferMessage(message);
@@ -358,12 +367,6 @@ const processRingBufferData = () => {
         // Update message count in shared memory
         if (sharedMemory) {
           sharedMemory.reportMessageProcessed();
-        }
-
-        // Process more messages if available
-        // Continue processing as long as there are messages to avoid building up backlog
-        if (ringBuffer.canRead()) {
-          setTimeout(processRingBufferData, 0); // Schedule with microtask to avoid stack overflow
         }
       }
     }
@@ -373,7 +376,6 @@ const processRingBufferData = () => {
 };
 
 const handleSharedMessagePort = (nodeId: string, port: MessagePort) => {
-  console.log("handle shared message port=", nodeId);
   port.onmessage = (e: MessageEvent) => {
     const type = e.data.type;
     const subType = e.data.subType;
@@ -419,10 +421,10 @@ self.onmessage = async (e: MessageEvent) => {
         ringBuffer = new RingBuffer(0, data.buffer, BufferDirection.WORKER_TO_MAIN);
 
         // Set up signal callback to notify main thread when data is available
-        ringBuffer.setSignalCallback(() => {
+        ringBuffer.setSignalCallback((count = 0) => {
           // set timeout ensures data is actually available (idk why this is actually needed)
           setTimeout(() => {
-            self.postMessage({ type: "ringBufferDataAvailable" });
+            self.postMessage({ body: count, type: "ringBufferDataAvailable" });
           }, 1);
         });
 

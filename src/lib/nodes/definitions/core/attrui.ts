@@ -52,6 +52,7 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
     }
     if (typeof _message === "number" && name()) {
       const msg = `${name()} ${_message}`;
+      custom.value = value() as Message;
       return [msg];
     }
     if (name() && value() !== undefined) {

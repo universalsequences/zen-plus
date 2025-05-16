@@ -1,8 +1,7 @@
 import { doc } from "./doc";
-import { Operator, Statement, CompoundOperator } from "./types";
-import { Lazy, ObjectNode, Message, OptimizedDataType } from "../../types";
-import { memoZen, memo } from "./memo";
-import { Clicker, click, ParamGen, param } from "@/lib/zen/index";
+import { Statement } from "./types";
+import { ObjectNode, Message, OptimizedDataType } from "../../types";
+import { Clicker, click } from "@/lib/zen/index";
 
 doc("click", {
   numberOfInlets: 1,
@@ -15,8 +14,17 @@ export const z_click = (node: ObjectNode) => {
   node.needsMainThread = true;
   node.needsLoad = true;
   node.inlets[0].optimizedDataType = [OptimizedDataType.NUMBER];
+  if (!node.attributes.cancel) {
+    node.attributes.cancel = false;
+  }
+
+  let invocationToUUID: { [x: number]: number[] } = {};
 
   return (message: Message) => {
+    if (Array.isArray(message) && typeof message[1] === "string") {
+      message[0] = parseInt(message[1]);
+      message[1] = parseInt(message[1]);
+    }
     if (!clicker) {
       clicker = click();
       node.click = clicker;
@@ -34,7 +42,22 @@ export const z_click = (node: ObjectNode) => {
     } else if (Array.isArray(message) && typeof message[0] === "number") {
       const time = 44100 * (message[0] - (node.patch.audioContext?.currentTime || 0));
       const invocation = message[1] as number;
-      clicker.click!(time, 1, invocation);
+
+      if (time < 0) {
+        console.log("negative time", node, message, node.patch.audioContext?.currentTime);
+      }
+
+      if (invocation !== undefined && invocationToUUID[invocation] && node.attributes.cancel) {
+        for (const uuid of invocationToUUID[invocation]) {
+          clicker.cancel?.(uuid);
+        }
+        invocationToUUID[invocation].length = 0;
+      }
+      const uuid = clicker.click!(time, 1, invocation);
+      if (invocation !== undefined) {
+        if (!invocationToUUID[invocation]) invocationToUUID[invocation] = [];
+        invocationToUUID[invocation].push(uuid);
+      }
     } else {
       clicker.click!();
     }

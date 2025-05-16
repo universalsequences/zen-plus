@@ -50,6 +50,7 @@ export const zen = (
   let out1: Generated = fragContext.gen(fragment);
   let shaderCode = generateShader(out1, fragContext, "gl_FragColor");
   let vertexCode = generateShader(out2, vertexContext, "gl_Position", fragContext.varyings);
+  console.log(shaderCode);
 
   return {
     drawType,

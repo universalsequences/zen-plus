@@ -25,7 +25,7 @@ import { LispError } from "../lisp/eval";
 import { Instruction } from "./vm/types";
 import { Branching } from "./vm/evaluate";
 import { MessageBody } from "@/workers/core";
-import { VM } from "@/workers/vm/VM";
+import { VM, VMEvaluation } from "@/workers/vm/VM";
 
 export interface Size {
   width: number;
@@ -271,7 +271,7 @@ export type ObjectNode = Positioned &
 
 export interface SerializableCustom {
   getJSON: () => any;
-  fromJSON: (x: any, y?: boolean, voice?: number, time?: number) => void;
+  fromJSON: (x: any, y?: boolean, voice?: number, time?: number) => VMEvaluation | undefined;
   value: Message;
   execute: (x?: number) => void;
 }

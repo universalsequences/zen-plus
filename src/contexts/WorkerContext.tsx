@@ -382,24 +382,22 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
     }
 
     // Function to process data from the ring buffer
-    const processRingBufferData = () => {
-      const id = Math.random();
+    const processRingBufferData = (count = 0) => {
+      let a = new Date().getTime();
       try {
-        if (ringBufferRef.current?.canRead()) {
+        while (ringBufferRef.current?.canRead()) {
           const message = ringBufferRef.current.read();
           if (message) {
             handleWorkerMessage(message);
-
-            // Continue processing messages if more are available
-            // This prevents backlogs by processing all available messages
-            if (ringBufferRef.current.canRead()) {
-              setTimeout(processRingBufferData, 0); // Use microtask to avoid stack overflow
-            }
           }
-        } else {
         }
       } catch (error) {
         console.error("Error processing ring buffer data:", error);
+      }
+      let b = new Date().getTime();
+      const time = b - a;
+      if (time > 1) {
+        console.log("read took %s ms", time);
       }
     };
 
@@ -420,6 +418,7 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
       // Handle signal that data is available in the ring buffer
       if (type === "ringBufferDataAvailable") {
+        //console.log("ring buffer available body=", body);
         processRingBufferData();
         return;
       }

@@ -103,7 +103,7 @@ export class FilterGraphValue extends MutableValue {
   fromJSON(x: any, isPreset?: boolean, voice?: number, time?: number) {
     if (Array.isArray(x)) {
       this.filters = x;
-      this.execute(this.filters, voice, time);
+      return this.execute(this.filters, voice, time);
     }
   }
 
@@ -113,6 +113,7 @@ export class FilterGraphValue extends MutableValue {
       voice !== undefined ? { voice, filters, time } : filters,
     );
     if (evaluation) {
+      if (voice !== undefined) return evaluation;
       this.objectNode.patch.vm?.sendEvaluationToMainThread?.(evaluation);
     }
   }
@@ -297,8 +298,9 @@ export const filtergraph = (node: ObjectNode) => {
         time,
       }));
     }
+
     if (Array.isArray(msg) && typeof msg[0] === "object") {
-      custom.fromJSON(msg);
+      custom.filters = msg;
       /// note: this is being called by
       /*
       if (node.onNewValue) {

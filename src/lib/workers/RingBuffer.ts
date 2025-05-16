@@ -143,7 +143,7 @@ export class RingBuffer {
   }
 
   // Callback function to signal that new data is available
-  private signalCallback?: () => void;
+  signalCallback?: (count?: number) => void;
 
   /**
    * Set a callback function to be called when new data is written to the buffer
@@ -157,7 +157,7 @@ export class RingBuffer {
    * Writes a message to the ring buffer in the current direction
    * Returns true if the message was written successfully
    */
-  write(type: MessageType, nodeId: string, message?: any): boolean {
+  write(type: MessageType, nodeId: string, message?: any, signal = true): boolean {
     //console.log(`RingBuffer.write - type=${type}, nodeId=${nodeId}, direction=${this.direction === BufferDirection.MAIN_TO_WORKER ? "MAIN_TO_WORKER" : "WORKER_TO_MAIN"}`);
 
     // Special cases for optimized message formats
@@ -336,7 +336,7 @@ export class RingBuffer {
       }
 
       // Signal that new data is available (if callback is set)
-      if (this.signalCallback) {
+      if (this.signalCallback && signal) {
         this.signalCallback();
       }
 

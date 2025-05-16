@@ -305,7 +305,7 @@ ${functionSignature} {
     if (this.disposed || !this.ready) {
       return true;
     }
-    this.scheduleEvents(218);
+    this.scheduleEvents(128);
 `;
     }
   }

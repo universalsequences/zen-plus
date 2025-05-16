@@ -62,7 +62,7 @@ export const mc_voicer = (node: ObjectNode) => {
 
   const listeners: AudioWorkletNode[] = [];
   const voiceActivities: number[] = [];
-  const freqToVoiceMap = new Map<number, number>(); // Maps frequencies to voice indexes
+  const freqToVoiceMap = new Map<string, number>(); // Maps "preset-frequency" to voice indexes
   const voiceToFreqMap = new Map<number, number>(); // Maps voice indexes to frequencies
   const voiceToPresetMap = new Map<number, number | null>(); // Maps voice indexes to their current preset or null
   const chans = node.attributes.chans as number;
@@ -135,17 +135,19 @@ export const mc_voicer = (node: ObjectNode) => {
       K_P = chans; // Default to total number of voices
     }
 
+    const freqKey = `${preset}-${frequency}`;
+
     if (message.type === "noteoff") {
-      if (freqToVoiceMap.has(frequency)) {
-        const voice = freqToVoiceMap.get(frequency) as number;
+      if (freqToVoiceMap.has(freqKey)) {
+        const voice = freqToVoiceMap.get(freqKey) as number;
         // Send noteoff message immediately
         const noteoffMessage = {
           ...message,
-          time: message.time || node.patch.audioContext!.currentTime + 0.01,
+          time: message.time ? message.time : node.patch.audioContext!.currentTime + 0.01,
           voice,
         };
         // Immediately remove mappings
-        freqToVoiceMap.delete(frequency);
+        freqToVoiceMap.delete(freqKey);
         voiceToFreqMap.delete(voice);
         if (!usePolyphony) {
           voiceToPresetMap.set(voice, null);
@@ -159,8 +161,8 @@ export const mc_voicer = (node: ObjectNode) => {
     let voiceChosen: number;
     const now = new Date().getTime();
 
-    if (freqToVoiceMap.has(frequency)) {
-      voiceChosen = freqToVoiceMap.get(frequency)!;
+    if (freqToVoiceMap.has(freqKey)) {
+      voiceChosen = freqToVoiceMap.get(freqKey)!;
     } else {
       if (usePolyphony) {
         // Get voices currently assigned to the preset
@@ -185,11 +187,22 @@ export const mc_voicer = (node: ObjectNode) => {
           } else if (freeVoices.length > 0) {
             voiceChosen = findLeastActiveVoice(freeVoices);
           } else {
-            // No free voices, steal from other presets
-            const otherVoices = Array.from({ length: chans }, (_, i) => i).filter(
-              (i) => voiceToPresetMap.get(i) !== preset,
+            // First try to steal from our own preset's voices
+            const ownInactiveVoices = voicesForP.filter(
+              (i) => voiceActivities[i] === 0 && now - voiceTimestamps[i] > 20,
             );
-            voiceChosen = findLeastActiveVoice(otherVoices);
+
+            if (ownInactiveVoices.length > 0) {
+              voiceChosen = findLeastActiveVoice(ownInactiveVoices);
+            } else if (voicesForP.length > 0) {
+              voiceChosen = findLeastActiveVoice(voicesForP);
+            } else {
+              // Only as last resort, steal from other presets
+              const otherVoices = Array.from({ length: chans }, (_, i) => i).filter(
+                (i) => voiceToPresetMap.get(i) !== preset,
+              );
+              voiceChosen = findLeastActiveVoice(otherVoices);
+            }
           }
         } else {
           // Polyphony limit reached, steal from preset's voices
@@ -210,11 +223,16 @@ export const mc_voicer = (node: ObjectNode) => {
       // If the chosen voice was used by another frequency, remove that mapping
       if (voiceToFreqMap.has(voiceChosen)) {
         const oldFreq = voiceToFreqMap.get(voiceChosen)!;
-        freqToVoiceMap.delete(oldFreq);
+        // Find and remove all freqKey entries that point to this voice
+        for (const [key, value] of freqToVoiceMap.entries()) {
+          if (value === voiceChosen) {
+            freqToVoiceMap.delete(key);
+          }
+        }
       }
 
       // Update mappings
-      freqToVoiceMap.set(frequency, voiceChosen);
+      freqToVoiceMap.set(freqKey, voiceChosen);
       voiceToFreqMap.set(voiceChosen, frequency);
       if (usePolyphony) {
         voiceToPresetMap.set(voiceChosen, preset);
@@ -227,7 +245,7 @@ export const mc_voicer = (node: ObjectNode) => {
       {
         ...message,
         voice: voiceChosen,
-        time: message.time || node.patch.audioContext!.currentTime + 0.01,
+        time: message.time ? message.time : node.patch.audioContext!.currentTime + 0.01,
       },
     ];
   };
