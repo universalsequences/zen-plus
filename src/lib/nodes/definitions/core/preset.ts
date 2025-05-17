@@ -550,7 +550,6 @@ export const preset = (object: ObjectNode) => {
     }
   };
   return (x: Message) => {
-    console.log("preset received=", x);
     const mgmt = object.custom as PresetManager;
     if (x === "update-ui") {
       updateUI();

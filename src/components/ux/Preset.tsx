@@ -103,18 +103,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       style={{ width, height }}
       className={`${showNames ? "overflow-scroll p-1" : "flex flex-wrap overflow-hidden"} content-start bg-zinc-950`}
     >
-      {slotMode && (
-        <div className="flex flex-wrap">
-          {new Array(numberOfSlots).fill(1).map((x, i) => (
-            <div
-              onClick={() => switchToPreset(i, true)}
-              className={`flex text-white text-xs text-center w-6 h-6 border ${i === current ? "border-white" : "border-zinc-600"} rounded-full m-0.5 cursor-pointer`}
-            >
-              <div className="m-auto">{i + 1}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      {slotMode && <div className="text-zinc-400 pl-1">slot: {current + 1}</div>}
       {mgmt.presets.map((_preset, i) => (
         <div
           key={i}

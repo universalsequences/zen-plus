@@ -124,10 +124,11 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     const stepData = node.steps?.[0][0];
     if (stepData) {
       for (const key in noteon) {
-        if (key in stepData) {
+        if (key in stepData && ["semitone", "transpose"].includes(key)) {
           // we have a match
           const num = noteon[key];
           recordingNoteOn[num] = lastStepNumber || 0;
+          console.log("noteon: we have match with key=", key, num);
         }
       }
     }
@@ -137,20 +138,32 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
     const stepData = node.steps?.[0][0];
     if (stepData) {
       for (const key in noteoff) {
-        if (key in stepData) {
+        if (key in stepData && ["semitone", "transpose"].includes(key)) {
           // we have a match
           const num = noteoff[key];
           const stepNumber = recordingNoteOn[num];
           const duration = Math.max(1, lastStepNumber - stepNumber);
           if (node.stepsSchema) {
-            const stepData = getDefaultStep(stepNumber, node.stepsSchema);
-            stepData[key] = num;
-            stepData.on = true;
-            stepData["duration"] = duration;
-            if (node.steps?.[stepNumber]?.length === 1 && !node.steps[stepNumber][0].on) {
-              node.steps[stepNumber] = [stepData];
+            // Create a new step with the recorded note
+            const newStepData = getDefaultStep(stepNumber, node.stepsSchema);
+            newStepData[key] = num;
+            newStepData.on = true;
+            newStepData["duration"] = duration;
+
+            // If there are existing steps at this position
+            if (node.steps?.[stepNumber]?.length > 0) {
+              // Only replace the default step if it's the only step and it's turned off
+              if (node.steps[stepNumber].length === 1 && !node.steps[stepNumber][0].on) {
+                node.steps[stepNumber] = [newStepData];
+              } else {
+                // Otherwise add the new step, preserving existing steps
+                node.steps?.[stepNumber].push(newStepData);
+              }
             } else {
-              node.steps?.[stepNumber].push(stepData);
+              // No steps at this position, add a new one
+              if (node.steps) {
+                node.steps[stepNumber] = [newStepData];
+              }
             }
           }
           updateUI();
