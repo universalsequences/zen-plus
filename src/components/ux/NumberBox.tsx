@@ -20,6 +20,83 @@ const NumberBox: React.FC<{
   const rounding = useRef<boolean>(true);
   const initValue = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Measure container dimensions for adaptive font sizing
+  useEffect(() => {
+    if (ref.current) {
+      const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          if (entry.target === ref.current) {
+            setContainerSize({
+              width: entry.contentRect.width,
+              height: entry.contentRect.height
+            });
+          }
+        }
+      });
+      
+      resizeObserver.observe(ref.current);
+      return () => resizeObserver.disconnect();
+    }
+  }, []);
+
+  // Calculate font size based on container dimensions
+  const getFontSize = () => {
+    // Calculate size based on both height and width
+    const { width, height } = containerSize;
+    
+    // First, calculate height-based font size with more aggressive scaling
+    let heightBasedSize;
+    if (height < 15) {
+      heightBasedSize = 8;
+    } else if (height < 20) {
+      heightBasedSize = 10;
+    } else if (height < 30) {
+      heightBasedSize = 12;
+    } else if (height < 40) {
+      heightBasedSize = 14;
+    } else if (height < 55) {
+      heightBasedSize = 18;
+    } else if (height < 70) {
+      heightBasedSize = 22;
+    } else if (height < 90) {
+      heightBasedSize = 26;
+    } else if (height < 120) {
+      heightBasedSize = 32;
+    } else {
+      // For extremely tall components
+      heightBasedSize = Math.min(50, Math.floor(height * 0.3)); // 30% of height, max 50px
+    }
+    
+    // Calculate width-based size
+    let widthBasedSize;
+    if (width < 60) {
+      widthBasedSize = 8;
+    } else if (width < 90) {
+      widthBasedSize = 10;
+    } else if (width < 130) {
+      widthBasedSize = 12;
+    } else if (width < 180) {
+      widthBasedSize = 14;
+    } else if (width < 220) {
+      widthBasedSize = 16;
+    } else if (width < 280) {
+      widthBasedSize = 18;
+    } else {
+      widthBasedSize = 20;
+    }
+    
+    // Use the smaller of the two sizes to ensure text fits in both dimensions
+    // With a slight bias toward the height-based size
+    const finalSize = Math.min(heightBasedSize, widthBasedSize * 1.3);
+    return `${finalSize}px`;
+  };
+
+  // Use a constant size for the triangle icon
+  const getIconSize = () => {
+    return '12px'; // Fixed size for consistency
+  };
 
   useEffect(() => {
     window.addEventListener("mouseup", onMouseUp);
@@ -138,19 +215,39 @@ const NumberBox: React.FC<{
     }, 0);
   };
 
+  // Determine styling based on container size
+  const fontSize = getFontSize();
+  const iconSize = getIconSize();
+  
+  // Always show icon unless width is extremely constrained
+  const showIcon = containerSize.width >= 40;
+  
+  // Only use compact display for extremely constrained width
+  // For standard height=20 elements, keep the decimal editor visible
+  const useCompactDisplay = containerSize.width < 40;
+
   return (
-    <div ref={ref}>
+    <div ref={ref} className="w-full h-full">
       <div
         className={`${className ? className : "m-y"} bg-zinc-800 h-full flex flex-1 active:bg-zinc-700 ${keyMode.current ? "cursor-text" : "cursor-ns-resize"}`}
+        style={{ 
+          fontSize: fontSize, 
+          display: 'flex', 
+          alignItems: 'center'
+        }}
       >
-        <TriangleRightIcon
-          onMouseDown={startEditing}
-          className="w-5 h-5 mr-2 my-auto invert active:fill-red-500"
-        />
+        {showIcon && (
+          <TriangleRightIcon
+            onMouseDown={startEditing}
+            className="mr-1 my-auto invert active:fill-red-500"
+            style={{ width: iconSize, height: iconSize, minWidth: iconSize }}
+          />
+        )}
         <div
           onMouseDown={startEditing}
           onDoubleClick={handleDoubleClick}
-          className="flex-1 active:text-green-200 text-white my-auto w-10 flex"
+          className="flex-1 active:text-green-200 text-white my-auto flex overflow-hidden"
+          style={{ maxHeight: '100%' }}
         >
           {keyMode.current && editing ? (
             <input
@@ -159,18 +256,32 @@ const NumberBox: React.FC<{
               value={typedValue}
               onChange={(e) => setTypedValue(e.target.value)}
               className="bg-transparent outline-none w-full"
+              style={{ fontSize: fontSize }}
               onBlur={() => {
                 setEditing(false);
                 setTypedValue("");
               }}
             />
+          ) : useCompactDisplay ? (
+            // Compact display for very small widths - just the integer part or rounded value
+            <div className="w-full truncate">
+              {Number.isInteger(value) ? value : Math.round(value * 10) / 10}
+            </div>
           ) : (
+            // Normal display with integer and decimal parts
             <>
-              <div onMouseDown={() => (rounding.current = true)} className="">
+              <div 
+                onMouseDown={() => (rounding.current = true)}
+                className="truncate"
+                style={{ maxWidth: '40%' }}
+              >
                 {integer}
               </div>
-              <div className="">.</div>
-              <div onMouseDown={() => (rounding.current = false)} className="flex-1 ">
+              <div className="mx-px">.</div>
+              <div 
+                onMouseDown={() => (rounding.current = false)} 
+                className="flex-1 truncate"
+              >
                 {float !== undefined
                   ? value < 0
                     ? float.toString().slice(3)

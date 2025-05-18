@@ -17,7 +17,8 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   let { attributesIndex } = useSelection();
   let { lockedMode } = useLocked();
 
-  let { fillColor } = attributes;
+  // Use the color attribute or fallback to fillColor or default blue
+  const sliderColor = attributes.color || attributes.fillColor || "#3b82f6";
 
   let { value: message } = useValue();
   useEffect(() => {
@@ -88,12 +89,12 @@ const Slider: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         onMouseDown={handleMouseDown}
       >
         <div
-          style={{ backgroundColor: fillColor as string, height: height + "%" }}
+          style={{ backgroundColor: sliderColor as string, height: height + "%" }}
           className="w-full  absolute bottom-0"
         ></div>
       </div>
     );
-  }, [height, fillColor, editing, setEditing, lockedMode, size]);
+  }, [height, sliderColor, editing, setEditing, lockedMode, size]);
 };
 
 export default Slider;

@@ -3,6 +3,10 @@ import { useValue } from "@/contexts/ValueContext";
 import NumberBox from "./NumberBox";
 import { Message, ObjectNode } from "@/lib/nodes/types";
 import { useStepsContext } from "@/contexts/StepsContext";
+import { useSelection } from "@/contexts/SelectionContext";
+import AttrUIKnob from "./AttrUIKnob";
+import AttrUISlider from "./AttrUISlider";
+import AttrUICheckbox from "./AttrUICheckbox";
 
 const AttrUIValue: React.FC<{
   lockedModeRef: React.MutableRefObject<boolean>;
@@ -10,9 +14,23 @@ const AttrUIValue: React.FC<{
   max: number;
   node: ObjectNode;
 }> = ({ node, lockedModeRef, min, max }) => {
+  // listens for the attributes changes and updates component when it does
+  useSelection();
+
+  const mode = node.attributes.mode as
+    | "number"
+    | "slider-horizontal"
+    | "slider-vertical"
+    | "checkbox"
+    | "knob";
+
+  // Determine if we're in a vertical layout
+  const isVerticalLayout = mode === "knob" || mode === "slider-horizontal" || mode === "slider-vertical";
+
   const { selectedSteps } = useStepsContext();
   const parsed = parseFloat(node.text.split(" ")[2]);
   const [value, setValue] = useState(!Number.isNaN(parsed) ? parsed : 0);
+  
   const onChangeValue = useCallback(
     (num: number, e?: MouseEvent) => {
       let objectNode = node;
@@ -65,19 +83,89 @@ const AttrUIValue: React.FC<{
   }, [message, setValue]);
 
   return React.useMemo(() => {
-    return (
-      <NumberBox
-        className="bg-zinc-900"
-        round={false}
-        isSelected={true}
-        value={value}
-        setValue={onChangeValue}
-        min={min}
-        max={max}
-        lockedModeRef={lockedModeRef}
-      />
-    );
-  }, [value, max, min]);
+    // Simple container style for all controls - ensures full usage of parent container
+    const containerStyle: React.CSSProperties = {
+      width: '100%',
+      height: '100%',
+      display: 'flex'
+    };
+
+    // Render the appropriate component based on the mode
+    switch (mode) {
+      case "knob":
+        return (
+          <div style={containerStyle}>
+            <AttrUIKnob
+              value={value}
+              setValue={onChangeValue}
+              min={min}
+              max={max}
+              node={node}
+              lockedModeRef={lockedModeRef}
+            />
+          </div>
+        );
+      
+      case "slider-horizontal":
+        return (
+          <div style={containerStyle}>
+            <AttrUISlider
+              value={value}
+              setValue={onChangeValue}
+              min={min}
+              max={max}
+              node={node}
+              lockedModeRef={lockedModeRef}
+              orientation="horizontal"
+            />
+          </div>
+        );
+      
+      case "slider-vertical":
+        return (
+          <div style={containerStyle}>
+            <AttrUISlider
+              value={value}
+              setValue={onChangeValue}
+              min={min}
+              max={max}
+              node={node}
+              lockedModeRef={lockedModeRef}
+              orientation="vertical"
+            />
+          </div>
+        );
+      
+      case "checkbox":
+        return (
+          <div style={{...containerStyle, alignItems: 'center', justifyContent: 'center'}}>
+            <AttrUICheckbox
+              value={value}
+              setValue={onChangeValue}
+              min={min}
+              max={max}
+              node={node}
+              lockedModeRef={lockedModeRef}
+            />
+          </div>
+        );
+      
+      case "number":
+      default:
+        return (
+          <NumberBox
+            className="bg-zinc-900 w-full"
+            round={false}
+            isSelected={true}
+            value={value}
+            setValue={onChangeValue}
+            min={min}
+            max={max}
+            lockedModeRef={lockedModeRef}
+          />
+        );
+    }
+  }, [value, max, min, mode, onChangeValue, node, lockedModeRef]);
 };
 
 export default AttrUIValue;

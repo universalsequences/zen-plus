@@ -56,7 +56,7 @@ export const js_scripting = (node: ObjectNode, ..._args: Lazy[]) => {
         return [ret];
       }
     } catch (error) {
-      console.error("Error in script:", error);
+      console.error("Error in script:", error, node, node.script);
     }
 
     return [];

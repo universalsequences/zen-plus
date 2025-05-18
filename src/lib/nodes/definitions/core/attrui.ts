@@ -22,6 +22,22 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
     custom = node.custom as MutableValue;
   }
 
+  if (!node.attributes.mode) {
+    node.attributes.mode = "number";
+  }
+
+  if (!node.attributes.color) {
+    node.attributes.color = "#3b82f6"; // Default to blue (tailwind blue-500)
+  }
+
+  node.attributeOptions.mode = [
+    "number",
+    "slider-horizontal",
+    "slider-vertical",
+    "checkbox",
+    "knob",
+  ];
+
   node.isResizable = true;
   if (!node.size) {
     node.size = { width: 160, height: 20 };

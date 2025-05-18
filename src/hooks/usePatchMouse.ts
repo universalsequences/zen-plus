@@ -333,9 +333,7 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
               node instanceof ObjectNodeImpl &&
               (node.name === "zen" || (node as ObjectNode).isResizable)
             ) {
-              if (node.name !== "attrui") {
-                node.size.height = height;
-              }
+              node.size.height = height;
             }
             updateSize(node.id, { ...node.size });
 
@@ -352,7 +350,7 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
               if (objNode.size) {
                 objNode.size.width = width;
                 if (objNode.name === "zen" || objNode.isResizable) {
-                  if (objNode.name !== "attrui") objNode.size.height = height;
+                  objNode.size.height = height;
                 }
                 updateSize(objNode.id, { ...objNode.size });
 
