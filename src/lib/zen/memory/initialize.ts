@@ -24,7 +24,6 @@ export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
   if (true) {
     //memorySize > 4000000) {
     // memory is huge so go thru one at a time
-    console.log("memory is huge...");
     for (const block of context.memory.blocksInUse) {
       if (block.initData !== undefined) {
         const idx = block._idx === undefined ? block.idx : block._idx;

@@ -202,6 +202,7 @@ export type Node = Identifiable &
     debugTopologicalIndex?: Record<string, number>;
     skipCompilation?: boolean;
     debugBranching?: Branching;
+    lastOnValue?: Message | null;
   };
 
 export type ObjectNode = Positioned &

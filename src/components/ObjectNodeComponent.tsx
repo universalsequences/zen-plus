@@ -57,6 +57,8 @@ const ObjectNodeComponent: React.FC<ObjectNodeComponentProps> = ({ objectNode, p
     lockedModeRef.current = lockedMode;
   }, [lockedMode]);
 
+  const wasSelected = useRef(false);
+
   // Handle patch selection effects
   useEffect(() => {
     if (isSelected) {
@@ -67,6 +69,15 @@ const ObjectNodeComponent: React.FC<ObjectNodeComponentProps> = ({ objectNode, p
           node.receive(node.inlets[0], "bang");
         });
     }
+    if (!isSelected && wasSelected.current) {
+      // Send bang to any onPatchSelect objects in subpatch
+      objectNode.subpatch?.objectNodes
+        .filter((x) => x.name === "onPatchUnselect")
+        .forEach((node) => {
+          node.receive(node.inlets[0], "bang");
+        });
+    }
+    wasSelected.current = true;
   }, [isSelected, objectNode]);
 
   return (

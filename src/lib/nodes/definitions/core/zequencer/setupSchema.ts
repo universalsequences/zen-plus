@@ -12,7 +12,6 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
   existingSteps: (BaseStepData & StepFromSchemas<Schemas>)[][],
   length: number,
 ) => {
-  console.log("setup schema called with length=%s", length);
   type MyStep = BaseStepData & StepFromSchemas<Schemas>;
   const steps: MyStep[][] = [];
 
@@ -32,12 +31,12 @@ export const setupSchema = <Schemas extends readonly FieldSchema[]>(
         // Determine if this is a duplicate or a step that needs to retain its ID
         // If the source index matches the current index, it's the original step, otherwise it's a duplicate
         const isNewDuplicate = sourceIndex !== i;
-        
+
         const newStep: MyStep = {
           ...sourceStep,
           stepNumber: i,
           // Generate new IDs for duplicated steps, keep original IDs only for original steps
-          id: isNewDuplicate ? generateStepId() : (sourceStep.id || generateStepId()),
+          id: isNewDuplicate ? generateStepId() : sourceStep.id || generateStepId(),
         };
 
         // Ensure all fields from the schema are present

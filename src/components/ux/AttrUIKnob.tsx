@@ -27,8 +27,20 @@ const AttrUIKnob: React.FC<AttrUIKnobProps> = ({
   // Get color from parent attrui node attribute, or fallback to strokeColor or default blue
   const knobColor = node.attributes.color || node.attributes.strokeColor || "#3b82f6";
 
-  // Normalize value between 0 and 1 for the knob
-  const normalizedValue = (value - min) / (max - min);
+  // Get exponent for non-linear mapping (power curve)
+  const exponent = node.attributes.exponent !== undefined ? Number(node.attributes.exponent) : 1;
+  
+  // Apply inverse of the power function to convert back from value to normalized position
+  // For values that had been previously transformed using the power function
+  const getNormalizedFromValue = (val: number) => {
+    const normalized = (val - min) / (max - min);
+    return exponent === 1 
+      ? normalized // Linear case
+      : Math.pow(normalized, 1 / exponent); // Inverse power function
+  };
+  
+  // Normalize value between 0 and 1 for the knob, using inverse mapping
+  const normalizedValue = getNormalizedFromValue(value);
 
   // Get the actual dimensions from the DOM on mount and resize
   useEffect(() => {
@@ -64,8 +76,13 @@ const AttrUIKnob: React.FC<AttrUIKnobProps> = ({
 
   // Handle mouse interaction
   const handleValueChange = (newVal: number, e?: MouseEvent) => {
+    // Apply power function to the normalized value for non-linear mapping
+    const mappedNormalizedValue = exponent === 1 
+      ? newVal // Linear case
+      : Math.pow(newVal, exponent); // Power function for non-linear mapping
+      
     // Convert normalized value back to range
-    const rangeValue = min + newVal * (max - min);
+    const rangeValue = min + mappedNormalizedValue * (max - min);
     setValue(rangeValue, e);
   };
 
@@ -99,8 +116,8 @@ const AttrUIKnob: React.FC<AttrUIKnobProps> = ({
 
   // Calculate stroke width based on size (with minimum thickness for visibility)
   const knobSize = Math.min(dimensions.width, dimensions.height);
-  const strokeWidth = knobSize < 20 ? 3 : knobSize < 40 ? 4 : 5;
-  const indicatorWidth = knobSize < 20 ? 2.5 : knobSize < 40 ? 3 : 4;
+  const strokeWidth = knobSize < 20 ? 6 : knobSize < 40 ? 8 : 10;
+  const indicatorWidth = knobSize < 20 ? 5 : knobSize < 40 ? 6 : 8;
 
   // Start angle is always 195 degrees (6:30)
   const startAngle = 195;
@@ -186,19 +203,19 @@ const AttrUIKnob: React.FC<AttrUIKnobProps> = ({
             <>
               {/* Semi-transparent background for better text visibility */}
               <rect
-                x={knobDisplaySize < 25 ? 28 : knobDisplaySize < 40 ? 30 : 25}
-                y={knobDisplaySize < 25 ? 42 : knobDisplaySize < 40 ? 42 : 40}
-                width={knobDisplaySize < 25 ? 44 : knobDisplaySize < 40 ? 40 : 50}
-                height={knobDisplaySize < 25 ? 16 : knobDisplaySize < 40 ? 16 : 20}
-                rx="3"
+                x="15"
+                y="30"
+                width="70"
+                height="40"
+                rx="5"
                 fill="rgba(0,0,0,0.7)"
               />
               <text
                 x="50"
-                y={knobDisplaySize < 25 ? 52.5 : knobDisplaySize < 40 ? 54 : 55}
+                y="55"
                 textAnchor="middle"
                 fill="white"
-                fontSize={knobDisplaySize < 25 ? 18 : knobDisplaySize < 40 ? 20 : 24}
+                fontSize={knobDisplaySize < 25 ? 27 : knobDisplaySize < 40 ? 30 : 36}
                 fontFamily="monospace"
               >
                 {displayValue}

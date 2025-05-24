@@ -64,8 +64,6 @@ export const onZenCompilation = (ret: ZenWorklet, patch: PatchImpl, zenGraph: Ze
   // this allows us to then connect this "objectNode" to other "audio/zen" nodes
   const merger = patch.audioContext?.createChannelMerger(zenGraph.numberOfInputs);
 
-  console.log("number of inputs=", zenGraph.numberOfInputs, zenGraph, parentNode, patch.audioNode);
-
   // note: for mc nodes this is unchanged ^^
   // upon connecting two nodes we will "do the right thing"
 

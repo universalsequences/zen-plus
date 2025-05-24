@@ -70,6 +70,22 @@ export const topologicalSearchFromNode = (
   return result;
 };
 
+const connectedToInboundSkipCompilation = (node: Node) => {
+  for (const inlet of node.inlets) {
+    const connections = getInboundConnections(inlet);
+    if (
+      connections.some(
+        (c) =>
+          c.source.skipCompilation ||
+          ((c.source as ObjectNode).name !== "attrui" && (c.source as ObjectNode).needsLoad),
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const isSourceNode = (node: Node) => {
   if ((node as ObjectNode).name === "preset") {
     return true;
@@ -81,8 +97,9 @@ export const isSourceNode = (node: Node) => {
 
   if (isMessageNode(node)) {
     return (
-      !node.inlets.some((x) => x.connections.length > 0) &&
-      node.outlets.some((y) => y.connections.length > 0)
+      connectedToInboundSkipCompilation(node) ||
+      (!node.inlets.some((x) => x.connections.length > 0) &&
+        node.outlets.some((y) => y.connections.length > 0))
     );
   }
 

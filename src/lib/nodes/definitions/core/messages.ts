@@ -70,7 +70,7 @@ export const subscribe = (node: ObjectNode, name: Lazy) => {
       }
     }
     if (typeof lastMessage === "string" && lastMessage === message && message !== "bang") {
-      return;
+      //return;
     }
     if (Array.isArray(message) && Array.isArray(lastMessage) && message.length === 2) {
       if (message[0] === lastMessage[0] && message[1] === lastMessage[1]) {

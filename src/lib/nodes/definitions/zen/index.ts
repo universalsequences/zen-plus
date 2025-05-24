@@ -34,6 +34,7 @@ doc("out", {
 const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
   const parentNode = (_node.patch as SubPatch).parentNode;
   const patchType = (_node.patch as SubPatch).patchType;
+  console.log("patch type =", patchType);
   const isAudio = patchType === OperatorContextType.AUDIO;
   if (parentNode) {
     const outputNumber = args[0]() as number;
@@ -75,11 +76,14 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
     gain.gain.value = 1;
     _node.audioNode = gain;
 
+    console.log("creating gain for audio patch out", gain);
+
     //gain.connect(ctxt.destination);
 
     let patchAudio = (_node.patch as SubPatch).parentNode.audioNode;
     if (patchAudio) {
       let outputNumber = args[0]() as number;
+      console.log("connecting gain to patch audio at ", outputNumber - 1);
       gain.connect(patchAudio, 0, outputNumber - 1);
     }
 
@@ -260,16 +264,23 @@ doc("zen", {
   attributeOptions: {
     type: ["zen", "gl"],
     target: ["C", "JS"],
+    ui: ["canvas", "stacked", "grid"],
     moduleType: ["sequencer", "generator", "effect", "other"],
   },
 });
 
 const zen: NodeFunction = (node: ObjectNode, ..._args: Lazy[]) => {
-  let noType = false;
+  let noType = true; //false;
   if (!node.attributes.type) {
-    noType = true;
+    //    noType = true;
     node.attributes.type = "zen";
   }
+
+  if (!node.attributes.ui) {
+    node.attributes.ui = "canvas";
+  }
+
+  node.attributeOptions.ui = ["canvas", "stacked", "grid"];
 
   if (!node.size) {
     node.size = {
@@ -348,6 +359,7 @@ const zen: NodeFunction = (node: ObjectNode, ..._args: Lazy[]) => {
     moduleType: ["sequencer", "generator", "effect", "other"],
     target: ["JS", "C"],
     type: ["zen", "gl", "core", "audio"],
+    ui: ["canvas", "vertical", "horizontal", "grid"],
   };
 
   if (!node.attributes.mc) {

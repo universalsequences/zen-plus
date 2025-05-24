@@ -40,28 +40,21 @@ export const constructStatements = (patch: PatchImpl, statement: Statement) => {
 export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
   const parentNode = (patch as Patch as SubPatch).parentNode;
   const mc = parentNode.attributes.mc;
-  console.log("constructing statement...");
   const statement =
     !mc && patch.historyDependencies.length > 0
       ? constructStatements(patch, _statement)
       : _statement;
 
-  console.log("finished constructing statement!", statement);
-  console.log("compiling statement into ast");
   const ast = compileStatement(statement);
   const target = parentNode.attributes.target === "C" ? Target.C : Target.Javascript;
   const forceScalar = !parentNode.attributes.SIMD;
 
   let zenGraph: ZenGraph | undefined = undefined;
   try {
-    console.log(ast);
-    console.log("compiling with zen target=", parentNode.attributes.target);
-
     if (window.stopCompileTest) throw new Error("hello");
     zenGraph = Array.isArray(ast)
       ? zenWithTarget(target, ast[0], forceScalar)
       : zenWithTarget(target, ast as UGen, forceScalar);
-    console.log("finished compiling zen");
   } catch (e) {
     console.log("error compiling patch", patch, e);
     throw e;
@@ -74,7 +67,6 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
 };
 
 export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNumber?: number) => {
-  console.log("onCompile return", outputNumber, patch.isCompiling, patch);
   let statement = inputStatement;
   if (outputNumber !== undefined) {
     patch.outputStatements[outputNumber - 1] = statement;
@@ -102,16 +94,12 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
     }
   }
 
-  console.log("...");
-
   if (patch.waiting) {
     patch.storedStatement = statement;
-    console.log("returning cuz waiting");
     return;
   }
   if (patch.skipRecompile) {
     patch.storedStatement = statement;
-    console.log("returning cuz skipCompile");
     return;
   }
 
@@ -121,13 +109,10 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
 
   patch.skipRecompile = false;
   setTimeout(() => {
-    console.log("settimeout");
     if (id !== patch.counter) {
-      console.log("ret");
       return;
     }
     if (patch.skipRecompile) {
-      console.log("ret");
       return;
     }
 
@@ -137,9 +122,7 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
 
     const parentNode = (patch as Patch as SubPatch).parentNode;
 
-    console.log("checking trivial");
     const trivialInputs = isTrivialGraph(statement);
-    console.log("completed");
     if (trivialInputs > 0) {
       patch.disconnectGraph();
       // then we need to create a 2 channel gain node and connect it to the merger;
@@ -152,10 +135,8 @@ export const onCompile = (patch: PatchImpl, inputStatement: Statement, outputNum
       return;
     }
     let a = new Date().getTime();
-    console.log("prepareing and compiling...");
     const prepared = prepareAndCompile(patch, statement);
     let b = new Date().getTime();
-    console.log("prepare and compile call=", b - a);
 
     const zenGraph = prepared.zenGraph;
     statement = prepared.statement;

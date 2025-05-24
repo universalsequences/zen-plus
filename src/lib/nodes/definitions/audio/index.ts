@@ -131,7 +131,6 @@ export const createWorklet = async (node: ObjectNode, path: string, processor: s
   await audioContext.audioWorklet.addModule(path);
   //  init[processor] = true;
   //}
-  console.log("processor", init);
   node.audioNode = new AudioWorkletNode(audioContext, processor);
 };
 

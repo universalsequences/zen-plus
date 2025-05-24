@@ -17,7 +17,7 @@ const CustomSubPatchView: React.FC<{
     return (
       <PatchProvider isCustomView={true} patch={subpatch}>
         <PositionProvider patch={subpatch}>
-          <Inner />
+          <Inner objectNode={objectNode} />
         </PositionProvider>
       </PatchProvider>
     );
@@ -25,7 +25,7 @@ const CustomSubPatchView: React.FC<{
   return <></>;
 };
 
-const Inner = () => {
+const Inner = ({ objectNode }: { objectNode: ObjectNode }) => {
   let { objectNodes, messageNodes } = usePatch();
   const visibleObjectNodes = useMemo(() => {
     let onodes = [];
@@ -52,7 +52,9 @@ const Inner = () => {
   }, [messageNodes]);
 
   return (
-    <div className="bg-zinc-900 flex w-full h-full">
+    <div
+      className={`custom-subpatch-wrapper ${objectNode.attributes.ui as string} bg-zinc-900 flex w-full h-full`}
+    >
       {visibleObjectNodes.map((node) => (
         <ObjectNodePresentationWrapper key={node.id} objectNode={node} />
       ))}

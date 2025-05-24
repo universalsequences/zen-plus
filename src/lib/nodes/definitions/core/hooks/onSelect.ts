@@ -11,3 +11,15 @@ export const onPatchSelect = () => {
     return ["bang"];
   };
 };
+
+doc("onPatchUnselect", {
+  description: "triggered when patch is unselected",
+  numberOfOutlets: 1,
+  numberOfInlets: 1,
+});
+
+export const onPatchUnselect = () => {
+  return () => {
+    return ["bang"];
+  };
+};

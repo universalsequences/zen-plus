@@ -904,3 +904,24 @@ div:active {
         border-color: transparent !important;
     }
 }
+
+.custom-subpatch-wrapper.vertical {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Aligns items tightly at the top */
+    align-items: flex-start; /* Prevents stretching horizontally */
+    gap: 5px;
+    overflow: scroll;
+}
+
+.custom-subpatch-wrapper.vertical > .node-component {
+    position: relative !important;
+    top: unset !important;
+    left: unset !important;
+    height: auto; /* Allow natural height based on content */
+    min-height: 0; /* Prevent forced minimum heights */
+    margin: 0; /* Reset margins to avoid negative offsets */
+    padding: 0; /* Reset padding */
+    flex-shrink: 0; /* Prevent items from shrinking */
+    width: 100%; /* Ensure items take full container width */
+}

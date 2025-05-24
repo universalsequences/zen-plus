@@ -1,16 +1,6 @@
 import { doc } from "./doc";
 import { subscribe } from "@/lib/messaging/queue";
-import {
-  Node,
-  ObjectNode,
-  Message,
-  Patch,
-  SubPatch,
-  MessageNode,
-  AttributeValue,
-} from "../../types";
-import { compileVM } from "../../vm/forwardpass";
-import { MockObjectNode } from "../../../../../test/mocks/MockObjectNode";
+import { Node, ObjectNode, Message, MessageNode, AttributeValue } from "../../types";
 import { getRootPatch } from "../../traverse";
 import ObjectNodeImpl from "../../ObjectNode";
 import { VMEvaluation } from "@/workers/vm/VM";
@@ -61,7 +51,7 @@ export class PresetManager {
   objectNode: ObjectNode;
   slots: Slot[];
   slotToPreset: SlotToPreset = {};
-  slotMode: boolean;
+  _slotMode: boolean;
   currentPattern: number;
   presets: Preset[];
   serializedPresets?: SerializedPreset[];
@@ -79,13 +69,13 @@ export class PresetManager {
   presetNames: string[];
 
   constructor(object: ObjectNode) {
+    this.slots = [];
     this.objectNode = object;
     this.voiceToPreset = new Map();
     this.counter = 0;
     this.slotMode = false;
     this.currentPattern = 0;
     this.slotToPreset = {};
-    this.slots = [];
     this.setNumberOfSlots(4);
 
     this.presetNames = [];
@@ -102,29 +92,64 @@ export class PresetManager {
     this.notifyVM();
   }
 
+  set slotMode(mode: boolean) {
+    this._slotMode = mode;
+    this.setNumberOfSlots((this.objectNode.attributes.slots as number) || 1);
+  }
+
+  get slotMode() {
+    return this._slotMode;
+  }
+
   setNumberOfSlots(numberOfSlots: number) {
-    this.slots = [];
-    for (let i = 0; i < numberOfSlots; i++) {
+    if (numberOfSlots === this.slots.length) return;
+
+    if (numberOfSlots < this.slots.length) {
+      this.slots = this.slots.slice(0, numberOfSlots);
+      this.updateUI();
+      return;
+    }
+
+    for (let i = this.slots.length; i < numberOfSlots; i++) {
       this.slots.push([{}]);
     }
+    this.updateUI();
   }
 
   getZequencerScriptingNames() {
+    const zequencerObjects = this.objectNode.attributes.zequencerObjects;
+    if (typeof zequencerObjects === "string") {
+      return zequencerObjects.split(",");
+    }
     return (this.objectNode.attributes.zequencerObjects || []) as string[];
   }
 
   newPattern() {
     // copy the slots to new pattern and increment currentPattern
     const oldPatternNumber = this.currentPattern;
+    const newPatternNumber = this.getNumberOfPatterns();
     for (let i = 0; i < this.slots.length; i++) {
       const slot = this.slots[i];
       const patternPreset = slot[oldPatternNumber];
       const copy = copyPreset(patternPreset);
-      slot.push(copy);
-      let newPatternNumber = slot.length - 1;
-      this.slotToPreset[i][newPatternNumber] = this.slotToPreset[i][oldPatternNumber];
+      slot[newPatternNumber] = copy;
+      if (!this.slotToPreset[i]) {
+        this.slotToPreset[i] = [];
+      }
+      this.slotToPreset[i][newPatternNumber] = this.slotToPreset[i]?.[oldPatternNumber] || 0;
     }
     this.currentPattern = this.getNumberOfPatterns() - 1;
+    this.updateUI();
+  }
+
+  deletePattern() {
+    const currentPattern = this.currentPattern;
+    const numPatterns = this.getNumberOfPatterns();
+    if (numPatterns <= 1) return;
+    for (let i = 0; i < this.slots.length; i++) {
+      this.slots[i].splice(currentPattern, 1);
+    }
+    this.switchToPattern(Math.max(0, Math.min(currentPattern, numPatterns - 2)));
     this.updateUI();
   }
 
@@ -133,18 +158,24 @@ export class PresetManager {
   }
 
   switchToPattern(patternNumber: number) {
-    console.log("switch to pattern=", patternNumber);
     // switch currentPattern and apply each preset
     if (patternNumber >= 0 && patternNumber < this.getNumberOfPatterns()) {
       this.currentPattern = patternNumber;
       for (let i = 0; i < this.slots.length; i++) {
         let slot = this.slots[i];
         const slotPreset = slot[patternNumber];
-        this.applyPreset(slotPreset);
+        // if currentPreset (i.e. what track is selected) is this one (i.e. i) then we should apply the preset
+        // otherwise we should only apply the preset to pattern object
+        if (this.currentPreset === i) {
+          this.applyPreset(slotPreset, undefined, undefined, true);
+        } else {
+          const zequencer = this.getZequencerScriptingNames()[i];
+          this.applyPreset(slotPreset, undefined, undefined, true, zequencer);
+        }
         for (const [voice, presetNumber] of this.voiceToPreset.entries()) {
           if (presetNumber === i) {
             // then we need to apply this to voice
-            this.applyPreset(slotPreset, voice, 0);
+            this.applyPreset(slotPreset, voice, 0, false);
           }
         }
       }
@@ -156,18 +187,9 @@ export class PresetManager {
     const presetNumber = this.slotMode
       ? this.slotToPreset[this.currentPreset]?.[this.currentPattern]
       : this.currentPreset;
-    console.log(
-      "set preset name presetNumber=%s name=%s",
-      presetNumber,
-      name,
-      this.slotToPreset,
-      this.slotMode,
-      this.slotToPreset[this.currentPreset],
-    );
     if (presetNumber > -1) {
       this.presetNames[presetNumber] = name;
     }
-    console.log("preset names is now=", this.presetNames);
   }
 
   notifyVM() {
@@ -215,11 +237,28 @@ export class PresetManager {
     this.presets[this.currentPreset] = { ...oldPreset };
   }
 
-  applyPreset(preset: Preset, voice?: number, time?: number) {
+  applyPreset(
+    preset: Preset,
+    voice?: number,
+    time?: number,
+    isPattern?: boolean,
+    zequencerName?: string,
+  ) {
     this.switching = true;
     let vmEvaluation: VMEvaluation | undefined;
+    const scriptingNames = this.getZequencerScriptingNames();
     for (let id in preset) {
       let { node, state } = preset[id];
+
+      const scriptingName = node.attributes["scripting name"] as string;
+      if (!isPattern && scriptingName && scriptingNames.includes(scriptingName)) {
+        continue;
+      }
+
+      if (isPattern && zequencerName && scriptingName !== zequencerName) {
+        // in this case we only wish to execute the pattern object in this preset
+        continue;
+      }
 
       const objectNode = node as ObjectNode;
       if (objectNode.custom) {
@@ -294,23 +333,12 @@ export class PresetManager {
       ? this.presets.findIndex((x, i) => Object.keys(x).length === 0)
       : this.slotToPreset[slotNumber]?.[this.currentPattern];
     const slotPreset = this.slots[slotNumber]?.[this.currentPattern];
-    console.log(
-      "write to memory slot=%s presetNumber=%s",
-      slotNumber,
-      presetNumber,
-      slotPreset,
-      this.slots,
-      this.presets,
-    );
     if (presetNumber !== undefined && slotPreset) {
-      console.log("copying slot to preset", presetNumber, slotPreset);
       this.presets[presetNumber] = copyPreset(slotPreset);
-      console.log("copied became=", this.presets);
       if (saveAsNew) {
         const oldPresetNumber = this.slotToPreset[slotNumber]?.[this.currentPattern];
         const oldPresetName = this.presetNames[oldPresetNumber];
         this.presetNames[presetNumber] = oldPresetName;
-        console.log("setting slot to preset to new preset number");
         this.slotToPreset[slotNumber][this.currentPattern] = presetNumber;
       }
     }
@@ -406,7 +434,9 @@ export class PresetManager {
           );
           if (slotNumber > -1) {
             const slot = this.slots[slotNumber];
-            slot[this.currentPattern][_stateChange.node.id] = _stateChange;
+            if (slot?.[this.currentPattern]) {
+              slot[this.currentPattern][_stateChange.node.id] = _stateChange;
+            }
           }
         } else {
           if (this.slotMode) {
@@ -442,7 +472,7 @@ export class PresetManager {
       serializedSlots.push(serializedSlot);
     }
 
-    const json = {
+    return {
       presets: !this.hydrated ? this.serializedPresets || serializedPresets : serializedPresets,
       slots: !this.hydrated ? this.serializedSlots || serializedSlots : serializedSlots,
       currentPreset: this.currentPreset,
@@ -450,7 +480,6 @@ export class PresetManager {
       slotToPreset: this.slotToPreset,
       currentPattern: this.currentPattern,
     };
-    return json;
   }
 
   fromJSON(json: any, force?: boolean) {
@@ -479,7 +508,9 @@ export class PresetManager {
     }
 
     this.hydrated = false;
+
     if (this.objectNode instanceof ObjectNodeImpl && force) {
+      // we are on main-thread so we hydrate directly
       const objects = this.objectNode.patch.getAllNodes();
       const messages = this.objectNode.patch.getAllMessageNodes();
       const allNodes = [...objects, ...messages];
@@ -489,6 +520,7 @@ export class PresetManager {
 
   // ensures each preset contains a reference to the nodes it applies to
   hydrateSerializedPresets(allNodes: Node[]) {
+    const scriptingNames = this.getZequencerScriptingNames();
     if (this.serializedPresets) {
       for (let i = 0; i < this.serializedPresets.length; i++) {
         let preset = this.serializedPresets[i];
@@ -496,6 +528,9 @@ export class PresetManager {
           let { state } = preset[id];
           let node = allNodes.find((x) => x.id === id);
           if (node) {
+            if (scriptingNames.includes(node.attributes["scripting name"] as string)) {
+              continue;
+            }
             this.presets[i][id] = {
               node,
               state,
@@ -511,6 +546,8 @@ export class PresetManager {
       }
     }
     if (this.serializedSlots) {
+      console.log("hydating slots slots are=", [...this.serializedSlots], this);
+      //this.slots = [];
       for (let i = 0; i < this.serializedSlots.length; i++) {
         const slot = this.serializedSlots[i];
         for (let j = 0; j < slot.length; j++) {
@@ -519,8 +556,12 @@ export class PresetManager {
             let { state } = preset[id];
             let node = allNodes.find((x) => x.id === id);
             if (node) {
-              if (!this.slots[i]) {
-                this.slots[i] = [];
+              const scriptingIndex = scriptingNames.indexOf(
+                node.attributes["scripting name"] as string,
+              );
+              if (scriptingIndex > -1 && scriptingIndex !== i) {
+                // this belongs to a zequencer object it shouldn't be controlling
+                continue;
               }
               if (!this.slots[i][j]) {
                 this.slots[i][j] = {};
@@ -541,9 +582,11 @@ export class PresetManager {
 
   deletePreset(presetNumber: number) {
     this.presets[presetNumber] = {};
+    this.presetNames[presetNumber] = "";
     if (this.buffer) {
       this.buffer[presetNumber] = 0;
     }
+    this.updateUI();
   }
 
   updateUI() {
@@ -561,6 +604,9 @@ export class PresetManager {
 
 export const preset = (object: ObjectNode) => {
   object.isResizable = true;
+  if (!object.size) {
+    object.size = { width: 200, height: 100 };
+  }
   if (!object.attributes.showNames) {
     object.attributes.showNames = false;
   }
@@ -575,6 +621,12 @@ export const preset = (object: ObjectNode) => {
   }
   if (!object.attributes.zequencerObjects) {
     object.attributes.zequencerObjects = "";
+  }
+  if (!object.attributes.compactPatternMode) {
+    object.attributes.compactPatternMode = false;
+  }
+  if (!object.attributes.cellSize) {
+    object.attributes.cellSize = 20;
   }
 
   object.attributeCallbacks.slots = (message: AttributeValue) => {
@@ -618,9 +670,10 @@ export const preset = (object: ObjectNode) => {
       if (typeof x === "number") {
         mgmt.switchToPreset(Math.round(x as number));
         updateUI();
+        return ["switch-to-preset", x as number];
       } else if (Array.isArray(x) && x[0] === "delete") {
         for (let i = 1; i < x.length; i++) {
-          mgmt.deletePreset(i);
+          mgmt.deletePreset(x[i] as number);
         }
       } else if (Array.isArray(x) && x[0] === "set-name") {
         mgmt.setPresetName(x[1] as string);
@@ -634,14 +687,20 @@ export const preset = (object: ObjectNode) => {
         updateUI();
       } else if (x === "new-pattern") {
         mgmt.newPattern();
+        return [["new-pattern", "bang"]];
       } else if (Array.isArray(x) && x[0] === "copy-to-slot") {
         const currentSlot = mgmt.currentPreset;
         const presetNumber = x[1] as number;
         mgmt.copyToSlot(presetNumber, currentSlot);
         updateUI();
+        return [["copy-to-slot", x[1]]];
       } else if (Array.isArray(x) && x[0] === "switch-to-pattern") {
         const patternNumber = x[1] as number;
         mgmt.switchToPattern(patternNumber);
+        return [["switch-to-pattern", x[1]]];
+      } else if (x === "delete-pattern") {
+        mgmt.deletePattern();
+        return [["delete-pattern", "bang"]];
       } else if (typeof x === "object" && "voice" in x && "preset" in x && "time" in x) {
         const { voice, preset, time } = x;
         mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number);

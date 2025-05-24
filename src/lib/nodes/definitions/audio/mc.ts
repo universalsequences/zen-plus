@@ -45,207 +45,258 @@ doc("mc.voicer", {
   numberOfOutlets: 1,
 });
 
-export const mc_voicer = (node: ObjectNode) => {
-  // Default attribute settings
-  if (node.attributes.chans === undefined) {
-    node.attributes.chans = 6;
-  }
-  if (node.attributes.field === undefined) {
-    node.attributes.field = "semitone";
-  }
-  if (node.attributes.preset === undefined) {
-    node.attributes.preset = "";
-  }
-  if (node.attributes.polyphony === undefined) {
-    node.attributes.polyphony = "";
-  }
+// mc_voicer – revision 3  ("never steal while idle voices exist")
+// ----------------------------------------------------------------------------
+// Changes from rev‑2
+// ➊  Stealing now happens *only* when the preset has already reached its
+//     polyphony limit **activeForPreset ≥ K_P**.  If there is *any* idle voice
+//     we will always pick one of those first.
+// ➋  Priority within idle voices:
+//       a) never‑used voices
+//       b) idle voices that already hold the same preset
+//       c) all remaining idle voices
+// ➌  Added verbose DEBUG logs (toggle with DEBUG flag) so mismatches can be
+//     traced in the console without editing the function again.
+// ----------------------------------------------------------------------------
 
-  const listeners: AudioWorkletNode[] = [];
-  const voiceActivities: number[] = [];
-  const freqToVoiceMap = new Map<string, number>(); // Maps "preset-frequency" to voice indexes
-  const voiceToFreqMap = new Map<number, number>(); // Maps voice indexes to frequencies
-  const voiceToPresetMap = new Map<number, number | null>(); // Maps voice indexes to their current preset or null
-  const chans = node.attributes.chans as number;
+export const mc_voicer = (node: ObjectNode) => {
+  /* ───── constants ───── */
+  const RMS_THRESHOLD = 0.001; // ≈ –60 dB
+  const DEBUG = false;
+  const now = () => Date.now();
+
+  /* ───── default attrs ───── */
+  if (node.attributes.chans === undefined) node.attributes.chans = 6;
+  if (node.attributes.field === undefined) node.attributes.field = "semitone";
+  if (node.attributes.preset === undefined) node.attributes.preset = "";
+  if (node.attributes.polyphony === undefined) node.attributes.polyphony = "";
+
+  /* ───── data structures ───── */
+  const chans: number = node.attributes.chans as number;
+  const freqToVoice = new Map<string, number>();
+  const voiceToFreq = new Map<number, number>();
+  const voiceToPreset = new Map<number, number | null>();
+  const voiceBusy: boolean[] = new Array(chans).fill(false);
+  const voiceIdleAt: number[] = new Array(chans).fill(0);
+
+  /* ───── audio wiring ───── */
   const ctx = node.patch.audioContext;
   node.inlets[0].mc = true;
   node.inlets[0].chans = chans;
   node.outlets[0].connectionType = ConnectionType.CORE;
 
-  // Initialize voice activities and preset mappings
-  for (let i = 0; i < chans; i++) {
-    voiceActivities[i] = 0;
-    voiceToPresetMap.set(i, null);
-  }
+  const voiceToRMS = new Array(chans).fill(0);
+
+  // if (ctx) {
+  //   if (!node.merger) node.merger = ctx.createChannelMerger(chans);
+  //   const splitter = ctx.createChannelSplitter(chans);
+  //   node.merger.connect(splitter);
+
+  //   (async () => {
+  //     console.log("initializing with chans=", chans);
+  //     for (let i = 0; i < chans; i++) {
+  //       await createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor");
+  //       const listener = node.audioNode as AudioWorkletNode;
+  //       splitter.connect(listener, i, 0);
+
+  //       listener.port.onmessage = ({ data }) => {
+  //         const rms = typeof data === "number" ? data : data?.rms ?? 0;
+  //         if (voiceBusy[i] && rms < RMS_THRESHOLD && now() - voiceIdleAt[i] > 50) {
+  //           voiceBusy[i] = false;
+  //           voiceIdleAt[i] = now();
+  //           console.log("freeing voice=%s", i);
+  //         }
+  //         if (voiceBusy[i] && rms === 0) {
+  //           console.log("rms=%s now() - voiceIdleAt[%s] -> %s", rms, i, now() - voiceIdleAt[i]);
+  //         }
+  //         voiceToRMS[i] = rms;
+  //       };
+  //       voiceToPreset.set(i, null);
+  //       voiceIdleAt[i] = now();
+  //     }
+  //     node.useAudioNode(ctx.createGain());
+  //   })();
+  // }
 
   if (ctx) {
-    if (!node.merger) {
-      node.merger = ctx.createChannelMerger(chans);
-    }
-    const splitter = ctx.createChannelSplitter(chans);
-    node.merger.connect(splitter);
-    const setup = async () => {
-      listeners.length = 0;
-      for (let i = 0; i < chans; i++) {
-        await createWorklet(node, "/VisualizerWorklet.js", "visualizer-processor");
-        const listener = node.audioNode as AudioWorkletNode;
-        splitter.connect(listener, i, 0);
-        listeners.push(listener);
-        listener.port.onmessage = (e) => {
-          voiceActivities[i] = e.data;
-        };
-      }
+    if (!node.merger) node.merger = ctx.createChannelMerger(chans);
+
+    (async () => {
+      /* ── NEW: single multi-channel Visualizer ─────────────────────────────── */
+      await ctx.audioWorklet.addModule("/MCVisualizerWorklet.js");
+
+      const mcListener = new AudioWorkletNode(ctx, "mc-visualizer-processor", {
+        numberOfInputs: 1, // we feed the merger’s output
+        channelCount: chans, // keep all voices separate
+        channelInterpretation: "discrete",
+      });
+
+      node.merger?.connect(mcListener);
+
+      mcListener.port.onmessage = ({ data }) => {
+        // data is Float32Array of per-voice RMS
+        const rmsArray = data as Float32Array;
+        for (let i = 0; i < chans; i++) {
+          const rms = rmsArray[i] ?? 0;
+
+          /* same busy-→-idle test you had before */
+          if (voiceBusy[i] && rms < RMS_THRESHOLD && now() - voiceIdleAt[i] > 50) {
+            voiceBusy[i] = false;
+            voiceIdleAt[i] = now();
+            if (DEBUG) console.log("freeing voice", i);
+          }
+
+          voiceToRMS[i] = rms; // keep if you still want it elsewhere
+        }
+      };
+
+      /* ── keep the Splitter ONLY if other code still needs per-channel taps ── */
+      // const splitter = ctx.createChannelSplitter(chans);
+      // node.merger.connect(splitter);
+      // … any other taps go here …
+
       node.useAudioNode(ctx.createGain());
-    };
-    setup();
+    })();
   }
 
-  const voiceTimestamps: number[] = new Array(chans).fill(0);
+  /* ───── helper: choose least‑recently‑used, prefer mono presets ───── */
+  const lru = (pool: number[]): number => {
+    if (pool.length === 1) return pool[0];
 
-  // Helper function to find the least active voice among a list of voices
-  const findLeastActiveVoice = (voices: number[]): number => {
-    let maxDiff = -Infinity;
-    let chosenVoice = voices[0];
-    const now = new Date().getTime();
-    for (const i of voices) {
-      const diff = now - voiceTimestamps[i];
-      if (diff > maxDiff) {
-        maxDiff = diff;
-        chosenVoice = i;
+    // Build polyphony lookup once per call
+    const polyArr = (node.attributes.polyphony as number[]) ?? [];
+
+    const mono: number[] = [];
+    const poly: number[] = [];
+
+    for (const v of pool) {
+      const p = voiceToPreset.get(v);
+      let kp = chans; // default (no limit)
+      if (p !== null && p !== undefined && p >= 0 && p < polyArr.length) {
+        kp = polyArr[p];
+      }
+      (kp === 1 ? mono : poly).push(v);
+    }
+
+    const bucket = mono.length ? mono : poly;
+    const t = now();
+    let oldest = bucket[0];
+    let oldestAge = 0;
+    for (const v of bucket) {
+      const age = t - voiceIdleAt[v];
+      if (age > oldestAge) {
+        oldestAge = age;
+        oldest = v;
       }
     }
-    return chosenVoice;
+    return oldest;
   };
 
-  return (_message: Message) => {
-    node.outlets[0].connectionType = ConnectionType.CORE;
-    if (typeof _message !== "object") return [];
-    const message = _message as MessageObject;
-    const frequency = message[node.attributes.field as string] as number;
-    const polyphony = (node.attributes.polyphony as number[]) || [];
-    const preset =
-      "preset" in message
-        ? (message.preset as number)
-        : (node.attributes.preset as number | undefined);
-    const usePolyphony =
-      polyphony.length > 0 && preset !== undefined && preset >= 0 && preset < polyphony.length;
-    let K_P: number;
-    if (usePolyphony) {
-      K_P = polyphony[preset];
-    } else {
-      K_P = chans; // Default to total number of voices
-    }
+  // /* ───── helper: choose least‑recently‑used from pool ───── */
+  // const lru = (pool: number[]): number => {
+  //   let vOld = pool[0];
+  //   let ageOld = 0;
+  //   const t = now();
+  //   for (const v of pool) {
+  //     const age = t - voiceIdleAt[v];
+  //     if (age > ageOld) {
+  //       ageOld = age;
+  //       vOld = v;
+  //     }
+  //   }
+  //   return vOld;
+  // };
 
-    const freqKey = `${preset}-${frequency}`;
+  /* ───── main callback ───── */
+  return (_m: Message) => {
+    if (typeof _m !== "object") return [];
+    const m = _m as MessageObject;
+    const freq = m[node.attributes.field as string] as number;
+    const preset = "preset" in m ? (m.preset as number) : (node.attributes.preset as number);
+    const poly = (node.attributes.polyphony as number[]) ?? [];
+    const hasLimit = preset !== undefined && preset >= 0 && preset < poly.length;
+    const K_P = hasLimit ? poly[preset] : chans; // unlimited → chans
 
-    if (message.type === "noteoff") {
-      if (freqToVoiceMap.has(freqKey)) {
-        const voice = freqToVoiceMap.get(freqKey) as number;
-        // Send noteoff message immediately
-        const noteoffMessage = {
-          ...message,
-          time: message.time ? message.time : node.patch.audioContext!.currentTime + 0.01,
-          voice,
-        };
-        // Immediately remove mappings
-        freqToVoiceMap.delete(freqKey);
-        voiceToFreqMap.delete(voice);
-        if (!usePolyphony) {
-          voiceToPresetMap.set(voice, null);
-        }
-        return [noteoffMessage];
+    const key = `${preset}-${freq}`;
+
+    /* -------- NOTE‑OFF -------- */
+    if (m.type === "noteoff") {
+      if (freqToVoice.has(key)) {
+        const v = freqToVoice.get(key)!;
+        freqToVoice.delete(key);
+        voiceToFreq.delete(v);
+        return [{ ...m, voice: v, time: m.time ?? ctx!.currentTime + 0.01 }];
       }
-      return []; // No action if frequency not found
+      return [];
     }
 
-    // Note-on handling
-    let voiceChosen: number;
-    const now = new Date().getTime();
+    /* -------- NOTE‑ON -------- */
+    let vChosen: number | undefined;
 
-    if (freqToVoiceMap.has(freqKey)) {
-      voiceChosen = freqToVoiceMap.get(freqKey)!;
-    } else {
-      if (usePolyphony) {
-        // Get voices currently assigned to the preset
-        const voicesForP = Array.from({ length: chans }, (_, i) => i).filter(
-          (i) => voiceToPresetMap.get(i) === preset,
-        );
+    // a) same <preset,freq> already mapped *and* either mono or idle
+    if (freqToVoice.has(key)) {
+      const vPrev = freqToVoice.get(key)!;
+      if (K_P === 1 || !voiceBusy[vPrev]) vChosen = vPrev;
+    }
 
-        if (K_P === 1 && voicesForP.length >= 1) {
-          // Monophonic case: reuse the existing voice
-          voiceChosen = voicesForP[0];
-        } else if (voicesForP.length < K_P) {
-          // Can allocate a new voice
-          const freeVoices = Array.from({ length: chans }, (_, i) => i).filter(
-            (i) => voiceToPresetMap.get(i) === null,
-          );
-          const inactiveFreeVoices = freeVoices.filter(
-            (i) => voiceActivities[i] === 0 && now - voiceTimestamps[i] > 20,
-          );
+    if (vChosen === undefined) {
+      const all = [...Array(chans).keys()];
+      const idle = all.filter((v) => !voiceBusy[v]); // && voiceToRMS[v] < RMS_THRESHOLD);
+      const brandNew = idle.filter((v) => voiceToPreset.get(v) === null);
+      const idleSame = idle.filter((v) => voiceToPreset.get(v) === preset);
+      const activeSame = all.filter((v) => voiceToPreset.get(v) === preset && voiceBusy[v]);
 
-          if (inactiveFreeVoices.length > 0) {
-            voiceChosen = inactiveFreeVoices[0];
-          } else if (freeVoices.length > 0) {
-            voiceChosen = findLeastActiveVoice(freeVoices);
-          } else {
-            // First try to steal from our own preset's voices
-            const ownInactiveVoices = voicesForP.filter(
-              (i) => voiceActivities[i] === 0 && now - voiceTimestamps[i] > 20,
-            );
-
-            if (ownInactiveVoices.length > 0) {
-              voiceChosen = findLeastActiveVoice(ownInactiveVoices);
-            } else if (voicesForP.length > 0) {
-              voiceChosen = findLeastActiveVoice(voicesForP);
-            } else {
-              // Only as last resort, steal from other presets
-              const otherVoices = Array.from({ length: chans }, (_, i) => i).filter(
-                (i) => voiceToPresetMap.get(i) !== preset,
-              );
-              voiceChosen = findLeastActiveVoice(otherVoices);
-            }
-          }
+      /* 1 — Any idle voice available AND we have not hit poly‑limit? */
+      if (idle.length && activeSame.length < K_P) {
+        if (brandNew.length) {
+          vChosen = lru(brandNew);
+        } else if (idleSame.length) {
+          vChosen = lru(idleSame);
         } else {
-          // Polyphony limit reached, steal from preset's voices
-          voiceChosen = findLeastActiveVoice(voicesForP);
+          vChosen = lru(idle);
+          if (DEBUG)
+            console.log(
+              "stealing idle voice=%s prevPreset=%s currentPreset=%s busy->",
+              vChosen,
+              voiceToPreset.get(vChosen),
+              preset,
+              voiceBusy.filter((x) => x).length,
+              [...voiceToRMS],
+            );
         }
       } else {
-        // No polyphony, use any inactive voice or least active
-        const inactiveVoices = Array.from({ length: chans }, (_, i) => i).filter(
-          (i) => voiceActivities[i] === 0 && now - voiceTimestamps[i] > 20,
-        );
-        if (inactiveVoices.length > 0) {
-          voiceChosen = inactiveVoices[0];
+        /* 2 — No idle voices or we’re at limit → we *must* steal */
+        if (activeSame.length) {
+          vChosen = lru(activeSame); // steal own preset first
         } else {
-          voiceChosen = findLeastActiveVoice(Array.from({ length: chans }, (_, i) => i));
+          vChosen = lru(all); // steal anyone (global LRU)
         }
       }
-
-      // If the chosen voice was used by another frequency, remove that mapping
-      if (voiceToFreqMap.has(voiceChosen)) {
-        const oldFreq = voiceToFreqMap.get(voiceChosen)!;
-        // Find and remove all freqKey entries that point to this voice
-        for (const [key, value] of freqToVoiceMap.entries()) {
-          if (value === voiceChosen) {
-            freqToVoiceMap.delete(key);
-          }
-        }
-      }
-
-      // Update mappings
-      freqToVoiceMap.set(freqKey, voiceChosen);
-      voiceToFreqMap.set(voiceChosen, frequency);
-      if (usePolyphony) {
-        voiceToPresetMap.set(voiceChosen, preset);
-      }
-      voiceTimestamps[voiceChosen] = now;
     }
 
-    // Output the chosen voice
+    /* cleanup if we stole an in‑use voice */
+    if (voiceToFreq.has(vChosen)) {
+      for (const [k, v] of freqToVoice.entries()) if (v === vChosen) freqToVoice.delete(k);
+      voiceToFreq.delete(vChosen);
+    }
+
+    /* map & mark busy */
+    freqToVoice.set(key, vChosen);
+    voiceToFreq.set(vChosen, freq);
+    voiceToPreset.set(vChosen, preset);
+    voiceBusy[vChosen] = true;
+    voiceIdleAt[vChosen] = now();
+
+    if (DEBUG)
+      console.log(
+        `[mc_voicer] note ${freq} preset ${preset} → voice ${vChosen} kp -> ${K_P} busy -> ${voiceBusy.filter((x) => x).length} ${[...voiceBusy]} voiceToRMS -> ${[...voiceToRMS]}`,
+      );
+
     return [
       {
-        ...message,
-        voice: voiceChosen,
-        time: message.time ? message.time : node.patch.audioContext!.currentTime + 0.01,
+        ...m,
+        voice: vChosen,
+        time: m.time ?? ctx!.currentTime + 0.01,
       },
     ];
   };

@@ -128,11 +128,6 @@ export const recompileGraph = (patch: Patch) => {
     return;
   }
   if (patch.isZenBase()) {
-    console.log(
-      "*************** ************** ************** ************** ************* began compiling at %s",
-      new Date().getTime(),
-      patch,
-    );
     patch.isCompiling = true;
   }
 

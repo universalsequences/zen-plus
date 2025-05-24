@@ -595,6 +595,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
         return this.subpatch.processMessageForParam(message);
       }
       */
+      if (attributeName === "set-size") {
+        const width = Number.parseInt(tokens[1]);
+        const height = Number.parseInt(tokens[2]);
+        this.updateSize({ width, height });
+        return true;
+      }
       if (this.attributes[attributeName] === undefined) {
         return;
       }
@@ -867,7 +873,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       const resizeNodes =
         this.subpatch?.objectNodes.filter((x) => x.name === "onPatchResize") || [];
       for (const n of resizeNodes) {
-        n.send(n.outlets[0], [size.width, size.height]);
+        n.receive(n.inlets[0], [size.width, size.height]);
       }
     }
   }

@@ -56,7 +56,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
 }) => {
   // Context hooks
   const { selectPatch } = usePatchSelector();
-  const { patch, buffer } = usePatch();
+  const { patch, buffer, isCustomView: isInCustomView } = usePatch();
   const { setSelectedBuffer } = usePatches();
   const { setSelectedNodes, selectedNodes } = useSelection();
   const {
@@ -119,7 +119,6 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
         // For resizable nodes, keep existing size
         updateSize(node.id, { ...node.size });
       } else if (!isMessageNode(node)) {
-        console.log("standard resize");
         // For standard nodes, size to content
         const size = {
           width: ref.current.offsetWidth,
@@ -163,12 +162,12 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
    */
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      const currentSelectedNodes = selectedNodesRef.current;
       // Skip for locked nodes
       if (node.locked) {
+        e.stopPropagation();
         return;
       }
-
-      const currentSelectedNodes = selectedNodesRef.current;
 
       // Handle shift key for multi-selection
       if (e.shiftKey) {
@@ -190,6 +189,16 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
           objectNode.name === "zen" &&
           objectNode.attributes["Custom Presentation"] &&
           !objectNode.attributes["slotview"];
+
+        /*
+        if (isInCustomView && isZenCustom) {
+          e.stopPropagation();
+          if (!currentSelectedNodes.includes(node)) {
+            setSelectedNodes([node]);
+          }
+          return;
+        }
+        */
 
         // Handle custom view or custom zen patch
         if (isCustomView || isZenCustom) {
@@ -244,7 +253,15 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
         }
       }
     },
-    [node, setDraggingNode, setSelectedNodes, selectPatch, isCustomView, updateZIndex],
+    [
+      node,
+      setDraggingNode,
+      setSelectedNodes,
+      selectPatch,
+      isCustomView,
+      updateZIndex,
+      isInCustomView,
+    ],
   );
 
   /**
@@ -257,6 +274,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       }
       // Skip for locked nodes
       if (node.locked) {
+        e.stopPropagation();
         return;
       }
 

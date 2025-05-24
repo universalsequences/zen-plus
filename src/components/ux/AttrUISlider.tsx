@@ -26,8 +26,20 @@ const AttrUISlider: React.FC<AttrUISliderProps> = ({
   const [editing, setEditing] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 100, height: 100 });
 
-  // Normalize value between 0 and 1 for display
-  const normalizedValue = (value - min) / (max - min);
+  // Get exponent for non-linear mapping (power curve)
+  const exponent = node.attributes.exponent !== undefined ? Number(node.attributes.exponent) : 1;
+  
+  // Apply inverse of the power function to convert back from value to normalized position
+  // For values that had been previously transformed using the power function
+  const getNormalizedFromValue = (val: number) => {
+    const normalized = (val - min) / (max - min);
+    return exponent === 1 
+      ? normalized // Linear case
+      : Math.pow(normalized, 1 / exponent); // Inverse power function
+  };
+  
+  // Normalize value between 0 and 1 for display using the inverse mapping
+  const normalizedValue = getNormalizedFromValue(value);
 
   // Format value for display (round to 2 decimal places)
   const displayValue = Math.round(value * 100) / 100;
@@ -89,8 +101,13 @@ const AttrUISlider: React.FC<AttrUISliderProps> = ({
         );
       }
 
+      // Apply power function to the normalized value for non-linear mapping
+      const mappedNormalizedValue = exponent === 1 
+        ? newNormalizedValue // Linear case
+        : Math.pow(newNormalizedValue, exponent); // Power function for non-linear mapping
+      
       // Convert back to range and update
-      const rangeValue = min + newNormalizedValue * (max - min);
+      const rangeValue = min + mappedNormalizedValue * (max - min);
       setValue(rangeValue, e as MouseEvent);
     }
   };

@@ -383,7 +383,6 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
 
     // Function to process data from the ring buffer
     const processRingBufferData = (count = 0) => {
-      let a = new Date().getTime();
       try {
         while (ringBufferRef.current?.canRead()) {
           const message = ringBufferRef.current.read();
@@ -393,11 +392,6 @@ export const WorkerProvider: React.FC<Props> = ({ patch, children }) => {
         }
       } catch (error) {
         console.error("Error processing ring buffer data:", error);
-      }
-      let b = new Date().getTime();
-      const time = b - a;
-      if (time > 1) {
-        console.log("read took %s ms", time);
       }
     };
 

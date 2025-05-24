@@ -148,9 +148,6 @@ export const zen_param = (object: ObjectNode, name: Lazy) => {
         const value = isNaN(x[0] as number) ? (object.attributes.default as number) || 0 : x[0];
         const invocation = x[2] as number;
 
-        if (time < 0) {
-          console.log("negative param", name());
-        }
         _param.set!(value as number, Math.max(0, time), invocation);
 
         object.storedParameterValue = value as number;

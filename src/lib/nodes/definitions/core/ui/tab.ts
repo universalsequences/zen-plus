@@ -80,8 +80,6 @@ class TabData implements SerializableCustom {
       return scriptingName && typeof scriptingName === "string" && scriptingName.trim() !== "";
     });
 
-    console.log("update visibility", selectedTabIndex, selectedTabScriptingNames);
-
     // Update visibility for each object
     for (const obj of allNodesWithScriptingNames) {
       const scriptingName = obj.attributes["scripting name"] as string;

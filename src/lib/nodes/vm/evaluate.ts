@@ -126,9 +126,12 @@ export const evaluate = (
           // trigger/pipe mesasge
           const messageNode = instruction.node as MessageNode;
           if (instruction.outletNumber === undefined) {
-            throw new Error("missing outlet number for pipe");
+            //throw new Error("missing outlet number for pipe");
           }
-          const messageToPipe = register[instruction.outletNumber];
+          const messageToPipe =
+            messageNode.inlets[0].lastMessage === undefined
+              ? _initialMessage
+              : messageNode.inlets[0].lastMessage; // register[instruction.outletNumber];
 
           if (messageToPipe === "bang") {
             // send out
@@ -291,6 +294,7 @@ export const evaluate = (
               }
               inlet.lastMessage = register[outletNumber] as Message;
             } else {
+              inlet.lastMessage = register[outletNumber] as Message;
             }
             /*
             if (false && (node as ObjectNode).needsMainThread) {

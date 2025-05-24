@@ -29,6 +29,10 @@ export const attrui: NodeFunction = (node: ObjectNode, name: Lazy, value: Lazy) 
   if (!node.attributes.color) {
     node.attributes.color = "#3b82f6"; // Default to blue (tailwind blue-500)
   }
+  
+  if (!node.attributes.exponent) {
+    node.attributes.exponent = 1; // Default to linear (1.0)
+  }
 
   node.attributeOptions.mode = [
     "number",

@@ -2,7 +2,7 @@ import { createContext, useState, useContext, useRef, useCallback, useEffect } f
 import type React from "react";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
-import type { Message, Node} from "@/lib/nodes/types";
+import type { Message, Node } from "@/lib/nodes/types";
 import { usePosition } from "./PositionContext";
 
 interface IValueContext {
@@ -25,10 +25,14 @@ export const useValue = (): IValueContext => {
 
 export const ValueProvider: React.FC<Props> = ({ node, children }) => {
   const [nodeToWatch, setNodeToWatch] = useState(node);
-  const [value, setValue] = useState<Message | null>(null);
+  const [value, setValue] = useState<Message | null>(node.lastOnValue ?? null);
   const { patches, selectedPatch } = usePatches();
   const { patch, isCustomView } = usePatch();
   const { presentationMode } = usePosition();
+
+  useEffect(() => {
+    if (value !== null) node.lastOnValue = value;
+  }, [value]);
 
   useEffect(() => {
     nodeToWatch.onNewValue = setValue;

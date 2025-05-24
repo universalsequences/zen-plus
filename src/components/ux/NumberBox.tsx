@@ -25,17 +25,17 @@ const NumberBox: React.FC<{
   // Measure container dimensions for adaptive font sizing
   useEffect(() => {
     if (ref.current) {
-      const resizeObserver = new ResizeObserver(entries => {
+      const resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           if (entry.target === ref.current) {
             setContainerSize({
               width: entry.contentRect.width,
-              height: entry.contentRect.height
+              height: entry.contentRect.height,
             });
           }
         }
       });
-      
+
       resizeObserver.observe(ref.current);
       return () => resizeObserver.disconnect();
     }
@@ -45,7 +45,7 @@ const NumberBox: React.FC<{
   const getFontSize = () => {
     // Calculate size based on both height and width
     const { width, height } = containerSize;
-    
+
     // First, calculate height-based font size with more aggressive scaling
     let heightBasedSize;
     if (height < 15) {
@@ -68,7 +68,7 @@ const NumberBox: React.FC<{
       // For extremely tall components
       heightBasedSize = Math.min(50, Math.floor(height * 0.3)); // 30% of height, max 50px
     }
-    
+
     // Calculate width-based size
     let widthBasedSize;
     if (width < 60) {
@@ -86,7 +86,7 @@ const NumberBox: React.FC<{
     } else {
       widthBasedSize = 20;
     }
-    
+
     // Use the smaller of the two sizes to ensure text fits in both dimensions
     // With a slight bias toward the height-based size
     const finalSize = Math.min(heightBasedSize, widthBasedSize * 1.3);
@@ -95,7 +95,7 @@ const NumberBox: React.FC<{
 
   // Use a constant size for the triangle icon
   const getIconSize = () => {
-    return '12px'; // Fixed size for consistency
+    return "12px"; // Fixed size for consistency
   };
 
   useEffect(() => {
@@ -218,10 +218,10 @@ const NumberBox: React.FC<{
   // Determine styling based on container size
   const fontSize = getFontSize();
   const iconSize = getIconSize();
-  
+
   // Always show icon unless width is extremely constrained
-  const showIcon = containerSize.width >= 40;
-  
+  const showIcon = true;
+
   // Only use compact display for extremely constrained width
   // For standard height=20 elements, keep the decimal editor visible
   const useCompactDisplay = containerSize.width < 40;
@@ -230,10 +230,10 @@ const NumberBox: React.FC<{
     <div ref={ref} className="w-full h-full">
       <div
         className={`${className ? className : "m-y"} bg-zinc-800 h-full flex flex-1 active:bg-zinc-700 ${keyMode.current ? "cursor-text" : "cursor-ns-resize"}`}
-        style={{ 
-          fontSize: fontSize, 
-          display: 'flex', 
-          alignItems: 'center'
+        style={{
+          fontSize: fontSize,
+          display: "flex",
+          alignItems: "center",
         }}
       >
         {showIcon && (
@@ -247,7 +247,7 @@ const NumberBox: React.FC<{
           onMouseDown={startEditing}
           onDoubleClick={handleDoubleClick}
           className="flex-1 active:text-green-200 text-white my-auto flex overflow-hidden"
-          style={{ maxHeight: '100%' }}
+          style={{ maxHeight: "100%" }}
         >
           {keyMode.current && editing ? (
             <input
@@ -270,18 +270,15 @@ const NumberBox: React.FC<{
           ) : (
             // Normal display with integer and decimal parts
             <>
-              <div 
+              <div
                 onMouseDown={() => (rounding.current = true)}
                 className="truncate"
-                style={{ maxWidth: '40%' }}
+                style={{ maxWidth: "40%" }}
               >
                 {integer}
               </div>
               <div className="mx-px">.</div>
-              <div 
-                onMouseDown={() => (rounding.current = false)} 
-                className="flex-1 truncate"
-              >
+              <div onMouseDown={() => (rounding.current = false)} className="flex-1 truncate">
                 {float !== undefined
                   ? value < 0
                     ? float.toString().slice(3)

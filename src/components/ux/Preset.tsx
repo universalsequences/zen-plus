@@ -5,7 +5,7 @@ import { ObjectNode } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useLocked } from "@/contexts/LockedContext";
-import { PlusCircledIcon } from "@radix-ui/react-icons";
+import { MinusCircledIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 
 const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { lockedMode } = useLocked();
@@ -23,7 +23,10 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const showNames = objectNode.attributes.showNames as boolean;
   const slotMode = objectNode.attributes.slotMode as boolean;
+  const patternMode = objectNode.attributes.patternMode as boolean;
   const numberOfSlots = objectNode.attributes.slots as number;
+  const cellSize = objectNode.attributes.cellSize as number;
+  const compactPatternMode = objectNode.attributes.compactPatternMode as boolean;
 
   const onMouseUp = useCallback((e: MouseEvent) => {
     isMouseDown.current = false;
@@ -32,6 +35,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Backspace" && !editingPreset) {
+        console.log("deleting...", selectedPresets);
         objectNode.receive(objectNode.inlets[0], ["delete", ...selectedPresets]);
         setTimeout(() => {
           setSelectedPresets([]);
@@ -121,6 +125,10 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
     objectNode.receive(objectNode.inlets[0], "new-pattern");
   }, [objectNode]);
 
+  const deletePattern = useCallback(() => {
+    objectNode.receive(objectNode.inlets[0], "delete-pattern");
+  }, [objectNode]);
+
   const switchToPattern = useCallback(
     (patternNumber: number) => {
       console.log("switch", patternNumber);
@@ -156,59 +164,89 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   return (
     <div
-      style={{ width, height }}
-      className={`${showNames ? "overflow-scroll p-1" : "flex flex-wrap overflow-hidden"} content-start bg-zinc-950`}
+      className={`w-full h-full ${showNames ? "overflow-y-scroll overflow-x-hidden p-1" : "flex flex-wrap overflow-hidden"} content-start bg-zinc-950`}
     >
-      {slotMode && <div className="text-zinc-400 pl-1">slot: {current + 1}</div>}
-      <div className="flex flex-wrap">
-        {new Array(numberOfPatterns).fill(0).map((_x, i) => (
+      {!compactPatternMode && slotMode && (
+        <div className="text-zinc-400 pl-1">slot: {current + 1}</div>
+      )}
+      <div className="flex gap-2 w-full ">
+        {patternMode && (
+          <div className="flex flex-wrap flex-1">
+            {new Array(numberOfPatterns).fill(0).map((_x, i) => (
+              <div
+                key={i}
+                style={{ width: cellSize, height: cellSize }}
+                onClick={() => switchToPattern(i)}
+                className={`items-start cursor-pointer ${i === currentPattern ? "border-white" : "border-zinc-500"} border flex m-0.5 text-white`}
+              >
+                <div style={{ fontSize: 8 }} className="m-auto">
+                  {i + 1}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {patternMode && (
+          <div className="flex gap-2 flex-col w-12 p-1 border-l border-l-zinc-800 ">
+            <button
+              className="p-2 cursor-pointer bg-zinc-900 rounded-lg hover:bg-zinc-800"
+              onClick={() => newPattern()}
+            >
+              <PlusCircledIcon
+                style={{ width: cellSize, height: cellSize }}
+                className="mx-auto active:stroke-zinc-100 my-auto"
+                color="white"
+              />
+            </button>
+            <button
+              className="p-2 cursor-pointer bg-zinc-900 hover:bg-zinc-800 rounded-lg"
+              onClick={() => deletePattern()}
+            >
+              <MinusCircledIcon
+                style={{ width: cellSize, height: cellSize }}
+                className="mx-auto active:stroke-zinc-100 my-auto"
+                color="white"
+              />
+            </button>
+          </div>
+        )}
+      </div>
+      {!compactPatternMode &&
+        mgmt.presets.map((_preset, i) => (
           <div
             key={i}
-            onClick={() => switchToPattern(i)}
-            className={`cursor-pointer ${i === currentPattern ? "border-white" : "border-zinc-500"} border w-5 h-5 rounded-lg flex m-0.5 text-white`}
+            onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => onMouseDown(e, i)}
+            onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => onMouseOver(e, i)}
+            onDoubleClick={() => handleDoubleClick(i)}
+            className={
+              (showNames ? "w-full h-4" : "w-3 h-3") +
+              " m-0.5 cursor-pointer border transition-colors " +
+              (selectedPresets.includes(i)
+                ? "bg-red-500"
+                : currentPresetNumber === i
+                  ? showNames
+                    ? "border-white"
+                    : "bg-zinc-100 "
+                  : !showNames && mgmt.buffer?.[i] === 1
+                    ? "bg-zinc-700 border-transparent "
+                    : "bg-zinc-900 border-transparent ")
+            }
           >
-            <div className="m-auto">{i + 1}</div>
+            {showNames &&
+              (editingPreset === i ? (
+                <input
+                  ref={inputRef}
+                  className="text-white bg-transparent outline-none w-full"
+                  onChange={onChangeName}
+                  onKeyPress={handleKeyPress}
+                  type="text"
+                  value={nameValue}
+                />
+              ) : (
+                <span className="text-white text-xs truncate block">{presetNames[i] || ""}</span>
+              ))}
           </div>
         ))}
-        <button className="cursor-pointer" onClick={() => newPattern()}>
-          <PlusCircledIcon className="w-5 h-5 my-auto" color="white" />
-        </button>
-      </div>
-      {mgmt.presets.map((_preset, i) => (
-        <div
-          key={i}
-          onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => onMouseDown(e, i)}
-          onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => onMouseOver(e, i)}
-          onDoubleClick={() => handleDoubleClick(i)}
-          className={
-            (showNames ? "w-full h-4" : "w-3 h-3") +
-            " m-0.5 cursor-pointer border transition-colors " +
-            (selectedPresets.includes(i)
-              ? "bg-red-500"
-              : currentPresetNumber === i
-                ? showNames
-                  ? "border-white"
-                  : "bg-zinc-100 "
-                : !showNames && mgmt.buffer?.[i] === 1
-                  ? "bg-zinc-700 border-transparent "
-                  : "bg-zinc-900 border-transparent ")
-          }
-        >
-          {showNames &&
-            (editingPreset === i ? (
-              <input
-                ref={inputRef}
-                className="text-white bg-transparent outline-none w-full"
-                onChange={onChangeName}
-                onKeyPress={handleKeyPress}
-                type="text"
-                value={nameValue}
-              />
-            ) : (
-              <span className="text-white text-xs truncate block">{presetNames[i] || ""}</span>
-            ))}
-        </div>
-      ))}
     </div>
   );
 };
