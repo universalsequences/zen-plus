@@ -82,15 +82,17 @@ const compileConnection = (
     instructions.push(instruction);
   } //else if (isObjectNode(destination)) {
   // object node
-  const instruction: Instruction = {
-    type: InstructionType.Store,
-    inletNumber,
-    inlet: destinationInlet,
-    outletNumber,
-    node: destination,
-  };
-  //pushInstruction(instructions, instruction, branch, branchIndex);
-  instructions.push(instruction);
+  if (!(isMessageNode(destination) && inletNumber === 1)) {
+    const instruction: Instruction = {
+      type: InstructionType.Store,
+      inletNumber,
+      inlet: destinationInlet,
+      outletNumber,
+      node: destination,
+    };
+    //pushInstruction(instructions, instruction, branch, branchIndex);
+    instructions.push(instruction);
+  }
   //}
 
   return instructions;

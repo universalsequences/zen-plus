@@ -24,6 +24,7 @@ import { compileVM, topologicalSearchFromNode } from "@/lib/nodes/vm/forwardpass
 import { ObjectNode } from "@/lib/nodes/types";
 
 describe("createInstructions", async () => {
+  // Graph: m1 -> o1(* 4) -> o2(* 5)
   it("createInstructions simple", async () => {
     const { nodes } = graph1();
     const instructions = compileInstructions(nodes);
@@ -45,21 +46,28 @@ describe("createInstructions", async () => {
     ]);
   });
 
+  // Graph: m1 -> o1(* 4) -> o2(* 5)
+  //             |         |
+  //             v         v
+  //            m2        m3
   it("createInstructions simple with message nodes", async () => {
     const { nodes } = graph2();
     const instructions = compileInstructions(nodes);
     expect(instructions.map((x) => x.type)).toEqual([
       InstructionType.Attribute,
       InstructionType.Store,
-      InstructionType.EvaluateObject,
+      InstructionType.EvaluateObject, // o1 evaluate
       InstructionType.Attribute,
-      InstructionType.Store,
+      InstructionType.Store, // store result of o1 in o2
       InstructionType.ReplaceMessage,
-      InstructionType.EvaluateObject,
-      InstructionType.ReplaceMessage,
+      InstructionType.EvaluateObject, // o2 evaluate
+      InstructionType.ReplaceMessage, // execute replace message with stored result
     ]);
   });
 
+  // Graph: m1 -> o1[p] -> m2
+  //              |
+  //              subpatch: in1 -> mult(* 3) -> out1
   it("createInstructions with subpatch", async () => {
     const { nodes } = graphSubPatch1();
     const instructions = compileInstructions(nodes);
@@ -73,6 +81,9 @@ describe("createInstructions", async () => {
     ]);
   });
 
+  // Graph: m1 -> p1[subpatch1] -> p2[subpatch2] -> o2(- 5) -> m2
+  //              |                |                |
+  //              in1->mult1(*3)->out1  in1->mult2(+4)->out1
   it("createInstructions with subpatch into other subpatch", async () => {
     const { nodes } = graphSubPatchIntoSubpatch();
     const instructions = compileInstructions(nodes);
@@ -92,6 +103,11 @@ describe("createInstructions", async () => {
     ]);
   });
 
+  // Graph: m1 -> route(1 2 3 4) -> mult1(* 2) -> add1_A(+ 2) -> m2
+  //                    |                                            |
+  //                    |-> mult2(* 3) -> m3                        |
+  //                    |                                            |
+  //                    |-> mult3(* 4) -> m4                        |
   it("createInstructions with subpatch into branch", async () => {
     const { nodes } = graphBranch1();
     const instructions = compileInstructions(nodes);
@@ -139,6 +155,10 @@ describe("createInstructions", async () => {
 });
 
 describe("evaluateInstructions", async () => {
+  // Graph: m1 -> o1(* 4) -> o2(* 5)
+  //             |         |
+  //             v         v
+  //            m2        m3
   it("evaluateInstructions simple with message nodes", async () => {
     const { nodes, m2, m3 } = graph2();
     const instructions = compileInstructions(nodes);
@@ -147,6 +167,9 @@ describe("evaluateInstructions", async () => {
     expect(m3.message).toBe(100);
   });
 
+  // Graph: m1 -> o1[p] -> m2
+  //              |
+  //              subpatch: in1 -> mult(* 3) -> out1
   it("evaluateInstructions with subpatch", async () => {
     const { nodes, m2 } = graphSubPatch1();
     const instructions = compileInstructions(nodes);
@@ -154,6 +177,9 @@ describe("evaluateInstructions", async () => {
     expect(m2.message).toBe(15);
   });
 
+  // Graph: m1 -> p1[subpatch1] -> p2[subpatch2] -> o2(- 5) -> m2
+  //              |                |                |
+  //              in1->mult1(*3)->out1  in1->mult2(+4)->out1
   it("evaluateInstructions with subpatch into subpatch", async () => {
     const { nodes, m2 } = graphSubPatchIntoSubpatch();
     const instructions = compileInstructions(nodes);
@@ -161,6 +187,11 @@ describe("evaluateInstructions", async () => {
     expect(m2.message).toBe(14);
   });
 
+  // Graph: m1 -> route(1 2 3 4) -> mult1(* 2) -> add1_A(+ 2) -> m2
+  //                    |                                            |
+  //                    |-> mult2(* 3) -> m3                        |
+  //                    |                                            |
+  //                    |-> mult3(* 4) -> m4                        |
   it("evaluateInstructions with route branch", async () => {
     const { nodes, m2, m3, m4 } = graphBranch1();
     const instructions = compileInstructions(nodes);
@@ -180,6 +211,9 @@ describe("evaluateInstructions", async () => {
     expect(m4.message).toBe(12);
   });
 
+  // Graph: m1 -> filter.= 1 -> mult1(* 2) -> add1_A(+ 2) -> m2
+  //         |
+  //         |-> m3
   it("evaluateInstructions with branch filter", async () => {
     const { nodes, m2, m3 } = graphBranch2();
     const instructions = compileInstructions(nodes);
@@ -192,6 +226,9 @@ describe("evaluateInstructions", async () => {
     expect(m3.message).toBe(20);
   });
 
+  // Graph: m1 -> messagemessage -> mult1(* 2) -> add1_A(+ 2) -> m2
+  //                    |
+  //                    |-> mult2(* 8) -> add2_A(+ 9) -> m3
   it("messagemessage should execute branches sequentially", () => {
     const { nodes, m2, m3, expectedObjectsEvaluated } = graphBranchMessageMessage();
     const instructions = compileInstructions(nodes);
@@ -201,6 +238,13 @@ describe("evaluateInstructions", async () => {
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
   });
 
+  // Graph: m1 -> messagemessage1 -> mult1(* 2) -> add1_A(+ 2) -> messagemessage2
+  //                      |                                                |
+  //                      |-> mult2(* 8) -> add2_A(+ 9) -> m3           |
+  //                                                                       |
+  //                                                mult3(* 2) -> add3_A(+ 2) -> m3
+  //                                                       |
+  //                                                mult4(* 2) -> add4_A(+ 2) -> m4
   it("nested messagemessage should execute branches sequentially", () => {
     const { nodes, expectedObjectsEvaluated } = graphBranchMessageMessageNested();
     const instructions = compileInstructions(nodes);
@@ -208,6 +252,9 @@ describe("evaluateInstructions", async () => {
     expect(objectsEvaluated?.map((x) => x.id)).toEqual(expectedObjectsEvaluated.map((x) => x.id));
   });
 
+  // Graph: m1 -> p[subpatch] -> m2
+  //              |
+  //              subpatch: in1 -> script(lisp) -> out2
   it("script in patch", () => {
     const { nodes, m2 } = graphScript();
     const instructions = compileInstructions(nodes);
@@ -215,6 +262,10 @@ describe("evaluateInstructions", async () => {
     expect(m2.message).toEqual([5, 5, 5, 5]);
   });
 
+  // Graph A: m1 -> lisp -> unpack -> matrix
+  //                           ^         |
+  //                           |_________|
+  // Graph B: button -> m2 -> matrix
   it("script matrix", () => {
     const { matrix, nodesA, nodesB, expectedA, expectedB } = graphCyclicScript();
 
@@ -227,6 +278,7 @@ describe("evaluateInstructions", async () => {
     expect(instructionsB.map((x) => x.type)).toEqual([
       InstructionType.EvaluateObject, // button
       InstructionType.Attribute,
+      InstructionType.Store,
       InstructionType.PipeMessage, // message box [0.5,0.5,0.5,0.5]
       InstructionType.Attribute,
       InstructionType.Store,
@@ -258,6 +310,11 @@ describe("evaluateInstructions", async () => {
     ]);
   });
 
+  // Graph: m1 -> filter.= 1 -> m2 -> o1[p] -> m4
+  //                    |       |     |
+  //                    |       |     subpatch: in1 -> mult(* 3) -> out1
+  //                    |       |
+  //                    |-> m3 -|
   it("branch into subpatch", () => {
     const { nodes, m4 } = graphBranchIntoSubPatch();
     const instructions = compileInstructions(nodes);
@@ -277,20 +334,34 @@ describe("evaluateInstructions", async () => {
     // pass new Set() to getOutboundConnection()
   });
 
+  // Graph: [placeholder for subscribe test]
   it("subscribe test", () => {
     //
   });
 
+  // Graph: [placeholder for unpack test]
   it("unpack test", () => {
     //
   });
 
+  // Graph: m1 -> lisp -> messagemessage -> route1 -> get1 -> m2
+  //                |              |
+  //                |              |-> get2 -> m3
+  //                |
+  //                |-> route2 -> get3 -> m4
   it("messagemessage / route test", () => {
     const { nodes, expected } = graphBranchMessageMessageRoute();
     expect(nodes.map((x) => x.id)).toEqual(expected);
     const instructions = compileInstructions(nodes);
   });
 
+  // Graph: m1 -> lisp -> filter -> messagemessage -> route1 -> get1 -> m2
+  //                           |               |
+  //                           |               |-> get2 -> m3
+  //                           |
+  //                           |-> p1[subpatch] -> m4
+  //                               |
+  //                               subpatch: in1 -> dict -> m4
   it("messagemessage / route test 2", () => {
     const { nodes, expected, expectedObjectsEvaluated } = graphBranchMessageMessageRoute2();
     expect(nodes.map((x) => x.id)).toEqual(expected);
@@ -299,6 +370,13 @@ describe("evaluateInstructions", async () => {
     expect(objectsEvaluated.map((x) => x.id)).toEqual(expectedObjectsEvaluated);
   });
 
+  // Graph: in_button -> matrix -> list_nth -> out_message
+  //                        |          ^
+  //                        v          |
+  //        filter -> button -> counter -> select_message
+  //                                |
+  //                                v
+  //                            list_nth
   it("branch pop basic", () => {
     const { patch, in_button, filter, out_message } = branchPopperGraph();
     compileVM(patch, false);
@@ -315,6 +393,14 @@ describe("evaluateInstructions", async () => {
     expect(out_message.message).toBe(0);
   });
 
+  // Graph: Same as branch pop basic but with swapped connection order
+  //        filter -> button -> counter -> list_nth -> out_message
+  //                              |          ^
+  //                              v          |
+  //                      select_message -> matrix
+  //                              ^
+  //                              |
+  //                         in_button
   it("inverse", () => {
     // not enough to force objects before messages
     // need to determine if the path leads to a cold path
@@ -328,6 +414,13 @@ describe("evaluateInstructions", async () => {
     );
   });
 
+  // Graph: filter -> button -> counter -> mult(* 1) -> select_message -> matrix
+  //                              |                                          |
+  //                              |-> list_nth <--------------------------|
+  //                                     |
+  //                                     v
+  //                               out_message
+  //        in_button -> matrix
   it("inverse+mult", () => {
     // not enough to force objects before messages
     // need to determine if the path leads to a cold path
