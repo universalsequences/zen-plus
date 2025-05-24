@@ -1,0 +1,65 @@
+#+title: Readme
+
+# VM Compilation
+
+This directory contains functions for compiling and evaluating control-based (~operatorContextType=Core~) nodes into bytecode instructions.
+
+These byte codes are executed by a VM which is run on a seperate worker thread.
+
+* Context
+Control nodes in a patch-based system can be thought of as interpreted language. Tree-based execution is very slow, and requires unpacking the graph topology as you execute.
+
+By compiling the patch, we can unroll the topology of the patch graph into a ~stream~ of instructions that can be executed linearly (w/ the exception of ~Branch~ instructions which introduces some trees)
+
+* Instruction Types (byte codes)
+The list of byte codes is found in ~./types.ts~
+** EvaluateObject
+- evaluates an ObjectNode using the values stored in it's inlets.
+- result is stored in VM ~register~
+** PipeMessage
+- pipes a string/message stored in a ~MessageNode~'s first inlet through the MessageNode
+- result is stored in VM ~register~
+- e.g. ~PipeMessage~ with node=MessageNode("hello $1") and inlet[0].lastMessage="world" will output the string "hello world" and store this string in the VM register.
+** ReplaceMessage
+- replaces message inside a ~MessageNode~ with the value inside the VM ~register~
+** Store
+- stores the value inside the VM register inside a specific node's inlet
+** Attribute
+- executes the value inside the VM register as an attribute update for some node or subpatch
+- e.g. ~Attribute~ with VM register=["cutoff 123"] and ~nodes=[*list of nodes in subpatch*]~ will update that parameter across all those nodes
+- e.g. ~Attribute~ with VM ~register=["fill-color", "#12345"]~ and ~node=colorNode~ will update the "fill-color" attribute with value "#12345"
+- instructions may contain a list of nodes necessary to execute the instruction (for example an attribute update for a subpatch requires a list of all the nodes within that subpatch)
+** Branch
+- contains several indepedent trees of instructions, one of which may be executed based on the result stored in register
+- register is an array and if the value is undefined then we skip that branch
+- only objects marked with ~node.isBranching = true~ will compile to a ~Branch~ instruction. These objects have optional outputs (i.e. some outlets may not output anything). Branching allows us to skip these branches when there are no outputs on some outlets.
+* Compiling
+** Topological Sorting
+- [[file./forwardpass.ts]] handles topologically sorting a patch into a list of nodes based on how they'll execute
+- Carefully handles inlets based on whether they are ~hot~ (should execute the node when they receive a message) or ~cold~ (should simply store the result in the inlet)
+- Flattens any subpatches based on how they are connected to the rest of the graph
+*** Source Nodes
+- Entry points into the compilation
+- e.g. UI elements that are controlled by the user on the main-thread
+- After compilation, each ~source node~ will contain a list of ~instructions~ to be executed whenever the node receives a message on the main-thread
+- See the function ~isSourceNode~
+*** skipCompilation
+- Any nodes that shouldn't be compiled are marked as ~node.skipCompilation=true~, when defining the node.
+- The topological sorting should skip these nodes
+- When determining ~sourceNodes~ (i.e. entry-points), we check if the inbound connections contains a node that has ~skipCompilation=true~
+** Compiling Instructions
+- [[file:./instructions.ts]]  handles compiling a list of topologically sorted nodes into a list of ~instructions~.
+* Evaluation
+- [[file:./evaluate.ts]] takes a list of ~instructions~ and an initial input ~message~ and evaluates the instructions, outputting a final result if any
+- This is generally run by the ~VM~ which exists on a seperate thread
+** needsMainThread
+- Some nodes can only be executed on the main-thread (e.g. ~param~ or ~uniform~ nodes).
+- When the evaluator reaches such a ~node~ it stores the current inlet values and VM register in an object and returns it at the end of evaluation
+- The caller of the ~evaluate~ can then send these objects to the main-thread for execution
+** isAsync
+- Some nodes are asynchronous (such as the ~subscribe~ object).
+- The definitions for these objects can call ~object.send(object.outlets[0], message)~. When this occurs on the VM worker-thread, the ~node~ knows to run this message on each of the outbound connections (utilizing the connected node's compiled instructions)
+* Testing
+- We have tests for topological sorting, compiling and evaluating
+- [[file:../../../../test/forwardpass.test.ts tests topoligical sorting of nodes
+- [[file:../../../../test/instructions.test.ts tests compiling graphs into instructions and also evaluating expressions

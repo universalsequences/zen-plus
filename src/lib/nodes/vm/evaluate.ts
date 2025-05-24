@@ -149,7 +149,7 @@ export const evaluate = (
         }
         case InstructionType.ReplaceMessage: {
           if (instruction.outletNumber === undefined) {
-            //throw new Error("missing outlet number for pipe");
+            throw new Error("missing outlet number for pipe");
           }
           const messageToReplace = register[instruction.outletNumber];
           if (messageToReplace !== undefined) {
@@ -178,67 +178,6 @@ export const evaluate = (
         case InstructionType.EvaluateObject:
           // TODO - need to first determine that all inlets have messages
           const objectNode = instruction.node as ObjectNode;
-
-          /*
-           * note: this is for compiling zen patches . when we reach an evaluation instruction
-           * where the data is not ready, we end up splicing instructions
-          let skip = false;
-          if (
-            (objectNode.inlets[0] && objectNode.inlets[0].lastMessage === undefined) ||
-            objectNode.arguments.slice(0, objectNode.inlets.length - 1).some((x) => x === undefined)
-          ) {
-            if (stopOnEmpty && objectNode.name !== "out") {
-              console.log(
-                "%cmissing inlet message for object node evaluation id=%s",
-                "color:red",
-                objectNode.id,
-                objectNode.text,
-                objectNode,
-                [
-                  objectNode.inlets[0]?.lastMessage,
-                  ...objectNode.arguments.slice(0, objectNode.inlets.length - 1),
-                ],
-                instructions.map((x) => x.node?.id),
-              );
-              return {
-                mainThreadInstructions,
-                objectsEvaluated,
-                replaceMessages,
-                instructionsEvaluated: emittedInstructions,
-                attributeUpdates,
-                optimizedMainThreadInstructions,
-              };
-              const forward = forwardTraversal(objectNode);
-              const instructs: Instruction[] = [instruction];
-              while (instructions.length > 0) {
-                const next = instructions[0];
-                if (next.node && forward.includes(next.node) && next.node.name !== "out") {
-                  //console.log("moving foward node=%s id=%s", next.node.text, next.node.id);
-                  const instr = instructions.shift();
-                  if (instr) {
-                    instructs.push(instr);
-                  }
-                } else {
-                  if (objectNode.inlets[0].lastMessage === undefined && register[0] === undefined) {
-                    console.log("skipping add");
-                    break;
-                  }
-                  skippedInstructions.push({
-                    value: register[0] as Message,
-                    instructions: instructs,
-                  });
-                  break;
-                }
-              }
-              skippedInstructions.push({
-                value: register[0] as Message,
-                instructions: instructs,
-              });
-
-              break;
-            }
-          }
-          */
 
           // note - store operation needs to store in inlet as well
           const inputMessage =
@@ -296,19 +235,6 @@ export const evaluate = (
             } else {
               inlet.lastMessage = register[outletNumber] as Message;
             }
-            /*
-            if (false && (node as ObjectNode).needsMainThread) {
-              const inletMessages = new Array(node.inlets.length).fill(undefined);
-              inletMessages[inletNumber] = register[outletNumber] as Message;
-              mainThreadInstructions.push({
-                nodeId: node.id,
-                inletMessages,
-              });
-            } else {
-
-            }
-            */
-          } else {
           }
           break;
         }
@@ -354,15 +280,6 @@ export const evaluate = (
       }
     }
 
-    /*
-    console.log(
-      "instructions evaluated",
-      emittedInstructions.length,
-      emittedInstructions[0]?.node?.text,
-      emittedInstructions,
-      _initialMessage,
-    );
-    */
     return {
       skippedInstructions,
       mainThreadInstructions,

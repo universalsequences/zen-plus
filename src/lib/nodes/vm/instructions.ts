@@ -82,7 +82,7 @@ const compileConnection = (
     instructions.push(instruction);
   } //else if (isObjectNode(destination)) {
   // object node
-  if (!(isMessageNode(destination) && inletNumber === 1)) {
+  if ((isMessageNode(destination) && inletNumber === 0) || isObjectNode(destination)) {
     const instruction: Instruction = {
       type: InstructionType.Store,
       inletNumber,
