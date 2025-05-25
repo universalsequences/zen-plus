@@ -441,7 +441,7 @@ export class PresetManager {
         } else {
           if (this.slotMode) {
             const slot = this.slots[this.currentPreset];
-            if (slot) {
+            if (slot?.[this.currentPattern]) {
               slot[this.currentPattern][_stateChange.node.id] = _stateChange;
             }
           } else {
@@ -546,7 +546,6 @@ export class PresetManager {
       }
     }
     if (this.serializedSlots) {
-      console.log("hydating slots slots are=", [...this.serializedSlots], this);
       //this.slots = [];
       for (let i = 0; i < this.serializedSlots.length; i++) {
         const slot = this.serializedSlots[i];
@@ -572,6 +571,7 @@ export class PresetManager {
               };
             }
           }
+          this.slots[i] = this.slots[i].slice(0, slot.length);
         }
       }
     }
@@ -609,6 +609,9 @@ export const preset = (object: ObjectNode) => {
   }
   if (!object.attributes.showNames) {
     object.attributes.showNames = false;
+  }
+  if (!object.attributes.hidePatterns) {
+    object.attributes.hidePatterns = false;
   }
   if (!object.attributes.slotMode) {
     object.attributes.slotMode = false;

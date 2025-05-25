@@ -34,7 +34,6 @@ export default class MessageNodeImpl extends MockBaseNode implements MessageNode
     super(patch);
     this.id = uuid();
     this.position = { x: 0, y: 0 };
-    this.size = { width: 100, height: 100 };
     this.zIndex = 0;
     this.newAttribute("min", 0);
     this.newAttribute("max", 1);

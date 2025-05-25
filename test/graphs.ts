@@ -13,6 +13,16 @@ export const newObject = (text: string, p: Patch, type = OperatorContextType.COR
   return obj1;
 };
 
+// Helper function to safely connect nodes only if outlets/inlets exist
+const safeConnect = (sourceNode: any, destNode: any, destInletIndex: number, sourceOutletIndex: number) => {
+  if (sourceNode.outlets && sourceNode.outlets[sourceOutletIndex] &&
+      destNode.inlets && destNode.inlets[destInletIndex]) {
+    sourceNode.connect(destNode, destNode.inlets[destInletIndex], sourceNode.outlets[sourceOutletIndex]);
+    return true;
+  }
+  return false;
+};
+
 export const graph1 = () => {
   const patch = new MockPatch(undefined, false, false);
   const m1 = new MessageNodeImpl(patch, MessageType.Number);
@@ -656,4 +666,330 @@ export const branchPopperGraphSwapMult = () => {
   c(in_button, matrix);
 
   return { patch, filter, counter, button, in_button, out_message };
+};
+
+// Complex graph with multiple parallel processing chains
+// Graph: m1 -> parallel_processor -> mult1(* 2) -> m2
+//         |                      |-> mult2(* 3) -> m3  
+//         |                      |-> mult3(* 4) -> m4
+//         |-> direct_mult(* 5) -> m5
+export const graphParallelProcessing = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+  const m5 = new MessageNodeImpl(patch, MessageType.Message);
+
+  const parallel_processor = newObject("messagemessage", patch);
+  const mult1 = newObject("* 2", patch);
+  const mult2 = newObject("* 3", patch);
+  const direct_mult = newObject("* 5", patch);
+
+  // Connect to parallel processor
+  m1.connect(parallel_processor, parallel_processor.inlets[0], m1.outlets[0]);
+  
+  // Two parallel branches from messagemessage (messagemessage typically has 2 outlets)
+  parallel_processor.connect(mult1, mult1.inlets[0], parallel_processor.outlets[0]);
+  parallel_processor.connect(mult2, mult2.inlets[0], parallel_processor.outlets[1]);
+  
+  // Connect to outputs
+  mult1.connect(m2, m2.inlets[1], mult1.outlets[0]);
+  mult2.connect(m3, m3.inlets[1], mult2.outlets[0]);
+
+  // Direct path
+  m1.connect(direct_mult, direct_mult.inlets[0], m1.outlets[0]);
+  direct_mult.connect(m5, m5.inlets[1], direct_mult.outlets[0]);
+
+  patch.messageNodes.push(m1, m2, m3, m5);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2, m3, m5,
+    parallel_processor,
+    mult1, mult2, direct_mult,
+    expected: [m1.id, parallel_processor.id, mult1.id, mult2.id, direct_mult.id]
+  };
+};
+
+// Deep nested subpatches with different context types
+// Graph: m1 -> p1[zen_patch] -> p2[core_patch] -> p3[zen_patch] -> m2
+//             |               |                |
+//             zen: in->add(+1)->out  core: in->mult(*2)->out  zen: in->sub(-1)->out
+export const graphDeepNestedSubpatches = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+
+  // Create first subpatch (ZEN)
+  const p1 = newObject("p", patch, OperatorContextType.ZEN);
+  const subpatch1 = p1.subpatch as SubPatch;
+  const in1 = newObject("in 1", subpatch1, OperatorContextType.ZEN);
+  const out1 = newObject("out 1", subpatch1, OperatorContextType.ZEN);
+  const add1 = newObject("+ 1", subpatch1);
+  in1.connect(add1, add1.inlets[0], in1.outlets[0]);
+  add1.connect(out1, out1.inlets[0], add1.outlets[0]);
+
+  // Create second subpatch (CORE)
+  const p2 = newObject("p", patch, OperatorContextType.ZEN);
+  const subpatch2 = p2.subpatch as SubPatch;
+  const in2 = newObject("in 1", subpatch2, OperatorContextType.ZEN);
+  const out2 = newObject("out 1", subpatch2, OperatorContextType.ZEN);
+  const mult2 = newObject("* 2", subpatch2);
+  in2.connect(mult2, mult2.inlets[0], in2.outlets[0]);
+  mult2.connect(out2, out2.inlets[0], mult2.outlets[0]);
+
+  // Create third subpatch (ZEN)
+  const p3 = newObject("p", patch, OperatorContextType.ZEN);
+  const subpatch3 = p3.subpatch as SubPatch;
+  const in3 = newObject("in 1", subpatch3, OperatorContextType.ZEN);
+  const out3 = newObject("out 1", subpatch3, OperatorContextType.ZEN);
+  const sub3 = newObject("- 1", subpatch3);
+  in3.connect(sub3, sub3.inlets[0], in3.outlets[0]);
+  sub3.connect(out3, out3.inlets[0], sub3.outlets[0]);
+
+  // Connect main chain
+  m1.connect(p1, p1.inlets[0], m1.outlets[0]);
+  p1.connect(p2, p2.inlets[0], p1.outlets[0]);
+  p2.connect(p3, p3.inlets[0], p2.outlets[0]);
+  p3.connect(m2, m2.inlets[1], p3.outlets[0]);
+
+  patch.messageNodes.push(m1, m2);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2,
+    p1, p2, p3,
+    add1, mult2, sub3,
+    expected: [m1.id, add1.id, mult2.id, sub3.id]
+  };
+};
+
+// Multi-input convergence with different timing
+// Graph: m1 -> add_A(+ ?) <- m2
+//        m3 -> add_B(+ ?) <- m4
+//        add_A -> mult(* ?) <- add_B
+//        mult -> m5
+export const graphMultiInputConvergence = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Number);
+  const m3 = new MessageNodeImpl(patch, MessageType.Number);
+  const m4 = new MessageNodeImpl(patch, MessageType.Number);
+  const m5 = new MessageNodeImpl(patch, MessageType.Message);
+
+  const add_A = newObject("+ 10", patch);
+  const add_B = newObject("+ 20", patch);
+  const mult = newObject("* 3", patch);
+
+  // Two separate addition chains
+  m1.connect(add_A, add_A.inlets[0], m1.outlets[0]);
+  m2.connect(add_A, add_A.inlets[1], m2.outlets[0]);
+  
+  m3.connect(add_B, add_B.inlets[0], m3.outlets[0]);
+  m4.connect(add_B, add_B.inlets[1], m4.outlets[0]);
+
+  // Convergence at multiplication
+  add_A.connect(mult, mult.inlets[0], add_A.outlets[0]);
+  add_B.connect(mult, mult.inlets[1], add_B.outlets[0]);
+
+  // Final output
+  mult.connect(m5, m5.inlets[1], mult.outlets[0]);
+
+  patch.messageNodes.push(m1, m2, m3, m4, m5);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2, m3, m4, m5,
+    add_A, add_B, mult,
+    expected: [m1.id, add_A.id, mult.id]
+  };
+};
+
+// Complex sequential processing with multiple branches
+// Graph: m1 -> add_base(+ 10) -> split -> mult_A(* 2) -> m2
+//                                     |
+//                                     |-> mult_B(* 3) -> m3
+export const graphSequentialBranching = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+
+  const add_base = newObject("+ 10", patch);
+  const split = newObject("messagemessage", patch);
+  const mult_A = newObject("* 2", patch);
+  const mult_B = newObject("* 3", patch);
+
+  // Sequential processing chain
+  m1.connect(add_base, add_base.inlets[0], m1.outlets[0]);
+  add_base.connect(split, split.inlets[0], add_base.outlets[0]);
+  split.connect(mult_A, mult_A.inlets[0], split.outlets[0]);
+  split.connect(mult_B, mult_B.inlets[0], split.outlets[1]);
+  
+  mult_A.connect(m2, m2.inlets[1], mult_A.outlets[0]);
+  mult_B.connect(m3, m3.inlets[1], mult_B.outlets[0]);
+
+  patch.messageNodes.push(m1, m2, m3);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2, m3,
+    add_base, split, mult_A, mult_B,
+    expected: [m1.id, add_base.id, split.id, mult_A.id, mult_B.id]
+  };
+};
+
+// Mixed routing with conditional branches and subpatches
+// Graph: m1 -> route(1 2) -> p1[add +1] -> m2
+//                    |       p2[mult *3] -> m3
+//                    |
+//                    |-> direct_output -> m5
+export const graphMixedRoutingWithSubpatches = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+  const m5 = new MessageNodeImpl(patch, MessageType.Message);
+
+  const route = newObject("route 1 2", patch);
+  const direct_output = newObject("+ 100", patch);
+  
+  // Create subpatches with different operations
+  const p1 = newObject("p", patch, OperatorContextType.ZEN);
+  const subpatch1 = p1.subpatch as SubPatch;
+  const in1 = newObject("in 1", subpatch1, OperatorContextType.ZEN);
+  const out1 = newObject("out 1", subpatch1, OperatorContextType.ZEN);
+  const add1 = newObject("+ 1", subpatch1);
+  in1.connect(add1, add1.inlets[0], in1.outlets[0]);
+  add1.connect(out1, out1.inlets[0], add1.outlets[0]);
+
+  const p2 = newObject("p", patch, OperatorContextType.ZEN);
+  const subpatch2 = p2.subpatch as SubPatch;
+  const in2 = newObject("in 1", subpatch2, OperatorContextType.ZEN);
+  const out2 = newObject("out 1", subpatch2, OperatorContextType.ZEN);
+  const mult2 = newObject("* 3", subpatch2);
+  in2.connect(mult2, mult2.inlets[0], in2.outlets[0]);
+  mult2.connect(out2, out2.inlets[0], mult2.outlets[0]);
+
+  // Connect routing directly to subpatches and outputs
+  m1.connect(route, route.inlets[0], m1.outlets[0]);
+  route.connect(p1, p1.inlets[0], route.outlets[0]);
+  route.connect(p2, p2.inlets[0], route.outlets[1]);
+
+  // Connect subpatches directly to message outputs
+  p1.connect(m2, m2.inlets[1], p1.outlets[0]);
+  p2.connect(m3, m3.inlets[1], p2.outlets[0]);
+
+  // Direct output path
+  m1.connect(direct_output, direct_output.inlets[0], m1.outlets[0]);
+  direct_output.connect(m5, m5.inlets[1], direct_output.outlets[0]);
+
+  patch.messageNodes.push(m1, m2, m3, m5);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2, m3, m5,
+    route, p1, p2,
+    add1, mult2, direct_output,
+    expected: [m1.id, route.id, add1.id, mult2.id, direct_output.id]
+  };
+};
+
+// Multi-path processing with routing and arithmetic
+// Graph: m1 -> route -> mult_filter(* 1) -> mult(* 2) -> m2
+//         |                              |
+//         |                              |-> add(+ 10) -> m3
+//         |-> add_filter(+ 0) -> sub(- 1) -> m4
+export const graphNestedConditionalProcessing = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+  const m3 = new MessageNodeImpl(patch, MessageType.Message);
+  const m4 = new MessageNodeImpl(patch, MessageType.Message);
+
+  const route_main = newObject("route 1 2", patch);
+  const mult_filter = newObject("* 1", patch);
+  const add_filter = newObject("+ 0", patch);
+  
+  const mult = newObject("* 2", patch);
+  const add = newObject("+ 10", patch);
+  const sub = newObject("- 1", patch);
+
+  // Main routing path
+  m1.connect(route_main, route_main.inlets[0], m1.outlets[0]);
+  route_main.connect(mult_filter, mult_filter.inlets[0], route_main.outlets[0]);
+  mult_filter.connect(mult, mult.inlets[0], mult_filter.outlets[0]);
+  mult.connect(m2, m2.inlets[1], mult.outlets[0]);
+
+  // Second branch from route
+  route_main.connect(add, add.inlets[0], route_main.outlets[1]);
+  add.connect(m3, m3.inlets[1], add.outlets[0]);
+
+  // Alternative path
+  m1.connect(add_filter, add_filter.inlets[0], m1.outlets[0]);
+  add_filter.connect(sub, sub.inlets[0], add_filter.outlets[0]);
+  sub.connect(m4, m4.inlets[1], sub.outlets[0]);
+
+  patch.messageNodes.push(m1, m2, m3, m4);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2, m3, m4,
+    route_main, mult_filter, add_filter,
+    mult, add, sub,
+    expected: [m1.id, route_main.id, mult_filter.id, mult.id, add_filter.id, sub.id]
+  };
+};
+
+// Arithmetic processing with dual computation paths
+// Graph: m1 -> add_base(+ 5) -> mult_A(* 2) -> add_final(+ ?) <- mult_B(* 3) <- sub_base(- 1) <- m1
+//                                                   |
+//                                                   v
+//                                                  m2
+export const graphDualArithmeticProcessing = () => {
+  const patch = new MockPatch(undefined, false, false);
+  const m1 = new MessageNodeImpl(patch, MessageType.Number);
+  const m2 = new MessageNodeImpl(patch, MessageType.Message);
+
+  const add_base = newObject("+ 5", patch);
+  const sub_base = newObject("- 1", patch);
+  const mult_A = newObject("* 2", patch);
+  const mult_B = newObject("* 3", patch);
+  const add_final = newObject("+ 0", patch);
+
+  // First processing path: m1 -> add_base -> mult_A -> add_final
+  m1.connect(add_base, add_base.inlets[0], m1.outlets[0]);
+  add_base.connect(mult_A, mult_A.inlets[0], add_base.outlets[0]);
+  mult_A.connect(add_final, add_final.inlets[0], mult_A.outlets[0]);
+
+  // Second processing path: m1 -> sub_base -> mult_B -> add_final
+  m1.connect(sub_base, sub_base.inlets[0], m1.outlets[0]);
+  sub_base.connect(mult_B, mult_B.inlets[0], sub_base.outlets[0]);
+  mult_B.connect(add_final, add_final.inlets[1], mult_B.outlets[0]);
+
+  // Final output
+  add_final.connect(m2, m2.inlets[1], add_final.outlets[0]);
+
+  patch.messageNodes.push(m1, m2);
+  const nodes = topologicalSearchFromNode(m1);
+
+  return {
+    nodes,
+    patch,
+    m1, m2,
+    add_base, sub_base, mult_A, mult_B, add_final,
+    expected: [m1.id, add_base.id, mult_A.id, sub_base.id, mult_B.id, add_final.id]
+  };
 };

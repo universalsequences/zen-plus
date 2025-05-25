@@ -52,6 +52,7 @@ import { instructionsPerformance } from "./instructions.performance";
 import { tab } from "./ui/tab";
 import { midiout, midioutInlet } from "./midi";
 import { filtergraph } from "./filtergraph";
+import { preset_view } from "./presetview";
 
 export const api: API = {
   js: js_scripting,
@@ -92,6 +93,7 @@ export const api: API = {
   slider,
   knob,
   preset,
+  "preset.view": preset_view,
   dictpack,
   currenttime,
   converttime,

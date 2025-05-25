@@ -19,6 +19,7 @@ doc("send~", {
 });
 
 export const send = (node: ObjectNode, name: Lazy) => {
+  node.skipCompilation = true;
   // this is a node that has a name
   // any "receives" can simply look for this name in the graph and find it
 
@@ -44,6 +45,7 @@ doc("receive~", {
 
 export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
   node.needsLoad = true;
+  node.skipCompilation = true;
 
   let oldNum: string | number | undefined = num() as number;
   let oldNodes: AudioNode[] = [];
@@ -71,10 +73,17 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
       .map((x) => x.audioNode as AudioNode);
   };
 
+  const oldConnections: AudioNode[] = [];
   const init = () => {
     const _name = name();
+    console.log("pub sub name changed=", _name);
 
     // need some sort of "publish message" when a new publish is received so it can re=look for connections
+    //
+
+    if (!node.patch.audioContext) {
+      return;
+    }
 
     if (!node.audioNode) {
       const gainNode = node.patch.audioContext!.createGain();
@@ -95,11 +104,17 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
     }
 
     if (node.merger && oldNum === undefined) {
-      node.merger.disconnect(node.audioNode);
+      //node.merger.disconnect(node.audioNode);
     }
 
     if (_name) {
       const _nodes = findSends(_name as string, num() === "" ? null : (num() as number));
+      console.log("sends to find=", _nodes);
+
+      for (const connection of oldConnections) {
+        connection.disconnect(node.audioNode);
+      }
+      oldConnections.length = 0;
 
       oldNodes = _nodes;
       for (const _node of _nodes) {
@@ -108,7 +123,9 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
           _node.connect(node.audioNode, num() as number);
           oldNum = num() as number;
         } else {
+          console.log("connecting node...", _node, node);
           _node.connect(node.audioNode);
+          oldConnections.push(_node);
           oldNum = undefined;
         }
       }

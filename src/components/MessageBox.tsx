@@ -80,7 +80,6 @@ const MessageBox: React.FC<{
   useEffect(() => {
     if (!isSelected) {
       setEditing(false);
-      enter();
     }
   }, [isSelected, setEditing]);
 

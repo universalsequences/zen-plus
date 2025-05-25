@@ -23,6 +23,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
 
   const showNames = objectNode.attributes.showNames as boolean;
   const slotMode = objectNode.attributes.slotMode as boolean;
+  const hidePatterns = objectNode.attributes.hidePatterns as boolean;
   const patternMode = objectNode.attributes.patternMode as boolean;
   const numberOfSlots = objectNode.attributes.slots as number;
   const cellSize = objectNode.attributes.cellSize as number;
@@ -170,7 +171,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         <div className="text-zinc-400 pl-1">slot: {current + 1}</div>
       )}
       <div className="flex gap-2 w-full ">
-        {patternMode && (
+        {!hidePatterns && patternMode && (
           <div className="flex flex-wrap flex-1">
             {new Array(numberOfPatterns).fill(0).map((_x, i) => (
               <div
@@ -186,7 +187,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
             ))}
           </div>
         )}
-        {patternMode && (
+        {!hidePatterns && patternMode && (
           <div className="flex gap-2 flex-col w-12 p-1 border-l border-l-zinc-800 ">
             <button
               className="p-2 cursor-pointer bg-zinc-900 rounded-lg hover:bg-zinc-800"
