@@ -11,6 +11,7 @@ import SignalReceive from "./SignalReceive";
 import { Slots } from "./Slots";
 import Button from "./Button";
 import Preset from "./Preset";
+import PresetView from "./PresetView";
 import FunctionUX from "./FunctionUX";
 import Divider from "./Divider";
 import FilterGraph from "./FilterGraph";
@@ -77,6 +78,7 @@ export const index: ComponentIndex = {
   function: FunctionUX,
   button: Button,
   preset: Preset,
+  "preset.view": PresetView,
   color: Color,
   "live.meter~": LiveMeter,
   lisp: Lisp as React.ComponentType<NodeProps>,

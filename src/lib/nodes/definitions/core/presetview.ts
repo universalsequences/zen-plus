@@ -8,6 +8,10 @@ doc("preset.view", {
 });
 
 export const preset_view = (object: ObjectNode) => {
+  object.isResizable = true;
+  if (!object.size) {
+    object.size = { width: 200, height: 300 };
+  }
   if (!object.attributes.preset) {
     object.attributes.preset = "";
   }
