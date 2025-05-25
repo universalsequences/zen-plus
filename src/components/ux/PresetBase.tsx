@@ -4,7 +4,14 @@ import { usePosition } from "@/contexts/PositionContext";
 import { ObjectNode, Message } from "@/lib/nodes/types";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useLocked } from "@/contexts/LockedContext";
-import { MinusCircledIcon, PlusCircledIcon } from "@radix-ui/react-icons";
+import {
+  MinusCircledIcon,
+  PlusCircledIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DotsVerticalIcon,
+} from "@radix-ui/react-icons";
+import { DropdownMenu } from "@radix-ui/themes";
 
 interface PresetBaseProps {
   objectNode: ObjectNode;
@@ -32,6 +39,8 @@ const PresetBase: React.FC<PresetBaseProps> = ({
   const [nameValue, setNameValue] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [current, setCurrent] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const presetRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Extract values from the value prop
   const presetNames = Array.isArray(value) ? (value[1] as string) : presetManager.presetNames;
@@ -57,6 +66,27 @@ const PresetBase: React.FC<PresetBaseProps> = ({
   const numberOfSlots = attributeSource.attributes.slots as number;
   const cellSize = attributeSource.attributes.cellSize as number;
   const compactPatternMode = attributeSource.attributes.compactPatternMode as boolean;
+
+  // Calculate current preset number
+  const currentPresetNumber = slotMode ? slotToPreset[currentSlot]?.[currentPattern] : current;
+
+  // Scroll to current preset when it changes
+  useEffect(() => {
+    if (showNames && scrollContainerRef.current && presetRefs.current[currentPresetNumber]) {
+      const container = scrollContainerRef.current;
+      const presetElement = presetRefs.current[currentPresetNumber];
+
+      if (presetElement) {
+        const containerRect = container.getBoundingClientRect();
+        const presetRect = presetElement.getBoundingClientRect();
+
+        // Check if preset is not fully visible
+        if (presetRect.top < containerRect.top || presetRect.bottom > containerRect.bottom) {
+          presetElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    }
+  }, [currentPresetNumber, showNames]);
 
   const onMouseUp = useCallback((e: MouseEvent) => {
     isMouseDown.current = false;
@@ -117,7 +147,7 @@ const PresetBase: React.FC<PresetBaseProps> = ({
     (presetNumber: number, switchMode = false) => {
       if (slotMode && !switchMode) {
         messageTarget.receive(messageTarget.inlets[0], currentSlot);
-        messageTarget.receive(messageTarget.inlets[0], ["copy-to-slot", presetNumber]);
+        messageTarget.receive(messageTarget.inlets[0], ["copy-to-slot", presetNumber, currentSlot]);
       } else {
         messageTarget.receive(messageTarget.inlets[0], presetNumber);
       }
@@ -178,13 +208,174 @@ const PresetBase: React.FC<PresetBaseProps> = ({
     [editingPreset, nameValue, messageTarget],
   );
 
-  const currentPresetNumber = slotMode ? slotToPreset[currentSlot]?.[currentPattern] : current;
+  const writeToMemory = useCallback(() => {
+    messageTarget.receive(messageTarget.inlets[0], "write-to-memory");
+  }, [messageTarget]);
+
+  const saveAsNew = useCallback(() => {
+    messageTarget.receive(messageTarget.inlets[0], "save-as-new");
+  }, [messageTarget]);
+
+  const goToPreviousPreset = useCallback(() => {
+    const totalPresets = presetManager.presets.length;
+    if (totalPresets === 0) return;
+
+    const prevIndex = currentPresetNumber > 0 ? currentPresetNumber - 1 : totalPresets - 1;
+    switchToPreset(prevIndex);
+  }, [currentPresetNumber, presetManager.presets.length, switchToPreset]);
+
+  const goToNextPreset = useCallback(() => {
+    const totalPresets = presetManager.presets.length;
+    if (totalPresets === 0) return;
+
+    const nextIndex = currentPresetNumber < totalPresets - 1 ? currentPresetNumber + 1 : 0;
+    switchToPreset(nextIndex);
+  }, [currentPresetNumber, presetManager.presets.length, switchToPreset]);
+
   console.log("current slot=%s", currentSlot, currentPresetNumber, slotMode, slotToPreset);
 
+  if (showNames) {
+    return (
+      <div className="w-full h-full flex flex-col bg-zinc-950">
+        {/* Fixed header with current preset name and buttons */}
+        <div className="flex-shrink-0 px-2 py-1 border-b border-zinc-800">
+          {/* Current preset name with navigation and menu */}
+          <div className="flex items-center justify-between mb-1">
+            <button
+              className="p-1 hover:bg-zinc-800 rounded transition-colors"
+              onClick={goToPreviousPreset}
+              disabled={presetManager.presets.length === 0}
+            >
+              <ChevronLeftIcon className="w-4 h-4 text-white" />
+            </button>
+
+            <div className="text-white font-medium truncate mx-2 flex-1 text-center">
+              {presetNames[currentPresetNumber] || `Preset ${currentPresetNumber + 1}`}
+            </div>
+
+            <button
+              className="p-1 hover:bg-zinc-800 rounded transition-colors"
+              onClick={goToNextPreset}
+              disabled={presetManager.presets.length === 0}
+            >
+              <ChevronRightIcon className="w-4 h-4 text-white" />
+            </button>
+
+            {/* Action menu */}
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                <button className="p-1 ml-1 hover:bg-zinc-800 rounded transition-colors">
+                  <DotsVerticalIcon className="w-4 h-4 text-white" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content
+                style={{ zIndex: 10000000000000000 }}
+                color="indigo"
+                className="bg-zinc-800 text-zinc-200 w-40 py-3 DropdownMenuContent text-sm"
+                sideOffset={5}
+              >
+                <DropdownMenu.Item
+                  onClick={writeToMemory}
+                  className="DropdownMenuItem flex cursor-pointer pointer-events-auto"
+                >
+                  Write to Memory
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onClick={saveAsNew}
+                  className="DropdownMenuItem flex cursor-pointer pointer-events-auto"
+                >
+                  Save as New
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </div>
+        </div>
+
+        {/* Pattern controls - fixed if present */}
+        {!hidePatterns && patternMode && (
+          <div className="flex-shrink-0 px-2 py-1 border-b border-zinc-800">
+            <div className="flex gap-2 w-full">
+              <div className="flex flex-wrap flex-1">
+                {new Array(numberOfPatterns).fill(0).map((_x, i) => (
+                  <div
+                    key={i}
+                    style={{ width: cellSize, height: cellSize }}
+                    onClick={() => switchToPattern(i)}
+                    className={`items-center justify-center cursor-pointer ${i === currentPattern ? "border-white" : "border-zinc-500"} border flex m-0.5 text-white`}
+                  >
+                    <div style={{ fontSize: 8 }}>{i + 1}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="p-1 cursor-pointer bg-zinc-900 rounded hover:bg-zinc-800"
+                  onClick={() => newPattern()}
+                >
+                  <PlusCircledIcon
+                    style={{ width: cellSize * 0.6, height: cellSize * 0.6 }}
+                    className="mx-auto"
+                    color="white"
+                  />
+                </button>
+                <button
+                  className="p-1 cursor-pointer bg-zinc-900 rounded hover:bg-zinc-800"
+                  onClick={() => deletePattern()}
+                >
+                  <MinusCircledIcon
+                    style={{ width: cellSize * 0.6, height: cellSize * 0.6 }}
+                    className="mx-auto"
+                    color="white"
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scrollable preset list */}
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
+        >
+          {!compactPatternMode &&
+            presetManager.presets.map((_preset, i) => (
+              <div
+                key={i}
+                ref={(el) => (presetRefs.current[i] = el)}
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => onMouseDown(e, i)}
+                onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => onMouseOver(e, i)}
+                onDoubleClick={() => handleDoubleClick(i)}
+                className={`w-full h-6 mb-1 px-2 flex items-center cursor-pointer border transition-colors ${
+                  currentPresetNumber === i
+                    ? "border-white"
+                    : "border-transparent hover:border-zinc-600"
+                }`}
+              >
+                {editingPreset === i ? (
+                  <input
+                    ref={inputRef}
+                    className="text-white bg-transparent outline-none w-full"
+                    onChange={onChangeName}
+                    onKeyPress={handleKeyPress}
+                    type="text"
+                    value={nameValue}
+                  />
+                ) : (
+                  <span className="text-white text-xs truncate block">
+                    {presetNames[i] || `Preset ${i + 1}`}
+                  </span>
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Original layout for non-showNames mode
   return (
-    <div
-      className={`w-full h-full ${showNames ? "overflow-y-scroll overflow-x-hidden p-1" : "flex flex-wrap overflow-hidden"} content-start bg-zinc-950`}
-    >
+    <div className="w-full h-full flex flex-wrap overflow-hidden content-start bg-zinc-950">
       {!compactPatternMode && slotMode && (
         <div className="text-zinc-400 pl-1">slot: {currentSlot + 1}</div>
       )}
@@ -238,33 +429,16 @@ const PresetBase: React.FC<PresetBaseProps> = ({
             onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => onMouseOver(e, i)}
             onDoubleClick={() => handleDoubleClick(i)}
             className={
-              (showNames ? "w-full h-4" : "w-3 h-3") +
-              " m-0.5 cursor-pointer border transition-colors " +
+              "w-3 h-3 m-0.5 cursor-pointer border transition-colors " +
               (selectedPresets.includes(i)
                 ? "bg-red-500"
                 : currentPresetNumber === i
-                  ? showNames
-                    ? "border-white"
-                    : "bg-zinc-100 "
-                  : !showNames && presetManager.buffer?.[i] === 1
+                  ? "bg-zinc-100 "
+                  : presetManager.buffer?.[i] === 1
                     ? "bg-zinc-700 border-transparent "
                     : "bg-zinc-900 border-transparent ")
             }
-          >
-            {showNames &&
-              (editingPreset === i ? (
-                <input
-                  ref={inputRef}
-                  className="text-white bg-transparent outline-none w-full"
-                  onChange={onChangeName}
-                  onKeyPress={handleKeyPress}
-                  type="text"
-                  value={nameValue}
-                />
-              ) : (
-                <span className="text-white text-xs truncate block">{presetNames[i] || ""}</span>
-              ))}
-          </div>
+          />
         ))}
     </div>
   );

@@ -692,8 +692,9 @@ export const preset = (object: ObjectNode) => {
         mgmt.newPattern();
         return [["new-pattern", "bang"]];
       } else if (Array.isArray(x) && x[0] === "copy-to-slot") {
-        const currentSlot = mgmt.currentPreset;
+        const currentSlot = x[2] !== undefined ? (x[2] as number) : mgmt.currentPreset;
         const presetNumber = x[1] as number;
+        console.log("copy to slot currentSlot=%s presetNumber=%s", currentSlot, presetNumber);
         mgmt.copyToSlot(presetNumber, currentSlot);
         updateUI();
         return [["copy-to-slot", x[1]]];
