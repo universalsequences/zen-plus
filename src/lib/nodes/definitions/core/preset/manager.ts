@@ -115,6 +115,65 @@ export class PresetManager {
     this.updateUI();
   }
 
+  movePatternTo(sourcePattern: number, targetPosition: number) {
+    const numPatterns = this.getNumberOfPatterns();
+    
+    // Validate inputs
+    if (sourcePattern < 0 || sourcePattern >= numPatterns) return;
+    if (targetPosition < 0 || targetPosition >= numPatterns) return;
+    if (sourcePattern === targetPosition) return; // No-op
+    
+    // Store the pattern data that we're moving
+    const movingPatterns: Preset[] = [];
+    for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
+      movingPatterns[slotIndex] = this.slots[slotIndex][sourcePattern];
+    }
+    
+    // Store the slotToPreset mappings for the moving pattern
+    const movingSlotToPresetMappings: number[] = [];
+    for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
+      movingSlotToPresetMappings[slotIndex] = this.slotToPreset[slotIndex]?.[sourcePattern] || 0;
+    }
+    
+    // Remove the pattern from all slots
+    for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
+      this.slots[slotIndex].splice(sourcePattern, 1);
+      if (this.slotToPreset[slotIndex]) {
+        this.slotToPreset[slotIndex].splice(sourcePattern, 1);
+      }
+    }
+    
+    // Calculate the actual insertion position after removal
+    const insertPosition = sourcePattern < targetPosition ? targetPosition - 1 : targetPosition;
+    
+    // Insert the pattern at the new position in all slots
+    for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
+      this.slots[slotIndex].splice(insertPosition, 0, movingPatterns[slotIndex]);
+      if (!this.slotToPreset[slotIndex]) {
+        this.slotToPreset[slotIndex] = [];
+      }
+      this.slotToPreset[slotIndex].splice(insertPosition, 0, movingSlotToPresetMappings[slotIndex]);
+    }
+    
+    // Update currentPattern if it was affected by the move
+    if (this.currentPattern === sourcePattern) {
+      // The current pattern was the one that moved
+      this.currentPattern = insertPosition;
+    } else if (sourcePattern < targetPosition) {
+      // Pattern moved forward - patterns between source and target shift left
+      if (this.currentPattern > sourcePattern && this.currentPattern <= targetPosition) {
+        this.currentPattern--;
+      }
+    } else {
+      // Pattern moved backward - patterns between target and source shift right  
+      if (this.currentPattern >= targetPosition && this.currentPattern < sourcePattern) {
+        this.currentPattern++;
+      }
+    }
+    
+    this.updateUI();
+  }
+
   getNumberOfPatterns() {
     return this.slots[0]?.length || 0;
   }

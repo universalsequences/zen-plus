@@ -111,6 +111,11 @@ export const preset = (object: ObjectNode) => {
       } else if (x === "delete-pattern") {
         mgmt.deletePattern();
         return [["delete-pattern", "bang"]];
+      } else if (Array.isArray(x) && x[0] === "move-pattern-to") {
+        const sourcePattern = x[1] as number;
+        const targetPosition = x[2] as number;
+        mgmt.movePatternTo(sourcePattern, targetPosition);
+        return [["move-pattern-to", sourcePattern, targetPosition]];
       } else if (typeof x === "object" && "voice" in x && "preset" in x && "time" in x) {
         const { voice, preset, time } = x;
         mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number);

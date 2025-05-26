@@ -364,4 +364,153 @@ describe("Preset Bug Reproduction: Pattern + Slot Mode", () => {
       expect(pattern1State[setup.filter.id].state.lfo.amount).toBe(400);
     });
   });
+
+  describe("Pattern Reordering in Live Performance", () => {
+    beforeEach(() => {
+      presetManager.slotMode = true;
+      presetObject.attributes.slotMode = true;
+      presetObject.attributes.patternMode = true;
+    });
+
+    it("should handle pattern reordering during live performance", () => {
+      // Create a typical live performance setup with 8 patterns
+      for (let p = 0; p < 8; p++) {
+        if (p > 0) presetFunction("new-pattern");
+        
+        // Each pattern has different settings for all instruments
+        presetManager.slots[0][p] = helper.createPreset({
+          [setup.oscillator.id]: { frequency: 220 + (p * 55), pattern: p },
+          [setup.filter.id]: { cutoff: 500 + (p * 200), pattern: p },
+          [setup.drum.id]: { steps: new Array(8).fill(0).map((_, i) => (i + p) % 2), pattern: p }
+        });
+      }
+
+      // Start on pattern 4
+      presetFunction(["switch-to-pattern", 4]);
+      expect(presetManager.currentPattern).toBe(4);
+
+      // Move pattern 7 to position 1 (common live performance move)
+      presetFunction(["move-pattern-to", 7, 1]);
+
+      // Expected order: [0, 7, 1, 2, 3, 4, 5, 6]
+      // Current pattern 4 should now be at position 5
+      expect(presetManager.currentPattern).toBe(5);
+
+      // Verify the moved pattern has correct state
+      const movedPattern = presetManager.slots[0][1];
+      expect(movedPattern[setup.oscillator.id].state.pattern).toBe(7);
+      expect(movedPattern[setup.oscillator.id].state.frequency).toBe(220 + (7 * 55));
+
+      // Switch to the moved pattern and verify it works
+      presetFunction(["switch-to-pattern", 1]);
+      expect(presetManager.currentPattern).toBe(1);
+      expect(presetManager.slots[0][1][setup.oscillator.id].state.pattern).toBe(7);
+    });
+
+    it("should handle multiple rapid reorderings", () => {
+      // Create 6 patterns with identifiable content
+      for (let p = 0; p < 6; p++) {
+        if (p > 0) presetFunction("new-pattern");
+        
+        presetManager.slots[0][p] = helper.createPreset({
+          [setup.oscillator.id]: { id: `pattern_${p}`, index: p }
+        });
+      }
+
+      // Perform a series of rapid reorderings (simulating live performance)
+      const moves = [
+        [5, 0], // Move last to first: [5,0,1,2,3,4]
+        [3, 1], // Move pattern to second: [5,2,0,1,3,4] 
+        [0, 5], // Move first to last: [2,0,1,3,4,5]
+        [2, 0], // Move to first: [1,2,0,3,4,5]
+      ];
+
+      for (const [source, target] of moves) {
+        presetFunction(["move-pattern-to", source, target]);
+      }
+
+      // Verify final order: [pattern_1, pattern_2, pattern_0, pattern_3, pattern_5, pattern_4]
+      expect(presetManager.slots[0][0][setup.oscillator.id].state.id).toBe("pattern_1");
+      expect(presetManager.slots[0][1][setup.oscillator.id].state.id).toBe("pattern_2");
+      expect(presetManager.slots[0][2][setup.oscillator.id].state.id).toBe("pattern_0");
+      expect(presetManager.slots[0][3][setup.oscillator.id].state.id).toBe("pattern_3");
+      expect(presetManager.slots[0][4][setup.oscillator.id].state.id).toBe("pattern_5");
+      expect(presetManager.slots[0][5][setup.oscillator.id].state.id).toBe("pattern_4");
+    });
+
+    it("should preserve pattern integrity during reordering with state changes", () => {
+      // Create 4 patterns
+      for (let p = 0; p < 4; p++) {
+        if (p > 0) presetFunction("new-pattern");
+        
+        presetManager.slots[0][p] = helper.createPreset({
+          [setup.oscillator.id]: { frequency: 440 + (p * 110), pattern: p },
+          [setup.filter.id]: { cutoff: 1000 + (p * 500), pattern: p }
+        });
+      }
+
+      // Switch to pattern 2 and modify its state
+      presetFunction(["switch-to-pattern", 2]);
+      presetManager.slots[0][2][setup.oscillator.id].state.frequency = 999;
+
+      // Move the modified pattern to position 0
+      presetFunction(["move-pattern-to", 2, 0]);
+
+      // The modified pattern should now be at position 0 with preserved changes
+      expect(presetManager.slots[0][0][setup.oscillator.id].state.frequency).toBe(999);
+      expect(presetManager.slots[0][0][setup.oscillator.id].state.pattern).toBe(2);
+
+      // Current pattern should have moved with the pattern
+      expect(presetManager.currentPattern).toBe(0);
+    });
+
+    it("should handle edge case: reordering with only one pattern", () => {
+      // Start with just one pattern
+      expect(presetManager.getNumberOfPatterns()).toBe(1);
+
+      // Try to move the only pattern
+      presetFunction(["move-pattern-to", 0, 0]);
+
+      // Should be a no-op
+      expect(presetManager.getNumberOfPatterns()).toBe(1);
+      expect(presetManager.currentPattern).toBe(0);
+    });
+
+    it("should handle reordering with cross-slot dependencies", () => {
+      presetManager.setNumberOfSlots(3);
+
+      // Create 3 patterns with cross-slot state
+      for (let p = 0; p < 3; p++) {
+        if (p > 0) presetFunction("new-pattern");
+        
+        for (let s = 0; s < 3; s++) {
+          const nodeId = `slot${s}_pattern${p}`;
+          const node = helper.createNode({
+            id: nodeId,
+            name: "attrui",
+            scriptingName: `instrument_${s}`
+          });
+          
+          presetManager.slots[s][p] = {
+            [nodeId]: { node, state: { slot: s, pattern: p, value: s * 10 + p }}
+          };
+        }
+      }
+
+      // Move pattern 2 to position 0
+      presetFunction(["move-pattern-to", 2, 0]);
+
+      // Verify all slots maintained their cross-dependencies
+      // Expected order: [2, 0, 1]
+      for (let s = 0; s < 3; s++) {
+        const p0State = presetManager.slots[s][0][`slot${s}_pattern2`].state;
+        const p1State = presetManager.slots[s][1][`slot${s}_pattern0`].state;
+        const p2State = presetManager.slots[s][2][`slot${s}_pattern1`].state;
+
+        expect(p0State).toEqual({ slot: s, pattern: 2, value: s * 10 + 2 });
+        expect(p1State).toEqual({ slot: s, pattern: 0, value: s * 10 + 0 });
+        expect(p2State).toEqual({ slot: s, pattern: 1, value: s * 10 + 1 });
+      }
+    });
+  });
 });

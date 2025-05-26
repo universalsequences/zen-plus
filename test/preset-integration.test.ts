@@ -349,5 +349,58 @@ describe("Preset Integration Tests", () => {
       presetFunction(["set-name", "Test Preset"]);
       expect(presetManager.presetNames[presetManager.currentPreset]).toBe("Test Preset");
     });
+
+    it("should handle pattern reordering commands", () => {
+      // Enable pattern mode
+      presetObject.attributes.patternMode = true;
+      presetObject.attributes.slotMode = true;
+      presetManager.slotMode = true;
+
+      // Create multiple patterns
+      for (let p = 0; p < 4; p++) {
+        if (p > 0) presetFunction("new-pattern");
+        
+        const node = new MockObjectNode(mockPatch, `node${p}`);
+        node.name = "attrui";
+        presetManager.slots[0][p] = {
+          [`node${p}`]: { node, state: { pattern: p, value: p * 10 } }
+        };
+      }
+
+      // Test move-pattern-to command
+      const moveResult = presetFunction(["move-pattern-to", 1, 3]);
+      expect(moveResult).toEqual([["move-pattern-to", 1, 3]]);
+
+      // Verify the pattern was moved
+      expect(presetManager.slots[0][0][`node0`].state.pattern).toBe(0);
+      expect(presetManager.slots[0][1][`node2`].state.pattern).toBe(2);
+      expect(presetManager.slots[0][2][`node1`].state.pattern).toBe(1); // moved pattern 
+      expect(presetManager.slots[0][3][`node3`].state.pattern).toBe(3);
+    });
+
+    it("should handle pattern commands in sequence", () => {
+      presetObject.attributes.patternMode = true;
+      presetObject.attributes.slotMode = true;
+      presetManager.slotMode = true;
+
+      // Create patterns
+      presetFunction("new-pattern");
+      presetFunction("new-pattern");
+      presetFunction("new-pattern");
+      
+      expect(presetManager.getNumberOfPatterns()).toBe(4);
+
+      // Move pattern around
+      presetFunction(["move-pattern-to", 3, 0]);
+      
+      // Switch to moved pattern
+      presetFunction(["switch-to-pattern", 0]);
+      expect(presetManager.currentPattern).toBe(0);
+
+      // Delete a pattern
+      presetFunction(["switch-to-pattern", 2]);
+      presetFunction("delete-pattern");
+      expect(presetManager.getNumberOfPatterns()).toBe(3);
+    });
   });
 });

@@ -93,7 +93,6 @@ export const SelectionProvider: React.FC<Props> = ({ children }) => {
     (id: string, attribute: Attributes) => {
       let attrs = { ...attributesRef.current };
       attrs[id] = { ...attribute };
-      console.log("update attributes called  with attrs", attrs);
       setAttributesIndex(attrs);
       attributesRef.current = attrs;
     },

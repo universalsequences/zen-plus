@@ -83,6 +83,7 @@ The preset object allows you to capture, store, and recall the state of UI eleme
 - `"new-pattern"`: Create new pattern
 - `"delete-pattern"`: Delete current pattern
 - `["switch-to-pattern", patternNumber]`: Switch to pattern
+- `["move-pattern-to", sourcePattern, targetPosition]`: Reorder patterns
 
 ### Voice Mode Commands
 - `{voice: number, preset: number, time: number}`: Voice-specific preset switch
@@ -147,6 +148,10 @@ presetObject.receive(0, "new-pattern");
 
 // Switch to pattern 2
 presetObject.receive(0, ["switch-to-pattern", 2]);
+
+// Reorder patterns - move pattern 3 to position 1
+presetObject.receive(0, ["move-pattern-to", 3, 1]);
+// This changes order from [0,1,2,3,4] to [0,3,1,2,4]
 ```
 
 ### Voice Mode
