@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { PresetManager, SlotToPreset } from "@/lib/nodes/definitions/core/preset";
+import { PresetManager } from "@/lib/nodes/definitions/core/preset/manager";
 import { ObjectNode } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
 import { getRootPatch } from "@/lib/nodes/traverse";

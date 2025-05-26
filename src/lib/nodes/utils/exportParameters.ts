@@ -1,6 +1,6 @@
 import { ParamInfo } from "@/lib/zen";
 import { ObjectNode, Patch } from "../types";
-import { PresetManager } from "../definitions/core/preset";
+import { PresetManager } from "../definitions/core/preset/manager";
 import { getNodesControllableByAttriUI } from "./getNodesControllableByAttriUI";
 
 export type ExportedParameter = ParamInfo & {

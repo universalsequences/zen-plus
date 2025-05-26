@@ -26,7 +26,7 @@ import {
   evaluate,
 } from "@/lib/nodes/vm/evaluate";
 import { isMessageNode } from "@/lib/nodes/vm/instructions";
-import { PresetManager } from "@/lib/nodes/definitions/core/preset";
+import { PresetManager } from "@/lib/nodes/definitions/core/preset/manager";
 import { publish } from "@/lib/messaging/queue";
 import { StepDataSchema } from "@/lib/nodes/definitions/core/zequencer/types";
 

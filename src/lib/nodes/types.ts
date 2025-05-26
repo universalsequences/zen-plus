@@ -1,5 +1,5 @@
 import React from "react";
-import type { StateChange } from "@/lib/nodes/definitions/core/preset";
+import type { StateChange } from "@/lib/nodes/definitions/core/preset/types";
 import type { TypeSuccess, TypeError } from "./typechecker";
 import type { RenderJob } from "@/lib/gl/zen";
 import type { SVGObject } from "./definitions/svg/index";

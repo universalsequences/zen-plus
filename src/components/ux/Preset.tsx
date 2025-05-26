@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { PresetManager, SlotToPreset } from "@/lib/nodes/definitions/core/preset";
+import { PresetManager } from "@/lib/nodes/definitions/core/preset/manager";
 import { ObjectNode } from "@/lib/nodes/types";
 import { useValue } from "@/contexts/ValueContext";
 import PresetBase from "./PresetBase";
@@ -17,12 +17,7 @@ const PresetUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   }, [value]);
 
   return (
-    <PresetBase
-      objectNode={objectNode}
-      presetManager={mgmt}
-      currentSlot={current}
-      value={value}
-    />
+    <PresetBase objectNode={objectNode} presetManager={mgmt} currentSlot={current} value={value} />
   );
 };
 

@@ -15,7 +15,7 @@ import { compileInstructions, isMessageNode, isObjectNode } from "./instructions
 import { getInboundConnections, getOutboundConnections } from "./traversal";
 import { NodeInstructions } from "@/workers/core";
 import { Statement } from "../definitions/zen/types";
-import { PresetManager } from "../definitions/core/preset";
+import { PresetManager } from "../definitions/core/preset/manager";
 
 export const topologicalSearchFromNode = (
   node: Node,

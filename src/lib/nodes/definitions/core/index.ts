@@ -30,7 +30,7 @@ import {
 import { function_editor } from "./function";
 import { knob, slider } from "./slider";
 import { et_editor } from "./et-system/editor";
-import { preset } from "./preset";
+import { preset } from "./preset/index";
 import { interval, metro, schedule } from "./metro";
 import { strings } from "./strings";
 import { divider, umenu, buttonoptions } from "./umenu";

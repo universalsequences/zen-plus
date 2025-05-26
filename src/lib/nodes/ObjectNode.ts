@@ -33,7 +33,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { compileVM } from "./vm/forwardpass";
 import { getRootPatch } from "./traverse";
-import { PresetManager } from "./definitions/core/preset";
+import { PresetManager } from "./definitions/core/preset/manager";
 import { getInboundConnections } from "./vm/traversal";
 
 interface Constants {

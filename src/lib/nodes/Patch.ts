@@ -12,7 +12,7 @@ import {
   type SerializedConnection,
 } from "./types";
 import type { BaseNode } from "./ObjectNode";
-import type { PresetManager } from "@/lib/nodes/definitions/core/preset";
+import type { PresetManager } from "@/lib/nodes/definitions/core/preset/manager";
 import Assistant from "@/lib/openai/assistant";
 import type { ZenGraph } from "@/lib/zen/zen";
 import { OperatorContextType } from "./context";
