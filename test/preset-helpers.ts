@@ -3,7 +3,7 @@ import { StateChange, Preset } from "@/lib/nodes/definitions/core/preset/types";
 import { MockObjectNode } from "./mocks/MockObjectNode";
 import { MockPatch } from "./mocks/MockPatch";
 
-import { mock } from "bun:test";
+import { mock, expect } from "bun:test";
 
 /**
  * Test helpers for preset system testing

@@ -1,20 +1,20 @@
-import { describe, it, expect, beforeEach, jest } from "bun:test";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { PresetManager, preset, StateChange } from "@/lib/nodes/definitions/core/preset/index";
 import { MockObjectNode } from "./mocks/MockObjectNode";
 import { MockPatch } from "./mocks/MockPatch";
 import { ObjectNode, Message } from "@/lib/nodes/types";
 
 // Mock dependencies
-jest.mock("@/lib/messaging/queue", () => ({
-  subscribe: jest.fn((event, callback) => {
+mock.module("@/lib/messaging/queue", () => ({
+  subscribe: mock((event, callback) => {
     // Store callback for manual triggering in tests
     (global as any).mockStateChangeCallback = callback;
   }),
 }));
 
-jest.mock("@/lib/nodes/traverse", () => ({
-  getRootPatch: jest.fn(() => ({
-    registerNodes: jest.fn(),
+mock.module("@/lib/nodes/traverse", () => ({
+  getRootPatch: mock(() => ({
+    registerNodes: mock(() => {}),
     scriptingNameToNodes: {},
   })),
 }));
@@ -28,8 +28,8 @@ describe("Preset Integration Tests", () => {
   beforeEach(() => {
     mockPatch = new MockPatch();
     presetObject = new MockObjectNode(mockPatch);
-    presetObject.updateWorkerState = jest.fn();
-    presetObject.onNewValue = jest.fn();
+    presetObject.updateWorkerState = mock(() => {});
+    presetObject.onNewValue = mock(() => {});
 
     // Initialize preset object
     presetFunction = preset(presetObject);
@@ -51,16 +51,16 @@ describe("Preset Integration Tests", () => {
       synthNode.name = "attrui";
       synthNode.attributes["scripting name"] = "lead-synth";
       synthNode.custom = {
-        fromJSON: jest.fn(),
-        getJSON: jest.fn(() => ({ cutoff: 1000, resonance: 0.5 })),
+        fromJSON: mock(),
+        getJSON: mock(() => ({ cutoff: 1000, resonance: 0.5 })),
       };
 
       const filterNode = new MockObjectNode(mockPatch, "filter1");
       filterNode.name = "attrui";
       filterNode.attributes["scripting name"] = "main-filter";
       filterNode.custom = {
-        fromJSON: jest.fn(),
-        getJSON: jest.fn(() => ({ frequency: 440, amplitude: 0.7 })),
+        fromJSON: mock(),
+        getJSON: mock(() => ({ frequency: 440, amplitude: 0.7 })),
       };
 
       // Simulate state changes in pattern 0
@@ -115,8 +115,8 @@ describe("Preset Integration Tests", () => {
         node.name = "attrui";
         node.attributes["scripting name"] = `instrument${i}`;
         node.custom = {
-          fromJSON: jest.fn(),
-          getJSON: jest.fn(() => ({ value: 0 })),
+          fromJSON: mock(),
+          getJSON: mock(() => ({ value: 0 })),
         };
         return node;
       });
@@ -189,8 +189,8 @@ describe("Preset Integration Tests", () => {
         node.name = "zequencer.core";
         node.attributes["scripting name"] = name;
         node.custom = {
-          fromJSON: jest.fn(),
-          getJSON: jest.fn(() => ({ steps: [] })),
+          fromJSON: mock(),
+          getJSON: mock(() => ({ steps: [] })),
         };
         return node;
       });
@@ -259,8 +259,8 @@ describe("Preset Integration Tests", () => {
       const synthNode = new MockObjectNode(mockPatch, "poly-synth");
       synthNode.name = "attrui";
       synthNode.custom = {
-        fromJSON: jest.fn(),
-        getJSON: jest.fn(() => ({ voices: 8 })),
+        fromJSON: mock(),
+        getJSON: mock(() => ({ voices: 8 })),
       };
 
       // Set up presets for different voices

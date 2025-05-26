@@ -3,11 +3,14 @@ import { Preset, SerializedPreset } from "./types";
 export const copyPreset = (preset: Preset) => {
   const copied: Preset = {};
   for (const id in preset) {
-    const state = preset[id];
-    if (typeof state === "object") {
-      copied[id] = { ...state };
+    const stateChange = preset[id];
+    if (typeof stateChange === "object" && stateChange !== null) {
+      copied[id] = {
+        node: stateChange.node, // Keep same node reference
+        state: JSON.parse(JSON.stringify(stateChange.state)) // Deep copy the state
+      };
     } else {
-      copied[id] = state;
+      copied[id] = stateChange;
     }
   }
   return copied;

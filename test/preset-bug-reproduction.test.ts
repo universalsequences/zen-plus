@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest } from "bun:test";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { PresetTestHelper, PresetAssertions, createPatternModeBugScenario } from "./preset-helpers";
 import { MockObjectNode } from "./mocks/MockObjectNode";
 import { MockPatch } from "./mocks/MockPatch";
@@ -6,13 +6,13 @@ import { ObjectNode, Message } from "@/lib/nodes/types";
 import { PresetManager, preset } from "@/lib/nodes/definitions/core/preset/index";
 
 // Mock dependencies
-jest.mock("@/lib/messaging/queue", () => ({
-  subscribe: jest.fn(),
+mock.module("@/lib/messaging/queue", () => ({
+  subscribe: mock(() => {}),
 }));
 
-jest.mock("@/lib/nodes/traverse", () => ({
-  getRootPatch: jest.fn(() => ({
-    registerNodes: jest.fn(),
+mock.module("@/lib/nodes/traverse", () => ({
+  getRootPatch: mock(() => ({
+    registerNodes: mock(() => {}),
   })),
 }));
 
@@ -30,8 +30,8 @@ describe("Preset Bug Reproduction: Pattern + Slot Mode", () => {
 
     const mockPatch = new MockPatch();
     presetObject = new MockObjectNode(mockPatch);
-    presetObject.updateWorkerState = jest.fn();
-    presetObject.onNewValue = jest.fn();
+    presetObject.updateWorkerState = mock(() => {});
+    presetObject.onNewValue = mock(() => {});
 
     // Configure for the reported bug scenario
     presetObject.attributes.patternMode = true;

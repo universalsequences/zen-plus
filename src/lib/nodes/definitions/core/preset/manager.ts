@@ -301,6 +301,11 @@ export class PresetManager {
         const oldPresetNumber = this.slotToPreset[slotNumber]?.[this.currentPattern];
         const oldPresetName = this.presetNames[oldPresetNumber];
         this.presetNames[presetNumber] = oldPresetName;
+
+        // Ensure slotToPreset mapping exists
+        if (!this.slotToPreset[slotNumber]) {
+          this.slotToPreset[slotNumber] = [];
+        }
         this.slotToPreset[slotNumber][this.currentPattern] = presetNumber;
       }
     }
