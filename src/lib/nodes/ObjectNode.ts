@@ -91,13 +91,18 @@ export class BaseNode implements Node {
     }
   }
 
+  rootPatch?: Patch;
+
   setAttribute(name: string, value: AttributeValue) {
     this.attributes[name] = value;
     if (this.attributeCallbacks[name]) {
       this.attributeCallbacks[name](value);
     }
-    if (this.patch.updateAttributes) {
-      this.patch.updateAttributes(this.id, { ...this.attributes });
+    const patch = this.rootPatch || getRootPatch(this.patch);
+    this.rootPatch = patch;
+
+    if (patch.updateAttributes) {
+      patch.updateAttributes(this.id, { ...this.attributes });
     }
   }
 

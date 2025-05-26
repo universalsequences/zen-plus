@@ -4,16 +4,34 @@ import { getRootPatch } from "@/lib/nodes/traverse";
 
 doc("sidebarOverlay", {
   description: "Shows/hides an object as a sidebar overlay",
-  numberOfOutlets: 0,
+  numberOfOutlets: 1,
   numberOfInlets: 1,
+  attributes: [
+    {
+      name: "object",
+      type: "string",
+      description: "Name of the object to show in the sidebar overlay",
+      defaultValue: "",
+    },
+    {
+      name: "disabled",
+      type: "boolean",
+      description:
+        "When true, shows the icon as unselected even if the object is currently showing",
+      defaultValue: false,
+    },
+  ],
 });
 
 export const sidebarOverlay = (node: ObjectNode) => {
   node.skipCompilation = true;
   node.needsMainThread = true;
-  // Set default attribute value
+  // Set default attribute values
   if (!node.attributes.object) {
     node.attributes.object = "";
+  }
+  if (node.attributes.disabled === undefined) {
+    node.attributes.disabled = false;
   }
 
   return (message: Message) => {
@@ -51,11 +69,11 @@ export const sidebarOverlay = (node: ObjectNode) => {
       // Show the object in the sidebar
       root.setCurrentSidebarObject(targetObject);
       root.setIsSidebarMinimized(false);
+      return [1];
     } else {
       // Hide the sidebar
       root.setIsSidebarMinimized(true);
+      return [0];
     }
-
-    return [];
   };
 };

@@ -4,13 +4,18 @@ import { useSidebar } from "@/contexts/SidebarContext";
 import { ObjectNode } from "@/lib/nodes/types";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { getRootPatch } from "@/lib/nodes/traverse";
+import { useSelection } from "@/contexts/SelectionContext";
 
 const SidebarOverlay: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { lockedMode } = useLocked();
   const { currentSidebarObject, isMinimized } = useSidebar();
+  useSelection();
 
   // Check if this sidebarOverlay object's target is currently showing in the sidebar
   const isSelected = useMemo(() => {
+    // If disabled attribute is true, always show as unselected
+    if (objectNode.attributes.disabled) return false;
+
     if (!currentSidebarObject || isMinimized) return false;
 
     const objectName = objectNode.attributes.object as string;
@@ -19,14 +24,10 @@ const SidebarOverlay: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
     // Check if the current sidebar object matches the scripting name we're targeting
     const patch = objectNode.patch;
     const rootPatch = getRootPatch(patch.getZenBase() || patch);
-    console.log("object name=%s", objectName, rootPatch.scriptingNameToNodes, rootPatch);
     const targetObjects = rootPatch.scriptingNameToNodes[objectName];
-    console.log("target objects=", targetObjects);
 
     return targetObjects && targetObjects.includes(currentSidebarObject);
-  }, [currentSidebarObject, isMinimized, objectNode]);
-
-  console.log("IS SELECTED=", isSelected);
+  }, [currentSidebarObject, isMinimized, objectNode, objectNode.attributes.disabled]);
 
   const handleClick = useCallback(() => {
     if (!lockedMode) return;
@@ -39,8 +40,6 @@ const SidebarOverlay: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
       objectNode.receive(objectNode.inlets[0], 1);
     }
   }, [lockedMode, objectNode, isSelected]);
-
-  const { width = 30, height = 30 } = objectNode.size || {};
 
   return (
     <button

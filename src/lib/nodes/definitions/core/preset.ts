@@ -676,7 +676,7 @@ export const preset = (object: ObjectNode) => {
       if (typeof x === "number") {
         mgmt.switchToPreset(Math.round(x as number));
         updateUI();
-        return ["switch-to-preset", x as number];
+        return [["switch-to-preset", x as number]];
       } else if (Array.isArray(x) && x[0] === "delete") {
         for (let i = 1; i < x.length; i++) {
           mgmt.deletePreset(x[i] as number);

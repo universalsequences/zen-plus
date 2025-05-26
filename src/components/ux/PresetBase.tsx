@@ -95,7 +95,6 @@ const PresetBase: React.FC<PresetBaseProps> = ({
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Backspace" && !editingPreset) {
-        console.log("deleting...", selectedPresets);
         messageTarget.receive(messageTarget.inlets[0], ["delete", ...selectedPresets]);
         setTimeout(() => {
           setSelectedPresets([]);
@@ -179,7 +178,6 @@ const PresetBase: React.FC<PresetBaseProps> = ({
 
   const switchToPattern = useCallback(
     (patternNumber: number) => {
-      console.log("switch", patternNumber);
       messageTarget.receive(messageTarget.inlets[0], ["switch-to-pattern", patternNumber]);
     },
     [messageTarget],
@@ -231,8 +229,6 @@ const PresetBase: React.FC<PresetBaseProps> = ({
     const nextIndex = currentPresetNumber < totalPresets - 1 ? currentPresetNumber + 1 : 0;
     switchToPreset(nextIndex);
   }, [currentPresetNumber, presetManager.presets.length, switchToPreset]);
-
-  console.log("current slot=%s", currentSlot, currentPresetNumber, slotMode, slotToPreset);
 
   if (showNames) {
     return (
