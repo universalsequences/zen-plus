@@ -355,6 +355,9 @@ export type Patch = Identifiable & {
   exportedAudioUnit?: ExportedAudioUnit;
   setPatchWindows?: React.Dispatch<React.SetStateAction<Patch[]>>;
   setSideNodeWindow?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
+  setSidebarObjects?: React.Dispatch<React.SetStateAction<ObjectNode[]>>;
+  setCurrentSidebarObject?: React.Dispatch<React.SetStateAction<ObjectNode | null>>;
+  setIsSidebarMinimized?: React.Dispatch<React.SetStateAction<boolean>>;
   sendNumberNodes: () => void;
   docId?: string;
   doc?: PatchDoc;

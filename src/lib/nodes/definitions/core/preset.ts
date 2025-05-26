@@ -76,6 +76,7 @@ export class PresetManager {
     this.slotMode = false;
     this.currentPattern = 0;
     this.slotToPreset = {};
+
     this.setNumberOfSlots(4);
 
     this.presetNames = [];
@@ -136,6 +137,8 @@ export class PresetManager {
       if (!this.slotToPreset[i]) {
         this.slotToPreset[i] = [];
       }
+
+      // ensure the slot to preset matches previous pattern's value
       this.slotToPreset[i][newPatternNumber] = this.slotToPreset[i]?.[oldPatternNumber] || 0;
     }
     this.currentPattern = this.getNumberOfPatterns() - 1;

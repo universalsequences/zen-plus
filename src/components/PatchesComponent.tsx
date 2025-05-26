@@ -10,6 +10,7 @@ import { usePatches } from "@/contexts/PatchesContext";
 import { useSelection } from "@/contexts/SelectionContext";
 import { useTilesContext } from "@/contexts/TilesContext";
 import { useWindows } from "@/contexts/WindowsContext";
+import { SidebarOverlay } from "./SidebarOverlay";
 
 /**
  * PatchesComponent is the main container for all patches in the patcher environment
@@ -117,6 +118,9 @@ const PatchesComponent: React.FC<{
       
       {/* Search overlay */}
       {showSearch && <SearchWindow hide={() => setShowSearch(false)} />}
+      
+      {/* Sidebar overlay */}
+      <SidebarOverlay />
     </div>
   ), [
     patchWindows,

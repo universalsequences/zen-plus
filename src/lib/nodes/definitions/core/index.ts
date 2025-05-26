@@ -53,6 +53,7 @@ import { tab } from "./ui/tab";
 import { midiout, midioutInlet } from "./midi";
 import { filtergraph } from "./filtergraph";
 import { preset_view } from "./presetview";
+import { sidebarOverlay } from "./sidebarOverlay";
 
 export const api: API = {
   js: js_scripting,
@@ -124,4 +125,5 @@ export const api: API = {
   filtergraph,
   messagefilter,
   gate,
+  sidebarOverlay,
 };

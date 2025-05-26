@@ -40,6 +40,7 @@ import { publicProvider } from "wagmi/providers/public";
 import { WorkerProvider } from "@/contexts/WorkerContext";
 import PatchWindow from "./PatchWindow";
 import { WindowsProvider } from "@/contexts/WindowsContext";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import { GlossaryDefinition } from "./docs/GlossaryDefinition";
 import { GlossaryProvider } from "@/contexts/GlossaryContext";
 import { useAudioContext } from "@/contexts/AudioContextContext";
@@ -147,17 +148,19 @@ export default function App(props: Props) {
           <SelectionProvider>
             <PatchesProvider basePatch={basePatch}>
               <WindowsProvider>
-                <GlobalKeyBindingsProvider>
-                  <WorkerProvider patch={basePatch}>
-                    <TilesProvider>
-                      <StepsProvider>
-                        <main className="flex min-h-screen flex-col h-full w-full text-white">
-                          <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
-                        </main>
-                      </StepsProvider>
-                    </TilesProvider>
-                  </WorkerProvider>
-                </GlobalKeyBindingsProvider>
+                <SidebarProvider>
+                  <GlobalKeyBindingsProvider>
+                    <WorkerProvider patch={basePatch}>
+                      <TilesProvider>
+                        <StepsProvider>
+                          <main className="flex min-h-screen flex-col h-full w-full text-white">
+                            <PatchesComponent fileToOpen={fileToOpen} setFileToOpen={setFileToOpen} />
+                          </main>
+                        </StepsProvider>
+                      </TilesProvider>
+                    </WorkerProvider>
+                  </GlobalKeyBindingsProvider>
+                </SidebarProvider>
               </WindowsProvider>
             </PatchesProvider>
           </SelectionProvider>
