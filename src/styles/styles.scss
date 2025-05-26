@@ -776,6 +776,14 @@ div:active {
         min-height: unset !important;
         flex: 1;
     }
+    .selected {
+        border-color: transparent !important;
+    }
+
+    .absolute.top-0.right-0.w-1.h-1.bg-zinc-300 {
+        display: none;
+    }
+
     .dark-background,
     .selected-patch {
         border: none !important;

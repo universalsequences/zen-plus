@@ -38,6 +38,7 @@ import { Panel } from "./Panel";
 import { InstructionsPerformance } from "./InstructionsPerformance";
 import TabObject from "./TabObject";
 import { ETEditor } from "./ETEDitor";
+import SidebarOverlay from "./SidebarOverlay";
 
 export type NodeProps =
   | {
@@ -90,6 +91,7 @@ export const index: ComponentIndex = {
   "instructions.performance": InstructionsPerformance,
   tab: TabObject,
   "et.editor": ETEditor,
+  sidebarOverlay: SidebarOverlay,
 };
 
 export const optionalIndex: ComponentIndex = {
