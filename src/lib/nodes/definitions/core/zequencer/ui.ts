@@ -35,6 +35,18 @@ export const zequencer_ui = (node: ObjectNode) => {
     node.attributes.pianoRollHeight = 60; // Default height in pixels
   }
 
+  if (node.attributes.showPianoRoll === undefined) {
+    node.attributes.showPianoRoll = false;
+  }
+
+  if (node.attributes.dynamicHeight === undefined) {
+    node.attributes.dynamicHeight = false;
+  }
+
+  if (node.attributes.showPatternLengthControls === undefined) {
+    node.attributes.showPatternLengthControls = false;
+  }
+
   node.isResizable = true;
   return () => {
     return [];

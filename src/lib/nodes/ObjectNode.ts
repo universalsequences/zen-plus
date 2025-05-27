@@ -867,10 +867,12 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   }
 
   updateSize(size: Size) {
+    console.log("update size called", this);
     // any hooks
     this.size = { ...size };
     const root = getRootPatch(this.patch);
     if (root.onUpdateSize) {
+      console.log("on update size exists so calling");
       root.onUpdateSize(this.id, this.size);
     }
 

@@ -68,6 +68,7 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
     updateSize,
     updateZIndex,
     maxZIndex,
+    patch: positionPatch,
   } = usePosition();
 
   // State and refs
@@ -316,9 +317,11 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
 
   // Get current size (from node or size index)
   const size = node.size || sizeIndex[node.id];
+  //console.log("positioned prerender=", node.id, size, node, sizeIndex, positionPatch);
 
   // Memoize the rendered component to prevent unnecessary re-renders
   return React.useMemo(() => {
+    //console.log("size memo=", node.id, size);
     // Calculate minimum width based on inlets
     let minWidth = Math.max(15, node.inlets.length * 15);
     if (size && size.width > minWidth) {

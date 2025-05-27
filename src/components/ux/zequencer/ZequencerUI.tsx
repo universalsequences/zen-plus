@@ -12,9 +12,10 @@ import { useStepsContext } from "@/contexts/StepsContext";
 import { Cirklon } from "./Cirklon";
 import { CirklonParameters } from "./CirklonParameters";
 import { PianoRoll } from "./PianoRoll";
+import { PlusCircledIcon, MinusCircledIcon } from "@radix-ui/react-icons";
 
 export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
-  usePosition();
+  const { presentationMode, updateSize } = usePosition();
   useSelection();
 
   const { width, height } = objectNode.size || { width: 200, height: 200 };
@@ -84,8 +85,6 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
       setSelectedSteps(validSelectedSteps.length > 0 ? validSelectedSteps : null);
     }
   }, [node?.steps]);
-
-  const { presentationMode } = usePosition();
 
   useEffect(() => {
     if (node) {
@@ -305,12 +304,70 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const schema = node?.stepsSchema as StepDataSchema;
   const [parameter, setParameter] = useState(schema?.[0]?.name);
   const showParameters = objectNode.attributes.parameters;
+  const showPatternLengthControls = objectNode.attributes.showPatternLengthControls;
 
   useEffect(() => {
     setParameter(schema?.[0]?.name);
   }, [schema]);
 
   const [mouseStartY, setMouseStartY] = useState<number | null>(null);
+
+  // Pattern length control handlers
+  const handlePatternLengthIncrease = useCallback(() => {
+    if (node) {
+      node.receive(node.inlets[0], { patternLengthMultiple: 2 });
+    }
+  }, [node]);
+
+  const handlePatternLengthDecrease = useCallback(() => {
+    if (node) {
+      node.receive(node.inlets[0], { patternLengthMultiple: 0.5 });
+    }
+  }, [node]);
+
+  // Get the piano roll height from attributes
+  const pianoRollHeight = Number(attributes.pianoRollHeight || 60);
+
+  // Track previous pattern length for dynamic height calculation
+  const [prevPatternLength, setPrevPatternLength] = useState<number>(0);
+
+  // Dynamic height logic
+  useEffect(() => {
+    if (!attributes.dynamicHeight || !node?.steps) return;
+
+    const currentPatternLength = node.steps.length;
+    const rowHeight = showParameters ? 60 : 40; // Approximate height per row
+    const pianoRollHeightValue = attributes.showPianoRoll ? pianoRollHeight : 0;
+    const baseHeight = 50; // Base padding and margins
+
+    if (prevPatternLength === 0) {
+      // First time setting up, just track the current length
+      setPrevPatternLength(currentPatternLength);
+    } else if (currentPatternLength !== prevPatternLength) {
+      // Pattern length changed, update height
+      const currentRows = Math.ceil(currentPatternLength / 16);
+      const newHeight = currentRows * rowHeight + pianoRollHeightValue + baseHeight;
+
+      if (updateSize) {
+        objectNode.size = {
+          width: objectNode.size?.width || 200,
+          height: newHeight,
+        };
+        updateSize(objectNode.id, objectNode.size);
+      }
+
+      setPrevPatternLength(currentPatternLength);
+    }
+  }, [
+    updateSize,
+    node?.steps?.length,
+    attributes.dynamicHeight,
+    showParameters,
+    pianoRollHeight,
+    attributes.showPianoRoll,
+    prevPatternLength,
+    objectNode,
+  ]);
 
   // Handler for when a step is clicked in the piano roll
   const handlePianoRollStepClick = useCallback(
@@ -348,14 +405,11 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     [node, selectedSteps, setSelectedSteps, rows.length],
   );
 
-  // Get the piano roll height from attributes
-  const pianoRollHeight = Number(attributes.pianoRollHeight || 60);
-
   return (
     <div className="bg-zinc-900 p-2" style={{ width, height }}>
-      <div className="flex flex-col gap-1 h-full">
+      <div className={`flex flex-col gap-1 h-full w-full ${!showParameters ? "items-start" : ""}`}>
         {/* Piano Roll Visualization */}
-        {node && pianoRollHeight > 0 && (
+        {node && pianoRollHeight > 0 && attributes.showPianoRoll && (
           <div className="mb-2">
             <PianoRoll
               objectNode={objectNode}
@@ -368,18 +422,66 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
           </div>
         )}
 
-        <div className="flex flex-col gap-1 h-full">
+        <div
+          className={`flex flex-col gap-1 h-full w-full ${!showParameters ? "items-start" : ""}`}
+        >
+          {/* Pattern Length Controls - show at top when parameters are hidden */}
+          {!showParameters && showPatternLengthControls && (
+            <div className="flex justify-end mb-2">
+              <div className="flex gap-1">
+                <button
+                  onClick={handlePatternLengthIncrease}
+                  className="p-1 hover:bg-zinc-700 rounded"
+                  title="Double pattern length"
+                >
+                  <PlusCircledIcon className="w-4 h-4 text-white" />
+                </button>
+                <button
+                  onClick={handlePatternLengthDecrease}
+                  className="p-1 hover:bg-zinc-700 rounded"
+                  title="Halve pattern length"
+                >
+                  <MinusCircledIcon className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {showParameters && schema && parameter && (
-            <CirklonParameters
-              color={attributes.stepOnColor as string}
-              schema={schema}
-              setParameter={setParameter}
-              parameter={parameter}
-            />
+            <div className="flex items-center justify-between">
+              <CirklonParameters
+                color={attributes.stepOnColor as string}
+                schema={schema}
+                setParameter={setParameter}
+                parameter={parameter}
+              />
+              {/* Pattern Length Controls - show next to parameters when visible */}
+              {showPatternLengthControls && (
+                <div className="flex gap-1 ml-2">
+                  <button
+                    onClick={handlePatternLengthIncrease}
+                    className="p-1 hover:bg-zinc-700 rounded"
+                    title="Double pattern length"
+                  >
+                    <PlusCircledIcon className="w-4 h-4 text-white" />
+                  </button>
+                  <button
+                    onClick={handlePatternLengthDecrease}
+                    className="p-1 hover:bg-zinc-700 rounded"
+                    title="Halve pattern length"
+                  >
+                    <MinusCircledIcon className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           {node &&
             rows.map((steps, rowIndex) => (
-              <div key={rowIndex} className="flex flex-col gap-1 h-full">
+              <div
+                key={rowIndex}
+                className={`flex flex-col gap-1 w-full ${!showParameters ? "items-start" : "h-full"}`}
+              >
                 {node && showParameters && schema && (
                   <Cirklon
                     setMouseStartY={setMouseStartY}
@@ -391,7 +493,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
                     steps={steps}
                   />
                 )}
-                <div className={`flex ${showParameters ? "h-8" : "h-full"}`}>
+                <div className={`flex w-full ${showParameters ? "h-8" : "h-full"}`}>
                   {steps.map((step, index) => (
                     <Step
                       isMini={!showParameters}

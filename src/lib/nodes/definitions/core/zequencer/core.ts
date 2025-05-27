@@ -128,7 +128,6 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
           // we have a match
           const num = noteon[key];
           recordingNoteOn[num] = lastStepNumber || 0;
-          console.log("noteon: we have match with key=", key, num);
         }
       }
     }
@@ -265,7 +264,6 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
 
         if (node.custom && node.steps) {
           // Update the custom value to contain the full polyphonic steps data
-          console.log("node.step=", node.steps);
           node.custom.value = node.steps.map((voiceArray) =>
             voiceArray.map((voice) => ({ ...voice })),
           ) as Message[];
