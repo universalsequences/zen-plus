@@ -459,7 +459,10 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
 
     if (isMessageNode(node)) {
       allowSize = true;
-      if (nodeSize) nodeStyle.width = nodeSize.width;
+      if (nodeSize) {
+        nodeStyle.width = nodeSize.width;
+        nodeStyle.height = nodeSize.height;
+      }
     }
 
     // Add error class
@@ -559,6 +562,8 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
     isResizing,
     node,
     isError,
+    size?.width,
+    size?.height,
     size,
     children,
     style,

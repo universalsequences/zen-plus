@@ -9,6 +9,7 @@ import {
   type Node,
   type Message,
   type MessageObject,
+  type Size,
 } from "./types";
 import { uuid } from "@/lib/uuid/IDGenerator";
 import { isNumber } from "@/utils/isNumber";
@@ -29,9 +30,14 @@ export default class MessageNodeImpl extends MockBaseNode implements MessageNode
   zIndex: number;
   messageType: MessageType;
   instructions?: Instruction[];
+  size: Size;
 
   constructor(patch: Patch, messageType: MessageType) {
     super(patch);
+    this.size = {
+      width: 60,
+      height: 24,
+    };
     this.id = uuid();
     this.position = { x: 0, y: 0 };
     this.zIndex = 0;
@@ -203,6 +209,7 @@ export default class MessageNodeImpl extends MockBaseNode implements MessageNode
       presentationPosition: this.presentationPosition,
       outlets: this.getConnectionsJSON(),
       messageType: this.messageType,
+      size: this.size,
     };
 
     json.attributes = {};
@@ -228,5 +235,8 @@ export default class MessageNodeImpl extends MockBaseNode implements MessageNode
     this.presentationPosition = json.presentationPosition;
     this.message = json.message;
     this.id = json.id;
+    if (json.size) {
+      this.size = json.size;
+    }
   }
 }

@@ -309,7 +309,8 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
         }
         // Handle height-only resize
         else if (orientation === Orientation.Y) {
-          if (isObjectNode(node)) {
+          if (true) {
+            //isObjectNode(node)) {
             const y = scrollRef.current.scrollTop + client.y;
             const height = y - position.y;
             node.size.height = height;
@@ -327,12 +328,10 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
           const width = x - position.x;
           const height = y - position.y;
 
-          if (isObjectNode(node)) {
+          if (true) {
+            //isObjectNode(node)) {
             node.size.width = width;
-            if (
-              node instanceof ObjectNodeImpl &&
-              (node.name === "zen" || (node as ObjectNode).isResizable)
-            ) {
+            if (isMessageNode(node) || node.name === "zen" || (node as ObjectNode).isResizable) {
               node.size.height = height;
             }
             updateSize(node.id, { ...node.size });

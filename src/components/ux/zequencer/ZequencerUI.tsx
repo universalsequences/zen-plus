@@ -28,7 +28,11 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
   const { selectedNodes } = useSelection();
 
-  const { node } = useAttributedByNameNode(objectNode, attributes.name as string, "zequencer.core");
+  const { node } = useAttributedByNameNode(
+    objectNode,
+    attributes.target as string,
+    "zequencer.core",
+  );
   const currentStepNumber = Array.isArray(value) ? (value[0] as number) : 0;
 
   const selectedStepsRef = useRef(selectedSteps);

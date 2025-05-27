@@ -4,8 +4,9 @@ import { PresetManager } from "./manager";
 
 doc("preset", {
   numberOfInlets: 1,
-  numberOfOutlets: 1,
+  numberOfOutlets: 3,
   description: "preset system",
+  outletNames: ["operation", "current pattern", "number of patterns"],
 });
 
 export const preset = (object: ObjectNode) => {
@@ -69,57 +70,77 @@ export const preset = (object: ObjectNode) => {
       mgmt.updateUI();
     }
   };
-  return (x: Message) => {
+  return (msg: Message) => {
     const mgmt = object.custom as PresetManager;
-    if (x === "update-ui") {
+    if (msg === "update-ui") {
       updateUI();
       return [];
     }
     if (mgmt) {
-      if (typeof x === "number") {
-        mgmt.switchToPreset(Math.round(x as number));
+      if (typeof msg === "number") {
+        mgmt.switchToPreset(Math.round(msg as number));
         updateUI();
-        return [["switch-to-preset", x as number]];
-      } else if (Array.isArray(x) && x[0] === "delete") {
-        for (let i = 1; i < x.length; i++) {
-          mgmt.deletePreset(x[i] as number);
+        return [
+          ["switch-to-preset", msg as number],
+          mgmt.currentPattern,
+          mgmt.getNumberOfPatterns(),
+        ];
+      } else if (Array.isArray(msg) && msg[0] === "delete") {
+        for (let i = 1; i < msg.length; i++) {
+          mgmt.deletePreset(msg[i] as number);
         }
-      } else if (Array.isArray(x) && x[0] === "set-name") {
-        mgmt.setPresetName(x[1] as string);
+        return [["delete", "bang"], mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (Array.isArray(msg) && msg[0] === "set-name") {
+        mgmt.setPresetName(msg[1] as string);
         updateUI();
-      } else if (x === "write-to-memory") {
+        return [undefined, mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (msg === "write-to-memory") {
         const currentSlot = mgmt.currentPreset;
         mgmt.writeToMemory(currentSlot);
-      } else if (x === "save-as-new") {
+        return [undefined, mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (msg === "save-as-new") {
         const currentSlot = mgmt.currentPreset;
         mgmt.writeToMemory(currentSlot, true);
         updateUI();
-      } else if (x === "new-pattern") {
+        return [undefined, mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (msg === "new-pattern") {
         mgmt.newPattern();
-        return [["new-pattern", "bang"]];
-      } else if (Array.isArray(x) && x[0] === "copy-to-slot") {
-        const currentSlot = x[2] !== undefined ? (x[2] as number) : mgmt.currentPreset;
-        const presetNumber = x[1] as number;
-        console.log("copy to slot currentSlot=%s presetNumber=%s", currentSlot, presetNumber);
+        return [["new-pattern", "bang"], mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (Array.isArray(msg) && msg[0] === "copy-to-slot") {
+        const currentSlot = msg[2] !== undefined ? (msg[2] as number) : mgmt.currentPreset;
+        const presetNumber = msg[1] as number;
         mgmt.copyToSlot(presetNumber, currentSlot);
         updateUI();
-        return [["copy-to-slot", x[1]]];
-      } else if (Array.isArray(x) && x[0] === "switch-to-pattern") {
-        const patternNumber = x[1] as number;
+        return [["copy-to-slot", msg[1]], mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (Array.isArray(msg) && msg[0] === "switch-to-pattern") {
+        const patternNumber = msg[1] as number;
         mgmt.switchToPattern(patternNumber);
-        return [["switch-to-pattern", x[1]]];
-      } else if (x === "delete-pattern") {
+        return [["switch-to-pattern", msg[1]], mgmt.currentPattern, mgmt.getNumberOfPatterns()];
+      } else if (Array.isArray(msg) && msg[0] === "set-pattern-count") {
+        const patternCount = msg[1] as number;
+        mgmt.setPatternCount(patternCount);
+        return [
+          ["set-pattern-count", patternCount],
+          mgmt.currentPattern,
+          mgmt.getNumberOfPatterns(),
+        ];
+      } else if (msg === "delete-pattern") {
         mgmt.deletePattern();
-        return [["delete-pattern", "bang"]];
-      } else if (Array.isArray(x) && x[0] === "move-pattern-to") {
-        const sourcePattern = x[1] as number;
-        const targetPosition = x[2] as number;
+        return [["delete-pattern", "bang"], mgmt.getNumberOfPatterns()];
+      } else if (Array.isArray(msg) && msg[0] === "move-pattern-to") {
+        const sourcePattern = msg[1] as number;
+        const targetPosition = msg[2] as number;
         mgmt.movePatternTo(sourcePattern, targetPosition);
-        return [["move-pattern-to", sourcePattern, targetPosition]];
-      } else if (typeof x === "object" && "voice" in x && "preset" in x && "time" in x) {
-        const { voice, preset, time } = x;
+        return [
+          ["move-pattern-to", sourcePattern, targetPosition],
+          mgmt.currentPattern,
+          mgmt.getNumberOfPatterns(),
+        ];
+      } else if (typeof msg === "object" && "voice" in msg && "preset" in msg && "time" in msg) {
+        const { voice, preset, time } = msg;
         mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number);
       }
+      return [undefined, mgmt.currentPattern, mgmt.getNumberOfPatterns()];
     }
     return [];
   };

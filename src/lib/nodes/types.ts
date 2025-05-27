@@ -438,6 +438,7 @@ export type SerializedMessageNode = Identifiable & {
   attributes?: Attributes;
   message: Message;
   messageType: MessageType;
+  size?: Size;
 };
 
 export enum MessageType {

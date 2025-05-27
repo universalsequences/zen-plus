@@ -26,6 +26,8 @@ export class PresetManager {
   voiceToPreset: Map<number, number>;
   counter: number;
   presetNames: string[];
+  lastReceivedPatternCount?: number;
+  initialHydrated = false;
 
   constructor(object: ObjectNode) {
     this.slots = [];
@@ -101,6 +103,7 @@ export class PresetManager {
       this.slotToPreset[i][newPatternNumber] = this.slotToPreset[i]?.[oldPatternNumber] || 0;
     }
     this.currentPattern = this.getNumberOfPatterns() - 1;
+    this.lastReceivedPatternCount = this.getNumberOfPatterns();
     this.updateUI();
   }
 
@@ -112,29 +115,47 @@ export class PresetManager {
       this.slots[i].splice(currentPattern, 1);
     }
     this.switchToPattern(Math.max(0, Math.min(currentPattern, numPatterns - 2)));
+    this.lastReceivedPatternCount = this.getNumberOfPatterns();
     this.updateUI();
+  }
+
+  setPatternCount(patternCount: number) {
+    if (patternCount < 1) {
+      return;
+    }
+    this.lastReceivedPatternCount = patternCount;
+    if (patternCount < this.getNumberOfPatterns()) {
+      while (patternCount < this.getNumberOfPatterns()) {
+        this.deletePattern();
+      }
+      return;
+    } else {
+      while (patternCount > this.getNumberOfPatterns()) {
+        this.newPattern();
+      }
+    }
   }
 
   movePatternTo(sourcePattern: number, targetPosition: number) {
     const numPatterns = this.getNumberOfPatterns();
-    
+
     // Validate inputs
     if (sourcePattern < 0 || sourcePattern >= numPatterns) return;
     if (targetPosition < 0 || targetPosition >= numPatterns) return;
     if (sourcePattern === targetPosition) return; // No-op
-    
+
     // Store the pattern data that we're moving
     const movingPatterns: Preset[] = [];
     for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
       movingPatterns[slotIndex] = this.slots[slotIndex][sourcePattern];
     }
-    
+
     // Store the slotToPreset mappings for the moving pattern
     const movingSlotToPresetMappings: number[] = [];
     for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
       movingSlotToPresetMappings[slotIndex] = this.slotToPreset[slotIndex]?.[sourcePattern] || 0;
     }
-    
+
     // Remove the pattern from all slots
     for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
       this.slots[slotIndex].splice(sourcePattern, 1);
@@ -142,10 +163,10 @@ export class PresetManager {
         this.slotToPreset[slotIndex].splice(sourcePattern, 1);
       }
     }
-    
+
     // Calculate the actual insertion position after removal
     const insertPosition = sourcePattern < targetPosition ? targetPosition - 1 : targetPosition;
-    
+
     // Insert the pattern at the new position in all slots
     for (let slotIndex = 0; slotIndex < this.slots.length; slotIndex++) {
       this.slots[slotIndex].splice(insertPosition, 0, movingPatterns[slotIndex]);
@@ -154,7 +175,7 @@ export class PresetManager {
       }
       this.slotToPreset[slotIndex].splice(insertPosition, 0, movingSlotToPresetMappings[slotIndex]);
     }
-    
+
     // Update currentPattern if it was affected by the move
     if (this.currentPattern === sourcePattern) {
       // The current pattern was the one that moved
@@ -165,12 +186,12 @@ export class PresetManager {
         this.currentPattern--;
       }
     } else {
-      // Pattern moved backward - patterns between target and source shift right  
+      // Pattern moved backward - patterns between target and source shift right
       if (this.currentPattern >= targetPosition && this.currentPattern < sourcePattern) {
         this.currentPattern++;
       }
     }
-    
+
     this.updateUI();
   }
 
@@ -216,7 +237,6 @@ export class PresetManager {
   notifyVM() {
     // register object in WorkerContext.ts (i.e. the main-thread)
     // fetches related nodes that are governed by this preset
-
     getRootPatch(this.objectNode.patch)?.registerNodes?.([this.objectNode], []);
 
     // register object in Worker itself, by sending a serialized version of itself there
@@ -546,6 +566,11 @@ export class PresetManager {
 
   // ensures each preset contains a reference to the nodes it applies to
   hydrateSerializedPresets(allNodes: Node[]) {
+    console.log("HYDRATE CALLED! ******************************", this.getNumberOfPatterns(), this);
+    if (this.initialHydrated && this.objectNode.patch.vm) {
+      console.log("skipping hydration");
+      return;
+    }
     const scriptingNames = this.getZequencerScriptingNames();
     if (this.serializedPresets) {
       for (let i = 0; i < this.serializedPresets.length; i++) {
@@ -572,7 +597,6 @@ export class PresetManager {
       }
     }
     if (this.serializedSlots) {
-      //this.slots = [];
       for (let i = 0; i < this.serializedSlots.length; i++) {
         const slot = this.serializedSlots[i];
         for (let j = 0; j < slot.length; j++) {
@@ -601,7 +625,11 @@ export class PresetManager {
         }
       }
     }
+    if (this.lastReceivedPatternCount !== undefined) {
+      this.setPatternCount(this.lastReceivedPatternCount);
+    }
     this.hydrated = true;
+    this.initialHydrated = true;
     this.objectNode.updateWorkerState();
     this.updateUI();
   }
