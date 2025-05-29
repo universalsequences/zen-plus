@@ -94,6 +94,13 @@ export interface SetPresetNodesBody {
   };
 }
 
+export interface SetSelectedStepsBody {
+  type: "setSelectedSteps";
+  body: {
+    stepIds: string[];
+  };
+}
+
 export interface LoadBangBody {
   type: "loadbang";
 }
@@ -117,6 +124,7 @@ export type MessageBody =
   | LoadBangBody
   | PublishBody
   | SetPresetNodesBody
+  | SetSelectedStepsBody
   | SetAttributeValueBody
   | ShareMessagePortBody
   | SyncWorkerStateWithMainThreadBody
@@ -475,6 +483,8 @@ self.onmessage = async (e: MessageEvent) => {
     if (vmEvaluation) sendEvaluationToMainThread(vmEvaluation);
   } else if (data.type === "setPresetNodes") {
     vm.setPresetNodes(data.body.nodeId, data.body.nodeIds);
+  } else if (data.type === "setSelectedSteps") {
+    vm.setSelectedSteps(data.body.stepIds);
   } else if (data.type === "syncWorkerStateWithMainThread") {
     vm.syncWorkerStateWithMainThread();
   } else if (data.type === "setAttributeValue") {

@@ -37,6 +37,9 @@ export class PresetManager {
   initialHydrated = false;
   staticMappedSlotNodes: StaticMappedSlotNodes;
   hydratedAt?: number;
+  selectedSteps: string[] = [];
+  stepParameterLocks: { [stepId: string]: Preset } = {};
+  preStepSelectionState?: { pattern: number; slot: number } = undefined;
 
   constructor(object: ObjectNode) {
     this.slots = [];
@@ -245,6 +248,69 @@ export class PresetManager {
       : this.currentPreset;
     if (presetNumber > -1) {
       this.presetNames[presetNumber] = name;
+    }
+  }
+
+  setSelectedSteps(stepIds: string[]) {
+    console.log("set selected steps=", stepIds);
+    
+    const hadPreviousSelection = this.selectedSteps.length > 0;
+    const hasNewSelection = stepIds.length > 0;
+    
+    // If we're starting a new selection (from no selection) store current state
+    if (!hadPreviousSelection && hasNewSelection) {
+      this.preStepSelectionState = {
+        pattern: this.currentPattern,
+        slot: this.slotMode ? this.currentPreset : this.currentPreset
+      };
+      console.log("stored pre-step selection state=", this.preStepSelectionState);
+    }
+    
+    // If we had a previous selection or stored state, restore the original preset first
+    if ((hadPreviousSelection || this.preStepSelectionState) && this.preStepSelectionState) {
+      console.log("restoring preset from pre-step selection state=", this.preStepSelectionState);
+      
+      if (this.slotMode) {
+        // In slot mode, apply the preset from the stored slot and pattern
+        const slotPreset = this.slots?.[this.preStepSelectionState.slot]?.[this.preStepSelectionState.pattern];
+        if (slotPreset) {
+          this.applyPreset(slotPreset);
+        }
+      } else {
+        // In regular preset mode, apply the stored preset
+        const preset = this.presets[this.preStepSelectionState.slot];
+        if (preset) {
+          this.applyPreset(preset);
+        }
+      }
+      
+      // Only clear the stored state if we're going to no selection
+      if (!hasNewSelection) {
+        this.preStepSelectionState = undefined;
+      }
+    }
+    
+    this.selectedSteps = stepIds;
+    
+    // If we have new selection, check if any of the selected steps have p-locks and apply them
+    if (hasNewSelection) {
+      // Merge all p-locks from selected steps to create a combined preset
+      const combinedPLocks: Preset = {};
+      let hasAnyPLocks = false;
+      
+      for (const stepId of stepIds) {
+        const stepPLocks = this.stepParameterLocks[stepId];
+        if (stepPLocks && Object.keys(stepPLocks).length > 0) {
+          hasAnyPLocks = true;
+          // Merge this step's p-locks into the combined preset
+          Object.assign(combinedPLocks, stepPLocks);
+        }
+      }
+      
+      if (hasAnyPLocks) {
+        console.log("applying p-locks for selected steps=", combinedPLocks);
+        this.applyPreset(combinedPLocks);
+      }
     }
   }
 
@@ -530,50 +596,63 @@ export class PresetManager {
       const node = _stateChange.node;
 
       if (this.presetNodes?.has(nodeId)) {
-        if (
-          this.slotMode &&
-          this.objectNode.attributes.patternMode &&
-          (node as ObjectNode).name === "zequencer.core"
-        ) {
-          // we are storing the pattern change directly in the slot associated with that zequencer node
-          const slotNumber = this.getZequencerScriptingNames().indexOf(
-            node.attributes["scripting name"] as string,
-          );
-          if (slotNumber > -1) {
-            const slot = this.slots[slotNumber];
-            if (slot && !slot[this.currentPattern]) {
-              slot[this.currentPattern] = {};
+        // Check if we should store this as a step-specific parameter lock
+        if (this.selectedSteps.length > 0) {
+          // Store the parameter change for each selected step
+          for (const stepId of this.selectedSteps) {
+            if (!this.stepParameterLocks[stepId]) {
+              this.stepParameterLocks[stepId] = {};
             }
-            if (slot?.[this.currentPattern]) {
-              slot[this.currentPattern][_stateChange.node.id] = _stateChange;
-            }
+            this.stepParameterLocks[stepId][_stateChange.node.id] = _stateChange;
+            console.log("storing plock=", this.stepParameterLocks);
           }
         } else {
-          if (this.slotMode) {
-            const optionalNodeSlot =
-              (node as ObjectNode).name === "attrui"
-                ? (node.attributes.slot as number | undefined)
-                : undefined;
-            if (optionalNodeSlot !== undefined && optionalNodeSlot !== "") {
-              // we need to map
-              this.staticMappedSlotNodes[node.id] = {
-                state: _stateChange,
-                slot: Number.parseInt(optionalNodeSlot),
-              };
-            } else {
-              const slot = this.slots[this.currentPreset];
+          // Normal preset behavior when no steps are selected
+          if (
+            this.slotMode &&
+            this.objectNode.attributes.patternMode &&
+            (node as ObjectNode).name === "zequencer.core"
+          ) {
+            // we are storing the pattern change directly in the slot associated with that zequencer node
+            const slotNumber = this.getZequencerScriptingNames().indexOf(
+              node.attributes["scripting name"] as string,
+            );
+            if (slotNumber > -1) {
+              const slot = this.slots[slotNumber];
+              if (slot && !slot[this.currentPattern]) {
+                slot[this.currentPattern] = {};
+              }
               if (slot?.[this.currentPattern]) {
                 slot[this.currentPattern][_stateChange.node.id] = _stateChange;
               }
             }
           } else {
-            this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
-          }
-          if (this.currentPreset !== undefined) {
-            this.handleVoiceStateChange(_stateChange, this.currentPreset);
-          }
-          if (this.buffer && this.buffer[this.currentPreset] !== 2) {
-            this.buffer[this.currentPreset] = 1;
+            if (this.slotMode) {
+              const optionalNodeSlot =
+                (node as ObjectNode).name === "attrui"
+                  ? (node.attributes.slot as number | undefined)
+                  : undefined;
+              if (optionalNodeSlot !== undefined && optionalNodeSlot !== "") {
+                // we need to map
+                this.staticMappedSlotNodes[node.id] = {
+                  state: _stateChange,
+                  slot: Number.parseInt(optionalNodeSlot),
+                };
+              } else {
+                const slot = this.slots[this.currentPreset];
+                if (slot?.[this.currentPattern]) {
+                  slot[this.currentPattern][_stateChange.node.id] = _stateChange;
+                }
+              }
+            } else {
+              this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
+            }
+            if (this.currentPreset !== undefined) {
+              this.handleVoiceStateChange(_stateChange, this.currentPreset);
+            }
+            if (this.buffer && this.buffer[this.currentPreset] !== 2) {
+              this.buffer[this.currentPreset] = 1;
+            }
           }
         }
       }

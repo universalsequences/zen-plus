@@ -87,6 +87,7 @@ export class VM {
   onNewStepSchema: OnNewStepSchema[] = [];
   newSharedBuffers: OnNewSharedBuffer[] = [];
   mutableValueChanged: MutableValueChanged[] = [];
+  selectedSteps: string[] = [];
 
   // Performance tracking
   totalInstructionsEvaluated: number = 0;
@@ -181,6 +182,20 @@ export class VM {
           }
         }
         presetManager.hydrateSerializedPresets(allNodes);
+      }
+    }
+  }
+
+  setSelectedSteps(stepIds: string[]) {
+    this.selectedSteps = stepIds;
+    // Notify all preset managers about the step selection change
+    for (const nodeId in this.nodes) {
+      const node = this.nodes[nodeId];
+      if (node) {
+        const presetManager = (node as ObjectNode).custom;
+        if (presetManager instanceof PresetManager) {
+          presetManager.setSelectedSteps(stepIds);
+        }
       }
     }
   }

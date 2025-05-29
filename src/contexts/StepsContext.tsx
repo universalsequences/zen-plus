@@ -1,6 +1,7 @@
 import { GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 import { createContext, useEffect, useCallback, useState, useContext } from "react";
 import { useSelection } from "./SelectionContext";
+import { usePatches } from "./PatchesContext";
 import { ObjectNode } from "@/lib/nodes/types";
 
 interface IStepsContext {
@@ -23,6 +24,7 @@ interface Props {
 export const StepsProvider: React.FC<Props> = ({ children }) => {
   const [selectedSteps, setSelectedSteps] = useState<GenericStepData[] | null>(null);
   const { selectedNodes } = useSelection();
+  const { patches } = usePatches();
 
   useEffect(() => {
     if (selectedNodes.every((x) => {
@@ -32,6 +34,21 @@ export const StepsProvider: React.FC<Props> = ({ children }) => {
       setSelectedSteps(null);
     }
   }, [selectedNodes]);
+
+  // Send worker message when selectedSteps changes
+  useEffect(() => {
+    const stepIds = selectedSteps?.map(step => step.id) || [];
+    // Use any available patch to send the worker message
+    const patch = Object.values(patches)[0];
+    if (patch?.sendWorkerMessage) {
+      patch.sendWorkerMessage({
+        type: "setSelectedSteps",
+        body: {
+          stepIds
+        }
+      });
+    }
+  }, [selectedSteps, patches]);
 
   return (
     <StepsContext.Provider
