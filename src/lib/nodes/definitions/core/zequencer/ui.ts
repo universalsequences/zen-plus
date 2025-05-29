@@ -47,6 +47,10 @@ export const zequencer_ui = (node: ObjectNode) => {
     node.attributes.showPatternLengthControls = false;
   }
 
+  if (node.attributes.showParametersToggle === undefined) {
+    node.attributes.showParametersToggle = false;
+  }
+
   node.isResizable = true;
   return () => {
     return [];

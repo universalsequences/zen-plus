@@ -3,7 +3,14 @@ import { Node, ObjectNode, Message, MessageNode } from "../../../types";
 import { getRootPatch } from "../../../traverse";
 import { VMEvaluation } from "@/workers/vm/VM";
 import { mergeEvaluation } from "@/workers/utils";
-import { StateChange, SerializedPreset, Preset, Slot, SlotToPreset } from "./types";
+import type {
+  StaticMappedSlotNodes,
+  StateChange,
+  SerializedPreset,
+  Preset,
+  Slot,
+  SlotToPreset,
+} from "./types";
 import { copyPreset, serializePreset } from "./utils";
 
 export class PresetManager {
@@ -28,9 +35,12 @@ export class PresetManager {
   presetNames: string[];
   lastReceivedPatternCount?: number;
   initialHydrated = false;
+  staticMappedSlotNodes: StaticMappedSlotNodes;
+  hydratedAt?: number;
 
   constructor(object: ObjectNode) {
     this.slots = [];
+    this.staticMappedSlotNodes = {};
     this.objectNode = object;
     this.voiceToPreset = new Map();
     this.counter = 0;
@@ -200,6 +210,9 @@ export class PresetManager {
   }
 
   switchToPattern(patternNumber: number) {
+    if (!this.hydrated) {
+      return;
+    }
     // switch currentPattern and apply each preset
     if (patternNumber >= 0 && patternNumber < this.getNumberOfPatterns()) {
       this.currentPattern = patternNumber;
@@ -211,6 +224,7 @@ export class PresetManager {
         if (this.currentPreset === i) {
           this.applyPreset(slotPreset, undefined, undefined, true);
         } else {
+          // can probably get rid of this
           const zequencer = this.getZequencerScriptingNames()[i];
           this.applyPreset(slotPreset, undefined, undefined, true, zequencer);
         }
@@ -284,11 +298,47 @@ export class PresetManager {
     time?: number,
     isPattern?: boolean,
     zequencerName?: string,
+    slotNumber?: number,
   ) {
     this.switching = true;
     let vmEvaluation: VMEvaluation | undefined;
     const scriptingNames = this.getZequencerScriptingNames();
+
+    for (const id in this.staticMappedSlotNodes) {
+      const { slot, state } = this.staticMappedSlotNodes[id];
+      const node = state.node as ObjectNode;
+      if (node.custom && voice !== undefined) {
+        for (const [voiceNumber, presetNumber] of this.voiceToPreset.entries()) {
+          if (presetNumber === slot) {
+            // then we are in the right voice + slot combo
+            // in this case
+            const currentEvaluation = node.custom.fromJSON(1, undefined, voiceNumber, time);
+            if (currentEvaluation) {
+              if (vmEvaluation) {
+                vmEvaluation = mergeEvaluation(vmEvaluation, currentEvaluation);
+              } else {
+                vmEvaluation = currentEvaluation;
+              }
+            }
+          } else {
+            // otherwise set it to zero yall
+            const currentEvaluation = node.custom.fromJSON(0, undefined, voiceNumber, time);
+            if (currentEvaluation) {
+              if (vmEvaluation) {
+                vmEvaluation = mergeEvaluation(vmEvaluation, currentEvaluation);
+              } else {
+                vmEvaluation = currentEvaluation;
+              }
+            }
+          }
+        }
+      }
+    }
+
     for (let id in preset) {
+      if (this.staticMappedSlotNodes[id]) {
+        continue;
+      }
       let { node, state } = preset[id];
 
       const scriptingName = node.attributes["scripting name"] as string;
@@ -352,18 +402,19 @@ export class PresetManager {
     }
     let slot = this.slots?.[slotNumber];
     if (slot && preset) {
-      slot[this.currentPattern] = copyPreset(preset);
+      const copied = copyPreset(preset);
+      slot[this.currentPattern] = copied;
       // store the mapping of slot -> preset
       if (!this.slotToPreset[slotNumber]) {
         this.slotToPreset[slotNumber] = [];
       }
       this.slotToPreset[slotNumber][this.currentPattern] = presetNumber;
       this.currentPreset = slotNumber;
-      this.applyPreset(preset);
+      this.applyPreset(copied);
       for (const [voice, presetNumber] of this.voiceToPreset.entries()) {
         if (presetNumber === slotNumber) {
           // then we need to apply this to voice
-          this.applyPreset(preset, voice, 0);
+          this.applyPreset(copied, voice, 0);
         }
       }
     }
@@ -395,6 +446,7 @@ export class PresetManager {
       this.currentVoicePreset = presetNumber;
       if (this.counter++ > 40) {
         // this somehow fixes "loading"
+        // TODO - fix it for real
         return;
       }
     }
@@ -411,7 +463,9 @@ export class PresetManager {
     let old = this.presets[this.currentPreset];
 
     // if we're in slot mode, we use the presets stored in slots (for the current pattern)
-    const slotPreset = this.slots?.[presetNumber]?.[this.currentPattern];
+    // in this case presetNumber is actually the slot number
+    const slotNumber = presetNumber;
+    const slotPreset = this.slots?.[slotNumber]?.[this.currentPattern];
     let preset = this.slotMode && slotPreset ? slotPreset : this.presets[presetNumber];
     if (Object.keys(old).length > 0 && Object.keys(preset).length === 0) {
       // old preset had a preset & new one is empty so lets copy it over
@@ -426,6 +480,7 @@ export class PresetManager {
       }
       this.applyPreset(preset, voice, time);
     }
+
     this.switching = false;
   }
 
@@ -452,7 +507,12 @@ export class PresetManager {
 
   listen() {
     subscribe("statechanged", (stateChange: Message) => {
-      if (this.switching) {
+      if (this.switching || !this.hydrated) {
+        return;
+      }
+      if (this.hydratedAt && new Date().getTime() - this.hydratedAt < 1000) {
+        // for some reason we get a lot of state changes right after hydration
+        // need to test whether switch a pattern causes state changes
         return;
       }
       let _stateChange = stateChange as StateChange;
@@ -468,6 +528,7 @@ export class PresetManager {
       // in the patch hierarchy
       let nodeId = _stateChange.node.id;
       const node = _stateChange.node;
+
       if (this.presetNodes?.has(nodeId)) {
         if (
           this.slotMode &&
@@ -480,15 +541,30 @@ export class PresetManager {
           );
           if (slotNumber > -1) {
             const slot = this.slots[slotNumber];
+            if (slot && !slot[this.currentPattern]) {
+              slot[this.currentPattern] = {};
+            }
             if (slot?.[this.currentPattern]) {
               slot[this.currentPattern][_stateChange.node.id] = _stateChange;
             }
           }
         } else {
           if (this.slotMode) {
-            const slot = this.slots[this.currentPreset];
-            if (slot?.[this.currentPattern]) {
-              slot[this.currentPattern][_stateChange.node.id] = _stateChange;
+            const optionalNodeSlot =
+              (node as ObjectNode).name === "attrui"
+                ? (node.attributes.slot as number | undefined)
+                : undefined;
+            if (optionalNodeSlot !== undefined && optionalNodeSlot !== "") {
+              // we need to map
+              this.staticMappedSlotNodes[node.id] = {
+                state: _stateChange,
+                slot: Number.parseInt(optionalNodeSlot),
+              };
+            } else {
+              const slot = this.slots[this.currentPreset];
+              if (slot?.[this.currentPattern]) {
+                slot[this.currentPattern][_stateChange.node.id] = _stateChange;
+              }
             }
           } else {
             this.presets[this.currentPreset][_stateChange.node.id] = _stateChange;
@@ -518,14 +594,17 @@ export class PresetManager {
       serializedSlots.push(serializedSlot);
     }
 
-    return {
-      presets: !this.hydrated ? this.serializedPresets || serializedPresets : serializedPresets,
-      slots: !this.hydrated ? this.serializedSlots || serializedSlots : serializedSlots,
+    const json = {
+      presets: !this.objectNode.patch.vm
+        ? this.serializedPresets || serializedPresets
+        : serializedPresets,
+      slots: !this.objectNode.patch.vm ? this.serializedSlots || serializedSlots : serializedSlots,
       currentPreset: this.currentPreset,
       presetNames: this.presetNames,
       slotToPreset: this.slotToPreset,
       currentPattern: this.currentPattern,
     };
+    return json;
   }
 
   fromJSON(json: any, force?: boolean) {
@@ -566,9 +645,8 @@ export class PresetManager {
 
   // ensures each preset contains a reference to the nodes it applies to
   hydrateSerializedPresets(allNodes: Node[]) {
-    console.log("HYDRATE CALLED! ******************************", this.getNumberOfPatterns(), this);
-    if (this.initialHydrated && this.objectNode.patch.vm) {
-      console.log("skipping hydration");
+    if (this.initialHydrated) {
+      this.hydrated = true;
       return;
     }
     const scriptingNames = this.getZequencerScriptingNames();
@@ -630,8 +708,14 @@ export class PresetManager {
     }
     this.hydrated = true;
     this.initialHydrated = true;
-    this.objectNode.updateWorkerState();
+
+    this.normalize();
+
+    if (!this.objectNode.patch.vm && this.objectNode.attributes.patternMode) {
+      this.switchToPattern(this.currentPattern || 0);
+    }
     this.updateUI();
+    this.hydratedAt = new Date().getTime();
   }
 
   deletePreset(presetNumber: number) {
@@ -654,4 +738,69 @@ export class PresetManager {
   }
 
   execute() {}
+
+  getAllNodeIdsControlledByPresets() {
+    const ids = new Set<string>();
+    for (const preset of this.presets) {
+      for (const id in preset) ids.add(id);
+    }
+    for (const slot of this.slots) {
+      for (const pattern of slot) {
+        for (const id in pattern) {
+          ids.add(id);
+        }
+      }
+    }
+    return ids;
+  }
+
+  getAllStateChangesForNodeId(nodeId: string) {
+    const stateChanges: StateChange[] = [];
+    for (const preset of this.presets) {
+      if (preset[nodeId]) stateChanges.push(preset[nodeId]);
+    }
+    for (const slot of this.slots) {
+      for (const pattern of slot) {
+        if (!pattern) continue;
+        if (pattern[nodeId]) {
+          stateChanges.push(pattern[nodeId]);
+        }
+      }
+    }
+    return stateChanges;
+  }
+
+  // normalizes the presets and slots such that they all have the same # of parameters that they control
+  // this keeps preset state from getting out of wack where one preset controls more parameters than an other
+  // and switching becomes not expected as certain parameters state drifts
+  normalize() {
+    const allNodeIds = [...this.getAllNodeIdsControlledByPresets()];
+    for (const preset of this.presets) {
+      for (const id of allNodeIds) {
+        if (!preset[id]) {
+          // missing from this preset
+          const stateChanges = this.getAllStateChangesForNodeId(id);
+          if (stateChanges[0]) {
+            preset[id] = { ...stateChanges[0] };
+          }
+        }
+      }
+    }
+    for (const slot of this.slots) {
+      for (let i = 0; i < slot.length; i++) {
+        if (!slot[i]) {
+          slot[i] = {};
+        }
+        const pattern = slot[i];
+        for (const id of allNodeIds) {
+          if (!pattern[id]) {
+            const stateChanges = this.getAllStateChangesForNodeId(id);
+            if (stateChanges[0]) {
+              pattern[id] = { ...stateChanges[0] };
+            }
+          }
+        }
+      }
+    }
+  }
 }

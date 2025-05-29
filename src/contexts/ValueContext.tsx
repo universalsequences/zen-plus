@@ -32,18 +32,22 @@ export const ValueProvider: React.FC<Props> = ({ node, children }) => {
   const { presentationMode } = usePosition();
 
   useEffect(() => {
-    if (value !== null) node.lastOnValue = value;
-  }, [value]);
+    if (value !== null) nodeToWatch.lastOnValue = value;
+  }, [value, nodeToWatch]);
+
+  useEffect(() => {
+    if (nodeToWatch.lastOnValue !== null) setValue(nodeToWatch.lastOnValue ?? null);
+  }, [nodeToWatch]);
 
   useEffect(() => {
     // Enhance the node to support multiple subscribers if it's an ObjectNode
-    if (nodeToWatch && 'custom' in nodeToWatch) {
+    if (nodeToWatch && "custom" in nodeToWatch) {
       enhanceNodeWithMultipleSubscribers(nodeToWatch as ObjectNode);
     }
-    
+
     // Now assign the callback - this will add to subscribers instead of replacing
     nodeToWatch.onNewValue = setValue;
-    
+
     // Keep the existing onNewValues logic for backward compatibility
     if (!nodeToWatch.onNewValues) {
       nodeToWatch.onNewValues = {};
@@ -55,7 +59,7 @@ export const ValueProvider: React.FC<Props> = ({ node, children }) => {
       if (nodeToWatch.onNewValues) {
         delete nodeToWatch.onNewValues[node.id];
       }
-      
+
       // The enhanced subscription cleanup happens automatically
       // via the _subscriberId mechanism in the proxy
     };

@@ -26,30 +26,30 @@ export function enhanceNodeWithMultipleSubscribers(node: ObjectNode) {
   }
 
   // Replace the onNewValue property with our proxy
-  Object.defineProperty(node, 'onNewValue', {
-    set: function(callback: SubscriberCallback | null) {
+  Object.defineProperty(node, "onNewValue", {
+    set: function (callback: SubscriberCallback | null) {
       if (callback) {
         // Generate unique subscriber ID
         const subscriberId = `sub_${++subscriberCounter}_${Date.now()}`;
-        
+
         // Remove old subscription if this callback was already registered
         if (callback._subscriberId) {
           subscribers.delete(callback._subscriberId);
         }
-        
+
         // Add new subscription
         callback._subscriberId = subscriberId;
         subscribers.set(subscriberId, callback);
       }
     },
-    
-    get: function() {
+
+    get: function () {
       // Return function that calls all subscribers
       return (value: any) => {
         if (subscribers.size === 0) {
           return;
         }
-        
+
         // Call all subscribers
         subscribers.forEach((callback, id) => {
           try {
@@ -62,23 +62,23 @@ export function enhanceNodeWithMultipleSubscribers(node: ObjectNode) {
         });
       };
     },
-    
+
     configurable: true,
-    enumerable: true
+    enumerable: true,
   });
 
   // Add method to manually remove subscribers (for advanced cleanup)
-  (node as any).removeOnNewValueSubscriber = function(subscriberId: string) {
+  (node as any).removeOnNewValueSubscriber = function (subscriberId: string) {
     subscribers.delete(subscriberId);
   };
 
   // Add method to get current subscriber count (for debugging)
-  (node as any).getSubscriberCount = function() {
+  (node as any).getSubscriberCount = function () {
     return subscribers.size;
   };
 
   // Add method to clear all subscribers
-  (node as any).clearAllSubscribers = function() {
+  (node as any).clearAllSubscribers = function () {
     subscribers.clear();
   };
 
@@ -90,15 +90,15 @@ export function enhanceNodeWithMultipleSubscribers(node: ObjectNode) {
  * Enhanced version of setNodeToWatch that automatically enables multiple subscribers
  */
 export function setNodeToWatchWithMultipleSubscribers(
-  targetNode: ObjectNode, 
-  callback: SubscriberCallback
+  targetNode: ObjectNode,
+  callback: SubscriberCallback,
 ) {
   // Enhance the target node if not already enhanced
   enhanceNodeWithMultipleSubscribers(targetNode);
-  
+
   // Now we can safely assign the callback
   targetNode.onNewValue = callback;
-  
+
   // Return cleanup function
   return () => {
     if (callback._subscriberId && (targetNode as any).removeOnNewValueSubscriber) {

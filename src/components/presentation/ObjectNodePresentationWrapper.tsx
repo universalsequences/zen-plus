@@ -1,13 +1,14 @@
 import { usePositionStyle } from "@/hooks/usePositionStyle";
-import { ObjectNode } from "@/lib/nodes/types";
+import type { Size, ObjectNode } from "@/lib/nodes/types";
 import { index, type NodeProps } from "../ux/index";
 import React from "react";
 import CustomSubPatchView from "../CustomSubPatchView";
 import { ValueProvider } from "@/contexts/ValueContext";
 import SlotView from "../SlotView";
 
-export const ObjectNodePresentationWrapper: React.FC<{ objectNode: ObjectNode }> = ({
+export const ObjectNodePresentationWrapper: React.FC<{ objectNode: ObjectNode; size?: Size }> = ({
   objectNode,
+  size,
 }) => {
   const style = usePositionStyle(objectNode, true);
   const _style = React.useMemo(() => {
@@ -22,8 +23,12 @@ export const ObjectNodePresentationWrapper: React.FC<{ objectNode: ObjectNode }>
         _s.height = 18;
       }
     }
+    if (objectNode.attributes.dynamicSizing) {
+      _s.width = undefined;
+      _s.height = undefined;
+    }
     return _s;
-  }, [style]);
+  }, [style, size]);
 
   let CustomComponent = (objectNode.name
     ? index[objectNode.name]

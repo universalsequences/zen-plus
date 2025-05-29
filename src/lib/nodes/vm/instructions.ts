@@ -235,7 +235,7 @@ export const compileInstructions = (nodes: Node[], patch?: Patch) => {
         if (inbound) {
           instruction.outletNumber = inbound.source.outlets.indexOf(inbound.sourceOutlet);
         } else {
-          console.log("missing outletNumber", instruction, node);
+          //console.log("missing outletNumber", instruction, node);
         }
       }
 

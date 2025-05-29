@@ -42,7 +42,7 @@ const PresetBase: React.FC<PresetBaseProps> = ({
   const [current, setCurrent] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const presetRefs = useRef<(HTMLDivElement | null)[]>([]);
-  
+
   // Drag and drop state for pattern reordering
   const [draggingPattern, setDraggingPattern] = useState<number | null>(null);
   const [dragOverPattern, setDragOverPattern] = useState<number | null>(null);
@@ -90,11 +90,12 @@ const PresetBase: React.FC<PresetBaseProps> = ({
 
   // Calculate current preset number
   const currentPresetNumber = slotMode ? slotToPreset[currentSlot]?.[currentPattern] : current;
-  
+
   // Get pattern display order (optimistic or real)
-  const patternDisplayOrder = optimisticPatternOrder.length > 0 
-    ? optimisticPatternOrder 
-    : Array.from({ length: numberOfPatterns }, (_, i) => i);
+  const patternDisplayOrder =
+    optimisticPatternOrder.length > 0
+      ? optimisticPatternOrder
+      : Array.from({ length: numberOfPatterns }, (_, i) => i);
 
   // Scroll to current preset when it changes
   useEffect(() => {
@@ -211,7 +212,11 @@ const PresetBase: React.FC<PresetBaseProps> = ({
 
   const movePatternTo = useCallback(
     (sourcePattern: number, targetPosition: number) => {
-      messageTarget.receive(messageTarget.inlets[0], ["move-pattern-to", sourcePattern, targetPosition]);
+      messageTarget.receive(messageTarget.inlets[0], [
+        "move-pattern-to",
+        sourcePattern,
+        targetPosition,
+      ]);
     },
     [messageTarget],
   );
@@ -234,53 +239,55 @@ const PresetBase: React.FC<PresetBaseProps> = ({
     [],
   );
 
-  const handlePatternDragLeave = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      // Only clear if we're leaving the entire pattern container
-      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-        setDragOverPattern(null);
-      }
-    },
-    [],
-  );
+  const handlePatternDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    // Only clear if we're leaving the entire pattern container
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverPattern(null);
+    }
+  }, []);
 
   const handlePatternDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>, targetIndex: number) => {
       e.preventDefault();
-      
-      if (draggingPattern !== null && draggingPattern !== targetIndex && 
-          targetIndex >= 0 && targetIndex < numberOfPatterns) {
+
+      if (
+        draggingPattern !== null &&
+        draggingPattern !== targetIndex &&
+        targetIndex >= 0 &&
+        targetIndex < numberOfPatterns
+      ) {
         try {
           // Calculate the actual pattern indices from the current display order
-          const currentOrder = optimisticPatternOrder.length > 0 
-            ? optimisticPatternOrder 
-            : Array.from({ length: numberOfPatterns }, (_, i) => i);
-            
+          const currentOrder =
+            optimisticPatternOrder.length > 0
+              ? optimisticPatternOrder
+              : Array.from({ length: numberOfPatterns }, (_, i) => i);
+
           const sourcePattern = draggingPattern;
           const sourceDisplayIndex = currentOrder.indexOf(sourcePattern);
-          
+
           if (sourceDisplayIndex !== -1) {
             // Create new order for optimistic update
             const newOrder = [...currentOrder];
             const [removed] = newOrder.splice(sourceDisplayIndex, 1);
             newOrder.splice(targetIndex, 0, removed);
             setOptimisticPatternOrder(newOrder);
-            
+
             // Send the command to the audio thread using original pattern indices
             movePatternTo(sourcePattern, targetIndex);
-            
+
             // Clear optimistic state after a delay to allow the real state to update
             setTimeout(() => {
               setOptimisticPatternOrder([]);
             }, 500);
           }
         } catch (error) {
-          console.error('Error during pattern reordering:', error);
+          console.error("Error during pattern reordering:", error);
           // Reset optimistic state on error
           setOptimisticPatternOrder([]);
         }
       }
-      
+
       setDraggingPattern(null);
       setDragOverPattern(null);
     },
@@ -405,18 +412,22 @@ const PresetBase: React.FC<PresetBaseProps> = ({
                   const isCurrentPattern = patternIndex === currentPattern;
                   const isDragging = draggingPattern === patternIndex;
                   const isDragTarget = dragOverPattern === displayIndex;
-                  
+
                   return (
                     <div
                       key={patternIndex}
-                      style={{ 
-                        width: cellSize, 
+                      style={{
+                        width: cellSize,
                         height: cellSize,
                         opacity: isDragging ? 0.5 : 1,
-                        transform: isDragging ? 'rotate(5deg) scale(1.05)' : 'none',
-                        borderColor: isDragTarget ? '#3b82f6' : (isCurrentPattern ? '#fff' : '#6b7280'),
-                        borderWidth: isDragTarget ? '2px' : '1px',
-                        boxShadow: isDragging ? '0 4px 8px rgba(0,0,0,0.3)' : 'none'
+                        transform: isDragging ? "rotate(5deg) scale(1.05)" : "none",
+                        borderColor: isDragTarget
+                          ? "#3b82f6"
+                          : isCurrentPattern
+                            ? "#fff"
+                            : "#6b7280",
+                        borderWidth: isDragTarget ? "2px" : "1px",
+                        boxShadow: isDragging ? "0 4px 8px rgba(0,0,0,0.3)" : "none",
                       }}
                       onClick={() => switchToPattern(patternIndex)}
                       onDragStart={(e) => handlePatternDragStart(e, patternIndex)}
@@ -425,13 +436,15 @@ const PresetBase: React.FC<PresetBaseProps> = ({
                       onDrop={(e) => handlePatternDrop(e, displayIndex)}
                       onDragEnd={handlePatternDragEnd}
                       draggable={lockedMode && numberOfPatterns > 1}
-                      title={lockedMode && numberOfPatterns > 1 ? `Drag to reorder pattern ${patternIndex + 1}` : ''}
+                      title={
+                        lockedMode && numberOfPatterns > 1
+                          ? `Drag to reorder pattern ${patternIndex + 1}`
+                          : ""
+                      }
                       className={`items-center justify-center cursor-pointer border flex m-0.5 text-white transition-all duration-150 ${
-                        isDragTarget ? 'bg-blue-900/50' : ''
-                      } ${
-                        isDragging ? 'z-10' : ''
-                      } ${
-                        lockedMode && numberOfPatterns > 1 ? 'hover:bg-zinc-800' : ''
+                        isDragTarget ? "bg-blue-900/50" : ""
+                      } ${isDragging ? "z-10" : ""} ${
+                        lockedMode && numberOfPatterns > 1 ? "hover:bg-zinc-800" : ""
                       }`}
                     >
                       <div style={{ fontSize: 8 }}>{patternIndex + 1}</div>
@@ -518,18 +531,18 @@ const PresetBase: React.FC<PresetBaseProps> = ({
               const isCurrentPattern = patternIndex === currentPattern;
               const isDragging = draggingPattern === patternIndex;
               const isDragTarget = dragOverPattern === displayIndex;
-              
+
               return (
                 <div
                   key={patternIndex}
-                  style={{ 
-                    width: cellSize, 
+                  style={{
+                    width: cellSize,
                     height: cellSize,
                     opacity: isDragging ? 0.5 : 1,
-                    transform: isDragging ? 'rotate(5deg) scale(1.05)' : 'none',
-                    borderColor: isDragTarget ? '#3b82f6' : (isCurrentPattern ? '#fff' : '#6b7280'),
-                    borderWidth: isDragTarget ? '2px' : '1px',
-                    boxShadow: isDragging ? '0 4px 8px rgba(0,0,0,0.3)' : 'none'
+                    transform: isDragging ? "rotate(5deg) scale(1.05)" : "none",
+                    borderColor: isDragTarget ? "#3b82f6" : isCurrentPattern ? "#fff" : "#6b7280",
+                    borderWidth: isDragTarget ? "2px" : "1px",
+                    boxShadow: isDragging ? "0 4px 8px rgba(0,0,0,0.3)" : "none",
                   }}
                   onClick={() => switchToPattern(patternIndex)}
                   onDragStart={(e) => handlePatternDragStart(e, patternIndex)}
@@ -538,13 +551,15 @@ const PresetBase: React.FC<PresetBaseProps> = ({
                   onDrop={(e) => handlePatternDrop(e, displayIndex)}
                   onDragEnd={handlePatternDragEnd}
                   draggable={lockedMode && numberOfPatterns > 1}
-                  title={lockedMode && numberOfPatterns > 1 ? `Drag to reorder pattern ${patternIndex + 1}` : ''}
+                  title={
+                    lockedMode && numberOfPatterns > 1
+                      ? `Drag to reorder pattern ${patternIndex + 1}`
+                      : ""
+                  }
                   className={`items-start cursor-pointer border flex m-0.5 text-white transition-all duration-150 ${
-                    isDragTarget ? 'bg-blue-900/50' : ''
-                  } ${
-                    isDragging ? 'z-10' : ''
-                  } ${
-                    lockedMode && numberOfPatterns > 1 ? 'hover:bg-zinc-800' : ''
+                    isDragTarget ? "bg-blue-900/50" : ""
+                  } ${isDragging ? "z-10" : ""} ${
+                    lockedMode && numberOfPatterns > 1 ? "hover:bg-zinc-800" : ""
                   }`}
                 >
                   <div style={{ fontSize: 8 }} className="m-auto">

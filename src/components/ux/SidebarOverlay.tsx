@@ -49,7 +49,7 @@ const SidebarOverlay: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) =>
         ${
           isSelected
             ? "bg-zinc-500 hover:bg-zinc-400 text-white"
-            : "bg-zinc-700 hover:bg-zinc-600 text-zinc-300"
+            : "bg-zinc-900 hover:bg-zinc-600 text-zinc-300"
         }
       `}
       style={{

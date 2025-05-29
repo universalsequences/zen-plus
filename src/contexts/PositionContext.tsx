@@ -159,15 +159,12 @@ export const PositionProvider: React.FC<Props> = ({ children, patch }) => {
     sizeIndexRef.current = sizeIndex;
   }, [sizeIndex]);
 
-  const [counter, setCounter] = useState(0);
   const updateSize = useCallback(
     (id: string, size: Size) => {
       let _size = { ...sizeIndexRef.current };
       _size[id] = size;
       sizeIndexRef.current = { ..._size };
-      console.log("update size called", id, size, patch);
       setSizeIndex({ ..._size });
-      setCounter((prev) => prev + 1);
     },
     [setSizeIndex],
   );

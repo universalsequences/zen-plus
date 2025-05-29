@@ -76,8 +76,6 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
   const oldConnections: AudioNode[] = [];
   const init = () => {
     const _name = name();
-    console.log("pub sub name changed=", _name);
-
     // need some sort of "publish message" when a new publish is received so it can re=look for connections
     //
 
@@ -109,8 +107,6 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
 
     if (_name) {
       const _nodes = findSends(_name as string, num() === "" ? null : (num() as number));
-      console.log("sends to find=", _nodes);
-
       for (const connection of oldConnections) {
         connection.disconnect(node.audioNode);
       }
@@ -123,7 +119,6 @@ export const receive = (node: ObjectNode, name: Lazy, num: Lazy) => {
           _node.connect(node.audioNode, num() as number);
           oldNum = num() as number;
         } else {
-          console.log("connecting node...", _node, node);
           _node.connect(node.audioNode);
           oldConnections.push(_node);
           oldNum = undefined;

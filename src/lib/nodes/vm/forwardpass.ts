@@ -158,6 +158,7 @@ const compileSourceNode = (node: Node) => {
 };
 
 export const getSourceNodesForCompilation = (patch: Patch): Node[] => {
+  console.log("getSourceNodesForCompilation=", patch.id);
   const allNodes = [...patch.getAllNodes(), ...patch.getAllMessageNodes()].filter((x) => {
     let name = (x as ObjectNode).name;
     if (name === "in" || name === "out" || (x as ObjectNode).subpatch) {

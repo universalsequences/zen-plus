@@ -512,6 +512,12 @@ const PositionedComponent: React.FC<PositionedComponentProps> = ({
       nodeStyle.top = 0;
     }
 
+    if (node.attributes.dynamicSizing) {
+      nodeStyle.width = undefined;
+      nodeStyle.height = undefined;
+      className = className.replace("h-6_5", "").replace("h-6", "");
+    }
+
     return (
       <div
         ref={ref}

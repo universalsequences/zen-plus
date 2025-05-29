@@ -12,7 +12,7 @@ import { useStepsContext } from "@/contexts/StepsContext";
 import { Cirklon } from "./Cirklon";
 import { CirklonParameters } from "./CirklonParameters";
 import { PianoRoll } from "./PianoRoll";
-import { PlusCircledIcon, MinusCircledIcon } from "@radix-ui/react-icons";
+import { PlusCircledIcon, MinusCircledIcon, MixerVerticalIcon } from "@radix-ui/react-icons";
 
 export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
   const { presentationMode, updateSize } = usePosition();
@@ -210,7 +210,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
 
         if (stepsToDelete.length > 0 || stepIdsToDelete.length > 0) {
           node.receive(node.inlets[0], {
-            stepsToDelete,
+            stepsToDelete: [],
             stepIdsToDelete,
           });
         }
@@ -305,6 +305,7 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   const [parameter, setParameter] = useState(schema?.[0]?.name);
   const showParameters = objectNode.attributes.parameters;
   const showPatternLengthControls = objectNode.attributes.showPatternLengthControls;
+  const showParametersToggleIcon = objectNode.attributes.showParametersToggle;
 
   useEffect(() => {
     setParameter(schema?.[0]?.name);
@@ -331,19 +332,23 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
   // Track previous pattern length for dynamic height calculation
   const [prevPatternLength, setPrevPatternLength] = useState<number>(0);
 
+  const [prevShowParameters, setPrevShowParameters] = useState(showParameters);
   // Dynamic height logic
   useEffect(() => {
     if (!attributes.dynamicHeight || !node?.steps) return;
 
     const currentPatternLength = node.steps.length;
-    const rowHeight = showParameters ? 60 : 40; // Approximate height per row
+    const rowHeight = showParameters ? 68 : 28; // Approximate height per row
     const pianoRollHeightValue = attributes.showPianoRoll ? pianoRollHeight : 0;
     const baseHeight = 50; // Base padding and margins
 
     if (prevPatternLength === 0) {
       // First time setting up, just track the current length
       setPrevPatternLength(currentPatternLength);
-    } else if (currentPatternLength !== prevPatternLength) {
+    } else if (
+      currentPatternLength !== prevPatternLength ||
+      showParameters !== prevShowParameters
+    ) {
       // Pattern length changed, update height
       const currentRows = Math.ceil(currentPatternLength / 16);
       const newHeight = currentRows * rowHeight + pianoRollHeightValue + baseHeight;
@@ -353,10 +358,11 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
           width: objectNode.size?.width || 200,
           height: newHeight,
         };
-        updateSize(objectNode.id, objectNode.size);
+        updateSize(objectNode.id, { ...objectNode.size });
       }
 
       setPrevPatternLength(currentPatternLength);
+      setPrevShowParameters(showParameters);
     }
   }, [
     updateSize,
@@ -368,6 +374,10 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
     prevPatternLength,
     objectNode,
   ]);
+
+  const toggleShowParameters = () => {
+    objectNode.setAttribute("parameters", objectNode.attributes.parameters ? false : true);
+  };
 
   // Handler for when a step is clicked in the piano roll
   const handlePianoRollStepClick = useCallback(
@@ -426,23 +436,37 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
           className={`flex flex-col gap-1 h-full w-full ${!showParameters ? "items-start" : ""}`}
         >
           {/* Pattern Length Controls - show at top when parameters are hidden */}
-          {!showParameters && showPatternLengthControls && (
-            <div className="flex justify-end mb-2">
-              <div className="flex gap-1">
-                <button
-                  onClick={handlePatternLengthIncrease}
-                  className="p-1 hover:bg-zinc-700 rounded"
-                  title="Double pattern length"
-                >
-                  <PlusCircledIcon className="w-4 h-4 text-white" />
-                </button>
-                <button
-                  onClick={handlePatternLengthDecrease}
-                  className="p-1 hover:bg-zinc-700 rounded"
-                  title="Halve pattern length"
-                >
-                  <MinusCircledIcon className="w-4 h-4 text-white" />
-                </button>
+          {!showParameters && (showParametersToggleIcon || showPatternLengthControls) && (
+            <div className="flex justify-end mb-2 ml-auto">
+              <div className="ml-auto flex gap-1">
+                {showPatternLengthControls && (
+                  <button
+                    onClick={handlePatternLengthIncrease}
+                    className="p-1 hover:bg-zinc-700 rounded"
+                    title="Double pattern length"
+                  >
+                    <PlusCircledIcon className="w-4 h-4 text-white" />
+                  </button>
+                )}
+                {showPatternLengthControls && (
+                  <button
+                    onClick={handlePatternLengthDecrease}
+                    className="p-1 hover:bg-zinc-700 rounded"
+                    title="Halve pattern length"
+                  >
+                    <MinusCircledIcon className="w-4 h-4 text-white" />
+                  </button>
+                )}
+                {showParametersToggleIcon && (
+                  <button
+                    onClick={toggleShowParameters}
+                    className={`p-1 ${showParameters && "bg-zinc-800"} hover:bg-zinc-700 rounded`}
+                  >
+                    <MixerVerticalIcon
+                      className={`w-4 h-4 ${showParameters ? "text-zinc-500" : "text-white"}`}
+                    />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -456,22 +480,34 @@ export const ZequencerUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }
                 parameter={parameter}
               />
               {/* Pattern Length Controls - show next to parameters when visible */}
-              {showPatternLengthControls && (
-                <div className="flex gap-1 ml-2">
-                  <button
-                    onClick={handlePatternLengthIncrease}
-                    className="p-1 hover:bg-zinc-700 rounded"
-                    title="Double pattern length"
-                  >
-                    <PlusCircledIcon className="w-4 h-4 text-white" />
-                  </button>
-                  <button
-                    onClick={handlePatternLengthDecrease}
-                    className="p-1 hover:bg-zinc-700 rounded"
-                    title="Halve pattern length"
-                  >
-                    <MinusCircledIcon className="w-4 h-4 text-white" />
-                  </button>
+              {(showPatternLengthControls || showParametersToggleIcon) && (
+                <div className="ml-auto flex gap-1 ml-2">
+                  {showPatternLengthControls && (
+                    <button
+                      onClick={handlePatternLengthIncrease}
+                      className="p-1 hover:bg-zinc-700 rounded"
+                      title="Double pattern length"
+                    >
+                      <PlusCircledIcon className="w-4 h-4 text-white" />
+                    </button>
+                  )}
+                  {showPatternLengthControls && (
+                    <button
+                      onClick={handlePatternLengthDecrease}
+                      className="p-1 hover:bg-zinc-700 rounded"
+                      title="Halve pattern length"
+                    >
+                      <MinusCircledIcon className="w-4 h-4 text-white" />
+                    </button>
+                  )}
+                  {showParametersToggleIcon && (
+                    <button
+                      onClick={toggleShowParameters}
+                      className={`p-1 ${showParameters && "bg-zinc-800"} hover:bg-zinc-700 rounded`}
+                    >
+                      <MixerVerticalIcon className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
               )}
             </div>

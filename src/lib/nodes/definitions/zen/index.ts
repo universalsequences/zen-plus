@@ -34,7 +34,6 @@ doc("out", {
 const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
   const parentNode = (_node.patch as SubPatch).parentNode;
   const patchType = (_node.patch as SubPatch).patchType;
-  console.log("patch type =", patchType);
   const isAudio = patchType === OperatorContextType.AUDIO;
   if (parentNode) {
     const outputNumber = args[0]() as number;
@@ -76,14 +75,11 @@ const out: NodeFunction = (_node: ObjectNode, ...args: Lazy[]) => {
     gain.gain.value = 1;
     _node.audioNode = gain;
 
-    console.log("creating gain for audio patch out", gain);
-
     //gain.connect(ctxt.destination);
 
     let patchAudio = (_node.patch as SubPatch).parentNode.audioNode;
     if (patchAudio) {
       let outputNumber = args[0]() as number;
-      console.log("connecting gain to patch audio at ", outputNumber - 1);
       gain.connect(patchAudio, 0, outputNumber - 1);
     }
 
@@ -278,6 +274,10 @@ const zen: NodeFunction = (node: ObjectNode, ..._args: Lazy[]) => {
 
   if (!node.attributes.ui) {
     node.attributes.ui = "canvas";
+  }
+
+  if (!node.attributes.dynamicSizing) {
+    node.attributes.dynamicSizing = false;
   }
 
   node.attributeOptions.ui = ["canvas", "stacked", "grid"];

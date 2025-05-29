@@ -21,3 +21,10 @@ export type Preset = {
 export type Slot = Preset[];
 
 export type SlotToPreset = { [slotNumber: number]: number[] };
+
+export type StaticMappedSlotNodes = {
+  [id: string]: {
+    state: StateChange;
+    slot: number;
+  };
+};

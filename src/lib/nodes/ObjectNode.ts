@@ -614,7 +614,17 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
       if (!Number.isNaN(Number.parseFloat(attributesValue)) && !attributesValue.includes(",")) {
         this.setAttribute(attributeName, Number.parseFloat(attributesValue));
       } else {
-        this.setAttribute(attributeName, attributesValue || "");
+        if (attributesValue.includes(",")) {
+          const tokens = attributesValue.split(",");
+          const numbers = tokens.map((x) => Number.parseFloat(x));
+          if (!numbers.some(Number.isNaN)) {
+            this.setAttribute(attributeName, numbers);
+          } else {
+            this.setAttribute(attributeName, tokens);
+          }
+        } else {
+          this.setAttribute(attributeName, attributesValue || "");
+        }
       }
       return true;
     }
@@ -867,12 +877,10 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   }
 
   updateSize(size: Size) {
-    console.log("update size called", this);
     // any hooks
     this.size = { ...size };
     const root = getRootPatch(this.patch);
     if (root.onUpdateSize) {
-      console.log("on update size exists so calling");
       root.onUpdateSize(this.id, this.size);
     }
 
