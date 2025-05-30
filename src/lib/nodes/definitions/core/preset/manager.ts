@@ -22,6 +22,7 @@ export class PresetManager {
   presets: Preset[];
   serializedPresets?: SerializedPreset[];
   serializedSlots?: SerializedPreset[][];
+  serializedStepParameterLocks?: { [stepId: string]: SerializedPreset };
   currentPreset: number;
   value: Message;
   switching = false;
@@ -40,6 +41,7 @@ export class PresetManager {
   selectedSteps: string[] = [];
   stepParameterLocks: { [stepId: string]: Preset } = {};
   preStepSelectionState?: { pattern: number; slot: number } = undefined;
+  currentVoicePLocks: Map<number, { stepId: string; pLocks: Preset }> = new Map();
 
   constructor(object: ObjectNode) {
     this.slots = [];
@@ -252,27 +254,23 @@ export class PresetManager {
   }
 
   setSelectedSteps(stepIds: string[]) {
-    console.log("set selected steps=", stepIds);
-    
     const hadPreviousSelection = this.selectedSteps.length > 0;
     const hasNewSelection = stepIds.length > 0;
-    
+
     // If we're starting a new selection (from no selection) store current state
     if (!hadPreviousSelection && hasNewSelection) {
       this.preStepSelectionState = {
         pattern: this.currentPattern,
-        slot: this.slotMode ? this.currentPreset : this.currentPreset
+        slot: this.slotMode ? this.currentPreset : this.currentPreset,
       };
-      console.log("stored pre-step selection state=", this.preStepSelectionState);
     }
-    
+
     // If we had a previous selection or stored state, restore the original preset first
     if ((hadPreviousSelection || this.preStepSelectionState) && this.preStepSelectionState) {
-      console.log("restoring preset from pre-step selection state=", this.preStepSelectionState);
-      
       if (this.slotMode) {
         // In slot mode, apply the preset from the stored slot and pattern
-        const slotPreset = this.slots?.[this.preStepSelectionState.slot]?.[this.preStepSelectionState.pattern];
+        const slotPreset =
+          this.slots?.[this.preStepSelectionState.slot]?.[this.preStepSelectionState.pattern];
         if (slotPreset) {
           this.applyPreset(slotPreset);
         }
@@ -283,21 +281,21 @@ export class PresetManager {
           this.applyPreset(preset);
         }
       }
-      
+
       // Only clear the stored state if we're going to no selection
       if (!hasNewSelection) {
         this.preStepSelectionState = undefined;
       }
     }
-    
+
     this.selectedSteps = stepIds;
-    
+
     // If we have new selection, check if any of the selected steps have p-locks and apply them
     if (hasNewSelection) {
       // Merge all p-locks from selected steps to create a combined preset
       const combinedPLocks: Preset = {};
       let hasAnyPLocks = false;
-      
+
       for (const stepId of stepIds) {
         const stepPLocks = this.stepParameterLocks[stepId];
         if (stepPLocks && Object.keys(stepPLocks).length > 0) {
@@ -306,9 +304,8 @@ export class PresetManager {
           Object.assign(combinedPLocks, stepPLocks);
         }
       }
-      
+
       if (hasAnyPLocks) {
-        console.log("applying p-locks for selected steps=", combinedPLocks);
         this.applyPreset(combinedPLocks);
       }
     }
@@ -365,6 +362,7 @@ export class PresetManager {
     isPattern?: boolean,
     zequencerName?: string,
     slotNumber?: number,
+    skipNodeIds?: Set<string>,
   ) {
     this.switching = true;
     let vmEvaluation: VMEvaluation | undefined;
@@ -405,6 +403,12 @@ export class PresetManager {
       if (this.staticMappedSlotNodes[id]) {
         continue;
       }
+
+      // Skip this parameter if it's in the skipNodeIds set (used for p-locks)
+      if (skipNodeIds?.has(id)) {
+        continue;
+      }
+
       let { node, state } = preset[id];
 
       const scriptingName = node.attributes["scripting name"] as string;
@@ -507,7 +511,50 @@ export class PresetManager {
     }
   }
 
-  switchToPreset(presetNumber: number, voice?: number, time?: number) {
+  switchToPreset(presetNumber: number, voice?: number, time?: number, stepId?: string) {
+    // Handle p-lock logic for voices
+    if (voice !== undefined) {
+      // Check if we need to undo previous p-locks for this voice
+      const currentPLocks = this.currentVoicePLocks.get(voice);
+      const newPLocks = stepId && this.stepParameterLocks[stepId];
+
+      if (currentPLocks) {
+        // Get the base preset to undo with
+        const slotNumber = presetNumber;
+        const slotPreset = this.slots?.[slotNumber]?.[this.currentPattern];
+        let basePreset = this.slotMode && slotPreset ? slotPreset : this.presets[presetNumber];
+
+        if (basePreset) {
+          // Only undo parameters that are NOT in the new p-locks (to avoid conflicts)
+          const undoPreset: Preset = {};
+          const newPLockNodeIds = newPLocks ? new Set(Object.keys(newPLocks)) : new Set();
+
+          for (const nodeId of Object.keys(currentPLocks.pLocks)) {
+            // Only undo this parameter if it's not going to be overridden by new p-locks
+            if (!newPLockNodeIds.has(nodeId) && basePreset[nodeId]) {
+              undoPreset[nodeId] = basePreset[nodeId];
+            }
+          }
+
+          if (Object.keys(undoPreset).length > 0) {
+            this.applyPreset(undoPreset, voice, time);
+          } else {
+          }
+        }
+
+        // Clear the current p-locks for this voice
+        this.currentVoicePLocks.delete(voice);
+      }
+
+      // Apply new p-locks if this step has them
+      if (newPLocks && Object.keys(newPLocks).length > 0) {
+        this.applyPreset(newPLocks, voice, time);
+
+        // Track these p-locks as current for this voice
+        this.currentVoicePLocks.set(voice, { stepId, pLocks: newPLocks });
+      }
+    }
+
     if (voice !== undefined && this.voiceToPreset.get(voice) === presetNumber) {
       this.currentVoicePreset = presetNumber;
       if (this.counter++ > 40) {
@@ -544,6 +591,8 @@ export class PresetManager {
       if (voice === undefined) {
         this.currentPreset = presetNumber;
       }
+
+      // Apply the main preset (p-locks are handled separately above for voices)
       this.applyPreset(preset, voice, time);
     }
 
@@ -597,14 +646,13 @@ export class PresetManager {
 
       if (this.presetNodes?.has(nodeId)) {
         // Check if we should store this as a step-specific parameter lock
-        if (this.selectedSteps.length > 0) {
+        if (this.selectedSteps.length > 0 && (node as ObjectNode).text !== "zequencer.core") {
           // Store the parameter change for each selected step
           for (const stepId of this.selectedSteps) {
             if (!this.stepParameterLocks[stepId]) {
               this.stepParameterLocks[stepId] = {};
             }
             this.stepParameterLocks[stepId][_stateChange.node.id] = _stateChange;
-            console.log("storing plock=", this.stepParameterLocks);
           }
         } else {
           // Normal preset behavior when no steps are selected
@@ -630,13 +678,13 @@ export class PresetManager {
             if (this.slotMode) {
               const optionalNodeSlot =
                 (node as ObjectNode).name === "attrui"
-                  ? (node.attributes.slot as number | undefined)
+                  ? (node.attributes.slot as number | string | undefined)
                   : undefined;
               if (optionalNodeSlot !== undefined && optionalNodeSlot !== "") {
                 // we need to map
                 this.staticMappedSlotNodes[node.id] = {
                   state: _stateChange,
-                  slot: Number.parseInt(optionalNodeSlot),
+                  slot: Number.parseInt(optionalNodeSlot as string),
                 };
               } else {
                 const slot = this.slots[this.currentPreset];
@@ -672,12 +720,19 @@ export class PresetManager {
       }
       serializedSlots.push(serializedSlot);
     }
+    const serializedStepParameterLocks: { [stepId: string]: SerializedPreset } = {};
+    for (const [stepId, preset] of Object.entries(this.stepParameterLocks)) {
+      serializedStepParameterLocks[stepId] = serializePreset(preset);
+    }
 
     const json = {
       presets: !this.objectNode.patch.vm
         ? this.serializedPresets || serializedPresets
         : serializedPresets,
       slots: !this.objectNode.patch.vm ? this.serializedSlots || serializedSlots : serializedSlots,
+      stepParameterLocks: !this.objectNode.patch.vm
+        ? this.serializedStepParameterLocks || serializedStepParameterLocks
+        : serializedStepParameterLocks,
       currentPreset: this.currentPreset,
       presetNames: this.presetNames,
       slotToPreset: this.slotToPreset,
@@ -692,6 +747,9 @@ export class PresetManager {
     }
     if (json.slots) {
       this.serializedSlots = json.slots;
+    }
+    if (json.stepParameterLocks) {
+      this.serializedStepParameterLocks = json.stepParameterLocks;
     }
     if (json.currentPattern) {
       this.currentPattern = json.currentPattern;
@@ -782,6 +840,26 @@ export class PresetManager {
         }
       }
     }
+    if (this.serializedStepParameterLocks) {
+      for (const [stepId, serializedPreset] of Object.entries(this.serializedStepParameterLocks)) {
+        for (const id in serializedPreset) {
+          let { state } = serializedPreset[id];
+          let node = allNodes.find((x) => x.id === id);
+          if (node) {
+            if (scriptingNames.includes(node.attributes["scripting name"] as string)) {
+              continue;
+            }
+            if (!this.stepParameterLocks[stepId]) {
+              this.stepParameterLocks[stepId] = {};
+            }
+            this.stepParameterLocks[stepId][id] = {
+              node,
+              state,
+            };
+          }
+        }
+      }
+    }
     if (this.lastReceivedPatternCount !== undefined) {
       this.setPatternCount(this.lastReceivedPatternCount);
     }
@@ -790,11 +868,12 @@ export class PresetManager {
 
     this.normalize();
 
-    if (!this.objectNode.patch.vm && this.objectNode.attributes.patternMode) {
+    this.hydratedAt = new Date().getTime();
+    if (this.objectNode.patch.vm && this.objectNode.attributes.patternMode) {
+      // if we're in the VM switch to current pattern at end of hydration
       this.switchToPattern(this.currentPattern || 0);
     }
     this.updateUI();
-    this.hydratedAt = new Date().getTime();
   }
 
   deletePreset(presetNumber: number) {

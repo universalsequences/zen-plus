@@ -63,7 +63,7 @@ export const SidebarOverlay = () => {
       {isVisible && (
         <div
           ref={overlayRef}
-          className="fixed select-none right-0 top-1/2 transform -translate-y-1/2 bg-zinc-900/95 border border-zinc-700 rounded-l-lg shadow-2xl z-[9999999999] backdrop-blur-sm p-3"
+          className="fixed select-none right-0 top-1/2 transform -translate-y-1/2 bg-zinc-900/95 border border-zinc-700 rounded-l-lg shadow-2xl z-[9999999999] backdrop-blur-sm p-1"
         >
           <NodePatchWrapper objectNode={currentSidebarObject} />
         </div>

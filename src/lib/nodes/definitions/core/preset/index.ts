@@ -139,8 +139,8 @@ export const preset = (object: ObjectNode) => {
       } else if (typeof msg === "object" && "voice" in msg && "preset" in msg && "time" in msg) {
         // this handles case where the preset object recevies a "step trigger" from the "zequencer" node, containing a "preset" and "voice number"
         // we need to tell the manager to switch to that preset
-        const { voice, preset, time } = msg;
-        mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number);
+        const { voice, preset, time, id } = msg;
+        mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number, id as string);
       }
       return [undefined, mgmt.currentPattern, mgmt.getNumberOfPatterns()];
     }

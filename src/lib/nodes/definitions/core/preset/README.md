@@ -347,3 +347,286 @@ Tests are designed to be:
 - **Reliable**: No flaky tests or race conditions
 - **Comprehensive**: High coverage of critical paths
 - **Maintainable**: Clear test structure and helper functions
+
+## Parameter Locks (P-Locks)
+
+Parameter locks (p-locks) are step-specific parameter overrides that work similarly to Elektron devices. They allow individual sequencer steps to have different parameter values that temporarily override the main preset.
+
+### Overview
+
+P-locks provide per-step parameter control, enabling complex parameter automation without requiring separate automation tracks. When a step with p-locks triggers, those parameter values override the main preset only for that step.
+
+### Core Components
+
+- **stepParameterLocks**: Map of step IDs to preset objects containing step-specific parameter overrides
+- **currentVoicePLocks**: Per-voice tracking of currently active p-locks for proper cleanup
+- **selectedSteps**: Array of currently selected step IDs for p-lock editing
+- **preStepSelectionState**: Stored preset state to restore when step selection changes
+
+### P-Lock Workflow
+
+#### 1. Creating P-Locks (Step Selection Mode)
+
+**User selects steps in zequencer UI:**
+1. StepsContext detects step selection change
+2. Sends worker message with step IDs to VM
+3. VM calls `setSelectedSteps()` on all preset managers
+4. PresetManager stores original preset state if first selection
+5. Applies existing p-locks for selected steps to UI
+
+**User edits parameters while steps selected:**
+1. Parameter change triggers `statechanged` event
+2. PresetManager checks if steps are selected
+3. If steps selected: stores change in `stepParameterLocks[stepId]` for each selected step
+4. If no steps selected: stores in normal preset system
+
+**User changes step selection:**
+1. PresetManager restores original preset first (undoes previous step p-locks)
+2. Applies p-locks for newly selected steps (if any exist)
+3. Updates UI to show current p-lock values
+
+**User deselects all steps:**
+1. PresetManager restores original preset
+2. Clears stored selection state
+3. UI returns to base preset values
+
+#### 2. Playing P-Locks (Performance Mode)
+
+**Step triggers during playback:**
+1. Zequencer sends message: `{voice: number, preset: number, time: number, id: stepId}`
+2. PresetManager calls `switchToPreset(presetNumber, voice, time, stepId)`
+3. P-lock processing occurs before main preset application
+
+**P-lock application logic:**
+1. **Check previous p-locks**: If voice has active p-locks, prepare to undo them
+2. **Calculate diff**: Identify which parameters need undoing vs. which will be overridden
+3. **Selective undo**: Apply base preset values only for parameters not in new p-locks
+4. **Apply new p-locks**: Apply step-specific parameter overrides
+5. **Track state**: Store current p-locks in `currentVoicePLocks[voice]`
+6. **Apply main preset**: Apply main preset normally
+
+### P-Lock Cases and Behaviors
+
+#### Case 1: Basic P-Lock Application
+```
+Base preset: frequency=440Hz, cutoff=1000Hz, resonance=0.5
+Step 2 p-locks: frequency=880Hz
+Result: frequency=880Hz, cutoff=1000Hz, resonance=0.5
+```
+
+#### Case 2: Multiple Parameter P-Locks
+```
+Base preset: frequency=440Hz, cutoff=1000Hz, resonance=0.5
+Step 3 p-locks: frequency=660Hz, cutoff=2000Hz
+Result: frequency=660Hz, cutoff=2000Hz, resonance=0.5
+```
+
+#### Case 3: P-Lock to No P-Lock (Undo)
+```
+Step 1: No p-locks → Apply base preset
+Step 2: frequency=880Hz, cutoff=2000Hz → Apply p-locks
+Step 3: No p-locks → Undo p-locks, restore frequency=440Hz, cutoff=1000Hz
+```
+
+#### Case 4: P-Lock to Different P-Lock (Transition)
+```
+Step 1: frequency=880Hz, cutoff=2000Hz → Apply p-locks A
+Step 2: frequency=660Hz, resonance=0.8 → Undo cutoff only, apply frequency+resonance
+Result: frequency=660Hz, cutoff=1000Hz (base), resonance=0.8
+```
+
+#### Case 5: P-Lock to P-Lock with Shared Parameters
+```
+Step 1: frequency=880Hz, cutoff=2000Hz → Apply p-locks A
+Step 2: frequency=1200Hz, cutoff=1500Hz → Update frequency+cutoff, no undo needed
+Result: frequency=1200Hz, cutoff=1500Hz, resonance=0.5 (base)
+```
+
+#### Case 6: Same Preset, Different P-Locks
+```
+Voice 0, Step 1: Preset 1 + frequency=880Hz → Apply preset + p-locks
+Voice 0, Step 2: Preset 1 + cutoff=2000Hz → Undo frequency, apply cutoff
+Result: frequency=440Hz (base), cutoff=2000Hz
+```
+
+#### Case 7: Polyphonic P-Locks
+```
+Voice 0, Step 1: Preset 1 + frequency=880Hz → Apply to voice 0
+Voice 1, Step 1: Preset 1 + frequency=660Hz → Apply to voice 1 
+Voice 0, Step 2: Preset 1 (no p-locks) → Undo p-locks from voice 0 only
+Result: Voice 0 has base preset, Voice 1 retains frequency=660Hz
+```
+
+#### Case 8: Step Selection UI Behavior
+```
+No selection: UI shows base preset values
+Select step 2 (has frequency p-lock): UI shows frequency=880Hz
+Select step 3 (has cutoff p-lock): UI restores base, then shows cutoff=2000Hz
+Select step 2 again: UI shows frequency=880Hz
+Deselect all: UI shows base preset values
+```
+
+#### Case 9: Multiple Step Selection
+```
+Select steps 2+3:
+- Step 2 has frequency=880Hz
+- Step 3 has cutoff=2000Hz
+Result: UI shows combined p-locks (frequency=880Hz, cutoff=2000Hz)
+Edit resonance=0.8: Both steps get resonance p-lock added
+```
+
+#### Case 10: Overlapping Step Selection
+```
+Select steps 2+3+4:
+- Step 2: frequency=880Hz
+- Step 3: frequency=660Hz, cutoff=2000Hz  
+- Step 4: resonance=0.8
+Result: UI shows last-wins for conflicts (frequency=660Hz from step 3)
+```
+
+### Edge Cases and Error Handling
+
+#### Edge Case 1: Missing Base Preset Parameters
+```
+Base preset: frequency=440Hz (missing cutoff)
+Step p-lock: cutoff=2000Hz
+Undo behavior: Skip undoing cutoff (no base value to restore)
+```
+
+#### Edge Case 2: Zequencer.core Parameter Changes
+```
+Zequencer objects are excluded from p-lock system
+Pattern-level changes go to normal slot/preset system
+Step-level parameter changes are filtered out
+```
+
+#### Edge Case 3: Same Step Triggered Rapidly
+```
+Voice 0, Step 2 triggers twice quickly:
+1st trigger: Apply p-locks
+2nd trigger: Previous p-locks already match, apply efficiently
+```
+
+#### Edge Case 4: Voice Allocation Changes
+```
+Voice mapping changes during playback:
+- currentVoicePLocks tracks per-voice state independently
+- Voice reassignment doesn't affect other voices' p-locks
+```
+
+### Serialization and Persistence
+
+#### JSON Structure
+```json
+{
+  "stepParameterLocks": {
+    "step_id_1": {
+      "node_id_1": {"state": value1},
+      "node_id_2": {"state": value2}
+    },
+    "step_id_2": {
+      "node_id_1": {"state": value3}
+    }
+  }
+}
+```
+
+#### Hydration Process
+1. **Load**: JSON → `serializedStepParameterLocks`
+2. **Hydrate**: Find node references, convert to live `stepParameterLocks`
+3. **Filter**: Skip zequencer objects and nodes without scripting names
+4. **Validate**: Handle missing nodes gracefully
+
+### Testing P-Locks
+
+#### Test Categories
+
+**1. Basic P-Lock Operations**
+- Create p-locks by selecting steps and editing parameters
+- Apply p-locks during step playback
+- Verify parameter values override base preset correctly
+
+**2. Step Selection UI Tests**
+- Test step selection/deselection behavior
+- Verify UI shows correct p-lock values
+- Test multiple step selection with overlapping p-locks
+
+**3. P-Lock Transition Tests**
+- No p-lock → p-lock → no p-lock sequences
+- P-lock → different p-lock transitions  
+- Shared parameter handling between consecutive p-locks
+
+**4. Polyphonic P-Lock Tests**
+- Multiple voices with different p-locks
+- Voice-specific p-lock undo behavior
+- Voice mapping changes during playback
+
+**5. Performance Mode Tests**
+- Rapid step triggering with p-locks
+- Same preset with different p-locks per step
+- Complex sequence patterns with p-locks
+
+**6. Serialization Tests**
+- Save/load projects with p-locks
+- Hydration with missing nodes
+- JSON structure validation
+
+**7. Edge Case Tests**
+- Zequencer.core parameter filtering
+- Missing base preset parameters
+- Empty p-lock handling
+- Memory cleanup and leak prevention
+
+#### Test Helpers
+
+```typescript
+// P-Lock test utilities
+class PLockTestHelper {
+  createStepPLocks(stepId: string, parameters: Record<string, any>): void
+  selectSteps(stepIds: string[]): void
+  triggerStep(stepId: string, voice: number, preset: number): void
+  assertPLockState(stepId: string, nodeId: string, expectedValue: any): void
+  assertVoiceState(voice: number, nodeId: string, expectedValue: any): void
+}
+
+// Example test
+it("should handle p-lock to different p-lock transition", () => {
+  const helper = new PLockTestHelper();
+  
+  // Set up base preset
+  helper.createBasePreset({ frequency: 440, cutoff: 1000 });
+  
+  // Create p-locks for different steps
+  helper.createStepPLocks("step1", { frequency: 880, cutoff: 2000 });
+  helper.createStepPLocks("step2", { frequency: 660, resonance: 0.8 });
+  
+  // Trigger sequence
+  helper.triggerStep("step1", 0, 1); // Apply step1 p-locks
+  helper.triggerStep("step2", 0, 1); // Transition to step2 p-locks
+  
+  // Verify only cutoff was undone, frequency updated, resonance added
+  helper.assertVoiceState(0, "frequency", 660);
+  helper.assertVoiceState(0, "cutoff", 1000); // restored to base
+  helper.assertVoiceState(0, "resonance", 0.8);
+});
+```
+
+### Implementation Notes
+
+#### Performance Considerations
+- P-locks only affect parameters that actually have locks (minimal overhead)
+- Selective undo prevents unnecessary parameter updates
+- Per-voice tracking scales efficiently with polyphonic systems
+
+#### Memory Management
+- `currentVoicePLocks` automatically cleans up when voices change
+- Serialization uses same efficient system as regular presets
+- No memory leaks from abandoned p-lock state
+
+#### Integration Points
+- StepsContext handles UI step selection
+- VM handles worker thread message passing
+- PresetManager coordinates all p-lock logic
+- Zequencer provides step trigger events with IDs
+
+This p-lock system provides professional-grade per-step parameter automation while maintaining the performance and reliability of the existing preset system.

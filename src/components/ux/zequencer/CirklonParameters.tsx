@@ -4,7 +4,7 @@ interface Props {
   schema: StepDataSchema;
   parameter: string;
   setParameter: React.Dispatch<React.SetStateAction<string>>;
-    color: string;
+  color: string;
 }
 
 export const CirklonParameters = (props: Props) => {
@@ -13,10 +13,10 @@ export const CirklonParameters = (props: Props) => {
     <div className="flex gap-2">
       {schema.map((field) => (
         <div
-style={{backgroundColor: parameter === field.name ? props.color : ""}}
+          style={{ color: parameter === field.name ? props.color : "" }}
           key={field.name}
           onClick={() => setParameter(field.name)}
-          className={`px-2 px-1 rounded-full cursor-pointer ${parameter === field.name ? "text-black" : "bg-black text-white"}`}
+          className={`px-2 px-1 rounded-full cursor-pointer ${parameter === field.name ? "bg-zinc-800" : "bg-black text-white"}`}
         >
           {field.name}
         </div>
