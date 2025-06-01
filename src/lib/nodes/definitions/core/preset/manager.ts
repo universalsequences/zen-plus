@@ -10,6 +10,13 @@ import type {
   Preset,
   Slot,
   SlotToPreset,
+  PresetOperation,
+  PLockUndoOperation,
+  PLockApplyOperation,
+  VoiceTrackingOperation,
+  PresetCopyOperation,
+  PresetApplyOperation,
+  BufferUpdateOperation,
 } from "./types";
 import { copyPreset, serializePreset } from "./utils";
 
@@ -491,9 +498,12 @@ export class PresetManager {
   }
 
   writeToMemory(slotNumber: number, saveAsNew = false) {
-    const presetNumber = saveAsNew
+    let presetNumber = saveAsNew
       ? this.presets.findIndex((x, i) => Object.keys(x).length === 0)
       : this.slotToPreset[slotNumber]?.[this.currentPattern];
+    if (presetNumber === -1) {
+      presetNumber = this.presets.length;
+    }
     const slotPreset = this.slots[slotNumber]?.[this.currentPattern];
     if (presetNumber !== undefined && slotPreset) {
       this.presets[presetNumber] = copyPreset(slotPreset);
@@ -511,7 +521,14 @@ export class PresetManager {
     }
   }
 
-  switchToPreset(presetNumber: number, voice?: number, time?: number, stepId?: string) {
+  generatePresetOperations(
+    presetNumber: number,
+    voice?: number,
+    time?: number,
+    stepId?: string,
+  ): PresetOperation[] {
+    const operations: PresetOperation[] = [];
+
     // Handle p-lock logic for voices
     if (voice !== undefined) {
       // Check if we need to undo previous p-locks for this voice
@@ -527,74 +544,246 @@ export class PresetManager {
         if (basePreset) {
           // Only undo parameters that are NOT in the new p-locks (to avoid conflicts)
           const undoPreset: Preset = {};
-          const newPLockNodeIds = newPLocks ? new Set(Object.keys(newPLocks)) : new Set();
 
           for (const nodeId of Object.keys(currentPLocks.pLocks)) {
-            // Only undo this parameter if it's not going to be overridden by new p-locks
-            if (!newPLockNodeIds.has(nodeId) && basePreset[nodeId]) {
-              undoPreset[nodeId] = basePreset[nodeId];
+            const currentPLockState = currentPLocks.pLocks[nodeId];
+            const newPLockState = newPLocks?.[nodeId];
+            const baseState = basePreset[nodeId];
+
+            if (baseState) {
+              // Create a selective undo for this node - only undo parameters that won't be overridden
+              const nodeUndoState: any = {};
+              let hasParametersToUndo = false;
+
+              // Check each parameter in the current p-lock
+              if (currentPLockState?.state && typeof currentPLockState.state === "object") {
+                for (const paramName of Object.keys(currentPLockState.state)) {
+                  // Only undo this parameter if it's not in the new p-locks
+                  const isInNewPLocks =
+                    newPLockState?.state &&
+                    typeof newPLockState.state === "object" &&
+                    newPLockState.state.hasOwnProperty(paramName);
+
+                  if (
+                    !isInNewPLocks &&
+                    baseState.state &&
+                    typeof baseState.state === "object" &&
+                    baseState.state.hasOwnProperty(paramName)
+                  ) {
+                    nodeUndoState[paramName] = baseState.state[paramName];
+                    hasParametersToUndo = true;
+                  }
+                }
+              }
+
+              if (hasParametersToUndo) {
+                undoPreset[nodeId] = {
+                  node: baseState.node,
+                  state: nodeUndoState,
+                };
+              }
             }
           }
 
           if (Object.keys(undoPreset).length > 0) {
-            this.applyPreset(undoPreset, voice, time);
-          } else {
+            operations.push({
+              type: "plock_undo",
+              voice,
+              preset: undoPreset,
+              time,
+            });
           }
         }
-
-        // Clear the current p-locks for this voice
-        this.currentVoicePLocks.delete(voice);
-      }
-
-      // Apply new p-locks if this step has them
-      if (newPLocks && Object.keys(newPLocks).length > 0) {
-        this.applyPreset(newPLocks, voice, time);
-
-        // Track these p-locks as current for this voice
-        this.currentVoicePLocks.set(voice, { stepId, pLocks: newPLocks });
       }
     }
 
+    // Voice tracking operations
+    /*
     if (voice !== undefined && this.voiceToPreset.get(voice) === presetNumber) {
-      this.currentVoicePreset = presetNumber;
       if (this.counter++ > 40) {
-        // this somehow fixes "loading"
-        // TODO - fix it for real
-        return;
+        // Early return if counter limit reached
+        return operations;
       }
     }
+    */
+
+    // Buffer update operations for main thread (not voice-specific)
     const oldPreset = this.currentPreset;
     if (oldPreset !== undefined && this.buffer && voice === undefined) {
-      const hadPresets = Object.keys(this.presets[oldPreset]).length > 0;
-      this.buffer[oldPreset] = hadPresets ? 1 : 0;
-      this.buffer[presetNumber] = 2;
+      operations.push({
+        type: "buffer_update",
+        oldPresetNumber: oldPreset,
+        newPresetNumber: presetNumber,
+      });
     }
-    if (voice !== undefined) {
-      this.currentVoicePreset = presetNumber;
-      this.voiceToPreset.set(voice, presetNumber);
-    }
-    let old = this.presets[this.currentPreset];
 
-    // if we're in slot mode, we use the presets stored in slots (for the current pattern)
-    // in this case presetNumber is actually the slot number
+    // Voice tracking operation
+    if (voice !== undefined) {
+      operations.push({
+        type: "voice_tracking",
+        voice,
+        presetNumber,
+      });
+    }
+
+    // Get the target preset (slot mode vs regular mode)
     const slotNumber = presetNumber;
     const slotPreset = this.slots?.[slotNumber]?.[this.currentPattern];
     let preset = this.slotMode && slotPreset ? slotPreset : this.presets[presetNumber];
+
+    // Handle preset copying if old has data but new is empty
+    let old = this.presets[this.currentPreset];
     if (Object.keys(old).length > 0 && Object.keys(preset).length === 0) {
-      // old preset had a preset & new one is empty so lets copy it over
-      this.presets[presetNumber] = {
-        ...old,
-      };
-      preset = this.presets[presetNumber];
+      operations.push({
+        type: "preset_copy",
+        fromPreset: old,
+        toPresetNumber: presetNumber,
+      });
+      preset = { ...old };
     }
-    if (preset) {
-      if (voice === undefined) {
-        this.currentPreset = presetNumber;
+
+    // Main preset application - exclude parameters that are p-locked
+    //if (voice !== undefined && this.voiceToPreset.get(voice) === presetNumber) {
+    if (preset && (voice === undefined || this.voiceToPreset.get(voice) !== presetNumber)) {
+      let filteredPreset = preset;
+
+      // Get current step p-locks for filtering
+      const currentStepPLocks = stepId && this.stepParameterLocks[stepId];
+
+      // If we have p-locks for this step, filter out p-locked parameters from main preset
+      if (voice !== undefined && currentStepPLocks && Object.keys(currentStepPLocks).length > 0) {
+        filteredPreset = {};
+
+        for (const nodeId in preset) {
+          const presetState = preset[nodeId];
+          const pLockState = currentStepPLocks[nodeId];
+
+          if (
+            pLockState &&
+            pLockState.state &&
+            typeof pLockState.state === "object" &&
+            presetState.state &&
+            typeof presetState.state === "object"
+          ) {
+            // Filter out p-locked parameters from this node's preset
+            const filteredState: any = {};
+            let hasNonPLockedParams = false;
+
+            for (const paramName in presetState.state) {
+              if (!pLockState.state.hasOwnProperty(paramName)) {
+                filteredState[paramName] = presetState.state[paramName];
+                hasNonPLockedParams = true;
+              }
+            }
+
+            if (hasNonPLockedParams) {
+              filteredPreset[nodeId] = {
+                node: presetState.node,
+                state: filteredState,
+              };
+            }
+          } else {
+            // No p-locks for this node, include entire preset
+            filteredPreset[nodeId] = presetState;
+          }
+        }
       }
 
-      // Apply the main preset (p-locks are handled separately above for voices)
-      this.applyPreset(preset, voice, time);
+      // Only add preset_apply if there are parameters to apply
+      if (Object.keys(filteredPreset).length > 0) {
+        operations.push({
+          type: "preset_apply",
+          preset: filteredPreset,
+          voice,
+          time,
+        });
+      }
     }
+
+    // Apply new p-locks AFTER main preset (so p-locks override preset parameters)
+    if (voice !== undefined) {
+      const newPLocks = stepId && this.stepParameterLocks[stepId];
+      if (newPLocks && Object.keys(newPLocks).length > 0) {
+        operations.push({
+          type: "plock_apply",
+          voice,
+          preset: newPLocks,
+          stepId,
+          time,
+        });
+      }
+    }
+
+    return operations;
+  }
+
+  executePresetOperations(operations: PresetOperation[], presetNumber: number, voice?: number) {
+    // Collect all node IDs that will be handled by p-locks to skip in main preset
+    const pLockNodeIds = new Set<string>();
+    for (const operation of operations) {
+      if (operation.type === "plock_apply") {
+        for (const nodeId in operation.preset) {
+          pLockNodeIds.add(nodeId);
+        }
+      }
+    }
+
+    for (const operation of operations) {
+      switch (operation.type) {
+        case "plock_undo":
+          this.applyPreset(operation.preset, operation.voice, operation.time);
+          break;
+
+        case "plock_apply":
+          this.applyPreset(operation.preset, operation.voice, operation.time);
+          // Track these p-locks as current for this voice
+          this.currentVoicePLocks.set(operation.voice, {
+            stepId: operation.stepId,
+            pLocks: operation.preset,
+          });
+          break;
+
+        case "voice_tracking":
+          this.currentVoicePreset = operation.presetNumber;
+          this.voiceToPreset.set(operation.voice, operation.presetNumber);
+          break;
+
+        case "buffer_update":
+          if (this.buffer) {
+            const hadPresets = Object.keys(this.presets[operation.oldPresetNumber]).length > 0;
+            this.buffer[operation.oldPresetNumber] = hadPresets ? 1 : 0;
+            this.buffer[operation.newPresetNumber] = 2;
+          }
+          break;
+
+        case "preset_copy":
+          this.presets[operation.toPresetNumber] = { ...operation.fromPreset };
+          break;
+
+        case "preset_apply":
+          if (voice === undefined) {
+            this.currentPreset = presetNumber;
+          }
+          // Skip nodes that will be handled by p-locks to avoid undefined behavior
+          this.applyPreset(
+            operation.preset,
+            operation.voice,
+            operation.time,
+            false,
+            undefined,
+            undefined,
+            pLockNodeIds,
+          );
+          break;
+      }
+    }
+  }
+
+  switchToPreset(presetNumber: number, voice?: number, time?: number, stepId?: string) {
+    // Generate and execute the operations
+    // (we need currentVoicePLocks intact to generate undo operations)
+    const operations = this.generatePresetOperations(presetNumber, voice, time, stepId);
+    this.executePresetOperations(operations, presetNumber, voice);
 
     this.switching = false;
   }
@@ -934,6 +1123,10 @@ export class PresetManager {
   normalize() {
     const allNodeIds = [...this.getAllNodeIdsControlledByPresets()];
     for (const preset of this.presets) {
+      if (Object.keys(preset).length === 0) {
+        // skip empty presets
+        continue;
+      }
       for (const id of allNodeIds) {
         if (!preset[id]) {
           // missing from this preset

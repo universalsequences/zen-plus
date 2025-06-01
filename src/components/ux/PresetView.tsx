@@ -42,9 +42,10 @@ const PresetViewUI: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
       setTargetPresetNode(targetNode);
       setNodeToWatch(targetNode);
     }
-  }, [presetScriptingName, setNodeToWatch]);
+  }, [presetScriptingName]);
 
   return React.useMemo(() => {
+    console.log("value changed=", value);
     // If we don't have a target preset manager, show an error message
     if (!targetPresetManager || !targetPresetNode) {
       return (

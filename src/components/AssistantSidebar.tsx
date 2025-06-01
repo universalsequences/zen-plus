@@ -1,8 +1,8 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useState } from "react";
 import { MagicWandIcon } from "@radix-ui/react-icons";
 import Assistant from "./Assistant";
 
-const Sidebar = () => {
+export const AssistantSidebar = () => {
   const [opened, setOpened] = useState(false);
 
   return (
@@ -30,5 +30,3 @@ const Sidebar = () => {
     </div>
   );
 };
-
-export default Sidebar;

@@ -5,6 +5,7 @@ import {
   Preset,
   SlotToPreset,
   copyPreset,
+  PresetOperation,
 } from "@/lib/nodes/definitions/core/preset/index";
 import { MockObjectNode } from "./mocks/MockObjectNode";
 import { MockPatch } from "./mocks/MockPatch";
@@ -41,10 +42,55 @@ const createStateChange = (node: Node, state: any): StateChange => ({
   state,
 });
 
+// Mock synth state machine to track actual parameter values per voice
+class MockSynthState {
+  private voiceParams: Map<number, Record<string, any>> = new Map();
+  private parameterUpdateLog: Array<{voice: number | undefined, nodeId: string, params: Record<string, any>, time?: number}> = [];
+
+  updateParameters(voice: number | undefined, nodeId: string, params: Record<string, any>, time?: number) {
+    // Log all parameter updates for debugging
+    this.parameterUpdateLog.push({ voice, nodeId, params, time });
+
+    // If voice is undefined, update all voices (main preset application)
+    if (voice === undefined) {
+      // For main preset, we need to determine which voices to update
+      // For simplicity in tests, update voice 0 if no specific voice mapping exists
+      const targetVoice = 0;
+      if (!this.voiceParams.has(targetVoice)) {
+        this.voiceParams.set(targetVoice, {});
+      }
+      Object.assign(this.voiceParams.get(targetVoice)!, params);
+    } else {
+      if (!this.voiceParams.has(voice)) {
+        this.voiceParams.set(voice, {});
+      }
+      Object.assign(this.voiceParams.get(voice)!, params);
+    }
+  }
+
+  getVoiceParameters(voice: number): Record<string, any> {
+    return { ...this.voiceParams.get(voice) } || {};
+  }
+
+  getUpdateLog() {
+    return [...this.parameterUpdateLog];
+  }
+
+  clearLog() {
+    this.parameterUpdateLog = [];
+  }
+
+  reset() {
+    this.voiceParams.clear();
+    this.parameterUpdateLog = [];
+  }
+}
+
 describe("PresetManager", () => {
   let presetManager: PresetManager;
   let mockObjectNode: ObjectNode;
   let mockPatch: MockPatch;
+  let mockSynthState: MockSynthState;
 
   beforeEach(() => {
     mockPatch = new MockPatch();
@@ -58,7 +104,21 @@ describe("PresetManager", () => {
     mockObjectNode.updateWorkerState = mock(() => {});
     mockObjectNode.onNewValue = mock(() => {});
 
+    mockSynthState = new MockSynthState();
     presetManager = new PresetManager(mockObjectNode);
+    
+    // Mock applyPreset to update our mock synth state
+    const originalApplyPreset = presetManager.applyPreset.bind(presetManager);
+    presetManager.applyPreset = mock((preset: Preset, voice?: number, time?: number) => {
+      // Call original method for side effects (like setting switching flag)
+      originalApplyPreset(preset, voice, time);
+      
+      // Update our mock synth state
+      for (const nodeId in preset) {
+        const { state } = preset[nodeId];
+        mockSynthState.updateParameters(voice, nodeId, state, time);
+      }
+    });
   });
 
   describe("Basic Preset Operations", () => {
@@ -72,6 +132,12 @@ describe("PresetManager", () => {
 
     it("should switch to preset correctly", () => {
       const targetPreset = 5;
+      // Set up a preset so it's not empty
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[targetPreset] = {
+        node1: createStateChange(node1, { frequency: 440 }),
+      };
+      
       presetManager.switchToPreset(targetPreset);
       expect(presetManager.currentPreset).toBe(targetPreset);
     });
@@ -757,6 +823,439 @@ describe("PresetManager", () => {
 
       const end = performance.now();
       expect(end - start).toBeLessThan(100); // Should be fast
+    });
+  });
+
+  describe("Operation Generation (generatePresetOperations)", () => {
+    it("should generate basic preset apply operation", () => {
+      // Set up a basic preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[5] = {
+        node1: createStateChange(node1, { frequency: 440 }),
+      };
+
+      const operations = presetManager.generatePresetOperations(5);
+
+      expect(operations).toHaveLength(1); // preset_apply (no buffer since buffer not initialized)
+      expect(operations[0].type).toBe("preset_apply");
+      expect((operations[0] as any).preset.node1.state.frequency).toBe(440);
+    });
+
+    it("should generate p-lock operations for voice with stepId", () => {
+      // Set up base preset and p-locks
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[3] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000 }),
+      };
+      presetManager.stepParameterLocks["step_123"] = {
+        node1: createStateChange(node1, { frequency: 880 }),
+      };
+
+      const operations = presetManager.generatePresetOperations(3, 0, 1000, "step_123");
+
+      // Should have: plock_apply, voice_tracking, preset_apply
+      expect(operations).toHaveLength(3);
+      expect(operations[0].type).toBe("plock_apply");
+      expect(operations[1].type).toBe("voice_tracking");
+      expect(operations[2].type).toBe("preset_apply");
+
+      const plockOp = operations[0] as any;
+      expect(plockOp.voice).toBe(0);
+      expect(plockOp.stepId).toBe("step_123");
+      expect(plockOp.preset.node1.state.frequency).toBe(880);
+    });
+
+    it("should generate p-lock undo operations when switching from step with p-locks", () => {
+      // Set up current p-locks for voice (different node than new p-locks)
+      const node1 = createMockNodeWithState("node1", "attrui");
+      const node2 = createMockNodeWithState("node2", "attrui");
+      presetManager.presets[2] = {
+        node1: createStateChange(node1, { frequency: 440, resonance: 0.5 }),
+        node2: createStateChange(node2, { cutoff: 1000 }),
+      };
+
+      const currentPLocks = {
+        node1: createStateChange(node1, { frequency: 880, resonance: 0.8 }),
+      };
+      presetManager.currentVoicePLocks.set(0, {
+        stepId: "old_step",
+        pLocks: currentPLocks,
+      });
+
+      // New step has different p-locks on different node
+      presetManager.stepParameterLocks["new_step"] = {
+        node2: createStateChange(node2, { cutoff: 2000 }),
+      };
+
+      const operations = presetManager.generatePresetOperations(2, 0, 1000, "new_step");
+
+      // Should have: plock_undo (for node1), plock_apply (for node2), voice_tracking, preset_apply
+      expect(operations).toHaveLength(4);
+      expect(operations[0].type).toBe("plock_undo");
+      expect(operations[1].type).toBe("plock_apply");
+
+      const undoOp = operations[0] as any;
+      // Should undo node1 (not in new p-locks) but not node2 (in new p-locks)
+      expect(undoOp.preset.node1.state.frequency).toBe(440);
+      expect(undoOp.preset.node1.state.resonance).toBe(0.5);
+      expect(undoOp.preset.node2).toBeUndefined();
+
+      const applyOp = operations[1] as any;
+      expect(applyOp.preset.node2.state.cutoff).toBe(2000);
+    });
+
+    it("should generate preset copy operation when old preset has data but new is empty", () => {
+      // Set up current preset with data
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.currentPreset = 1;
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440 }),
+      };
+      presetManager.presets[7] = {}; // Empty target preset
+
+      const operations = presetManager.generatePresetOperations(7);
+
+      expect(operations).toHaveLength(2); // preset_copy + preset_apply (no buffer)
+      expect(operations[0].type).toBe("preset_copy");
+      expect((operations[0] as any).toPresetNumber).toBe(7);
+      expect((operations[0] as any).fromPreset.node1.state.frequency).toBe(440);
+    });
+
+    it("should handle slot mode correctly", () => {
+      presetManager.slotMode = true;
+      mockObjectNode.attributes.slotMode = true;
+
+      // Set up slot preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.slots[2] = [{
+        node1: createStateChange(node1, { frequency: 660 }),
+      }];
+
+      const operations = presetManager.generatePresetOperations(2);
+
+      expect(operations).toHaveLength(1); // preset_apply (no buffer)
+      const applyOp = operations[0] as any;
+      expect(applyOp.preset.node1.state.frequency).toBe(660);
+    });
+
+    it("should handle early return for voice counter limit", () => {
+      presetManager.voiceToPreset.set(5, 3);
+      presetManager.counter = 45; // Above the 40 limit
+
+      const operations = presetManager.generatePresetOperations(3, 5);
+
+      // Should return early with no operations due to counter limit
+      expect(operations).toHaveLength(0);
+    });
+
+    it("should handle complex 3-step p-lock transition scenario", () => {
+      // Set up base preset with 3 parameters
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000, resonance: 0.5 }),
+      };
+
+      // Step 1: No p-locks (uses base preset)
+      // Step 2: P-locks with frequency=880, cutoff=2000 (both exist in base preset)
+      presetManager.stepParameterLocks["step_2"] = {
+        node1: createStateChange(node1, { frequency: 880, cutoff: 2000 }),
+      };
+      
+      // Step 3: P-locks with frequency=660, resonance=0.8 
+      // - frequency also exists in step 2 (should replace it)
+      // - resonance doesn't exist in step 2 (so cutoff from step 2 should be undone)
+      presetManager.stepParameterLocks["step_3"] = {
+        node1: createStateChange(node1, { frequency: 660, resonance: 0.8 }),
+      };
+
+      // Simulate step 1 → step 2 transition
+      let operations = presetManager.generatePresetOperations(1, 0, 1000, "step_2");
+      expect(operations).toHaveLength(3); // plock_apply, voice_tracking, preset_apply
+      expect(operations[0].type).toBe("plock_apply");
+
+      // Set up current voice p-locks as if step 2 was just applied
+      presetManager.currentVoicePLocks.set(0, {
+        stepId: "step_2",
+        pLocks: presetManager.stepParameterLocks["step_2"],
+      });
+
+      // Now test step 2 → step 3 transition
+      operations = presetManager.generatePresetOperations(1, 0, 1000, "step_3");
+      
+      expect(operations).toHaveLength(4); // plock_undo, plock_apply, voice_tracking, preset_apply
+      expect(operations[0].type).toBe("plock_undo");
+      expect(operations[1].type).toBe("plock_apply");
+
+      const undoOp = operations[0] as any;
+      const applyOp = operations[1] as any;
+
+      // Undo operation should restore cutoff to base value (since it's not in step_3)
+      // but NOT frequency (since frequency will be overridden by step_3 p-lock)
+      expect(undoOp.preset.node1.state.cutoff).toBe(1000); // restored to base
+      expect(undoOp.preset.node1.state.frequency).toBeUndefined(); // not undone (will be overridden)
+      expect(undoOp.preset.node1.state.resonance).toBeUndefined(); // not in step_2, so nothing to undo
+
+      // Apply operation should set the new p-locks for step_3
+      expect(applyOp.preset.node1.state.frequency).toBe(660); // new value
+      expect(applyOp.preset.node1.state.resonance).toBe(0.8); // new parameter
+      expect(applyOp.preset.node1.state.cutoff).toBeUndefined(); // not in step_3
+    });
+
+    it("should undo all p-locks when transitioning to step with no p-locks", () => {
+      // Set up base preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000, resonance: 0.5 }),
+      };
+
+      // Step 4 has p-locks
+      presetManager.stepParameterLocks["step_4"] = {
+        node1: createStateChange(node1, { frequency: 880, cutoff: 2000 }),
+      };
+
+      // Simulate that step 4 was just applied (has current p-locks)
+      presetManager.currentVoicePLocks.set(0, {
+        stepId: "step_4",
+        pLocks: presetManager.stepParameterLocks["step_4"],
+      });
+
+      // Step 1 has NO p-locks (stepId provided but no entry in stepParameterLocks)
+      // This simulates going from step 4 back to step 1 in a loop
+      const operations = presetManager.generatePresetOperations(1, 0, 1000, "step_1");
+
+      // Should have: plock_undo (for all parameters), voice_tracking, preset_apply
+      expect(operations).toHaveLength(3);
+      expect(operations[0].type).toBe("plock_undo");
+      expect(operations[1].type).toBe("voice_tracking");
+      expect(operations[2].type).toBe("preset_apply");
+
+      const undoOp = operations[0] as any;
+
+      // Should undo ALL p-locked parameters back to base values
+      expect(undoOp.preset.node1.state.frequency).toBe(440); // back to base
+      expect(undoOp.preset.node1.state.cutoff).toBe(1000); // back to base
+      expect(undoOp.preset.node1.state.resonance).toBeUndefined(); // wasn't p-locked, so not in undo
+    });
+
+    it("should handle 4-step loop scenario with p-locks", () => {
+      // Set up base preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000, resonance: 0.5 }),
+      };
+
+      // Step 3 and 4 have p-locks, step 1 and 2 don't
+      presetManager.stepParameterLocks["step_3"] = {
+        node1: createStateChange(node1, { frequency: 660, cutoff: 1500 }),
+      };
+      presetManager.stepParameterLocks["step_4"] = {
+        node1: createStateChange(node1, { frequency: 880, resonance: 0.8 }),
+      };
+
+      // Test step 3 → step 4 transition
+      presetManager.currentVoicePLocks.set(0, {
+        stepId: "step_3",
+        pLocks: presetManager.stepParameterLocks["step_3"],
+      });
+
+      let operations = presetManager.generatePresetOperations(1, 0, 1000, "step_4");
+      expect(operations).toHaveLength(4); // undo cutoff, apply new p-locks, voice_tracking, preset_apply
+      
+      // Simulate step 4 is now active
+      presetManager.currentVoicePLocks.set(0, {
+        stepId: "step_4", 
+        pLocks: presetManager.stepParameterLocks["step_4"],
+      });
+
+      // Test step 4 → step 1 transition (back to start of loop, no p-locks)
+      operations = presetManager.generatePresetOperations(1, 0, 1000, "step_1");
+      expect(operations).toHaveLength(3); // undo all p-locks, voice_tracking, preset_apply
+
+      const undoOp = operations[0] as any;
+      // Should restore ALL p-locked parameters to base values
+      expect(undoOp.preset.node1.state.frequency).toBe(440); // restore to base
+      expect(undoOp.preset.node1.state.resonance).toBe(0.5); // restore to base
+    });
+  });
+
+  describe("State Machine Testing (Full switchToPreset execution)", () => {
+    it("should apply basic preset correctly to synth state", () => {
+      // Set up base preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[5] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000 }),
+      };
+
+      presetManager.switchToPreset(5);
+
+      // Check final synth state
+      const synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(440);
+      expect(synthParams.cutoff).toBe(1000);
+    });
+
+    it("should apply p-locks correctly for specific voice", () => {
+      // Set up base preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000, resonance: 0.5 }),
+      };
+
+      // Set up p-locks for step
+      presetManager.stepParameterLocks["step_2"] = {
+        node1: createStateChange(node1, { frequency: 880, cutoff: 2000 }),
+      };
+
+      // Apply step with p-locks
+      presetManager.switchToPreset(1, 0, 1000, "step_2");
+
+      // Check final synth state - should have p-locked values
+      const synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(880); // p-locked value
+      expect(synthParams.cutoff).toBe(2000); // p-locked value
+      expect(synthParams.resonance).toBe(0.5); // base preset value
+    });
+
+    it("CRITICAL: should undo all p-locks when transitioning to step with no p-locks", () => {
+      // Set up base preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000, resonance: 0.5 }),
+      };
+
+      // Step 4 has p-locks
+      presetManager.stepParameterLocks["step_4"] = {
+        node1: createStateChange(node1, { frequency: 880, cutoff: 2000 }),
+      };
+
+      // Apply step 4 with p-locks first
+      presetManager.switchToPreset(1, 0, 1000, "step_4");
+      
+      // Verify p-locks are applied
+      let synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(880); // p-locked
+      expect(synthParams.cutoff).toBe(2000); // p-locked
+      expect(synthParams.resonance).toBe(0.5); // base preset
+
+      mockSynthState.clearLog(); // Clear for next test
+
+      // Now transition to step 1 with NO p-locks
+      presetManager.switchToPreset(1, 0, 1000, "step_1");
+
+      // Check that ALL p-locked parameters are undone back to base values
+      synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(440); // SHOULD BE undone to base
+      expect(synthParams.cutoff).toBe(1000); // SHOULD BE undone to base  
+      expect(synthParams.resonance).toBe(0.5); // unchanged (wasn't p-locked)
+
+      // Debug: show what actually happened
+      const updateLog = mockSynthState.getUpdateLog();
+      console.log("Parameter updates during step_1 transition:", updateLog);
+    });
+
+    it("should handle 4-step sequencer loop with p-locks on steps 3 and 4", () => {
+      // Set up base preset
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440, cutoff: 1000, resonance: 0.5 }),
+      };
+
+      // Step 3 and 4 have p-locks, step 1 and 2 don't
+      presetManager.stepParameterLocks["step_3"] = {
+        node1: createStateChange(node1, { frequency: 660, cutoff: 1500 }),
+      };
+      presetManager.stepParameterLocks["step_4"] = {
+        node1: createStateChange(node1, { frequency: 880, resonance: 0.8 }),
+      };
+
+      // Test full sequence: step 1 → 2 → 3 → 4 → 1 (loop back)
+      
+      // Step 1: No p-locks (base preset)
+      presetManager.switchToPreset(1, 0, 1000, "step_1");
+      let synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(440);
+      expect(synthParams.cutoff).toBe(1000);
+      expect(synthParams.resonance).toBe(0.5);
+
+      // Step 2: No p-locks (base preset)
+      presetManager.switchToPreset(1, 0, 2000, "step_2");
+      synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(440);
+      expect(synthParams.cutoff).toBe(1000);
+      expect(synthParams.resonance).toBe(0.5);
+
+      // Step 3: P-locks (frequency=660, cutoff=1500)
+      presetManager.switchToPreset(1, 0, 3000, "step_3");
+      synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(660); // p-locked
+      expect(synthParams.cutoff).toBe(1500); // p-locked
+      expect(synthParams.resonance).toBe(0.5); // base preset
+
+      // Step 4: Different p-locks (frequency=880, resonance=0.8)
+      // Should undo cutoff back to base, keep frequency p-locked, add resonance p-lock
+      presetManager.switchToPreset(1, 0, 4000, "step_4");
+      synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(880); // new p-lock value
+      expect(synthParams.cutoff).toBe(1000); // undone to base (not in step 4 p-locks)
+      expect(synthParams.resonance).toBe(0.8); // new p-lock value
+
+      mockSynthState.clearLog();
+
+      // Step 1: Loop back - NO p-locks, should undo ALL p-locks
+      presetManager.switchToPreset(1, 0, 5000, "step_1");
+      synthParams = mockSynthState.getVoiceParameters(0);
+      expect(synthParams.frequency).toBe(440); // undone to base
+      expect(synthParams.cutoff).toBe(1000); // already at base
+      expect(synthParams.resonance).toBe(0.5); // undone to base
+
+      // Debug: show what happened during the critical transition
+      const updateLog = mockSynthState.getUpdateLog();
+      console.log("Critical step 4→1 transition updates:", updateLog);
+    });
+
+    it("should detect undefined behavior when multiple operations affect same parameter", () => {
+      // This test checks for the undefined behavior case where multiple operations
+      // might try to set the same parameter for the same voice at the same time
+      
+      const node1 = createMockNodeWithState("node1", "attrui");
+      presetManager.presets[1] = {
+        node1: createStateChange(node1, { frequency: 440 }),
+      };
+
+      // Create a scenario that might cause conflicting parameter updates
+      presetManager.stepParameterLocks["step_conflict"] = {
+        node1: createStateChange(node1, { frequency: 880 }),
+      };
+
+      // Set up current p-locks that have the same parameter
+      presetManager.currentVoicePLocks.set(0, {
+        stepId: "previous_step",
+        pLocks: {
+          node1: createStateChange(node1, { frequency: 660 }),
+        },
+      });
+
+      mockSynthState.clearLog();
+
+      // This should generate: undo (frequency=440) + apply p-lock (frequency=880) + apply preset (frequency=440)
+      // The final frequency should be 440 (preset wins) since p-locks are applied before main preset
+      presetManager.switchToPreset(1, 0, 1000, "step_conflict");
+
+      const updateLog = mockSynthState.getUpdateLog();
+      console.log("Update log for conflict scenario:", updateLog);
+
+      // Count how many times frequency was updated for voice 0
+      const frequencyUpdates = updateLog.filter(update => 
+        update.voice === 0 && update.params.frequency !== undefined
+      );
+      
+      if (frequencyUpdates.length > 1) {
+        console.warn("UNDEFINED BEHAVIOR: Multiple frequency updates for same voice/time:", frequencyUpdates);
+      }
+
+      // Final state should be deterministic based on order of operations
+      const synthParams = mockSynthState.getVoiceParameters(0);
+      console.log("Final frequency after conflict:", synthParams.frequency);
     });
   });
 });

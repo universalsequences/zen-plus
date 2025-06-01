@@ -29,6 +29,7 @@ const PresetBase: React.FC<PresetBaseProps> = ({
   value,
   targetNode,
 }) => {
+  console.log("preset base called", targetNode);
   const { lockedMode } = useLocked();
   let ref = useRef<HTMLDivElement>(null);
   const { sizeIndex } = usePosition();
@@ -49,7 +50,8 @@ const PresetBase: React.FC<PresetBaseProps> = ({
   const [optimisticPatternOrder, setOptimisticPatternOrder] = useState<number[]>([]);
 
   // Extract values from the value prop
-  const presetNames = Array.isArray(value) ? (value[1] as string) : presetManager.presetNames;
+  const presetNames = Array.isArray(value) ? (value[1] as string) : presetManager.presetNames || [];
+
   const slotToPreset = Array.isArray(value) ? (value[2] as SlotToPreset) : {};
   const currentPattern = Array.isArray(value) ? (value[3] as number) : 0;
   const numberOfPatterns = Array.isArray(value) ? (value[4] as number) : 0;
@@ -362,7 +364,7 @@ const PresetBase: React.FC<PresetBaseProps> = ({
             </button>
 
             <div className="text-white font-medium truncate mx-2 flex-1 text-center">
-              {presetNames[currentPresetNumber] || `Preset ${currentPresetNumber + 1}`}
+              {presetNames?.[currentPresetNumber] || `Preset ${currentPresetNumber + 1}`}
             </div>
 
             <button

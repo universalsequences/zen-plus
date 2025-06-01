@@ -45,6 +45,7 @@ import { GlossaryDefinition } from "./docs/GlossaryDefinition";
 import { GlossaryProvider } from "@/contexts/GlossaryContext";
 import { useAudioContext } from "@/contexts/AudioContextContext";
 import GlobalKeyBindingsProvider from "./GlobalKeyBindingsProvider";
+import { AssistantProvider } from "@/contexts/AssistantContext";
 
 const { chains, publicClient } = configureChains(
   [zoraSepolia],
@@ -147,7 +148,8 @@ export default function App(props: Props) {
         <MessageProvider>
           <SelectionProvider>
             <PatchesProvider basePatch={basePatch}>
-              <WindowsProvider>
+              <AssistantProvider>
+                <WindowsProvider>
                 <SidebarProvider>
                   <GlobalKeyBindingsProvider>
                     <WorkerProvider patch={basePatch}>
@@ -161,7 +163,8 @@ export default function App(props: Props) {
                     </WorkerProvider>
                   </GlobalKeyBindingsProvider>
                 </SidebarProvider>
-              </WindowsProvider>
+                </WindowsProvider>
+              </AssistantProvider>
             </PatchesProvider>
           </SelectionProvider>
         </MessageProvider>

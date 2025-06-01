@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ArrowUpIcon } from "@radix-ui/react-icons";
 import { usePosition } from "@/contexts/PositionContext";
-import { usePatch } from "@/contexts/PatchContext";
+import { useAssistant } from "@/contexts/AssistantContext";
 
 const Assistant = () => {
-  const { patch, assist } = usePatch();
+  const { assist } = useAssistant();
 
-  const { updatePositions } = usePosition();
+  //const { updatePositions } = usePosition();
   let [showAssist, setShowAssist] = useState(true);
   let [assistText, setAssistText] = useState("");
   let [loading, setLoading] = useState(false);
@@ -93,7 +93,7 @@ const Assistant = () => {
                   for (let obj of x) {
                     positions[obj.id] = obj.position;
                   }
-                  updatePositions(positions);
+                  //updatePositions(positions);
                 });
               }}
               className="absolute bottom-8 right-3 rounded-lg bg-white text-black p-1 mr-2 cursor-pointer"
