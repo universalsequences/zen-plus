@@ -26,16 +26,16 @@ export const moveStep = (
   const moveDirection = Math.sign(moveOffset);
 
   // Create a deep copy of the steps array to work with
-  const movedSteps = steps.map(stepVoices => [...stepVoices]);
-  
+  const movedSteps = steps.map((stepVoices) => [...stepVoices]);
+
   // Collect steps to be moved and remove them from their original positions
   const stepsBeingMoved: GenericStepData[][] = [];
-  
+
   for (const stepNumber of stepsToMove) {
     if (stepNumber >= 0 && stepNumber < movedSteps.length) {
       // Store all voices for this step position
       stepsBeingMoved.push([...movedSteps[stepNumber]]);
-      
+
       // Replace with a default step (single voice)
       movedSteps[stepNumber] = [getDefaultStep(stepNumber, userDefinedSchema)];
     }
@@ -50,14 +50,14 @@ export const moveStep = (
     // Ensure we're not inserting out of bounds
     if (newStepNumber >= 0 && newStepNumber < movedSteps.length && stepVoicesToInsert) {
       // Update step numbers for all voices
-      const updatedVoices = stepVoicesToInsert.map(voice => ({
+      const updatedVoices = stepVoicesToInsert.map((voice) => ({
         ...voice,
-        stepNumber: newStepNumber
+        stepNumber: newStepNumber,
       }));
-      
+
       // Replace the voices at the target position
-      movedSteps[newStepNumber] = updatedVoices;
-      
+      movedSteps[newStepNumber] = updatedVoices as any;
+
       // Ensure the first voice has the 'on' property set to true for visibility
       if (updatedVoices.length > 0) {
         updatedVoices[0].on = true;
@@ -76,10 +76,10 @@ export const moveStep = (
     for (let i = startShift; i <= endShift; i++) {
       if (!stepsToMove.includes(i - moveOffset) && i >= 0 && i < movedSteps.length) {
         // Update step number for all voices at this position
-        movedSteps[i] = movedSteps[i].map(voice => ({
+        movedSteps[i] = movedSteps[i].map((voice) => ({
           ...voice,
-          stepNumber: i
-        }));
+          stepNumber: i,
+        })) as any;
       }
     }
   }

@@ -52,7 +52,9 @@ const compileConnection = (
 
     if (input) {
       const connections = input.outlets.flatMap((outlet) => outlet.connections);
-      const compiledInstructions = connections.flatMap((c) => compileConnection(c, patch));
+      const compiledInstructions = connections.flatMap((c) =>
+        compileConnection(c, input.outlets.indexOf(c.sourceOutlet), patch),
+      );
       for (const instruction of compiledInstructions) {
         instructions.push(instruction);
         //pushInstruction(instructions, instruction, branch, branchIndex);

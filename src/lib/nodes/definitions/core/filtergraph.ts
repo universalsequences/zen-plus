@@ -1,5 +1,5 @@
 import { publish } from "@/lib/messaging/queue";
-import { ObjectNode } from "../../ObjectNode";
+import { ObjectNode, SerializableCustom } from "../../types";
 import { Message, MessageObject } from "../../types";
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
@@ -77,7 +77,7 @@ export class FilterGraphValue extends MutableValue {
     this.updateValue();
   }
 
-  set value(x) {
+  set value(x: Message) {
     if (x === undefined) {
       return;
     }
@@ -91,7 +91,7 @@ export class FilterGraphValue extends MutableValue {
     });
 
     this._value = x;
-    this.filters = x as Filter[];
+    this.filters = x as unknown as Filter[];
 
     this.updateMainThread();
   }
@@ -110,7 +110,7 @@ export class FilterGraphValue extends MutableValue {
   execute(filters?: Filter[], voice?: number, time?: number) {
     const evaluation = this.objectNode.patch.vm?.evaluateNode(
       this.objectNode.id,
-      voice !== undefined ? { voice, filters, time } : filters,
+      (voice !== undefined ? { voice, filters, time } : filters) as unknown as Message,
     );
     if (evaluation) {
       if (voice !== undefined) return evaluation;
@@ -146,7 +146,7 @@ export class FilterGraphValue extends MutableValue {
     this.updateValue();
   }
 
-  private ensureFilterExists(index: number) {
+  ensureFilterExists(index: number) {
     while (this.filters.length <= index) {
       this.filters.push({
         type: "lowpass",
@@ -159,11 +159,11 @@ export class FilterGraphValue extends MutableValue {
 
   private updateValue() {
     // This triggers the state change notification
-    this.value = this.getAllFilters();
+    this.value = this.getAllFilters() as unknown as Message;
 
     // Notify UX component about parameter changes
     if (this.objectNode.onNewValue) {
-      this.objectNode.onNewValue(this.getAllFilters());
+      this.objectNode.onNewValue(this.getAllFilters() as unknown as Message);
     }
     this.updateMainThread(undefined, this.getAllFilters());
   }
@@ -228,14 +228,14 @@ export const filtergraph = (node: ObjectNode) => {
   let custom: FilterGraphValue;
   if (!node.custom) {
     custom = new FilterGraphValue(node);
-    node.custom = custom;
+    node.custom = custom as SerializableCustom;
 
     // Initialize required number of filters based on activeFilters attribute
     const activeFilters = Number(node.attributes["activeFilters"]) || 1;
     for (let i = 0; i < activeFilters; i++) {
       if (i > 0) {
         // First filter is already created by default
-        custom.ensureFilterExists(i);
+        (custom as FilterGraphValue).ensureFilterExists(i);
       }
     }
 
@@ -245,7 +245,7 @@ export const filtergraph = (node: ObjectNode) => {
         ...custom.getParams(),
         allFilters: custom.getAllFilters(),
         numFilters: activeFilters,
-      });
+      } as unknown as Message);
     }
   } else {
     custom = node.custom as FilterGraphValue;
@@ -253,7 +253,7 @@ export const filtergraph = (node: ObjectNode) => {
     // Ensure the number of filters matches the activeFilters attribute
     const activeFilters = Number(node.attributes["activeFilters"]) || 1;
     for (let i = 0; i < activeFilters; i++) {
-      custom.ensureFilterExists(i);
+      //(custom as FilterGraphValue).ensureFilterExists(i);
     }
   }
 
@@ -291,7 +291,7 @@ export const filtergraph = (node: ObjectNode) => {
     if (typeof msg === "object" && "voice" in msg && "filters" in msg && "time" in msg) {
       const time = msg.time as number;
       const voice = msg.voice as number;
-      const filters = msg.filters as Filter[];
+      const filters = (msg as any).filters as Filter[];
       return filters.map((filter) => ({
         ...filter,
         voice,
@@ -300,7 +300,7 @@ export const filtergraph = (node: ObjectNode) => {
     }
 
     if (Array.isArray(msg) && typeof msg[0] === "object") {
-      custom.filters = msg;
+      (custom as FilterGraphValue).filters = msg as any;
       /// note: this is being called by
       /*
       if (node.onNewValue) {
@@ -311,7 +311,11 @@ export const filtergraph = (node: ObjectNode) => {
         });
       }
       */
-      custom.updateMainThread(undefined, custom.getAllFilters(), custom.getAllFilters());
+      custom.updateMainThread(
+        undefined,
+        (custom as FilterGraphValue).getAllFilters(),
+        (custom as FilterGraphValue).getAllFilters() as any,
+      );
 
       // we are setting the entire filter
       return custom.getAllFilters();
@@ -331,14 +335,14 @@ export const filtergraph = (node: ObjectNode) => {
 
         // Ensure we have enough filters
         for (let i = 0; i < numFilters; i++) {
-          custom.ensureFilterExists(i);
+          (custom as FilterGraphValue).ensureFilterExists(i);
         }
 
         // Update UI
         if (node.onNewValue) {
           node.onNewValue({
             ...custom.getParams(),
-            allFilters: custom.getAllFilters(),
+            allFilters: custom.getAllFilters() as any,
             numFilters: numFilters,
           });
         }

@@ -1,14 +1,14 @@
 import { useLocked } from "@/contexts/LockedContext";
 import type { GenericStepData, StepDataSchema } from "@/lib/nodes/definitions/core/zequencer/types";
 import type { ObjectNode } from "@/lib/nodes/types";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, memo, useEffect } from "react";
 import { interpolateHexColors } from "../Toggle";
 import type { Selection } from "./types";
 import { usePatches } from "../../../contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "@/hooks/usePatchSelector";
 
-export const Step: React.FC<{
+const StepComponent: React.FC<{
   isMini: boolean;
   selectedSteps: GenericStepData[] | null;
   isSelected: boolean;
@@ -52,6 +52,18 @@ export const Step: React.FC<{
   const { lockedMode } = useLocked();
   const down = useRef(false);
   const { selectPatch } = usePatchSelector();
+  
+  // Add throttling to prevent excessive calls
+  const lastMouseOverTime = useRef(0);
+  const pendingTimeouts = useRef<NodeJS.Timeout[]>([]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      pendingTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      pendingTimeouts.current = [];
+    };
+  }, []);
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -110,8 +122,20 @@ export const Step: React.FC<{
     if (!lockedMode) {
       return;
     }
+    
+    // Throttle mouse over events to max 60fps (16ms)
+    const now = Date.now();
+    if (now - lastMouseOverTime.current < 16) {
+      return;
+    }
+    lastMouseOverTime.current = now;
+    
     if (stepEditingDuration !== null) {
       const duration = Math.max(1, stepNumber - stepEditingDuration + 1);
+      
+      // Clear any pending timeouts to prevent queue buildup
+      pendingTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      pendingTimeouts.current = [];
       
       // Get all steps at the editing position
       const stepVoices = node.steps?.[stepEditingDuration];
@@ -121,18 +145,12 @@ export const Step: React.FC<{
         const activeSteps = stepVoices.filter(voice => voice.on);
         
         if (activeSteps.length > 0) {
-          // If there are multiple active steps (chord), update all of them
-          // Use batch update approach - update each step one by one
-          activeSteps.forEach((activeStep, index) => {
-            // Add a small delay between operations to ensure they process in order
-            setTimeout(() => {
-              node.receive(node.inlets[0], {
-                name: "duration",
-                stepNumber: stepEditingDuration,
-                value: duration,
-                stepId: activeStep.id
-              });
-            }, index * 5); // Small 5ms staggered delay between operations
+          // Batch all operations into a single message to reduce overhead
+          node.receive(node.inlets[0], {
+            name: "duration",
+            stepNumber: stepEditingDuration,
+            value: duration,
+            stepIds: activeSteps.map(step => step.id) // Send all IDs at once
           });
         } else {
           // Fall back to editing the first voice if no active steps are found
@@ -161,8 +179,12 @@ export const Step: React.FC<{
       // Update the step being moved to the new position
       setStepNumberMoving(stepNumber);
 
-      // Give a longer delay to allow the move operation to complete and state to return from worker thread
-      setTimeout(() => {
+      // Clear any existing timeouts to prevent queue buildup
+      pendingTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      pendingTimeouts.current = [];
+
+      // Use a single timeout with proper cleanup
+      const timeout = setTimeout(() => {
         // Get the step at the new position after the move operation
         const updatedSteps = node.steps;
         if (updatedSteps && updatedSteps[stepNumber] && updatedSteps[stepNumber].length > 0) {
@@ -171,8 +193,11 @@ export const Step: React.FC<{
             setSelectedSteps([newStep]);
           }
         }
-      }, 20); // Increased delay to 50ms to account for cross-thread communication
-
+        // Remove this timeout from pending list
+        pendingTimeouts.current = pendingTimeouts.current.filter(t => t !== timeout);
+      }, 20);
+      
+      pendingTimeouts.current.push(timeout);
       setStepMoved(true);
     }
   }, [
@@ -290,3 +315,18 @@ export const Step: React.FC<{
     </div>
   );
 };
+
+export const Step = memo(StepComponent, (prevProps, nextProps) => {
+  // Custom comparison for Step component
+  return (
+    prevProps.step.id === nextProps.step.id &&
+    prevProps.step.on === nextProps.step.on &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isDurationStep === nextProps.isDurationStep &&
+    prevProps.stepEditingDuration === nextProps.stepEditingDuration &&
+    prevProps.stepNumberMoving === nextProps.stepNumberMoving &&
+    prevProps.selection === nextProps.selection &&
+    prevProps.stepMoved === nextProps.stepMoved &&
+    prevProps.isMini === nextProps.isMini
+  );
+});

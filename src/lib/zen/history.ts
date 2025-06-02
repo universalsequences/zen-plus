@@ -339,7 +339,7 @@ export const history = (
     const initializeBlockWithData = (block: MemoryBlock) => {
       if (val !== undefined) {
         block.initData = new Float32Array(
-          params?.mc ? new Array(block.context.loopSize).fill(val) : [val],
+          params?.mc ? new Array((block.context as any).loopSize).fill(val) : [val],
         );
       }
       if (cachedValue !== undefined) {
@@ -347,7 +347,7 @@ export const history = (
           console.log("block=", block, params);
         }
         block.initData = new Float32Array(
-          params?.mc ? new Array(block.context.loopSize).fill(cachedValue) : [cachedValue],
+          params?.mc ? new Array((block.context as any).loopSize).fill(cachedValue) : [cachedValue],
         );
       }
     };

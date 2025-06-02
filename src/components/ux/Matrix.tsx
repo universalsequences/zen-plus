@@ -297,9 +297,9 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
               : typeof options === "number"
                 ? [options]
                 : (options as string).split(",");
-            displayText = array[Math.floor(value) % array.length] as string;
+            displayText = array[Math.floor(value as number) % array.length] as string;
           } else {
-            displayText = `${(max as number) > 1 ? Math.round(value) : Math.round(100 * value) / 100} ${unit}`;
+            displayText = `${(max as number) > 1 ? Math.round(value as number) : Math.round(100 * (value as number)) / 100} ${unit}`;
           }
           ctx.fillText(displayText, x + cellWidth / 2, y + cellHeight / 2);
         }
@@ -446,7 +446,7 @@ const Matrix: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
         colIdx = Math.floor((mouseX - margin) / totalCellWidth);
         rowIdx = Math.floor((mouseY - margin) / totalCellHeight);
         // Check if indices are within bounds
-        if (colIdx < 0 || colIdx >= cols || rowIdx < 0 || rowIdx >= rows) {
+        if (colIdx < 0 || colIdx >= cols || rowIdx < 0 || rowIdx >= (rows as number)) {
           return null;
         }
         const cellX = colIdx * totalCellWidth + margin;

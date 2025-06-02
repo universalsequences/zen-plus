@@ -144,7 +144,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
   let flag = useRef(true);
 
   // Declare the liftPatchTile function as a ref to avoid circular dependencies
-  const liftPatchTileRef = useRef<(patch: Patch) => void>();
+  const liftPatchTileRef = useRef<(patch: Buffer) => void>();
 
   const goToPreviousPatch = useCallback(() => {
     let popped = patchHistory.current.pop();
@@ -189,7 +189,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
 
         // Use the ref to call liftPatchTile
         if (liftPatchTileRef.current) {
-          liftPatchTileRef.current(popped);
+          liftPatchTileRef.current(popped as unknown as Buffer);
         }
       }
     }
@@ -655,7 +655,7 @@ export const PatchesProvider: React.FC<Props> = ({ children, ...props }) => {
           // Create a buffer for the parent patch
           const parentBuffer = [...workingBuffers]
             .reverse()
-            .find((x) => !rootTileRef.current.findBuffer(x.id));
+            .find((x) => !rootTileRef.current?.findBuffer(x.id));
 
           console.log("parent buffer = ", parentBuffer, selectedBuffer);
           if (parentBuffer) {

@@ -56,7 +56,8 @@ export class MockObjectNode extends MockBaseNode implements ObjectNode {
   custom?: SerializableCustom;
   definition?: Definition;
   slots?: Slot[];
-  steps?: GenericStepData[];
+  steps?: GenericStepData[][];
+  skipCompilation?: boolean;
   script?: string;
   instructions?: Instruction[];
   isAsync?: boolean;

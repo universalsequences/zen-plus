@@ -9,7 +9,7 @@ interface UseDiredKeyboardNavigationProps {
   currentPatch: Patch | null;
   setCurrentPatch: (patch: Patch | null) => void;
   selectedIndex: number;
-  setSelectedIndex: (index: number) => void;
+  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
   entryRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   entriesCountRef: React.MutableRefObject<number>;
   entriesContainerRef: React.RefObject<HTMLDivElement>;
@@ -154,7 +154,7 @@ export const useDiredKeyboardNavigation = ({
           }
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) => Math.min(prev + 1, entriesCount - 1));
+          setSelectedIndex((prev) => Math.min((prev as number) + 1, (entriesCount as number) - 1));
           break;
         case "ArrowUp":
           e.preventDefault();
@@ -266,7 +266,7 @@ export const useDiredKeyboardNavigation = ({
       buffer,
       handleObjectNodeClick,
       setCurrentPatch,
-    ]
+    ],
   );
 
   // Set up the global keyboard event listener
@@ -281,7 +281,7 @@ export const useDiredKeyboardNavigation = ({
           setCommandText("");
           return;
         }
-        
+
         if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
           // If we're in the dired view but the active element is not our container,
           // focus our container and handle the event
@@ -291,8 +291,8 @@ export const useDiredKeyboardNavigation = ({
             e.preventDefault();
 
             if (e.key === "ArrowDown") {
-              setSelectedIndex((prev) => 
-                Math.min(prev + 1, entryRefs.current.filter(Boolean).length - 1)
+              setSelectedIndex((prev) =>
+                Math.min(prev + 1, entryRefs.current.filter(Boolean).length - 1),
               );
             } else if (e.key === "ArrowUp") {
               setSelectedIndex((prev) => Math.max(prev - 1, 0));
@@ -377,9 +377,9 @@ export const useDiredKeyboardNavigation = ({
         }
       };
 
-      window.addEventListener("keydown", handleGlobalKeyDown);
+      window.addEventListener("keydown", handleGlobalKeyDown as any);
       return () => {
-        window.removeEventListener("keydown", handleGlobalKeyDown);
+        window.removeEventListener("keydown", handleGlobalKeyDown as any);
       };
     }
   }, [

@@ -43,12 +43,12 @@ export const initMemory = (context: Context, workletNode: AudioWorkletNode) => {
   const memory = new Float32Array(memorySize);
   for (const block of context.memory.blocksInUse) {
     if (block.initData !== undefined) {
-      const idx = block._idx === undefined ? block.idx : block._idx;
+      const idx = (block._idx === undefined ? block.idx : block._idx) as number;
       initializes[idx] = block.initData;
-      if (Number.isNaN(block.initData[0])) {
+      if (Number.isNaN(block.initData?.[0])) {
         continue;
       }
-      memory.set(block.initData, idx as number);
+      memory.set(block.initData as Float32Array, idx as number);
     }
   }
   workletNode.port.postMessage({

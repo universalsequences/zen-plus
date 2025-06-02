@@ -15,7 +15,7 @@ import { ContextMenu } from "@radix-ui/themes";
 import { useStorage } from "@/contexts/StorageContext";
 import { usePatches } from "@/contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
-import type { ObjectNode, SubPatch } from "@/lib/nodes/types";
+import type { ObjectNode, Patch, SubPatch } from "@/lib/nodes/types";
 import { FileIcon, Pencil2Icon, ArrowLeftIcon, DiscIcon, UploadIcon } from "@radix-ui/react-icons";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -433,7 +433,8 @@ const SlotView: React.FC<{ objectNode: ObjectNode }> = ({ objectNode }) => {
           className={
             "w-full flex h-full slot-view overflow-hidden " +
             objectNode.attributes.moduleType +
-            (patchWindows.includes(objectNode.subpatch) || patches.includes(objectNode.subpatch)
+            (patchWindows.includes(objectNode.subpatch as Patch) ||
+            patches.includes(objectNode.subpatch as Patch)
               ? " "
               : "") +
             (isMenuOpen ? " bg-white text-black" : "")

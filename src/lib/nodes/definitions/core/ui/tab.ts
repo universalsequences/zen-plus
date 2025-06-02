@@ -140,7 +140,7 @@ class TabData implements SerializableCustom {
     return this._value;
   }
 
-  fromJSON(data: any) {
+  fromJSON(data: any, y?: boolean, v?: number, t?: number) {
     if (typeof data === "number") {
       this._value = data;
       // Initialize with the stored tab index
@@ -148,6 +148,7 @@ class TabData implements SerializableCustom {
         this.updateVisibility(this._value);
       }, 100);
     }
+    return undefined;
   }
 
   execute(tabIndex?: number) {

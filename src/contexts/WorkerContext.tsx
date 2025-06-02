@@ -273,7 +273,7 @@ class UpdateBatcher {
       if (!node?.onNewValues) continue;
       for (const id in node.onNewValues) {
         if (node.name === "zequencer.core" && Array.isArray(value)) {
-          node.steps = value[1] as GenericStepData[];
+          node.steps = value[1] as GenericStepData[][];
         }
         node.onNewValues[id](value);
       }

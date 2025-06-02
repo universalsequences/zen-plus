@@ -1,4 +1,4 @@
-import { Coordinate, ObjectNode, Message } from "../../types";
+import { Coordinate, ObjectNode, Message, SerializableCustom } from "../../types";
 import { doc } from "./doc";
 
 doc("xy.control", {
@@ -45,7 +45,7 @@ export class XYControl {
     }));
   }
 
-  set value(v) {}
+  set value(v: Message) {}
 
   get value() {
     return this.points;
@@ -81,7 +81,7 @@ export const xy_control = (node: ObjectNode) => {
 
   if (!node.custom) {
     const xy = new XYControl(node) as XYControl;
-    node.custom = xy;
+    node.custom = xy as SerializableCustom;
     xy.points.push({ x: 0.3, y: 0.6 });
   }
 

@@ -50,10 +50,10 @@ import { modselector } from "./modselector";
 import { panel } from "./panel";
 import { instructionsPerformance } from "./instructions.performance";
 import { tab } from "./ui/tab";
-import { midiout, midioutInlet } from "./midi";
 import { filtergraph } from "./filtergraph";
 import { preset_view } from "./presetview";
 import { sidebarOverlay } from "./sidebarOverlay";
+import { NodeFunction } from "../../types";
 
 export const api: API = {
   js: js_scripting,
@@ -93,7 +93,7 @@ export const api: API = {
   dedupe,
   slider,
   knob,
-  preset,
+  preset: preset as unknown as NodeFunction,
   "preset.view": preset_view,
   dictpack,
   currenttime,
@@ -120,9 +120,9 @@ export const api: API = {
   tab,
   "et.editor": et_editor,
   "instructions.performance": instructionsPerformance,
-  midiout,
+  //midiout,
   "keyboard.transpose": keyboardTranspose,
-  filtergraph,
+  filtergraph: filtergraph as unknown as NodeFunction,
   messagefilter,
   gate,
   sidebarOverlay,

@@ -1,7 +1,7 @@
 import { useStepsContext } from "@/contexts/StepsContext";
 import { FieldSchema, GenericStepData } from "@/lib/nodes/definitions/core/zequencer/types";
 import { ObjectNode } from "@/lib/nodes/types";
-import { Dispatch, SetStateAction, useState, useCallback, useRef } from "react";
+import { Dispatch, SetStateAction, useState, useCallback, useRef, memo } from "react";
 import { usePatches } from "../../../contexts/PatchesContext";
 import { usePatch } from "@/contexts/PatchContext";
 import { usePatchSelector } from "@/hooks/usePatchSelector";
@@ -16,7 +16,7 @@ interface Props {
   setMouseStartY: Dispatch<SetStateAction<number | null>>;
 }
 
-export const CirklonStep = (props: Props) => {
+const CirklonStepComponent = (props: Props) => {
   const { setSelectedSteps } = useStepsContext();
   const { step, objectNode, parameter, fieldSchema, color } = props;
   const value = step[parameter] as number;
@@ -25,6 +25,9 @@ export const CirklonStep = (props: Props) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [hovering, setHovering] = useState(false);
   const { selectPatch } = usePatchSelector();
+  
+  // Add throttling for mouse events
+  const lastMouseMoveTime = useRef(0);
 
   const update = useCallback(
     (value: number) => {
@@ -36,7 +39,7 @@ export const CirklonStep = (props: Props) => {
         stepId: step.id // Use stepId for direct targeting
       });
     },
-    [parameter, step],
+    [parameter, step.stepNumber, step.id, objectNode],
   );
 
   const calculateValue = useCallback(
@@ -61,7 +64,7 @@ export const CirklonStep = (props: Props) => {
       setSelectedSteps([step]);
       selectPatch();
     },
-    [update, calculateValue, selectPatch],
+    [update, calculateValue, selectPatch, step, props.setMouseStartY],
   );
 
   const onMouseMove = useCallback(
@@ -69,10 +72,18 @@ export const CirklonStep = (props: Props) => {
       if (props.mouseStartY === null) {
         return;
       }
+      
+      // Throttle mouse move events to 60fps (16ms)
+      const now = Date.now();
+      if (now - lastMouseMoveTime.current < 16) {
+        return;
+      }
+      lastMouseMoveTime.current = now;
+      
       const rect = ref.current?.getBoundingClientRect();
       const y = e.clientY - (rect?.top as number);
       update(calculateValue(y));
-      setSelectedSteps([step]);
+      // Don't call setSelectedSteps on every mouse move - it's already selected from mouseDown
     },
     [update, calculateValue, props.mouseStartY],
   );
@@ -105,3 +116,15 @@ export const CirklonStep = (props: Props) => {
     </div>
   );
 };
+
+export const CirklonStep = memo(CirklonStepComponent, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.step.id === nextProps.step.id &&
+    prevProps.step[prevProps.parameter] === nextProps.step[nextProps.parameter] &&
+    prevProps.step.on === nextProps.step.on &&
+    prevProps.parameter === nextProps.parameter &&
+    prevProps.color === nextProps.color &&
+    prevProps.mouseStartY === nextProps.mouseStartY
+  );
+});

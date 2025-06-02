@@ -414,7 +414,7 @@ export type SerializedObjectNode = Identifiable & {
   saveData?: any;
   custom?: any;
   slots?: SerializedObjectNode[];
-  steps?: GenericStepData[];
+  steps?: GenericStepData[][];
 };
 
 export type SerializedPatch = Identifiable & {

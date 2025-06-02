@@ -60,6 +60,7 @@ export class BaseNode implements Node {
   position: Coordinate;
   zIndex: number;
   locked?: boolean;
+  skipCompilation?: boolean;
 
   constructor(patch: Patch) {
     this.id = uuid();
@@ -381,7 +382,7 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   custom?: SerializableCustom;
   definition?: Definition;
   slots?: Slot[];
-  steps?: GenericStepData[];
+  steps?: GenericStepData[][];
   script?: string;
   instructions?: Instruction[];
   isAsync?: boolean;
@@ -506,6 +507,17 @@ export default class ObjectNodeImpl extends BaseNode implements ObjectNode {
   // Cache inlet indices to avoid indexOf calls
 
   pipeSubPatch(inlet: IOlet, _message: Message, fromNode?: Node) {
+    /*
+    console.log(
+      "pipe subpatch",
+      this,
+      _message,
+      fromNode,
+      this.subpatch?.isCompiling,
+      this.patch.isCompiling,
+      this.patch.skipRecompile,
+    );
+    */
     if (!this.subpatch || _message === undefined) {
       return;
     }

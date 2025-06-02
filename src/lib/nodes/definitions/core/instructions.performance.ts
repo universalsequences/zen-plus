@@ -1,6 +1,6 @@
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
-import { ObjectNode, Message } from "../../types";
+import { ObjectNode, Message, SerializableCustom } from "../../types";
 
 doc("instructions.performance", {
   description: "displays the number of VM instructions being executed per second",
@@ -11,7 +11,7 @@ doc("instructions.performance", {
 export const instructionsPerformance = (node: ObjectNode) => {
   node.needsUX = true;
   node.isResizable = true;
-  
+
   // Set default size if not provided
   if (!node.size) {
     node.size = {
@@ -19,7 +19,7 @@ export const instructionsPerformance = (node: ObjectNode) => {
       height: 40,
     };
   }
-  
+
   // Set default attributes if not provided
   if (!node.attributes.textColor) {
     node.attributes.textColor = "#ffffff";
@@ -33,13 +33,13 @@ export const instructionsPerformance = (node: ObjectNode) => {
     node.custom = new MutableValue(node);
     node.custom.value = 0;
   }
-  
+
   return (message: Message) => {
     // Handle incoming messages if needed
     if (typeof message === "number") {
-      node.custom.value = message;
+      (node.custom as SerializableCustom).value = message;
     }
-    
+
     return []; // No outputs from this node
   };
 };

@@ -13,12 +13,12 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
   schema: StepDataSchema | undefined,
 ) => {
   const { stepNumber, name, value, voiceIndex = 0, stepId } = setFieldMessage;
-  
+
   // First try to find the step by ID if provided
   if (stepId) {
-    let foundStep = null;
+    let foundStep: GenericStepData | null = null;
     let foundStepPosition = { stepNumber: -1, voiceIndex: -1 };
-    
+
     // Search for the step with matching ID
     for (let i = 0; i < steps.length; i++) {
       const voices = steps[i];
@@ -31,7 +31,7 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
       }
       if (foundStep) break;
     }
-    
+
     // If step was found by ID, update it
     if (foundStep) {
       // Ensure the field exists in the step schema before updating
@@ -48,10 +48,7 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
         };
 
         // Ensure the type of fieldValue matches the expected type
-        if (
-          typeof value === typeof schemaField.default &&
-          isKeyOfStepType(fieldKey)
-        ) {
+        if (typeof value === typeof schemaField.default && isKeyOfStepType(fieldKey)) {
           (foundStep as StepType)[fieldKey] = value as StepType[typeof fieldKey];
         } else {
           console.error(
@@ -61,11 +58,11 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
       } else {
         console.error(`Field ${name} not found in schema.`);
       }
-      
+
       return { steps: [...steps], schema };
     }
   }
-  
+
   // Fall back to the traditional stepNumber/voiceIndex approach if no ID was provided
   // or if the step wasn't found by ID
   if (steps[stepNumber] && steps[stepNumber].length > 0) {
@@ -79,7 +76,7 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
         steps[stepNumber].push(template);
       }
     }
-    
+
     // Ensure the field exists in the step schema before updating
     const schemaField = schema?.find((f) => f.name === name);
     if (name === "on" && typeof value === "boolean") {
@@ -94,12 +91,8 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
       };
 
       // Ensure the type of fieldValue matches the expected type
-      if (
-        typeof value === typeof schemaField.default &&
-        isKeyOfStepType(fieldKey)
-      ) {
-        (steps[stepNumber][voiceIndex] as StepType)[fieldKey] =
-          value as StepType[typeof fieldKey];
+      if (typeof value === typeof schemaField.default && isKeyOfStepType(fieldKey)) {
+        (steps[stepNumber][voiceIndex] as StepType)[fieldKey] = value as StepType[typeof fieldKey];
       } else {
         console.error(
           `Type mismatch or invalid field for ${name}. Expected ${typeof schemaField.default}, got ${typeof value}.`,
@@ -109,6 +102,6 @@ export const setFieldForStep = <Schemas extends readonly FieldSchema[]>(
       console.error(`Field ${name} not found in schema.`);
     }
   }
-  
+
   return { steps: [...steps], schema };
 };

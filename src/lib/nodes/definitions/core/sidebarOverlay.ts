@@ -6,21 +6,6 @@ doc("sidebarOverlay", {
   description: "Shows/hides an object as a sidebar overlay",
   numberOfOutlets: 1,
   numberOfInlets: 1,
-  attributes: [
-    {
-      name: "object",
-      type: "string",
-      description: "Name of the object to show in the sidebar overlay",
-      defaultValue: "",
-    },
-    {
-      name: "disabled",
-      type: "boolean",
-      description:
-        "When true, shows the icon as unselected even if the object is currently showing",
-      defaultValue: false,
-    },
-  ],
 });
 
 export const sidebarOverlay = (node: ObjectNode) => {

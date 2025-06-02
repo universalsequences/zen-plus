@@ -1,4 +1,4 @@
-import { ObjectNode, Message, MessageObject, NodeFunction } from "../../types";
+import { ObjectNode, Message, MessageObject, NodeFunction, SerializableCustom } from "../../types";
 import { publish } from "@/lib/messaging/queue";
 import { doc } from "./doc";
 import { getRootPatch } from "../../traverse";
@@ -173,7 +173,7 @@ const setupMatrixAttributes = (node: ObjectNode) => {
   }
 
   if (!node.custom && node.buffer) {
-    node.custom = new Matrix(node, node.buffer);
+    node.custom = new Matrix(node, node.buffer) as SerializableCustom;
   }
 
   if (!node.attributes.min) {

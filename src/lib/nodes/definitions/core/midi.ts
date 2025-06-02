@@ -1,3 +1,4 @@
+/*
 import { doc } from "./doc";
 import { MutableValue } from "./MutableValue";
 import { ObjectNode, Message } from "../../types";
@@ -25,7 +26,7 @@ doc("midiout", {
 
 export const midiout = (node: ObjectNode) => {
   node.needsMainThread = true;
-  
+
   // Set up default attributes and state
   if (!node.custom) {
     node.custom = new MutableValue(node);
@@ -41,7 +42,7 @@ export const midiout = (node: ObjectNode) => {
   // Create attribute options for the MIDI commands
   if (!node.attributeOptions.command) {
     node.attributeOptions.command = [
-      "note_off", "note_on", "polyphonic_aftertouch", 
+      "note_off", "note_on", "polyphonic_aftertouch",
       "control_change", "program_change", "channel_aftertouch", "pitch_bend"
     ];
   }
@@ -69,7 +70,7 @@ export const midiout = (node: ObjectNode) => {
         "channel_aftertouch": MIDI_COMMANDS.CHANNEL_AFTERTOUCH,
         "pitch_bend": MIDI_COMMANDS.PITCH_BEND
       };
-      
+
       if (typeof value === "string" && value in commandMap) {
         if (node.custom) {
           node.custom.value = {
@@ -86,7 +87,7 @@ export const midiout = (node: ObjectNode) => {
       if (typeof value === "number") {
         // Ensure channel is between 1-16
         const channel = Math.max(1, Math.min(16, value));
-        
+
         if (node.custom) {
           node.custom.value = {
             ...node.custom.value,
@@ -111,77 +112,77 @@ export const midiout = (node: ObjectNode) => {
   // This function will be called from the main thread
   node.onNewValue = (message: Message) => {
     if (typeof message !== "object" || message === null) return;
-    
+
     try {
       // Get access to MIDI context
       const midiContext = useMidi();
-      
+
       if (!midiContext.midiAccess) {
         console.error("No MIDI access available");
         return;
       }
-      
+
       // Get the stored values
       const stored = node.custom?.value as any;
-      
+
       // Get the output device index
       const outputIdx = stored.outputDevice || 0;
-      
+
       // Get the MIDI output
       const outputs = Array.from(midiContext.midiOutputs);
-      
+
       if (outputs.length === 0) {
         console.error("No MIDI output devices available");
         return;
       }
-      
+
       // Make sure the output index is in range
       const safeOutputIdx = Math.min(outputIdx, outputs.length - 1);
       const output = outputs[safeOutputIdx];
-      
+
       if (!output) {
         console.error("MIDI output not found");
         return;
       }
-      
+
       // Get command, channel, note, and velocity values
       const command = stored.command || MIDI_COMMANDS.NOTE_ON;
       const channel = Math.max(1, Math.min(16, stored.channel || 1)) - 1; // Convert 1-16 to 0-15
       const noteNumber = stored.noteNumber || 60;
       const velocity = stored.velocity || 100;
-      
+
       // Create the MIDI message based on the command
       let midiData: number[];
-      
+
       switch (command) {
         case MIDI_COMMANDS.NOTE_ON:
         case MIDI_COMMANDS.NOTE_OFF:
           midiData = [command + channel, noteNumber, velocity];
           break;
-        
+
         case MIDI_COMMANDS.CONTROL_CHANGE:
           midiData = [command + channel, noteNumber, velocity];
           break;
-        
+
         case MIDI_COMMANDS.PROGRAM_CHANGE:
         case MIDI_COMMANDS.CHANNEL_AFTERTOUCH:
           midiData = [command + channel, noteNumber];
           break;
-        
+
         case MIDI_COMMANDS.PITCH_BEND:
           // Note: Pitch bend uses two bytes for the value
           const msb = (velocity >> 7) & 0x7F;
           const lsb = velocity & 0x7F;
           midiData = [command + channel, lsb, msb];
           break;
-        
+
         default:
           midiData = [command + channel, noteNumber, velocity];
       }
-      
+
       // Send the MIDI message
       output.send(midiData);
-      
+
       return;
     } catch (error) {
       console.error("Error sending MIDI message:", error);
@@ -192,7 +193,7 @@ export const midiout = (node: ObjectNode) => {
   return (message: Message) => {
     if (node.custom) {
       const state = node.custom.value as any;
-      
+
       // Handle different inlet messages
       if (message !== undefined) {
         if (typeof message === "number") {
@@ -207,10 +208,10 @@ export const midiout = (node: ObjectNode) => {
           }
         }
       }
-      
+
       return [true]; // Return success
     }
-    
+
     return [false]; // Return failure
   };
 };
@@ -220,16 +221,16 @@ export const midioutInlet = (node: ObjectNode, inlet: number) => {
   return (message: Message) => {
     if (node.custom && typeof message === "number") {
       const state = node.custom.value as any;
-      
+
       switch (inlet) {
         case 1: // Velocity
           state.velocity = Math.min(127, Math.max(0, Math.floor(message)));
           break;
-        
+
         case 2: // Channel
           state.channel = Math.min(16, Math.max(1, Math.floor(message)));
           break;
-        
+
         case 3: // Command
           // Commands can be specified as numbers matching the MIDI spec
           const commandValues = Object.values(MIDI_COMMANDS);
@@ -241,15 +242,16 @@ export const midioutInlet = (node: ObjectNode, inlet: number) => {
             }
           }
           break;
-        
+
         case 4: // Output device
           state.outputDevice = Math.max(0, Math.floor(message));
           break;
       }
-      
+
       node.custom.value = {...state};
     }
-    
+
     return [];
   };
 };
+*/

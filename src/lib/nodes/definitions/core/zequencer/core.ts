@@ -150,7 +150,7 @@ export const zequencer = <Schemas extends readonly FieldSchema[]>(node: ObjectNo
             newStepData["duration"] = duration;
 
             // If there are existing steps at this position
-            if (node.steps?.[stepNumber]?.length > 0) {
+            if (node.steps && node.steps?.[stepNumber]?.length > 0) {
               // Only replace the default step if it's the only step and it's turned off
               if (node.steps[stepNumber].length === 1 && !node.steps[stepNumber][0].on) {
                 node.steps[stepNumber] = [newStepData];

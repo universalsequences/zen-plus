@@ -331,7 +331,9 @@ export const function_editor = (node: ObjectNode) => {
           `shape ${shape} ${time} ${voice}`,
         ];
       }
-      console.log("not skipping");
+      if (node.attributes.adsr) {
+        return [];
+      }
       ed1.points = scaleAttackDecay(attack + decay, ed1.points);
       ed2.points = scaleRelease(release, ed2.points);
       const releaseBufferList = ed2.toBufferList();

@@ -33,17 +33,20 @@ const isResponseIncomplete = (response: string): boolean => {
     if (codeBlocks && codeBlocks.length % 2 !== 0) {
       return true;
     }
-    
+
     // If we have patch commands but the response seems to end abruptly
     const lastCodeBlock = trimmed.lastIndexOf("```");
     if (lastCodeBlock !== -1) {
       const afterLastBlock = trimmed.substring(lastCodeBlock + 3).trim();
       // If there's content after the last ``` that doesn't look like a proper section
-      if (afterLastBlock.length > 0 && 
-          !afterLastBlock.startsWith("**") && 
-          !afterLastBlock.includes("**Usage Notes**:") &&
-          !afterLastBlock.includes("Notes:") &&
-          afterLastBlock.length < 100) { // Short trailing content might be incomplete
+      if (
+        afterLastBlock.length > 0 &&
+        !afterLastBlock.startsWith("**") &&
+        !afterLastBlock.includes("**Usage Notes**:") &&
+        !afterLastBlock.includes("Notes:") &&
+        afterLastBlock.length < 100
+      ) {
+        // Short trailing content might be incomplete
         return true;
       }
     }
@@ -55,8 +58,10 @@ const isResponseIncomplete = (response: string): boolean => {
 /**
  * Requests continuation of a truncated response
  */
-const getContinuation = async (conversation: Array<{ role: string; content: any[] }>): Promise<string> => {
-  const msg = await anthropic.messages.create({
+const getContinuation = async (
+  conversation: Array<{ role: string; content: any[] }>,
+): Promise<string> => {
+  const msg = await (anthropic as any).messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 3000,
     temperature: 0,
@@ -81,7 +86,7 @@ const getContinuation = async (conversation: Array<{ role: string; content: any[
 
 export const prompt = async (text: string): Promise<string[]> => {
   console.log("my key=", process.env.NEXT_PUBLIC_ANTHROPIC_KEY);
-  
+
   const conversation = [
     {
       role: "user",
@@ -94,7 +99,7 @@ export const prompt = async (text: string): Promise<string[]> => {
     },
   ];
 
-  let msg = await anthropic.messages.create({
+  let msg = await (anthropic as any).messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 3000, // Increased from 1000
     temperature: 0,
@@ -104,7 +109,7 @@ export const prompt = async (text: string): Promise<string[]> => {
 
   console.log(msg);
   const content = msg.content[0];
-  
+
   if (!content) {
     return [];
   }
@@ -118,7 +123,7 @@ export const prompt = async (text: string): Promise<string[]> => {
 
   while (isResponseIncomplete(fullResponse) && continuationCount < maxContinuations) {
     console.log(`Response appears incomplete, requesting continuation ${continuationCount + 1}...`);
-    
+
     // Add the assistant's response to conversation history
     conversation.push({
       role: "assistant",
@@ -132,7 +137,7 @@ export const prompt = async (text: string): Promise<string[]> => {
 
     const continuation = await getContinuation(conversation);
     console.log("Continuation=", continuation);
-    
+
     if (continuation.trim().length === 0) {
       console.log("Empty continuation received, stopping");
       break;

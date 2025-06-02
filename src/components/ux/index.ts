@@ -14,7 +14,6 @@ import Preset from "./Preset";
 import PresetView from "./PresetView";
 import FunctionUX from "./FunctionUX";
 import Divider from "./Divider";
-import FilterGraph from "./FilterGraph";
 import FilterGraphSVG from "./FilterGraphSVG";
 import GLCanvas from "./GLCanvas";
 import SVGCanvas from "./SVGCanvas";

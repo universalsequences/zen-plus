@@ -15,10 +15,7 @@ import {
 import { FunctionEditor } from "@/lib/nodes/definitions/core/function";
 import { traverseBackwards } from "@/lib/nodes/traverse";
 import { Component } from "../../../zen/physical-modeling/Component";
-import {
-  MetallicComponent,
-  MetallicMaterial,
-} from "../../../zen/physical-modeling/MetallicComponent";
+import { MetallicComponent } from "../../../zen/physical-modeling/MetallicComponent";
 import { condMessage, message } from "../../../zen/message";
 import { zdf } from "../../../zen/filters/zdf";
 import { svf } from "../../../zen/filters/svf";

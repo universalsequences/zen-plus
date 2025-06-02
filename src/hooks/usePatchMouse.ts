@@ -331,7 +331,11 @@ export const usePatchMouse = ({ isCustomView }: Props) => {
           if (true) {
             //isObjectNode(node)) {
             node.size.width = width;
-            if (isMessageNode(node) || node.name === "zen" || (node as ObjectNode).isResizable) {
+            if (
+              isMessageNode(node) ||
+              (node as ObjectNode).name === "zen" ||
+              (node as ObjectNode).isResizable
+            ) {
               node.size.height = height;
             }
             updateSize(node.id, { ...node.size });

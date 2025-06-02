@@ -161,7 +161,7 @@ The only output I need from the assistant is the DSL commands in a JSON list for
 The API operators all act exactly the same as they do in Max MSP's gen~ language specification-- so remember that history works by getting its last input (one sample-frame ago) and sending it thru its outlet
 
 API of allowed operators, in format (operator_name, description,inletName1, inletName2, ...)
-phasor,outputs signal from 0-1 based on frequency,frequency, 
+phasor,outputs signal from 0-1 based on frequency,frequency,
 reset
 cycle,outputs a sine wave from -1 to 1 based on frequency in hz,frequency,phase
 out,output of entire patcher,outputNumber

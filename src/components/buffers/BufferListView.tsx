@@ -368,9 +368,9 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
         }
       };
 
-      window.addEventListener("keydown", handleGlobalKeyDown);
+      window.addEventListener("keydown", handleGlobalKeyDown as any);
       return () => {
-        window.removeEventListener("keydown", handleGlobalKeyDown);
+        window.removeEventListener("keydown", handleGlobalKeyDown as any);
       };
     }
   }, [
@@ -495,11 +495,6 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
               {isSelected && !isEditing && <span className="text-xs">⏎</span>}
             </div>
           </div>
-          {b.type === BufferType.Patch && b.patch?.description && !isEditing && (
-            <div className="buffer-description text-sm text-zinc-400 mt-1">
-              {b.patch.description}
-            </div>
-          )}
         </div>
       );
     },
@@ -552,9 +547,9 @@ const BufferListView: React.FC<BufferListViewProps> = ({ buffer }) => {
       </div>
 
       <div className="help-text mt-4 text-xs text-zinc-500 flex-shrink-0">
-        <p>Press 'b' to show/hide buffer list</p>
+        <p>Press &apos;b&apos; to show/hide buffer list</p>
         <p>Use arrow keys ↑↓ to navigate, Enter to select</p>
-        <p>Press 'r' on a patch buffer to rename it</p>
+        <p>Press &apos;r&apos; on a patch buffer to rename it</p>
         <p>Type to filter buffers by name</p>
         <p>Buffers with blue border are already displayed in another tile</p>
       </div>

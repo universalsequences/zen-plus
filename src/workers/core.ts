@@ -7,7 +7,12 @@ import type {
 import type { SerializedInstruction } from "@/lib/nodes/vm/types";
 import { SyncWorkerState, VM, VMEvaluation } from "./vm/VM";
 import { publish } from "@/lib/messaging/queue";
-import { RingBuffer, MessageType, BufferDirection } from "@/lib/workers/RingBuffer";
+import {
+  RingBuffer,
+  MessageType,
+  BufferDirection,
+  RingBufferMessage,
+} from "@/lib/workers/RingBuffer";
 import { SharedMemoryManager, MemoryOffsets } from "@/lib/workers/SharedMemoryManager";
 
 export interface NodeInstructions {
@@ -137,7 +142,7 @@ let perfMonitoringActive = false;
 const PERF_MONITOR_INTERVAL = 1000; // 1s performance monitoring interval
 
 // sends one round of instructions evaluation to the main thread
-const sendEvaluationToMainThread = (data: VMEvaluation, clear = true, debug = true) => {
+const sendEvaluationToMainThread = (data: VMEvaluation, clear = true) => {
   //console.log("send evaluation to main thread", data);
   const {
     mutableValueChanged,
@@ -298,7 +303,7 @@ const processRingBufferMessage = (message: { type: MessageType; nodeId: string; 
       break;
     case MessageType.LOADBANG:
       const loadbangEval = vm.loadBang();
-      sendEvaluationToMainThread(loadbangEval);
+      if (loadbangEval) sendEvaluationToMainThread(loadbangEval);
       break;
     case MessageType.PUBLISH:
       publish(message.message.type, message.message.message);
@@ -367,16 +372,26 @@ const startPerformanceMonitoring = () => {
 // Function to process data from the ring buffer
 const processRingBufferData = () => {
   try {
+    let messages: RingBufferMessage[] = [];
+    let a = new Date().getTime();
     while (ringBuffer?.canRead()) {
       const message = ringBuffer.read();
       if (message) {
-        processRingBufferMessage(message);
+        messages.push(message);
 
         // Update message count in shared memory
         if (sharedMemory) {
           sharedMemory.reportMessageProcessed();
         }
       }
+    }
+    let b = new Date().getTime();
+    for (const message of messages) {
+      processRingBufferMessage(message);
+    }
+    let c = new Date().getTime();
+    if (c - a > 1) {
+      //console.log("read took %s ms process took %s ms", b - a, c - b, messages, vm);
     }
   } catch (error) {
     console.error("Error processing ring buffer data:", error);
@@ -497,7 +512,7 @@ self.onmessage = async (e: MessageEvent) => {
     vm.updateMessage(nodeId, json);
   } else if (data.type === "loadbang") {
     const vmEvaluation = vm.loadBang();
-    sendEvaluationToMainThread(vmEvaluation);
+    if (vmEvaluation) sendEvaluationToMainThread(vmEvaluation);
   } else if (data.type === "attrui") {
     const vmEvaluation = vm.sendAttrUI(data.body.nodeId, data.body.message);
     if (vmEvaluation) {

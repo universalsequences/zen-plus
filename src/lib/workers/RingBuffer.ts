@@ -1,6 +1,7 @@
 // BidirectionalRingBuffer for efficient message passing between threads
 // Uses a SharedArrayBuffer and DataView for efficient, type-safe messaging
 
+export type RingBufferMessage = { type: MessageType; nodeId: string; message: any };
 // Message type identifiers
 export enum MessageType {
   // Main-to-Worker message types
@@ -493,7 +494,7 @@ export class RingBuffer {
    * Reads a message from the ring buffer in the opposite direction
    * Returns undefined if no message is available
    */
-  read(): { type: MessageType; nodeId: string; message: any } | undefined {
+  read(): RingBufferMessage | undefined {
     try {
       // Determine which buffer to read from (opposite of the direction we write to)
       let writePtr: number,

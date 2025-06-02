@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ObjectNode } from "../../lib/nodes/ObjectNode";
+import { ObjectNode } from "../../lib/nodes/types";
 import { useValue } from "../../contexts/ValueContext";
 import { useLocked } from "../../contexts/LockedContext";
 import {
@@ -319,7 +319,7 @@ const getControlPointY = (
 
 // The main FilterGraph component using SVG
 const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
-  const { isLocked } = useLocked();
+  const { lockedMode } = useLocked();
   const { width, height } = objectNode.size || { width: 200, height: 100 };
 
   // Get the filter parameters from the custom value
@@ -347,7 +347,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
   useEffect(() => {
     if (!value) return;
 
-    const newParams = value as FilterParams & {
+    const newParams = value as unknown as FilterParams & {
       allFilters?: Filter[];
       numFilters?: number;
     };
@@ -479,9 +479,9 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
   // Setup window-level event listeners for mouse tracking
   useEffect(() => {
     const handleWindowMouseMove = (e: MouseEvent) => {
-      if (!isDragging || isLocked) return;
+      if (!isDragging || !lockedMode) return;
 
-      const svgElement = document.getElementById(`filtergraph-${custom.id}`);
+      const svgElement = document.getElementById(`filtergraph-${objectNode.id}`);
       if (!svgElement) return;
 
       const rect = svgElement.getBoundingClientRect();
@@ -559,11 +559,11 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
-  }, [isDragging, isLocked, filterParams, custom, objectNode, width, height]);
+  }, [isDragging, lockedMode, filterParams, custom, objectNode, width, height]);
 
   // Handle mouse down to start dragging
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (isLocked) return;
+    if (!lockedMode) return;
 
     const svgElement = e.currentTarget;
     if (!svgElement) return;
@@ -607,7 +607,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   // Handle double click to cycle through filter types
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if (isLocked) return;
+    if (!lockedMode) return;
 
     // Cycle through filter types for the active filter
     const filterTypes: FilterType[] = [
@@ -633,7 +633,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   // Handle filter selection by click
   const handleClick = (filterIndex: number) => {
-    if (isLocked) return;
+    if (!lockedMode) return;
 
     // Set the clicked filter as active
     setActiveFilterIndex(filterIndex);
@@ -679,11 +679,11 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
   return (
     <svg
-      id={`filtergraph-${custom.id}`}
+      id={`filtergraph-${objectNode.id}`}
       width={width}
       height={height}
       style={{
-        cursor: isLocked ? "default" : isDragging ? "grabbing" : "pointer",
+        cursor: lockedMode ? "default" : isDragging ? "grabbing" : "pointer",
         userSelect: "none",
         touchAction: "none", // Prevent scrolling while interacting
       }}
@@ -696,7 +696,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
         y="0"
         width={width}
         height={height}
-        fill={objectNode.attributes["backgroundColor"] || "#303030"}
+        fill={(objectNode.attributes["backgroundColor"] as string) || "#303030"}
       />
 
       {/* Grid lines */}
@@ -727,13 +727,13 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
               y1={0}
               x2={x}
               y2={height}
-              stroke={objectNode.attributes["gridColor"] || "#666666"}
+              stroke={(objectNode.attributes["gridColor"] as string) || "#666666"}
               strokeWidth="0.5"
             />
             <text
               x={x}
               y={height - 2}
-              fill={objectNode.attributes["textColor"] || "#ffffff"}
+              fill={(objectNode.attributes["textColor"] as string) || "#ffffff"}
               fontSize={width < 150 ? "6px" : "8px"}
               textAnchor="middle"
             >
@@ -761,14 +761,14 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
               y1={y}
               x2={width}
               y2={y}
-              stroke={objectNode.attributes["gridColor"] || "#666666"}
+              stroke={(objectNode.attributes["gridColor"] as string) || "#666666"}
               strokeWidth="0.5"
             />
             {showLabel() && (
               <text
                 x={width < 150 ? 15 : 25}
                 y={y + 3}
-                fill={objectNode.attributes["textColor"] || "#ffffff"}
+                fill={(objectNode.attributes["textColor"] as string) || "#ffffff"}
                 fontSize={height < 150 ? "6px" : "8px"}
                 textAnchor="right"
               >
@@ -786,7 +786,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
           <path
             key={`filter-${index}`}
             d={path}
-            stroke={color.stroke}
+            stroke={color.stroke as string}
             strokeWidth="2"
             opacity={color.opacity}
             fill="none"
@@ -810,7 +810,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
               y1={0}
               x2={cutoffX}
               y2={height}
-              stroke={color.stroke}
+              stroke={color.stroke as string}
               strokeWidth={isActive ? "1" : "0.5"}
               strokeDasharray="2,2"
               opacity={color.opacity}
@@ -821,7 +821,7 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
               cx={cutoffX}
               cy={controlPointY}
               r={isActive ? 5 : 4}
-              fill={color.stroke}
+              fill={color.stroke as string}
               strokeWidth={isActive ? 2 : 0}
               stroke="#ffffff"
               opacity={color.opacity}
@@ -830,7 +830,13 @@ const FilterGraphSVG: React.FC<FilterGraphProps> = ({ objectNode }) => {
 
             {/* Filter type indicator (shown only for active filter or when hovering) */}
             {isActive && (
-              <text x={cutoffX} y={10} fill={color.stroke} fontSize="8px" textAnchor="middle">
+              <text
+                x={cutoffX}
+                y={10}
+                fill={color.stroke as string}
+                fontSize="8px"
+                textAnchor="middle"
+              >
                 {allFilters[index].type} ({index + 1})
               </text>
             )}

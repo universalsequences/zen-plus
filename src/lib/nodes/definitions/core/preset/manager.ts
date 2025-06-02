@@ -51,6 +51,7 @@ export class PresetManager {
   currentVoicePLocks: Map<number, { stepId: string; pLocks: Preset }> = new Map();
 
   constructor(object: ObjectNode) {
+    this._slotMode = false;
     this.slots = [];
     this.staticMappedSlotNodes = {};
     this.objectNode = object;
@@ -407,6 +408,10 @@ export class PresetManager {
     }
 
     for (let id in preset) {
+      if (!preset[id]) {
+        delete preset[id];
+        continue;
+      }
       if (this.staticMappedSlotNodes[id]) {
         continue;
       }
@@ -467,7 +472,7 @@ export class PresetManager {
       }
     }
     if (vmEvaluation) {
-      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(vmEvaluation, true, true);
+      this.objectNode.patch.vm?.sendEvaluationToMainThread?.(vmEvaluation, true);
     }
     this.switching = false;
   }
@@ -533,7 +538,7 @@ export class PresetManager {
     if (voice !== undefined) {
       // Check if we need to undo previous p-locks for this voice
       const currentPLocks = this.currentVoicePLocks.get(voice);
-      const newPLocks = stepId && this.stepParameterLocks[stepId];
+      const newPLocks = stepId && (this.stepParameterLocks[stepId] as Preset);
 
       if (currentPLocks) {
         // Get the base preset to undo with
@@ -547,41 +552,11 @@ export class PresetManager {
 
           for (const nodeId of Object.keys(currentPLocks.pLocks)) {
             const currentPLockState = currentPLocks.pLocks[nodeId];
-            const newPLockState = newPLocks?.[nodeId];
+            const newPLockState = (newPLocks as Preset)?.[nodeId];
             const baseState = basePreset[nodeId];
 
-            if (baseState) {
-              // Create a selective undo for this node - only undo parameters that won't be overridden
-              const nodeUndoState: any = {};
-              let hasParametersToUndo = false;
-
-              // Check each parameter in the current p-lock
-              if (currentPLockState?.state && typeof currentPLockState.state === "object") {
-                for (const paramName of Object.keys(currentPLockState.state)) {
-                  // Only undo this parameter if it's not in the new p-locks
-                  const isInNewPLocks =
-                    newPLockState?.state &&
-                    typeof newPLockState.state === "object" &&
-                    newPLockState.state.hasOwnProperty(paramName);
-
-                  if (
-                    !isInNewPLocks &&
-                    baseState.state &&
-                    typeof baseState.state === "object" &&
-                    baseState.state.hasOwnProperty(paramName)
-                  ) {
-                    nodeUndoState[paramName] = baseState.state[paramName];
-                    hasParametersToUndo = true;
-                  }
-                }
-              }
-
-              if (hasParametersToUndo) {
-                undoPreset[nodeId] = {
-                  node: baseState.node,
-                  state: nodeUndoState,
-                };
-              }
+            if (!newPLockState) {
+              undoPreset[nodeId] = baseState;
             }
           }
 
@@ -794,7 +769,7 @@ export class PresetManager {
     let vmEvaluation: VMEvaluation | undefined;
     for (const [voice, preset] of this.voiceToPreset.entries()) {
       if (preset === presetNumber) {
-        const currentEvaluation = node.custom?.fromJSON(state, undefined, voice, 0);
+        const currentEvaluation = (node as ObjectNode).custom?.fromJSON(state, undefined, voice, 0);
         if (currentEvaluation) {
           if (vmEvaluation) {
             vmEvaluation = mergeEvaluation(vmEvaluation, currentEvaluation);
@@ -978,6 +953,10 @@ export class PresetManager {
     const scriptingNames = this.getZequencerScriptingNames();
     if (this.serializedPresets) {
       for (let i = 0; i < this.serializedPresets.length; i++) {
+        if (!this.presets[i]) {
+          this.presets[i] = {};
+          this.presetNames[i] = "";
+        }
         let preset = this.serializedPresets[i];
         for (let id in preset) {
           let { state } = preset[id];

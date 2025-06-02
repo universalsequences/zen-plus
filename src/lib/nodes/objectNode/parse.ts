@@ -387,7 +387,7 @@ const parseArguments = (
     if (tokens[i] !== undefined && Number.isNaN(parsed)) {
       parsed = tokens[i];
     }
-    objectNode.arguments[i] = i < tokens.length ? parsed : defaultArgument;
+    objectNode.arguments[i] = (i < tokens.length ? parsed : defaultArgument) as Message;
     otherArguments[i] = i < tokens.length ? parsed : defaultMessage;
   }
   return otherArguments;

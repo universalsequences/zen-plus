@@ -37,7 +37,7 @@ const Toolbar: React.FC<{ patch: Patch }> = ({ patch }) => {
     setPatchNames,
   } = usePatches();
 
-  const { buffer, assist } = usePatch();
+  const { buffer } = usePatch();
   let breadcrumbs: any[] | any = [];
   let _patch: Patch = patch;
   let [editing, setEditing] = useState(false);

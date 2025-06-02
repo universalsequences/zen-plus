@@ -8,10 +8,10 @@ import { useCallback, useEffect, useState, useRef } from "react";
 
 // Helper functions for working with patterns
 const calculateSize = (pattern: ETPattern): number => {
-  return pattern.reduce((acc, atom) => {
-    if (atom === 0) return acc + 1; // DOT_SIZE = 1
-    if (atom === 1) return acc + 2; // DASH_SIZE = 2
-    return acc + atom.size;
+  return pattern.reduce((acc: number, atom) => {
+    if (atom === 0) return (acc as number) + 1; // DOT_SIZE = 1
+    if (atom === 1) return (acc as number) + 2; // DASH_SIZE = 2
+    return ((acc as number) + (atom.size as number)) as number;
   }, 0);
 };
 
@@ -50,7 +50,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   const uxEditing = useRef(false);
 
   // Calculate dynamic base width and heights based on objectNode.size and pattern size
-  const patternTotalSize = pattern.reduce((acc, atom) => {
+  const patternTotalSize = pattern.reduce((acc: number, atom) => {
     if (atom === 0) return acc + 1; // DOT_SIZE
     if (atom === 1) return acc + 2; // DASH_SIZE
     return acc + atom.size;
@@ -111,7 +111,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       const parentPath = cursorPath.slice(0, -1);
       const atom = getAtomAtPath(parentPath, pattern);
 
-      if (typeof atom === "object" && "pattern" in atom) {
+      if (atom && typeof atom === "object" && "pattern" in atom) {
         setSelectedNestedPattern(parentPath);
       }
     } else {
@@ -231,7 +231,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
 
     // Check if it's a nested pattern for selection
     const atom = getAtomAtPath(atomPath, pattern);
-    if (typeof atom === "object" && "pattern" in atom) {
+    if (atom && typeof atom === "object" && "pattern" in atom) {
       if (e.shiftKey) {
         // Add to selection
         setSelectedSymbols((prev) => [...prev, atomPath]);
@@ -289,11 +289,11 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   }, []);
 
   // Get an atom at a specific path
-  const getAtomAtPath = (path: number[], fullPattern: ETPattern): Atom => {
+  const getAtomAtPath = (path: number[], fullPattern: ETPattern): Atom | null => {
     if (path.length === 0) return null;
 
     let currentPattern = fullPattern;
-    let atom: Atom = null;
+    let atom: Atom | null = null;
 
     for (let i = 0; i < path.length; i++) {
       const index = path[i];
@@ -339,7 +339,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
         parentPattern = newPattern;
       } else {
         const parent = getAtomAtPath(parentPath, newPattern);
-        if (typeof parent === "object" && "pattern" in parent) {
+        if (typeof parent === "object" && parent && "pattern" in parent) {
           parentPattern = parent.pattern;
         } else {
           continue; // Skip if parent pattern not found
@@ -365,7 +365,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
     const newPattern = [...pattern];
     const atom = getAtomAtPath(selectedNestedPattern, newPattern);
 
-    if (typeof atom === "object" && "pattern" in atom) {
+    if (typeof atom === "object" && atom && "pattern" in atom) {
       // Create a new nested pattern with updated size
       const parentPath = selectedNestedPattern.slice(0, -1);
       const currentIndex = selectedNestedPattern[selectedNestedPattern.length - 1];
@@ -375,7 +375,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
         parentPattern = newPattern;
       } else {
         const parent = getAtomAtPath(parentPath, newPattern);
-        if (typeof parent === "object" && "pattern" in parent) {
+        if (parent && typeof parent === "object" && "pattern" in parent) {
           parentPattern = parent.pattern;
         } else {
           return; // Skip if parent pattern not found
@@ -589,7 +589,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
         const digit = parseInt(e.key);
         const atom = getAtomAtPath(selectedNestedPattern, pattern);
 
-        if (typeof atom === "object" && "pattern" in atom) {
+        if (atom && typeof atom === "object" && "pattern" in atom) {
           // Instead of appending, we just set the size directly to the entered digit
           updateNestedPatternSize(digit);
           e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
@@ -600,7 +600,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       if (selectedNestedPattern && e.key === "ArrowUp") {
         const atom = getAtomAtPath(selectedNestedPattern, pattern);
 
-        if (typeof atom === "object" && "pattern" in atom) {
+        if (atom && typeof atom === "object" && "pattern" in atom) {
           // Instead of appending, we just set the size directly to the entered digit
           updateNestedPatternSize(atom.size + 1);
           e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
@@ -611,7 +611,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
       if (selectedNestedPattern && e.key === "ArrowDown") {
         const atom = getAtomAtPath(selectedNestedPattern, pattern);
 
-        if (typeof atom === "object" && "pattern" in atom) {
+        if (atom && typeof atom === "object" && "pattern" in atom) {
           // Instead of appending, we just set the size directly to the entered digit
           updateNestedPatternSize(atom.size - 1);
           e.preventDefault(); // Prevent default to avoid inserting digit in the pattern
@@ -725,7 +725,7 @@ export const ETEditor = ({ objectNode }: { objectNode: ObjectNode }) => {
   }, [onKeyDown, handleMouseUp]);
 
   // Calculate total size of the pattern
-  const patternSize = pattern.reduce((acc, atom) => {
+  const patternSize = pattern.reduce((acc: number, atom) => {
     if (atom === 0) return acc + 1;
     if (atom === 1) return acc + 2;
     return acc + atom.size;

@@ -14,7 +14,6 @@ import type {
   Environment,
   LocatedExpression,
 } from "./types";
-import { BytecodeInterpreter } from "./bytecode";
 
 const stringCache: { [x: string]: string } = {};
 
@@ -27,15 +26,6 @@ export class LispError extends Error {
     this.expression = expression;
   }
 }
-
-// Use our new bytecode interpreter instead of the tree-walking one
-export const createByteCodeContext = (pool: ListPool, objectNode: Core.ObjectNode) => {
-  // Create bytecode interpreter instance
-  const interpreter = new BytecodeInterpreter(pool, objectNode);
-
-  // Return the evaluation function
-  return interpreter.createContext();
-};
 
 // Keep the old tree-walking interpreter for compatibility and fallback
 export const createContext = (pool: ListPool, objectNode: Core.ObjectNode) => {

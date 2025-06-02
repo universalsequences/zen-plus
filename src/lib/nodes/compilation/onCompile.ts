@@ -51,7 +51,6 @@ export const prepareAndCompile = (patch: PatchImpl, _statement: Statement) => {
 
   let zenGraph: ZenGraph | undefined = undefined;
   try {
-    if (window.stopCompileTest) throw new Error("hello");
     zenGraph = Array.isArray(ast)
       ? zenWithTarget(target, ast[0], forceScalar)
       : zenWithTarget(target, ast as UGen, forceScalar);

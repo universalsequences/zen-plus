@@ -1,5 +1,5 @@
 import { doc } from "../doc";
-import { ObjectNode, Message, AttributeValue } from "../../../types";
+import { ObjectNode, Message, AttributeValue, SerializableCustom } from "../../../types";
 import { PresetManager } from "./manager";
 
 doc("preset", {
@@ -54,7 +54,7 @@ export const preset = (object: ObjectNode) => {
   };
 
   if (!object.custom) {
-    object.custom = new PresetManager(object);
+    object.custom = new PresetManager(object) as unknown as SerializableCustom;
   }
 
   if (object.attributes.slotMode) {
@@ -140,7 +140,12 @@ export const preset = (object: ObjectNode) => {
         // this handles case where the preset object recevies a "step trigger" from the "zequencer" node, containing a "preset" and "voice number"
         // we need to tell the manager to switch to that preset
         const { voice, preset, time, id } = msg;
-        mgmt.switchToPreset(Math.round(preset as number), voice as number, time as number, id as string);
+        mgmt.switchToPreset(
+          Math.round(preset as number),
+          voice as number,
+          time as number,
+          id as string,
+        );
       }
       return [undefined, mgmt.currentPattern, mgmt.getNumberOfPatterns()];
     }
